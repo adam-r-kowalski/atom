@@ -121,3 +121,27 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
     }
     return list.toOwnedSlice();
 }
+
+pub fn toSource(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u8 {
+    var list = List(u8).init(allocator);
+    const writer = list.writer();
+    var pos = Pos{ .line = 1, .column = 1 };
+    for (tokens.kind.items) |kind, i| {
+        const span = tokens.span.items[i];
+        const delta = span.start.column - pos.column;
+        var j: usize = 0;
+        while (j < delta) : (j += 1) try writer.writeAll(" ");
+        pos.column = span.end.column;
+        switch (kind) {
+            .symbol => |interned| {
+                const string = intern.lookup(interned);
+                try writer.writeAll(string);
+            },
+            .equal => try writer.writeAll("="),
+            .backslash => try writer.writeAll("\\"),
+            .dot => try writer.writeAll("."),
+            .plus => try writer.writeAll("+"),
+        }
+    }
+    return list.toOwnedSlice();
+}

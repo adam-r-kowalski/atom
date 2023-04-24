@@ -23,4 +23,7 @@ test "tokenize" {
         \\symbol x
     ;
     try std.testing.expectEqualStrings(expected, actual);
+    const reconstructed = try fusion.tokenizer.toSource(allocator, intern, tokens);
+    defer allocator.free(reconstructed);
+    try std.testing.expectEqualStrings(source, reconstructed);
 }
