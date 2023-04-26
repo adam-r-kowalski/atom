@@ -7,6 +7,11 @@ const interner = @import("interner.zig");
 const Intern = interner.Intern;
 const Interned = interner.Interned;
 
+pub const Indent = union(enum) {
+    space: u8,
+    tab: u8,
+};
+
 const Kind = union(enum) {
     symbol: Interned,
     int: Interned,
@@ -18,6 +23,8 @@ const Kind = union(enum) {
     plus,
     minus,
     arrow,
+    left_paren,
+    right_paren,
 };
 
 const Pos = struct {
@@ -25,7 +32,7 @@ const Pos = struct {
     column: usize,
 };
 
-const Span = struct {
+pub const Span = struct {
     begin: Pos,
     end: Pos,
 };
@@ -39,9 +46,7 @@ pub const Tokens = struct {
     kind: List(Kind),
     span: List(Span),
 
-    const Self = @This();
-
-    pub fn deinit(self: Self) void {
+    pub fn deinit(self: Tokens) void {
         self.kind.deinit();
         self.span.deinit();
     }
@@ -56,7 +61,7 @@ fn trim(cursor: *Cursor) void {
 
 fn reserved(c: u8) bool {
     return switch (c) {
-        ' ', '\n', '.', ':' => true,
+        ' ', '\n', '(', ')', '.', ':' => true,
         else => false,
     };
 }
@@ -159,6 +164,8 @@ pub fn tokenize(allocator: Allocator, intern: *Intern, source: []const u8) !Toke
             '\\' => try exact(&tokens, &cursor, .backslash),
             ':' => try exact(&tokens, &cursor, .colon),
             '+' => try exact(&tokens, &cursor, .plus),
+            '(' => try exact(&tokens, &cursor, .left_paren),
+            ')' => try exact(&tokens, &cursor, .right_paren),
             else => try symbol(&tokens, intern, &cursor),
         }
     }
@@ -190,6 +197,8 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
             .plus => try writer.writeAll("plus"),
             .minus => try writer.writeAll("minus"),
             .arrow => try writer.writeAll("arrow"),
+            .left_paren => try writer.writeAll("left paren"),
+            .right_paren => try writer.writeAll("right paren"),
         }
     }
     return list.toOwnedSlice();
@@ -217,6 +226,8 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
             .plus => try writer.writeAll("+"),
             .minus => try writer.writeAll("-"),
             .arrow => try writer.writeAll("->"),
+            .left_paren => try writer.writeAll("("),
+            .right_paren => try writer.writeAll(")"),
         }
     }
     return list.toOwnedSlice();
