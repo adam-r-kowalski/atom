@@ -53,6 +53,7 @@ pub const Ast = struct {
         self.index.deinit();
         self.symbol.deinit();
         self.define.deinit();
+        for (self.lambda.items) |l| l.parameters.deinit();
         self.lambda.deinit();
         self.binary_op.deinit();
         self.top_level.deinit();
@@ -97,6 +98,7 @@ fn lambda(context: *Context) !Expression {
         const param = try expression(context);
         try params.append(param);
     }
+    context.precedence = LOWEST;
     std.debug.assert(context.tokens.kind.items[context.token_index] == .dot);
     context.token_index += 1;
     const body = try expression(context);
@@ -169,6 +171,7 @@ const Infix = struct {
 };
 
 fn infix(context: *Context) ?Infix {
+    if (context.tokens.kind.items.len <= context.token_index) return null;
     switch (context.tokens.kind.items[context.token_index]) {
         .equal => return .{ .kind = .define, .precedence = DEFINE, .asscociativity = .right },
         .plus => return .{ .kind = .{ .binary_op = .add }, .precedence = ADD, .asscociativity = .left },
@@ -183,8 +186,10 @@ fn expression(context: *Context) error{OutOfMemory}!Expression {
             var next = parser.precedence;
             if (context.precedence > next) return left;
             if (parser.asscociativity == .left) next += 1;
+            const previous = context.precedence;
             context.precedence = next;
             left = try parser.parse(context, left);
+            context.precedence = previous;
         } else return left;
     }
 }
@@ -239,12 +244,25 @@ fn lambdaToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expre
     try writer.writeAll(")");
 }
 
+fn binaryOpToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) !void {
+    const b = ast.binary_op.items[ast.index.items[expr]];
+    try writer.writeAll("(");
+    switch (b.kind) {
+        .add => try writer.writeAll("+"),
+    }
+    try writer.writeAll(" ");
+    try expressionToString(writer, intern, ast, b.left);
+    try writer.writeAll(" ");
+    try expressionToString(writer, intern, ast, b.right);
+    try writer.writeAll(")");
+}
+
 fn expressionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) error{OutOfMemory}!void {
     switch (ast.kind.items[expr]) {
         .symbol => try symbolToString(writer, intern, ast, expr),
         .define => try defineToString(writer, intern, ast, expr),
         .lambda => try lambdaToString(writer, intern, ast, expr),
-        else => std.debug.panic("Unknown kind {}\n", .{ast.kind.items[expr]}),
+        .binary_op => try binaryOpToString(writer, intern, ast, expr),
     }
 }
 
