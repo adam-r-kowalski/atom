@@ -148,3 +148,79 @@ test "parse annotating bindings" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "parse annotating multiple bindings" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\add = \(x: I32) (y: I32) -> I32. x + y
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(def add (fn [(x I32) (y I32)] I32 (+ x y)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse annotating multiple bindings with no return type" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\add = \(x: I32) (y: I32). x + y
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(def add (fn [(x I32) (y I32)] (+ x y)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse multiple parameters annotating only return type" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\add = \x y -> I32. x + y
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(def add (fn [x y] I32 (+ x y)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse multiple parameters annotating one parameter and return type" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\add = \(x: I32) y -> I32. x + y
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(def add (fn [(x I32) y] I32 (+ x y)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
