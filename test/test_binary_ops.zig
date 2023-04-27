@@ -119,3 +119,22 @@ test "parse arrow is right associative" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "parse greater has lower precedence then add" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\a + b > c + d
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(> (+ a b) (+ c d))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
