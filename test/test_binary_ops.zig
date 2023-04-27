@@ -1,0 +1,121 @@
+const std = @import("std");
+const fusion = @import("fusion");
+
+test "tokenize add then multiply" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\x + y * z
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const actual = try fusion.tokenizer.toString(allocator, intern, tokens);
+    defer allocator.free(actual);
+    const expected =
+        \\symbol x
+        \\plus
+        \\symbol y
+        \\times
+        \\symbol z
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+    const reconstructed = try fusion.tokenizer.toSource(allocator, intern, tokens);
+    defer allocator.free(reconstructed);
+    try std.testing.expectEqualStrings(source, reconstructed);
+}
+
+test "parse add then multiply" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\x + y * z
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(+ x (* y z))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse multiply then add" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\x * y + z
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(+ (* x y) z)
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse multiply is left associative" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\x * y * z
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(* (* x y) z)
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse exponentiate is right associative" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\x ^ y ^ z
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(^ x (^ y z))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse arrow is right associative" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\x -> y -> z
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(-> x (-> y z))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

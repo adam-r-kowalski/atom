@@ -224,3 +224,22 @@ test "parse multiple parameters annotating one parameter and return type" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "parse multi parameter annotation" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\add: I32 -> I32 -> I32 = \x y. x + y
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(def add (-> I32 (-> I32 I32)) (fn [x y] (+ x y)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

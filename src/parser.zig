@@ -36,6 +36,8 @@ const Lambda = struct {
 
 const BinaryOpKind = enum {
     add,
+    multiply,
+    exponentiate,
     arrow,
 };
 
@@ -75,8 +77,10 @@ const LOWEST = 0;
 const DEFINE = LOWEST + DELTA;
 const ANNOTATE = DEFINE;
 const ADD = ANNOTATE + DELTA;
-const ARROW = ADD + DELTA;
-const HIGHEST = ADD + DELTA;
+const MULTIPLY = ADD + DELTA;
+const EXPONENTIATE = MULTIPLY + DELTA;
+const ARROW = EXPONENTIATE + DELTA;
+const HIGHEST = ARROW + DELTA;
 
 const Expression = u64;
 
@@ -244,6 +248,8 @@ fn infix(context: *Context) ?Infix {
         .equal => return .{ .kind = .define, .precedence = DEFINE, .asscociativity = .right },
         .colon => return .{ .kind = .annotate, .precedence = ANNOTATE, .asscociativity = .right },
         .plus => return .{ .kind = .{ .binary_op = .add }, .precedence = ADD, .asscociativity = .left },
+        .times => return .{ .kind = .{ .binary_op = .multiply }, .precedence = MULTIPLY, .asscociativity = .left },
+        .caret => return .{ .kind = .{ .binary_op = .exponentiate }, .precedence = EXPONENTIATE, .asscociativity = .right },
         .arrow => return .{ .kind = .{ .binary_op = .arrow }, .precedence = ARROW, .asscociativity = .right },
         else => return null,
     }
@@ -301,7 +307,7 @@ fn typeToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Express
             try writer.writeAll("(-> ");
             try typeToString(writer, intern, ast, b.left);
             try writer.writeAll(" ");
-            try typeToString(writer, intern, ast, b.left);
+            try typeToString(writer, intern, ast, b.right);
             try writer.writeAll(")");
         },
         .symbol => try symbolToString(writer, intern, ast, expr),
@@ -355,6 +361,8 @@ fn binaryOpToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Exp
     try writer.writeAll("(");
     switch (b.kind) {
         .add => try writer.writeAll("+"),
+        .multiply => try writer.writeAll("*"),
+        .exponentiate => try writer.writeAll("^"),
         .arrow => try writer.writeAll("->"),
     }
     try writer.writeAll(" ");
