@@ -110,3 +110,22 @@ test "parse with no annotation" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "parse with annotation" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\double: I32 -> I32 = \x. x + x
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(def (: double (-> I32 I32)) (fn (x) (+ x x)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

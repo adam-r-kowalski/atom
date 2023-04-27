@@ -19,6 +19,7 @@ const Kind = enum {
 
 const Define = struct {
     name: Expression,
+    type: ?Expression,
     value: Expression,
 };
 
@@ -29,6 +30,7 @@ const Lambda = struct {
 
 const BinaryOpKind = enum {
     add,
+    arrow,
 };
 
 const BinaryOp = struct {
@@ -62,10 +64,13 @@ pub const Ast = struct {
 
 const Precedence = u32;
 
+const DELTA = 10;
 const LOWEST = 0;
-const DEFINE = LOWEST + 10;
-const ADD = DEFINE + 10;
-const HIGHEST = ADD + 10;
+const DEFINE = LOWEST + DELTA;
+const ANNOTATE = DEFINE;
+const ADD = ANNOTATE + DELTA;
+const ARROW = ADD + DELTA;
+const HIGHEST = ADD + DELTA;
 
 const Expression = u64;
 
@@ -135,7 +140,27 @@ fn define(context: *Context, name: Expression) !Expression {
     try context.ast.kind.append(.define);
     try context.ast.span.append(span);
     try context.ast.index.append(context.ast.define.items.len);
-    try context.ast.define.append(.{ .name = name, .value = value });
+    try context.ast.define.append(.{ .name = name, .type = null, .value = value });
+    return self;
+}
+
+fn annotate(context: *Context, name: Expression) !Expression {
+    context.token_index += 1;
+    context.precedence = ARROW;
+    const type_ = try expression(context);
+    std.debug.assert(context.tokens.kind.items[context.token_index] == .equal);
+    context.token_index += 1;
+    context.precedence = LOWEST;
+    const value = try expression(context);
+    const span = Span{
+        .begin = context.ast.span.items[name].begin,
+        .end = context.ast.span.items[value].end,
+    };
+    const self = context.ast.kind.items.len;
+    try context.ast.kind.append(.define);
+    try context.ast.span.append(span);
+    try context.ast.index.append(context.ast.define.items.len);
+    try context.ast.define.append(.{ .name = name, .type = type_, .value = value });
     return self;
 }
 
@@ -159,12 +184,14 @@ const Infix = struct {
     asscociativity: Asscociativity,
     kind: union(enum) {
         define,
+        annotate,
         binary_op: BinaryOpKind,
     },
 
     fn parse(self: Infix, context: *Context, left: Expression) !Expression {
         switch (self.kind) {
             .define => return try define(context, left),
+            .annotate => return try annotate(context, left),
             .binary_op => |kind| return try binaryOp(context, left, kind),
         }
     }
@@ -174,7 +201,9 @@ fn infix(context: *Context) ?Infix {
     if (context.tokens.kind.items.len <= context.token_index) return null;
     switch (context.tokens.kind.items[context.token_index]) {
         .equal => return .{ .kind = .define, .precedence = DEFINE, .asscociativity = .right },
+        .colon => return .{ .kind = .annotate, .precedence = ANNOTATE, .asscociativity = .right },
         .plus => return .{ .kind = .{ .binary_op = .add }, .precedence = ADD, .asscociativity = .left },
+        .arrow => return .{ .kind = .{ .binary_op = .arrow }, .precedence = ARROW, .asscociativity = .right },
         else => return null,
     }
 }
@@ -186,10 +215,10 @@ fn expression(context: *Context) error{OutOfMemory}!Expression {
             var next = parser.precedence;
             if (context.precedence > next) return left;
             if (parser.asscociativity == .left) next += 1;
-            const previous = context.precedence;
+            const last = context.precedence;
             context.precedence = next;
             left = try parser.parse(context, left);
-            context.precedence = previous;
+            context.precedence = last;
         } else return left;
     }
 }
@@ -223,10 +252,34 @@ fn symbolToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expre
     try writer.writeAll(intern.lookup(s));
 }
 
+fn typeToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) !void {
+    switch (ast.kind.items[expr]) {
+        .binary_op => {
+            const b = ast.binary_op.items[ast.index.items[expr]];
+            std.debug.assert(b.kind == .arrow);
+            try writer.writeAll("(-> ");
+            try typeToString(writer, intern, ast, b.left);
+            try writer.writeAll(" ");
+            try typeToString(writer, intern, ast, b.left);
+            try writer.writeAll(")");
+        },
+        .symbol => try symbolToString(writer, intern, ast, expr),
+        else => std.debug.panic("\ncannot convert type to string {}\n", .{ast.kind.items[expr]}),
+    }
+}
+
 fn defineToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) !void {
     const d = ast.define.items[ast.index.items[expr]];
     try writer.writeAll("(def ");
-    try symbolToString(writer, intern, ast, d.name);
+    if (d.type) |t| {
+        try writer.writeAll("(: ");
+        try symbolToString(writer, intern, ast, d.name);
+        try writer.writeAll(" ");
+        try typeToString(writer, intern, ast, t);
+        try writer.writeAll(")");
+    } else {
+        try symbolToString(writer, intern, ast, d.name);
+    }
     try writer.writeAll(" ");
     try expressionToString(writer, intern, ast, d.value);
     try writer.writeAll(")");
@@ -249,6 +302,7 @@ fn binaryOpToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Exp
     try writer.writeAll("(");
     switch (b.kind) {
         .add => try writer.writeAll("+"),
+        .arrow => try writer.writeAll("->"),
     }
     try writer.writeAll(" ");
     try expressionToString(writer, intern, ast, b.left);
