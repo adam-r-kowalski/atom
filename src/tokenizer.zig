@@ -12,7 +12,7 @@ pub const Indent = union(enum) {
     tab: u8,
 };
 
-const Kind = union(enum) {
+pub const Kind = union(enum) {
     symbol: Interned,
     int: Interned,
     float: Interned,

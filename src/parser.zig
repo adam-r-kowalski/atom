@@ -23,8 +23,14 @@ const Define = struct {
     value: Expression,
 };
 
+const Parameter = struct {
+    name: Expression,
+    type: ?Expression,
+};
+
 const Lambda = struct {
-    parameters: List(Expression),
+    parameters: List(Parameter),
+    return_type: ?Expression,
     body: Expression,
 };
 
@@ -94,25 +100,61 @@ fn symbol(context: *Context, s: Interned) !Expression {
     return self;
 }
 
+fn consume(context: *Context, kind: tokenizer.Kind) void {
+    std.debug.assert(std.meta.activeTag(context.tokens.kind.items[context.token_index]) == kind);
+    context.token_index += 1;
+}
+
+fn consumeSymbol(context: *Context) !Expression {
+    switch (context.tokens.kind.items[context.token_index]) {
+        .symbol => |s| return try symbol(context, s),
+        else => |kind| std.debug.panic("\nExpected symbol, got {}\n", .{kind}),
+    }
+}
+
 fn lambda(context: *Context) !Expression {
     const begin = context.tokens.span.items[context.token_index].begin;
     context.token_index += 1;
-    var params = List(Expression).init(context.allocator);
-    context.precedence = HIGHEST;
-    while (context.tokens.kind.items[context.token_index] != .dot) {
-        const param = try expression(context);
-        try params.append(param);
+    var parameters = List(Parameter).init(context.allocator);
+    var return_type: ?Expression = null;
+    while (true) {
+        switch (context.tokens.kind.items[context.token_index]) {
+            .symbol => |s| {
+                const name = try symbol(context, s);
+                try parameters.append(.{ .name = name, .type = null });
+            },
+            .left_paren => {
+                context.token_index += 1;
+                const name = try consumeSymbol(context);
+                consume(context, .colon);
+                context.precedence = LOWEST;
+                const type_ = try expression(context);
+                consume(context, .right_paren);
+                try parameters.append(.{ .name = name, .type = type_ });
+            },
+            .dot => {
+                context.token_index += 1;
+                break;
+            },
+            .arrow => {
+                context.token_index += 1;
+                return_type = try expression(context);
+            },
+            else => |kind| std.debug.panic("\nExpected symbol, got {}\n", .{kind}),
+        }
     }
     context.precedence = LOWEST;
-    std.debug.assert(context.tokens.kind.items[context.token_index] == .dot);
-    context.token_index += 1;
     const body = try expression(context);
     const self = context.ast.kind.items.len;
     const end = context.ast.span.items[body].end;
     try context.ast.kind.append(.lambda);
     try context.ast.span.append(.{ .begin = begin, .end = end });
     try context.ast.index.append(context.ast.lambda.items.len);
-    try context.ast.lambda.append(.{ .parameters = params, .body = body });
+    try context.ast.lambda.append(.{
+        .parameters = parameters,
+        .return_type = return_type,
+        .body = body,
+    });
     return self;
 }
 
@@ -148,8 +190,7 @@ fn annotate(context: *Context, name: Expression) !Expression {
     context.token_index += 1;
     context.precedence = ARROW;
     const type_ = try expression(context);
-    std.debug.assert(context.tokens.kind.items[context.token_index] == .equal);
-    context.token_index += 1;
+    consume(context, .equal);
     context.precedence = LOWEST;
     const value = try expression(context);
     const span = Span{
@@ -271,28 +312,40 @@ fn typeToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Express
 fn defineToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) !void {
     const d = ast.define.items[ast.index.items[expr]];
     try writer.writeAll("(def ");
+    try symbolToString(writer, intern, ast, d.name);
     if (d.type) |t| {
-        try writer.writeAll("(: ");
-        try symbolToString(writer, intern, ast, d.name);
         try writer.writeAll(" ");
         try typeToString(writer, intern, ast, t);
-        try writer.writeAll(")");
-    } else {
-        try symbolToString(writer, intern, ast, d.name);
     }
     try writer.writeAll(" ");
     try expressionToString(writer, intern, ast, d.value);
     try writer.writeAll(")");
 }
 
+fn parameterToString(writer: List(u8).Writer, intern: Intern, ast: Ast, p: Parameter) !void {
+    if (p.type) |t| {
+        try writer.writeAll("(");
+        try symbolToString(writer, intern, ast, p.name);
+        try writer.writeAll(" ");
+        try typeToString(writer, intern, ast, t);
+        try writer.writeAll(")");
+    } else {
+        try symbolToString(writer, intern, ast, p.name);
+    }
+}
+
 fn lambdaToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) !void {
     const l = ast.lambda.items[ast.index.items[expr]];
-    try writer.writeAll("(fn (");
+    try writer.writeAll("(fn [");
     for (l.parameters.items) |p, i| {
-        try expressionToString(writer, intern, ast, p);
+        try parameterToString(writer, intern, ast, p);
         if (i < l.parameters.items.len - 1) try writer.writeAll(" ");
     }
-    try writer.writeAll(") ");
+    try writer.writeAll("] ");
+    if (l.return_type) |t| {
+        try typeToString(writer, intern, ast, t);
+        try writer.writeAll(" ");
+    }
     try expressionToString(writer, intern, ast, l.body);
     try writer.writeAll(")");
 }
