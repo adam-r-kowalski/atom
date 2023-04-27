@@ -243,3 +243,22 @@ test "parse multi parameter annotation" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "parse both kinds of annotations" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\add: I32 -> I32 -> Bool = \(x: I32) (y: I32) -> Bool. x > y
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(def add (-> I32 (-> I32 Bool)) (fn [(x I32) (y I32)] Bool (> x y)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

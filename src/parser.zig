@@ -38,6 +38,7 @@ const BinaryOpKind = enum {
     add,
     multiply,
     exponentiate,
+    greater,
     arrow,
 };
 
@@ -76,7 +77,8 @@ const DELTA = 10;
 const LOWEST = 0;
 const DEFINE = LOWEST + DELTA;
 const ANNOTATE = DEFINE;
-const ADD = ANNOTATE + DELTA;
+const GREATER = ANNOTATE + DELTA;
+const ADD = GREATER + DELTA;
 const MULTIPLY = ADD + DELTA;
 const EXPONENTIATE = MULTIPLY + DELTA;
 const ARROW = EXPONENTIATE + DELTA;
@@ -250,6 +252,7 @@ fn infix(context: *Context) ?Infix {
         .plus => return .{ .kind = .{ .binary_op = .add }, .precedence = ADD, .asscociativity = .left },
         .times => return .{ .kind = .{ .binary_op = .multiply }, .precedence = MULTIPLY, .asscociativity = .left },
         .caret => return .{ .kind = .{ .binary_op = .exponentiate }, .precedence = EXPONENTIATE, .asscociativity = .right },
+        .greater => return .{ .kind = .{ .binary_op = .greater }, .precedence = GREATER, .asscociativity = .left },
         .arrow => return .{ .kind = .{ .binary_op = .arrow }, .precedence = ARROW, .asscociativity = .right },
         else => return null,
     }
@@ -363,6 +366,7 @@ fn binaryOpToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Exp
         .add => try writer.writeAll("+"),
         .multiply => try writer.writeAll("*"),
         .exponentiate => try writer.writeAll("^"),
+        .greater => try writer.writeAll(">"),
         .arrow => try writer.writeAll("->"),
     }
     try writer.writeAll(" ");
