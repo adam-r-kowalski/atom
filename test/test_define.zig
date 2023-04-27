@@ -88,3 +88,36 @@ test "parse single line define" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "tokenize multi line define" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\x =
+        \\    a = y + z
+        \\    a - b
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const actual = try fusion.tokenizer.toString(allocator, intern, tokens);
+    defer allocator.free(actual);
+    const expected =
+        \\symbol x
+        \\equal
+        \\space 4
+        \\symbol a
+        \\equal
+        \\symbol y
+        \\plus
+        \\symbol z
+        \\space 4
+        \\symbol a
+        \\minus
+        \\symbol b
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+    const reconstructed = try fusion.tokenizer.toSource(allocator, intern, tokens);
+    defer allocator.free(reconstructed);
+    try std.testing.expectEqualStrings(source, reconstructed);
+}

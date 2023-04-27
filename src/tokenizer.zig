@@ -8,14 +8,15 @@ const Intern = interner.Intern;
 const Interned = interner.Interned;
 
 pub const Indent = union(enum) {
-    space: u8,
-    tab: u8,
+    space: u64,
+    tab: u64,
 };
 
 pub const Kind = union(enum) {
     symbol: Interned,
     int: Interned,
     float: Interned,
+    indent: Indent,
     equal,
     backslash,
     dot,
@@ -31,8 +32,8 @@ pub const Kind = union(enum) {
 };
 
 const Pos = struct {
-    line: usize,
-    column: usize,
+    line: u64,
+    column: u64,
 };
 
 pub const Span = struct {
@@ -56,7 +57,7 @@ pub const Tokens = struct {
 };
 
 fn trim(cursor: *Cursor) void {
-    var i: usize = 0;
+    var i: u64 = 0;
     while (i < cursor.source.len and cursor.source[i] == ' ') : (i += 1) {}
     cursor.pos.column += i;
     cursor.source = cursor.source[i..];
@@ -69,7 +70,7 @@ fn reserved(c: u8) bool {
     };
 }
 
-fn advance(cursor: *Cursor, n: usize) []const u8 {
+fn advance(cursor: *Cursor, n: u64) []const u8 {
     const value = cursor.source[0..n];
     cursor.source = cursor.source[n..];
     cursor.pos.column += n;
@@ -78,8 +79,8 @@ fn advance(cursor: *Cursor, n: usize) []const u8 {
 
 fn number(intern: *Intern, tokens: *Tokens, cursor: *Cursor) !void {
     const begin = cursor.pos;
-    var i: usize = 1;
-    var decimals: usize = if (cursor.source[0] == '.') 1 else 0;
+    var i: u64 = 1;
+    var decimals: u64 = if (cursor.source[0] == '.') 1 else 0;
     while (i < cursor.source.len) : (i += 1) {
         switch (cursor.source[i]) {
             '0'...'9' => {},
@@ -140,7 +141,7 @@ fn choice(tokens: *Tokens, cursor: *Cursor, kind: Kind, choices: []const Choice)
 
 fn symbol(tokens: *Tokens, intern: *Intern, cursor: *Cursor) !void {
     const begin = cursor.pos;
-    var i: usize = 0;
+    var i: u64 = 0;
     while (i < cursor.source.len and !reserved(cursor.source[i])) : (i += 1) {}
     const string = advance(cursor, i);
     const interned = try intern.string(string);
@@ -148,6 +149,37 @@ fn symbol(tokens: *Tokens, intern: *Intern, cursor: *Cursor) !void {
     const span = Span{ .begin = begin, .end = end };
     try tokens.kind.append(.{ .symbol = interned });
     try tokens.span.append(span);
+}
+
+fn newLine(tokens: *Tokens, cursor: *Cursor) !void {
+    var begin = cursor.pos;
+    cursor.pos.column = 1;
+    var i: u64 = 0;
+    while (cursor.source.len > i and cursor.source[i] == '\n') : (i += 1) {}
+    cursor.pos.line += i;
+    cursor.source = cursor.source[i..];
+    if (cursor.source.len == 0) return;
+    i = 0;
+    if (cursor.source[0] == ' ') {
+        while (cursor.source.len > i and cursor.source[i] == ' ') : (i += 1) {}
+        cursor.pos.column += i;
+        cursor.source = cursor.source[i..];
+        if (cursor.source.len == 0) return;
+        try tokens.kind.append(.{ .indent = .{ .space = i } });
+        try tokens.span.append(.{ .begin = begin, .end = cursor.pos });
+        return;
+    }
+    if (cursor.source[0] == '\t') {
+        while (cursor.source.len > i and cursor.source[i] == '\t') : (i += 1) {}
+        cursor.pos.column += i;
+        cursor.source = cursor.source[i..];
+        if (cursor.source.len == 0) return;
+        try tokens.kind.append(.{ .indent = .{ .tab = i } });
+        try tokens.span.append(.{ .begin = begin, .end = cursor.pos });
+        return;
+    }
+    try tokens.kind.append(.{ .indent = .{ .space = 0 } });
+    try tokens.span.append(.{ .begin = begin, .end = cursor.pos });
 }
 
 pub fn tokenize(allocator: Allocator, intern: *Intern, source: []const u8) !Tokens {
@@ -172,6 +204,7 @@ pub fn tokenize(allocator: Allocator, intern: *Intern, source: []const u8) !Toke
             '>' => try exact(&tokens, &cursor, .greater),
             '(' => try exact(&tokens, &cursor, .left_paren),
             ')' => try exact(&tokens, &cursor, .right_paren),
+            '\n' => try newLine(&tokens, &cursor),
             else => try symbol(&tokens, intern, &cursor),
         }
     }
@@ -196,6 +229,12 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
                 const string = intern.lookup(interned);
                 try std.fmt.format(writer, "float {s}", .{string});
             },
+            .indent => |indent| {
+                switch (indent) {
+                    .space => try std.fmt.format(writer, "space {d}", .{indent.space}),
+                    .tab => try std.fmt.format(writer, "tab {d}", .{indent.tab}),
+                }
+            },
             .equal => try writer.writeAll("equal"),
             .backslash => try writer.writeAll("backslash"),
             .dot => try writer.writeAll("dot"),
@@ -213,21 +252,44 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
     return list.toOwnedSlice();
 }
 
+fn spaceToSource(writer: List(u8).Writer, span: Span, pos: *Pos) !void {
+    const delta = span.begin.column - pos.column;
+    var i: u64 = 0;
+    while (i < delta) : (i += 1) try writer.writeAll(" ");
+    pos.* = span.end;
+}
+
+fn indentToSource(writer: List(u8).Writer, span: Span, indent: Indent) !void {
+    const delta = span.end.line - span.begin.line;
+    {
+        var i: u64 = 0;
+        while (i < delta) : (i += 1) try writer.writeAll("\n");
+    }
+    switch (indent) {
+        .space => |space| {
+            var i: u64 = 0;
+            while (i < space) : (i += 1) try writer.writeAll(" ");
+        },
+        .tab => |tab| {
+            var i: u64 = 0;
+            while (i < tab) : (i += 1) try writer.writeAll("\t");
+        },
+    }
+}
+
 pub fn toSource(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u8 {
     var list = List(u8).init(allocator);
     const writer = list.writer();
     var pos = Pos{ .line = 1, .column = 1 };
     for (tokens.kind.items) |kind, i| {
         const span = tokens.span.items[i];
-        const delta = span.begin.column - pos.column;
-        var j: usize = 0;
-        while (j < delta) : (j += 1) try writer.writeAll(" ");
-        pos.column = span.end.column;
+        try spaceToSource(writer, span, &pos);
         switch (kind) {
             .symbol, .int, .float => |interned| {
                 const string = intern.lookup(interned);
                 try writer.writeAll(string);
             },
+            .indent => |indent| try indentToSource(writer, span, indent),
             .equal => try writer.writeAll("="),
             .backslash => try writer.writeAll("\\"),
             .dot => try writer.writeAll("."),
