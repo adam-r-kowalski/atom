@@ -138,7 +138,10 @@ test "parse multi line define" {
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected =
-        \\(def x I32 (+ y z))
+        \\(def x
+        \\    (block
+        \\        (def a (+ y z))
+        \\        (- a b)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

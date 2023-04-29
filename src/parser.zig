@@ -36,6 +36,7 @@ const Lambda = struct {
 
 const BinaryOpKind = enum {
     add,
+    subtract,
     multiply,
     exponentiate,
     greater,
@@ -80,6 +81,7 @@ const DEFINE = LOWEST + DELTA;
 const ANNOTATE = DEFINE;
 const GREATER = ANNOTATE + DELTA;
 const ADD = GREATER + DELTA;
+const SUBTRACT = ADD;
 const MULTIPLY = ADD + DELTA;
 const EXPONENTIATE = MULTIPLY + DELTA;
 const ARROW = EXPONENTIATE + DELTA;
@@ -185,8 +187,10 @@ fn block(context: *Context) !List(Expression) {
             context.token_index += 1;
             context.indent = indent;
             while (true) {
+                context.precedence = LOWEST;
                 const expr = try expression(context);
                 try exprs.append(expr);
+                if (context.tokens.kind.items.len <= context.token_index) break;
                 switch (context.tokens.kind.items[context.token_index]) {
                     .indent => |next_indent| {
                         if (!std.meta.eql(context.indent, next_indent)) break;
@@ -278,6 +282,7 @@ fn infix(context: *Context) ?Infix {
         .equal => return .{ .kind = .define, .precedence = DEFINE, .asscociativity = .right },
         .colon => return .{ .kind = .annotate, .precedence = ANNOTATE, .asscociativity = .right },
         .plus => return .{ .kind = .{ .binary_op = .add }, .precedence = ADD, .asscociativity = .left },
+        .minus => return .{ .kind = .{ .binary_op = .subtract }, .precedence = SUBTRACT, .asscociativity = .left },
         .times => return .{ .kind = .{ .binary_op = .multiply }, .precedence = MULTIPLY, .asscociativity = .left },
         .caret => return .{ .kind = .{ .binary_op = .exponentiate }, .precedence = EXPONENTIATE, .asscociativity = .right },
         .greater => return .{ .kind = .{ .binary_op = .greater }, .precedence = GREATER, .asscociativity = .left },
@@ -346,19 +351,32 @@ fn typeToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Express
     }
 }
 
-fn blockToString(writer: List(u8).Writer, intern: Intern, ast: Ast, exprs: List(Expression)) !void {
-    if (exprs.items.len == 1) {
-        try writer.writeAll(" ");
-        try expressionToString(writer, intern, ast, exprs.items[0]);
-        return;
-    }
-    for (exprs.items) |expr| {
-        try writer.writeAll("\n");
-        try expressionToString(writer, intern, ast, expr);
+fn indentToString(writer: List(u8).Writer, indent: u64) !void {
+    var i: u64 = 0;
+    while (i < indent) {
+        try writer.writeAll("    ");
+        i += 1;
     }
 }
 
-fn defineToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) !void {
+fn blockToString(writer: List(u8).Writer, intern: Intern, ast: Ast, exprs: List(Expression), indent: u64) !void {
+    if (exprs.items.len == 1) {
+        try writer.writeAll(" ");
+        try expressionToString(writer, intern, ast, exprs.items[0], indent);
+        return;
+    }
+    try writer.writeAll("\n");
+    try indentToString(writer, indent);
+    try writer.writeAll("(block");
+    for (exprs.items) |expr| {
+        try writer.writeAll("\n");
+        try indentToString(writer, indent + 1);
+        try expressionToString(writer, intern, ast, expr, indent);
+    }
+    try writer.writeAll(")");
+}
+
+fn defineToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) !void {
     const d = ast.define.items[ast.index.items[expr]];
     try writer.writeAll("(def ");
     try symbolToString(writer, intern, ast, d.name);
@@ -366,7 +384,7 @@ fn defineToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expre
         try writer.writeAll(" ");
         try typeToString(writer, intern, ast, t);
     }
-    try blockToString(writer, intern, ast, d.body);
+    try blockToString(writer, intern, ast, d.body, indent + 1);
     try writer.writeAll(")");
 }
 
@@ -382,7 +400,7 @@ fn parameterToString(writer: List(u8).Writer, intern: Intern, ast: Ast, p: Param
     }
 }
 
-fn lambdaToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) !void {
+fn lambdaToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) !void {
     const l = ast.lambda.items[ast.index.items[expr]];
     try writer.writeAll("(fn [");
     for (l.parameters.items) |p, i| {
@@ -394,39 +412,41 @@ fn lambdaToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expre
         try typeToString(writer, intern, ast, t);
         try writer.writeAll(" ");
     }
-    try expressionToString(writer, intern, ast, l.body);
+    try expressionToString(writer, intern, ast, l.body, indent);
     try writer.writeAll(")");
 }
 
-fn binaryOpToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) !void {
+fn binaryOpToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) !void {
     const b = ast.binary_op.items[ast.index.items[expr]];
     try writer.writeAll("(");
     switch (b.kind) {
         .add => try writer.writeAll("+"),
+        .subtract => try writer.writeAll("-"),
         .multiply => try writer.writeAll("*"),
         .exponentiate => try writer.writeAll("^"),
         .greater => try writer.writeAll(">"),
         .arrow => try writer.writeAll("->"),
     }
     try writer.writeAll(" ");
-    try expressionToString(writer, intern, ast, b.left);
+    try expressionToString(writer, intern, ast, b.left, indent);
     try writer.writeAll(" ");
-    try expressionToString(writer, intern, ast, b.right);
+    try expressionToString(writer, intern, ast, b.right, indent);
     try writer.writeAll(")");
 }
 
-fn expressionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) error{OutOfMemory}!void {
+fn expressionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) error{OutOfMemory}!void {
     switch (ast.kind.items[expr]) {
         .symbol => try symbolToString(writer, intern, ast, expr),
-        .define => try defineToString(writer, intern, ast, expr),
-        .lambda => try lambdaToString(writer, intern, ast, expr),
-        .binary_op => try binaryOpToString(writer, intern, ast, expr),
+        .define => try defineToString(writer, intern, ast, expr, indent),
+        .lambda => try lambdaToString(writer, intern, ast, expr, indent),
+        .binary_op => try binaryOpToString(writer, intern, ast, expr, indent),
     }
 }
 
 pub fn toString(allocator: Allocator, intern: Intern, ast: Ast) ![]u8 {
     var list = List(u8).init(allocator);
     const writer = list.writer();
-    for (ast.top_level.items) |expr| try expressionToString(writer, intern, ast, expr);
+    const indent: u64 = 0;
+    for (ast.top_level.items) |expr| try expressionToString(writer, intern, ast, expr, indent);
     return list.toOwnedSlice();
 }
