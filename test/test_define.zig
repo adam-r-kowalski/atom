@@ -121,3 +121,24 @@ test "tokenize multi line define" {
     defer allocator.free(reconstructed);
     try std.testing.expectEqualStrings(source, reconstructed);
 }
+
+test "parse multi line define" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\x =
+        \\    a = y + z
+        \\    a - b
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(def x I32 (+ y z))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

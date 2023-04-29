@@ -20,7 +20,7 @@ const Kind = enum {
 const Define = struct {
     name: Expression,
     type: ?Expression,
-    value: Expression,
+    body: List(Expression),
 };
 
 const Parameter = struct {
@@ -63,6 +63,7 @@ pub const Ast = struct {
         self.span.deinit();
         self.index.deinit();
         self.symbol.deinit();
+        for (self.define.items) |d| d.body.deinit();
         self.define.deinit();
         for (self.lambda.items) |l| l.parameters.deinit();
         self.lambda.deinit();
@@ -177,18 +178,45 @@ const Asscociativity = enum {
     right,
 };
 
+fn block(context: *Context) !List(Expression) {
+    var exprs = List(Expression).init(context.allocator);
+    switch (context.tokens.kind.items[context.token_index]) {
+        .indent => |indent| {
+            context.token_index += 1;
+            context.indent = indent;
+            while (true) {
+                const expr = try expression(context);
+                try exprs.append(expr);
+                switch (context.tokens.kind.items[context.token_index]) {
+                    .indent => |next_indent| {
+                        if (!std.meta.eql(context.indent, next_indent)) break;
+                        context.token_index += 1;
+                    },
+                    else => break,
+                }
+            }
+        },
+        else => {
+            context.precedence = LOWEST;
+            const expr = try expression(context);
+            try exprs.append(expr);
+        },
+    }
+    return exprs;
+}
+
 fn define(context: *Context, name: Expression) !Expression {
     context.token_index += 1;
-    const value = try expression(context);
+    const body = try block(context);
     const span = Span{
         .begin = context.ast.span.items[name].begin,
-        .end = context.ast.span.items[value].end,
+        .end = context.ast.span.items[body.items[body.items.len - 1]].end,
     };
     const self = context.ast.kind.items.len;
     try context.ast.kind.append(.define);
     try context.ast.span.append(span);
     try context.ast.index.append(context.ast.define.items.len);
-    try context.ast.define.append(.{ .name = name, .type = null, .value = value });
+    try context.ast.define.append(.{ .name = name, .type = null, .body = body });
     return self;
 }
 
@@ -198,16 +226,16 @@ fn annotate(context: *Context, name: Expression) !Expression {
     const type_ = try expression(context);
     consume(context, .equal);
     context.precedence = LOWEST;
-    const value = try expression(context);
+    const body = try block(context);
     const span = Span{
         .begin = context.ast.span.items[name].begin,
-        .end = context.ast.span.items[value].end,
+        .end = context.ast.span.items[body.items[body.items.len - 1]].end,
     };
     const self = context.ast.kind.items.len;
     try context.ast.kind.append(.define);
     try context.ast.span.append(span);
     try context.ast.index.append(context.ast.define.items.len);
-    try context.ast.define.append(.{ .name = name, .type = type_, .value = value });
+    try context.ast.define.append(.{ .name = name, .type = type_, .body = body });
     return self;
 }
 
@@ -318,6 +346,18 @@ fn typeToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Express
     }
 }
 
+fn blockToString(writer: List(u8).Writer, intern: Intern, ast: Ast, exprs: List(Expression)) !void {
+    if (exprs.items.len == 1) {
+        try writer.writeAll(" ");
+        try expressionToString(writer, intern, ast, exprs.items[0]);
+        return;
+    }
+    for (exprs.items) |expr| {
+        try writer.writeAll("\n");
+        try expressionToString(writer, intern, ast, expr);
+    }
+}
+
 fn defineToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) !void {
     const d = ast.define.items[ast.index.items[expr]];
     try writer.writeAll("(def ");
@@ -326,8 +366,7 @@ fn defineToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expre
         try writer.writeAll(" ");
         try typeToString(writer, intern, ast, t);
     }
-    try writer.writeAll(" ");
-    try expressionToString(writer, intern, ast, d.value);
+    try blockToString(writer, intern, ast, d.body);
     try writer.writeAll(")");
 }
 
