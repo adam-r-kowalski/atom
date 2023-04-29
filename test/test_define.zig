@@ -139,9 +139,31 @@ test "parse multi line define" {
     defer allocator.free(actual);
     const expected =
         \\(def x
-        \\    (block
-        \\        (def a (+ y z))
-        \\        (- a b)))
+        \\    (def a (+ y z))
+        \\    (- a b))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse multi line define with type annotation" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\x: I32 =
+        \\    a: I32 = y + z
+        \\    a - b
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(def x I32
+        \\    (def a I32 (+ y z))
+        \\    (- a b))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

@@ -365,15 +365,11 @@ fn blockToString(writer: List(u8).Writer, intern: Intern, ast: Ast, exprs: List(
         try expressionToString(writer, intern, ast, exprs.items[0], indent);
         return;
     }
-    try writer.writeAll("\n");
-    try indentToString(writer, indent);
-    try writer.writeAll("(block");
     for (exprs.items) |expr| {
         try writer.writeAll("\n");
-        try indentToString(writer, indent + 1);
+        try indentToString(writer, indent);
         try expressionToString(writer, intern, ast, expr, indent);
     }
-    try writer.writeAll(")");
 }
 
 fn defineToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) !void {
