@@ -11,6 +11,7 @@ const Span = tokenizer.Span;
 const Indent = tokenizer.Indent;
 
 const Kind = enum {
+    int,
     symbol,
     define,
     lambda,
@@ -31,7 +32,7 @@ const Parameter = struct {
 const Lambda = struct {
     parameters: List(Parameter),
     return_type: ?Expression,
-    body: Expression,
+    body: List(Expression),
 };
 
 const BinaryOpKind = enum {
@@ -53,6 +54,7 @@ pub const Ast = struct {
     kind: List(Kind),
     span: List(Span),
     index: List(u64),
+    int: List(Interned),
     symbol: List(Interned),
     define: List(Define),
     lambda: List(Lambda),
@@ -63,10 +65,14 @@ pub const Ast = struct {
         self.kind.deinit();
         self.span.deinit();
         self.index.deinit();
+        self.int.deinit();
         self.symbol.deinit();
         for (self.define.items) |d| d.body.deinit();
         self.define.deinit();
-        for (self.lambda.items) |l| l.parameters.deinit();
+        for (self.lambda.items) |l| {
+            l.parameters.deinit();
+            l.body.deinit();
+        }
         self.lambda.deinit();
         self.binary_op.deinit();
         self.top_level.deinit();
@@ -97,6 +103,17 @@ const Context = struct {
     precedence: Precedence,
     indent: Indent,
 };
+
+fn int(context: *Context, s: Interned) !Expression {
+    const self = context.ast.kind.items.len;
+    const span = context.tokens.span.items[context.token_index];
+    try context.ast.kind.append(.int);
+    try context.ast.span.append(span);
+    try context.ast.index.append(context.ast.int.items.len);
+    try context.ast.int.append(s);
+    context.token_index += 1;
+    return self;
+}
 
 fn symbol(context: *Context, s: Interned) !Expression {
     const self = context.ast.kind.items.len;
@@ -152,10 +169,9 @@ fn lambda(context: *Context) !Expression {
             else => |kind| std.debug.panic("\nExpected symbol, got {}\n", .{kind}),
         }
     }
-    context.precedence = LOWEST;
-    const body = try expression(context);
+    const body = try block(context);
     const self = context.ast.kind.items.len;
-    const end = context.ast.span.items[body].end;
+    const end = context.ast.span.items[body.items[body.items.len - 1]].end;
     try context.ast.kind.append(.lambda);
     try context.ast.span.append(.{ .begin = begin, .end = end });
     try context.ast.index.append(context.ast.lambda.items.len);
@@ -169,6 +185,7 @@ fn lambda(context: *Context) !Expression {
 
 fn prefix(context: *Context) !Expression {
     switch (context.tokens.kind.items[context.token_index]) {
+        .int => |s| return try int(context, s),
         .symbol => |s| return try symbol(context, s),
         .backslash => return try lambda(context),
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),
@@ -311,6 +328,7 @@ pub fn parse(allocator: Allocator, tokens: Tokens) !Ast {
         .kind = List(Kind).init(allocator),
         .span = List(Span).init(allocator),
         .index = List(u64).init(allocator),
+        .int = List(Interned).init(allocator),
         .symbol = List(Interned).init(allocator),
         .define = List(Define).init(allocator),
         .lambda = List(Lambda).init(allocator),
@@ -328,6 +346,11 @@ pub fn parse(allocator: Allocator, tokens: Tokens) !Ast {
     const expr = try expression(&context);
     try context.ast.top_level.append(expr);
     return ast;
+}
+
+fn intToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) !void {
+    const s = ast.int.items[ast.index.items[expr]];
+    try writer.writeAll(intern.lookup(s));
 }
 
 fn symbolToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) !void {
@@ -408,7 +431,7 @@ fn lambdaToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expre
         try typeToString(writer, intern, ast, t);
         try writer.writeAll(" ");
     }
-    try expressionToString(writer, intern, ast, l.body, indent);
+    try blockToString(writer, intern, ast, l.body, indent);
     try writer.writeAll(")");
 }
 
@@ -432,6 +455,7 @@ fn binaryOpToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Exp
 
 fn expressionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) error{OutOfMemory}!void {
     switch (ast.kind.items[expr]) {
+        .int => try intToString(writer, intern, ast, expr),
         .symbol => try symbolToString(writer, intern, ast, expr),
         .define => try defineToString(writer, intern, ast, expr, indent),
         .lambda => try lambdaToString(writer, intern, ast, expr, indent),

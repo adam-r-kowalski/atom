@@ -262,3 +262,28 @@ test "parse both kinds of annotations" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "parse multi line function" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\sum_squares = \(x: I32) (y: I32) -> I32.
+        \\    x_squared = x ^ 2
+        \\    y_squared = y ^ 2
+        \\    x_squared + y_squared
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(def sum_squares (fn [(x I32) (y I32)] I32 
+        \\    (def x_squared (^ x 2))
+        \\    (def y_squared (^ y 2))
+        \\    (+ x_squared y_squared)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
