@@ -8,7 +8,8 @@ test "tokenize with no annotation" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const actual = try fusion.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
@@ -35,7 +36,8 @@ test "parse with no annotation" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -54,7 +56,8 @@ test "tokenize with annotation" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const actual = try fusion.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
@@ -85,7 +88,8 @@ test "parse with annotation" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -104,7 +108,8 @@ test "tokenize annotating bindings" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const actual = try fusion.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
@@ -137,7 +142,8 @@ test "parse annotating bindings" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -156,7 +162,8 @@ test "parse annotating multiple bindings" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -175,7 +182,8 @@ test "parse annotating multiple bindings with no return type" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -194,7 +202,8 @@ test "parse multiple parameters annotating only return type" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -213,7 +222,8 @@ test "parse multiple parameters annotating one parameter and return type" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -232,7 +242,8 @@ test "parse multi parameter annotation" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -251,7 +262,8 @@ test "parse both kinds of annotations" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -273,7 +285,8 @@ test "parse multi line function" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();

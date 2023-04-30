@@ -8,7 +8,8 @@ test "tokenize add then multiply" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const actual = try fusion.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
@@ -32,7 +33,8 @@ test "parse add then multiply" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -51,7 +53,8 @@ test "parse multiply then add" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -70,7 +73,8 @@ test "parse multiply then grouped add" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -89,7 +93,8 @@ test "parse multiply is left associative" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -108,7 +113,8 @@ test "parse exponentiate is right associative" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -127,7 +133,8 @@ test "parse arrow is right associative" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -146,7 +153,8 @@ test "parse grouped arrow" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -165,7 +173,8 @@ test "parse greater has lower precedence then add" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -184,7 +193,8 @@ test "parse grouped greater" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();

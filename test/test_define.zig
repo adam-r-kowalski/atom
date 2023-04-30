@@ -8,7 +8,8 @@ test "tokenize single line define" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const actual = try fusion.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
@@ -32,7 +33,8 @@ test "parse single line define" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -51,7 +53,8 @@ test "tokenize annotated single line define" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const actual = try fusion.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
@@ -77,7 +80,8 @@ test "parse single line define" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -98,7 +102,8 @@ test "tokenize multi line define" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const actual = try fusion.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
@@ -131,7 +136,8 @@ test "parse multi line define" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -154,7 +160,8 @@ test "parse multi line define with type annotation" {
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try fusion.parser.parse(allocator, tokens);
     defer ast.deinit();

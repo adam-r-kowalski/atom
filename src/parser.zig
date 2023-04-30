@@ -17,6 +17,7 @@ const Kind = enum {
     lambda,
     binary_op,
     group,
+    if_,
 };
 
 const Define = struct {
@@ -53,6 +54,12 @@ const BinaryOp = struct {
 
 const Group = Expression;
 
+const If = struct {
+    condition: Expression,
+    then: List(Expression),
+    else_: List(Expression),
+};
+
 pub const Ast = struct {
     kind: List(Kind),
     span: List(Span),
@@ -63,6 +70,7 @@ pub const Ast = struct {
     lambda: List(Lambda),
     binary_op: List(BinaryOp),
     group: List(Group),
+    if_: List(If),
     top_level: List(Expression),
 
     pub fn deinit(self: Ast) void {
@@ -80,6 +88,11 @@ pub const Ast = struct {
         self.lambda.deinit();
         self.binary_op.deinit();
         self.group.deinit();
+        for (self.if_.items) |i| {
+            i.then.deinit();
+            i.else_.deinit();
+        }
+        self.if_.deinit();
         self.top_level.deinit();
     }
 };
@@ -134,6 +147,13 @@ fn symbol(context: *Context, s: Interned) !Expression {
 fn consume(context: *Context, kind: tokenizer.Kind) void {
     std.debug.assert(std.meta.activeTag(context.tokens.kind.items[context.token_index]) == kind);
     context.token_index += 1;
+}
+
+fn consumeIndent(context: *Context) void {
+    switch (context.tokens.kind.items[context.token_index]) {
+        .indent => context.token_index += 1,
+        else => {},
+    }
 }
 
 fn consumeSymbol(context: *Context) !Expression {
@@ -204,12 +224,32 @@ fn group(context: *Context) !Expression {
     return self;
 }
 
+fn if_(context: *Context) !Expression {
+    const begin = context.tokens.span.items[context.token_index].begin;
+    context.token_index += 1;
+    context.precedence = LOWEST;
+    const condition = try expression(context);
+    consume(context, .then);
+    const then = try block(context);
+    consumeIndent(context);
+    consume(context, .else_);
+    const else_ = try block(context);
+    const end = context.tokens.span.items[else_.items[else_.items.len - 1]].end;
+    const self = context.ast.kind.items.len;
+    try context.ast.kind.append(.if_);
+    try context.ast.span.append(.{ .begin = begin, .end = end });
+    try context.ast.index.append(context.ast.if_.items.len);
+    try context.ast.if_.append(If{ .condition = condition, .then = then, .else_ = else_ });
+    return self;
+}
+
 fn prefix(context: *Context) !Expression {
     switch (context.tokens.kind.items[context.token_index]) {
         .int => |s| return try int(context, s),
         .symbol => |s| return try symbol(context, s),
         .backslash => return try lambda(context),
         .left_paren => return try group(context),
+        .if_ => return try if_(context),
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),
     }
 }
@@ -356,6 +396,7 @@ pub fn parse(allocator: Allocator, tokens: Tokens) !Ast {
         .lambda = List(Lambda).init(allocator),
         .binary_op = List(BinaryOp).init(allocator),
         .group = List(Group).init(allocator),
+        .if_ = List(If).init(allocator),
         .top_level = List(Expression).init(allocator),
     };
     var context = Context{
@@ -481,6 +522,15 @@ fn groupToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expres
     return try expressionToString(writer, intern, ast, g, indent);
 }
 
+fn ifToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) !void {
+    const i = ast.if_.items[ast.index.items[expr]];
+    try writer.writeAll("(if ");
+    try expressionToString(writer, intern, ast, i.condition, indent);
+    try blockToString(writer, intern, ast, i.then, indent);
+    try blockToString(writer, intern, ast, i.else_, indent);
+    try writer.writeAll(")");
+}
+
 fn expressionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) error{OutOfMemory}!void {
     switch (ast.kind.items[expr]) {
         .int => try intToString(writer, intern, ast, expr),
@@ -489,6 +539,7 @@ fn expressionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: E
         .lambda => try lambdaToString(writer, intern, ast, expr, indent),
         .binary_op => try binaryOpToString(writer, intern, ast, expr, indent),
         .group => try groupToString(writer, intern, ast, expr, indent),
+        .if_ => try ifToString(writer, intern, ast, expr, indent),
     }
 }
 
