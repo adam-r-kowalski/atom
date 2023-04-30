@@ -51,9 +51,9 @@ test "parse if then else across multiple lines" {
     const allocator = std.testing.allocator;
     const source =
         \\if x then
-        \\    y
+        \\  y
         \\else
-        \\    z
+        \\  z
     ;
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
@@ -74,8 +74,8 @@ test "parse if multi line then else" {
     const allocator = std.testing.allocator;
     const source =
         \\if x then
-        \\    a = y ^ 2
-        \\    a * 5
+        \\  a = y ^ 2
+        \\  a * 5
         \\else
         \\    z
     ;
@@ -102,10 +102,10 @@ test "parse if then multi line else" {
     const allocator = std.testing.allocator;
     const source =
         \\if x then
-        \\    y
+        \\  y
         \\else
-        \\    a = z ^ 2
-        \\    a * 5
+        \\  a = z ^ 2
+        \\  a * 5
     ;
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
@@ -129,10 +129,10 @@ test "parse let on result of if then else" {
     const allocator = std.testing.allocator;
     const source =
         \\b = if x then
-        \\        y
+        \\      y
         \\    else
-        \\        a = z ^ 2
-        \\        a * 5
+        \\      a = z ^ 2
+        \\      a * 5
     ;
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();

@@ -85,8 +85,8 @@ test "tokenize multi line define" {
     const allocator = std.testing.allocator;
     const source =
         \\x =
-        \\    a = y + z
-        \\    a - b
+        \\  a = y + z
+        \\  a - b
     ;
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
@@ -98,13 +98,13 @@ test "tokenize multi line define" {
     const expected =
         \\symbol x
         \\equal
-        \\space 4
+        \\space 2
         \\symbol a
         \\equal
         \\symbol y
         \\plus
         \\symbol z
-        \\space 4
+        \\space 2
         \\symbol a
         \\minus
         \\symbol b
@@ -119,8 +119,8 @@ test "parse multi line define" {
     const allocator = std.testing.allocator;
     const source =
         \\x =
-        \\    a = y + z
-        \\    a - b
+        \\  a = y + z
+        \\  a - b
     ;
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
@@ -144,8 +144,8 @@ test "parse multi line define with type annotation" {
     const allocator = std.testing.allocator;
     const source =
         \\x: i32 =
-        \\    a: i32 = y + z
-        \\    a - b
+        \\  a: i32 = y + z
+        \\  a - b
     ;
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
