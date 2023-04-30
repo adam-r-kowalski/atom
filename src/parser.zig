@@ -310,6 +310,41 @@ fn binaryOp(context: *Context, left: Expression, kind: BinaryOpKind) !Expression
     return self;
 }
 
+const ColonOrEqual = enum { colon, equal };
+
+fn convertCallToFunction(context: *Context, left: Expression, arguments: *List(Expression), current: ColonOrEqual) !Expression {
+    context.token_index += 1;
+    const return_type = blk: {
+        if (current == .colon) {
+            context.precedence = DEFINE + 1;
+            const expr = try expression(context);
+            consume(context, .equal);
+            break :blk expr;
+        } else break :blk null;
+    };
+    const body = try block(context);
+    const span = Span{
+        .begin = context.ast.span.items[left].begin,
+        .end = context.ast.span.items[body.items[body.items.len - 1]].end,
+    };
+    const self = context.ast.kind.items.len;
+    try context.ast.kind.append(.function);
+    try context.ast.span.append(span);
+    try context.ast.index.append(context.ast.function.items.len);
+    var parameters = try List(Parameter).initCapacity(context.allocator, arguments.items.len);
+    for (arguments.items) |argument| {
+        try parameters.append(Parameter{ .name = argument, .type = null });
+    }
+    arguments.deinit();
+    try context.ast.function.append(Function{
+        .name = left,
+        .parameters = parameters,
+        .return_type = return_type,
+        .body = body,
+    });
+    return self;
+}
+
 fn callOrFunction(context: *Context, left: Expression) !Expression {
     context.token_index += 1;
     var arguments = List(Expression).init(context.allocator);
@@ -329,30 +364,8 @@ fn callOrFunction(context: *Context, left: Expression) !Expression {
     }
     if (context.tokens.kind.items.len > context.token_index) {
         switch (context.tokens.kind.items[context.token_index]) {
-            .equal => {
-                context.token_index += 1;
-                const body = try block(context);
-                const span = Span{
-                    .begin = context.ast.span.items[left].begin,
-                    .end = context.ast.span.items[body.items[body.items.len - 1]].end,
-                };
-                const self = context.ast.kind.items.len;
-                try context.ast.kind.append(.function);
-                try context.ast.span.append(span);
-                try context.ast.index.append(context.ast.function.items.len);
-                var parameters = try List(Parameter).initCapacity(context.allocator, arguments.items.len);
-                for (arguments.items) |argument| {
-                    try parameters.append(Parameter{ .name = argument, .type = null });
-                }
-                arguments.deinit();
-                try context.ast.function.append(Function{
-                    .name = left,
-                    .parameters = parameters,
-                    .return_type = null,
-                    .body = body,
-                });
-                return self;
-            },
+            .equal => return try convertCallToFunction(context, left, &arguments, .equal),
+            .colon => return try convertCallToFunction(context, left, &arguments, .colon),
             else => {},
         }
     }

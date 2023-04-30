@@ -136,7 +136,7 @@ test "parse multiple parameters annotating only return type" {
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected =
-        \\(def add (fn [x y] i32 (+ x y)))
+        \\(defn add [x y] i32 (+ x y))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
