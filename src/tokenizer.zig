@@ -115,7 +115,7 @@ fn number(intern: *Intern, tokens: *Tokens, cursor: *Cursor) !void {
     }
     _ = advance(cursor, i);
     try tokens.span.append(.{ .begin = begin, .end = cursor.pos });
-    const interned = try intern.string(string);
+    const interned = try interner.string(intern, string);
     if (decimals == 0) return try tokens.kind.append(.{ .int = interned });
     try tokens.kind.append(.{ .float = interned });
 }
@@ -158,7 +158,7 @@ fn symbol(tokens: *Tokens, intern: *Intern, cursor: *Cursor) !void {
     if (std.mem.eql(u8, string, "if")) return try tokens.kind.append(.if_);
     if (std.mem.eql(u8, string, "then")) return try tokens.kind.append(.then);
     if (std.mem.eql(u8, string, "else")) return try tokens.kind.append(.else_);
-    const interned = try intern.string(string);
+    const interned = try interner.string(intern, string);
     try tokens.kind.append(.{ .symbol = interned });
 }
 
@@ -230,15 +230,15 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
         if (i != 0) try writer.writeAll("\n");
         switch (kind) {
             .symbol => |interned| {
-                const string = intern.lookup(interned);
+                const string = interner.lookup(intern, interned);
                 try std.fmt.format(writer, "symbol {s}", .{string});
             },
             .int => |interned| {
-                const string = intern.lookup(interned);
+                const string = interner.lookup(intern, interned);
                 try std.fmt.format(writer, "int {s}", .{string});
             },
             .float => |interned| {
-                const string = intern.lookup(interned);
+                const string = interner.lookup(intern, interned);
                 try std.fmt.format(writer, "float {s}", .{string});
             },
             .indent => |indent| {
@@ -301,7 +301,7 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
         try spaceToSource(writer, span, &pos);
         switch (kind) {
             .symbol, .int, .float => |interned| {
-                const string = intern.lookup(interned);
+                const string = interner.lookup(intern, interned);
                 try writer.writeAll(string);
             },
             .indent => |indent| try indentToSource(writer, span, indent),

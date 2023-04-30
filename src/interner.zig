@@ -19,16 +19,16 @@ pub const Intern = struct {
     pub fn deinit(self: *Intern) void {
         self.map.deinit();
     }
-
-    pub fn string(self: *Intern, str: []const u8) !Interned {
-        const result = try self.map.getOrPut(str);
-        if (result.found_existing) return result.value_ptr.*;
-        result.value_ptr.* = self.index;
-        self.index += 1;
-        return result.value_ptr.*;
-    }
-
-    pub fn lookup(self: Intern, interned: Interned) []const u8 {
-        return self.map.keys()[interned];
-    }
 };
+
+pub fn string(self: *Intern, str: []const u8) !Interned {
+    const result = try self.map.getOrPut(str);
+    if (result.found_existing) return result.value_ptr.*;
+    result.value_ptr.* = self.index;
+    self.index += 1;
+    return result.value_ptr.*;
+}
+
+pub fn lookup(self: Intern, interned: Interned) []const u8 {
+    return self.map.keys()[interned];
+}

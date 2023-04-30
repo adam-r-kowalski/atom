@@ -6,7 +6,7 @@ test "tokenize if then else" {
     const source =
         \\if x then y else z
     ;
-    var intern = atom.Intern.init(allocator);
+    var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
     const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
@@ -31,7 +31,7 @@ test "parse if then else" {
     const source =
         \\if x then y else z
     ;
-    var intern = atom.Intern.init(allocator);
+    var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
     const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
@@ -53,7 +53,7 @@ test "parse if then else across multiple lines" {
         \\else
         \\  z
     ;
-    var intern = atom.Intern.init(allocator);
+    var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
     const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
@@ -76,7 +76,7 @@ test "parse if multi line then else" {
         \\else
         \\    z
     ;
-    var intern = atom.Intern.init(allocator);
+    var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
     const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
@@ -103,7 +103,7 @@ test "parse if then multi line else" {
         \\  a = z ^ 2
         \\  a * 5
     ;
-    var intern = atom.Intern.init(allocator);
+    var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
     const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
@@ -129,7 +129,7 @@ test "parse let on result of if then else" {
         \\      a = z ^ 2
         \\      a * 5
     ;
-    var intern = atom.Intern.init(allocator);
+    var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
     const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
@@ -153,7 +153,7 @@ test "parse nested if then else" {
         \\else if x < y then -1
         \\else 0
     ;
-    var intern = atom.Intern.init(allocator);
+    var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
     const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();

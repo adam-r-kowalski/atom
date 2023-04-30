@@ -4,7 +4,7 @@ const atom = @import("atom");
 test "tokenize call" {
     const allocator = std.testing.allocator;
     const source = "f(x, y, z)";
-    var intern = atom.Intern.init(allocator);
+    var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
     const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
@@ -29,7 +29,7 @@ test "tokenize call" {
 test "parse call" {
     const allocator = std.testing.allocator;
     const source = "f(x, y, z)";
-    var intern = atom.Intern.init(allocator);
+    var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
     const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();

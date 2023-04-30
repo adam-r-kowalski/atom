@@ -449,15 +449,6 @@ const Infix = struct {
         call_or_function,
         binary_op: BinaryOpKind,
     },
-
-    fn parse(self: Infix, context: *Context, left: Expression) !Expression {
-        switch (self.kind) {
-            .define => return try define(context, left),
-            .annotate => return try annotate(context, left),
-            .binary_op => |kind| return try binaryOp(context, left, kind),
-            .call_or_function => return try callOrFunction(context, left),
-        }
-    }
 };
 
 fn infix(context: *Context, left: Expression) ?Infix {
@@ -479,6 +470,15 @@ fn infix(context: *Context, left: Expression) ?Infix {
     }
 }
 
+fn parseInfix(parser: Infix, context: *Context, left: Expression) !Expression {
+    switch (parser.kind) {
+        .define => return try define(context, left),
+        .annotate => return try annotate(context, left),
+        .binary_op => |kind| return try binaryOp(context, left, kind),
+        .call_or_function => return try callOrFunction(context, left),
+    }
+}
+
 fn expression(context: *Context) error{OutOfMemory}!Expression {
     var left = try prefix(context);
     const previous = context.precedence;
@@ -488,7 +488,7 @@ fn expression(context: *Context) error{OutOfMemory}!Expression {
             if (context.precedence > next) return left;
             if (parser.associativity == .left) next += 1;
             context.precedence = next;
-            left = try parser.parse(context, left);
+            left = try parseInfix(parser, context, left);
             context.precedence = previous;
         } else return left;
     }
@@ -524,12 +524,12 @@ pub fn parse(allocator: Allocator, tokens: Tokens) !Ast {
 
 fn intToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) !void {
     const s = ast.int.items[ast.index.items[expr]];
-    try writer.writeAll(intern.lookup(s));
+    try writer.writeAll(interner.lookup(intern, s));
 }
 
 fn symbolToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) !void {
     const s = ast.symbol.items[ast.index.items[expr]];
-    try writer.writeAll(intern.lookup(s));
+    try writer.writeAll(interner.lookup(intern, s));
 }
 
 fn typeToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) !void {
