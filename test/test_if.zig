@@ -151,3 +151,25 @@ test "parse let on result of if then else" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "parse nested if then else" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\if x > y then 1
+        \\else if x < y then -1
+        \\else 0
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const builtins = try fusion.tokenizer.Builtins.init(&intern);
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(if (> x y) 1 (if (< x y) -1 0))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
