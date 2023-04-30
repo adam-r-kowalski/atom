@@ -11,13 +11,13 @@ pub fn build(b: *std.build.Builder) void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
     const mode = b.standardReleaseOptions();
 
-    const fusion = std.build.Pkg{
-        .name = "fusion",
-        .source = .{ .path = "src/fusion.zig" },
+    const atom = std.build.Pkg{
+        .name = "atom",
+        .source = .{ .path = "src/atom.zig" },
     };
 
-    const exe = b.addExecutable("fusion", "src/main.zig");
-    exe.addPackage(fusion);
+    const exe = b.addExecutable("atom", "src/main.zig");
+    exe.addPackage(atom);
     exe.setTarget(target);
     exe.setBuildMode(mode);
     exe.install();
@@ -31,8 +31,8 @@ pub fn build(b: *std.build.Builder) void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
-    const tests = b.addTest("test/test_fusion.zig");
-    tests.addPackage(fusion);
+    const tests = b.addTest("test/test_atom.zig");
+    tests.addPackage(atom);
     tests.setTarget(target);
     tests.setBuildMode(mode);
 

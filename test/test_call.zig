@@ -1,15 +1,15 @@
 const std = @import("std");
-const fusion = @import("fusion");
+const atom = @import("atom");
 
 test "tokenize call" {
     const allocator = std.testing.allocator;
     const source = "f(x, y, z)";
-    var intern = fusion.Intern.init(allocator);
+    var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try fusion.tokenizer.Builtins.init(&intern);
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const builtins = try atom.tokenizer.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
-    const actual = try fusion.tokenizer.toString(allocator, intern, tokens);
+    const actual = try atom.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
     const expected =
         \\symbol f
@@ -22,7 +22,7 @@ test "tokenize call" {
         \\right paren
     ;
     try std.testing.expectEqualStrings(expected, actual);
-    const reconstructed = try fusion.tokenizer.toSource(allocator, intern, tokens);
+    const reconstructed = try atom.tokenizer.toSource(allocator, intern, tokens);
     defer allocator.free(reconstructed);
     try std.testing.expectEqualStrings(source, reconstructed);
 }
@@ -30,14 +30,14 @@ test "tokenize call" {
 test "parse call" {
     const allocator = std.testing.allocator;
     const source = "f(x, y, z)";
-    var intern = fusion.Intern.init(allocator);
+    var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try fusion.tokenizer.Builtins.init(&intern);
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const builtins = try atom.tokenizer.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
-    const ast = try fusion.parser.parse(allocator, tokens);
+    const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
-    const actual = try fusion.parser.toString(allocator, intern, ast);
+    const actual = try atom.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected = "(f x y z)";
     try std.testing.expectEqualStrings(expected, actual);

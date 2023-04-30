@@ -1,15 +1,15 @@
 const std = @import("std");
-const fusion = @import("fusion");
+const atom = @import("atom");
 
 test "tokenize with no annotation" {
     const allocator = std.testing.allocator;
     const source = "double(x) = x + x";
-    var intern = fusion.Intern.init(allocator);
+    var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try fusion.tokenizer.Builtins.init(&intern);
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const builtins = try atom.tokenizer.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
-    const actual = try fusion.tokenizer.toString(allocator, intern, tokens);
+    const actual = try atom.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
     const expected =
         \\symbol double
@@ -22,7 +22,7 @@ test "tokenize with no annotation" {
         \\symbol x
     ;
     try std.testing.expectEqualStrings(expected, actual);
-    const reconstructed = try fusion.tokenizer.toSource(allocator, intern, tokens);
+    const reconstructed = try atom.tokenizer.toSource(allocator, intern, tokens);
     defer allocator.free(reconstructed);
     try std.testing.expectEqualStrings(source, reconstructed);
 }
@@ -30,14 +30,14 @@ test "tokenize with no annotation" {
 test "parse with no annotation" {
     const allocator = std.testing.allocator;
     const source = "double(x) = x + x";
-    var intern = fusion.Intern.init(allocator);
+    var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try fusion.tokenizer.Builtins.init(&intern);
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const builtins = try atom.tokenizer.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
-    const ast = try fusion.parser.parse(allocator, tokens);
+    const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
-    const actual = try fusion.parser.toString(allocator, intern, ast);
+    const actual = try atom.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected = "(defn double [x] (+ x x))";
     try std.testing.expectEqualStrings(expected, actual);
@@ -46,12 +46,12 @@ test "parse with no annotation" {
 test "tokenize with annotation" {
     const allocator = std.testing.allocator;
     const source = "double(x: i32): i32 = x + x";
-    var intern = fusion.Intern.init(allocator);
+    var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try fusion.tokenizer.Builtins.init(&intern);
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const builtins = try atom.tokenizer.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
-    const actual = try fusion.tokenizer.toString(allocator, intern, tokens);
+    const actual = try atom.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
     const expected =
         \\symbol double
@@ -68,7 +68,7 @@ test "tokenize with annotation" {
         \\symbol x
     ;
     try std.testing.expectEqualStrings(expected, actual);
-    const reconstructed = try fusion.tokenizer.toSource(allocator, intern, tokens);
+    const reconstructed = try atom.tokenizer.toSource(allocator, intern, tokens);
     defer allocator.free(reconstructed);
     try std.testing.expectEqualStrings(source, reconstructed);
 }
@@ -76,14 +76,14 @@ test "tokenize with annotation" {
 test "parse with annotation" {
     const allocator = std.testing.allocator;
     const source = "double(x: i32): i32 = x + x";
-    var intern = fusion.Intern.init(allocator);
+    var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try fusion.tokenizer.Builtins.init(&intern);
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const builtins = try atom.tokenizer.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
-    const ast = try fusion.parser.parse(allocator, tokens);
+    const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
-    const actual = try fusion.parser.toString(allocator, intern, ast);
+    const actual = try atom.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected = "(defn double [(x i32)] i32 (+ x x))";
     try std.testing.expectEqualStrings(expected, actual);
@@ -92,14 +92,14 @@ test "parse with annotation" {
 test "parse annotating multiple bindings" {
     const allocator = std.testing.allocator;
     const source = "add(x: i32, y: i32): i32 = x + y";
-    var intern = fusion.Intern.init(allocator);
+    var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try fusion.tokenizer.Builtins.init(&intern);
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const builtins = try atom.tokenizer.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
-    const ast = try fusion.parser.parse(allocator, tokens);
+    const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
-    const actual = try fusion.parser.toString(allocator, intern, ast);
+    const actual = try atom.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected = "(defn add [(x i32) (y i32)] i32 (+ x y))";
     try std.testing.expectEqualStrings(expected, actual);
@@ -108,14 +108,14 @@ test "parse annotating multiple bindings" {
 test "parse annotating multiple bindings with no return type" {
     const allocator = std.testing.allocator;
     const source = "add(x: i32, y: i32) = x + y";
-    var intern = fusion.Intern.init(allocator);
+    var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try fusion.tokenizer.Builtins.init(&intern);
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const builtins = try atom.tokenizer.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
-    const ast = try fusion.parser.parse(allocator, tokens);
+    const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
-    const actual = try fusion.parser.toString(allocator, intern, ast);
+    const actual = try atom.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected = "(defn add [(x i32) (y i32)] (+ x y))";
     try std.testing.expectEqualStrings(expected, actual);
@@ -124,14 +124,14 @@ test "parse annotating multiple bindings with no return type" {
 test "parse multiple parameters annotating only return type" {
     const allocator = std.testing.allocator;
     const source = "add(x, y): i32 = x + y";
-    var intern = fusion.Intern.init(allocator);
+    var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try fusion.tokenizer.Builtins.init(&intern);
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const builtins = try atom.tokenizer.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
-    const ast = try fusion.parser.parse(allocator, tokens);
+    const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
-    const actual = try fusion.parser.toString(allocator, intern, ast);
+    const actual = try atom.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected = "(defn add [x y] i32 (+ x y))";
     try std.testing.expectEqualStrings(expected, actual);
@@ -140,14 +140,14 @@ test "parse multiple parameters annotating only return type" {
 test "parse multiple parameters annotating one parameter and return type" {
     const allocator = std.testing.allocator;
     const source = "add(x: i32, y): i32 = x + y";
-    var intern = fusion.Intern.init(allocator);
+    var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try fusion.tokenizer.Builtins.init(&intern);
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const builtins = try atom.tokenizer.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
-    const ast = try fusion.parser.parse(allocator, tokens);
+    const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
-    const actual = try fusion.parser.toString(allocator, intern, ast);
+    const actual = try atom.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected = "(defn add [(x i32) y] i32 (+ x y))";
     try std.testing.expectEqualStrings(expected, actual);
@@ -161,14 +161,14 @@ test "parse multi line function" {
         \\    y_squared = y ^ 2
         \\    x_squared + y_squared
     ;
-    var intern = fusion.Intern.init(allocator);
+    var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try fusion.tokenizer.Builtins.init(&intern);
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const builtins = try atom.tokenizer.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
-    const ast = try fusion.parser.parse(allocator, tokens);
+    const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
-    const actual = try fusion.parser.toString(allocator, intern, ast);
+    const actual = try atom.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected =
         \\(defn sum_squares [(x i32) (y i32)] i32
