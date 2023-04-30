@@ -21,7 +21,7 @@ pub const Intern = struct {
     }
 };
 
-pub fn string(self: *Intern, str: []const u8) !Interned {
+pub fn store(self: *Intern, str: []const u8) !Interned {
     const result = try self.map.getOrPut(str);
     if (result.found_existing) return result.value_ptr.*;
     result.value_ptr.* = self.index;

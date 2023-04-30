@@ -157,7 +157,7 @@ test "parse multi line define with type annotation" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
-
+//
 // test "type infer define i32" {
 //     const allocator = std.testing.allocator;
 //     const source = "x = 5";
@@ -168,7 +168,7 @@ test "parse multi line define with type annotation" {
 //     const ast = try atom.parser.parse(allocator, tokens);
 //     const typed_ast = try atom.type_infer.top_level(allocator, ast);
 //     defer typed_ast.deinit();
-//     const x = try intern.string("x");
+//     const x = try atom.interner.store(intern, "x");
 //     try atom.type_infer.infer(typed_ast, x);
 //     const actual = try atom.type_infer.toString(allocator, intern, typed_ast);
 //     defer allocator.free(actual);
