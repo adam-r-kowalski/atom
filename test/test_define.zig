@@ -127,9 +127,9 @@ test "parse multi line define" {
     defer allocator.free(actual);
     const expected =
         \\(def x
-        \\    (block
-        \\        (def a (+ y z))
-        \\        (- a b)))
+        \\  (block
+        \\    (def a (+ y z))
+        \\    (- a b)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -151,13 +151,13 @@ test "parse multi line define with type annotation" {
     defer allocator.free(actual);
     const expected =
         \\(def x i32
-        \\    (block
-        \\        (def a i32 (+ y z))
-        \\        (- a b)))
+        \\  (block
+        \\    (def a i32 (+ y z))
+        \\    (- a b)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
-
+//
 // test "type infer define i32" {
 //     const allocator = std.testing.allocator;
 //     const source = "x = 5";

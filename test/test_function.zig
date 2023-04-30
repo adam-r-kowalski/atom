@@ -163,10 +163,10 @@ test "parse multi line function" {
     defer allocator.free(actual);
     const expected =
         \\(defn sum_squares [(x i32) (y i32)] i32
-        \\    (block
-        \\        (def x_squared (^ x 2))
-        \\        (def y_squared (^ y 2))
-        \\        (+ x_squared y_squared)))
+        \\  (block
+        \\    (def x_squared (^ x 2))
+        \\    (def y_squared (^ y 2))
+        \\    (+ x_squared y_squared)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

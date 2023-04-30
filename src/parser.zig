@@ -551,7 +551,7 @@ fn typeToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Express
 fn indentToString(writer: List(u8).Writer, indent: u64) !void {
     var i: u64 = 0;
     while (i < indent) {
-        try writer.writeAll("    ");
+        try writer.writeAll("  ");
         i += 1;
     }
 }
