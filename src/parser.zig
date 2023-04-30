@@ -18,6 +18,7 @@ const Kind = enum {
     binary_op,
     group,
     if_,
+    call,
 };
 
 const Define = struct {
@@ -61,6 +62,11 @@ const If = struct {
     else_: List(Expression),
 };
 
+const Call = struct {
+    function: Expression,
+    arguments: List(Expression),
+};
+
 pub const Ast = struct {
     kind: List(Kind),
     span: List(Span),
@@ -72,6 +78,7 @@ pub const Ast = struct {
     binary_op: List(BinaryOp),
     group: List(Group),
     if_: List(If),
+    call: List(Call),
     top_level: List(Expression),
 
     pub fn deinit(self: Ast) void {
@@ -94,6 +101,8 @@ pub const Ast = struct {
             i.else_.deinit();
         }
         self.if_.deinit();
+        for (self.call.items) |c| c.arguments.deinit();
+        self.call.deinit();
         self.top_level.deinit();
     }
 };
@@ -110,6 +119,7 @@ const ADD = GREATER + DELTA;
 const SUBTRACT = ADD;
 const MULTIPLY = ADD + DELTA;
 const EXPONENTIATE = MULTIPLY + DELTA;
+const CALL = EXPONENTIATE + DELTA;
 const ARROW = EXPONENTIATE + DELTA;
 const HIGHEST = ARROW + DELTA;
 
@@ -335,16 +345,41 @@ fn binaryOp(context: *Context, left: Expression, kind: BinaryOpKind) !Expression
     try context.ast.kind.append(.binary_op);
     try context.ast.span.append(span);
     try context.ast.index.append(context.ast.binary_op.items.len);
-    try context.ast.binary_op.append(.{ .kind = kind, .left = left, .right = right });
+    try context.ast.binary_op.append(BinaryOp{ .kind = kind, .left = left, .right = right });
+    return self;
+}
+
+fn call(context: *Context, left: Expression) !Expression {
+    var arguments = List(Expression).init(context.allocator);
+    while (context.tokens.kind.items.len > context.token_index) {
+        switch (context.tokens.kind.items[context.token_index]) {
+            .plus, .minus, .times, .caret, .greater, .less => break,
+            else => {
+                context.precedence = HIGHEST;
+                const argument = try expression(context);
+                try arguments.append(argument);
+            },
+        }
+    }
+    const span = Span{
+        .begin = context.ast.span.items[left].begin,
+        .end = context.ast.span.items[arguments.items[arguments.items.len - 1]].end,
+    };
+    const self = context.ast.kind.items.len;
+    try context.ast.kind.append(.call);
+    try context.ast.span.append(span);
+    try context.ast.index.append(context.ast.call.items.len);
+    try context.ast.call.append(Call{ .function = left, .arguments = arguments });
     return self;
 }
 
 const Infix = struct {
     precedence: Precedence,
-    asscociativity: Asscociativity,
+    associativity: Asscociativity,
     kind: union(enum) {
         define,
         annotate,
+        call,
         binary_op: BinaryOpKind,
     },
 
@@ -353,23 +388,29 @@ const Infix = struct {
             .define => return try define(context, left),
             .annotate => return try annotate(context, left),
             .binary_op => |kind| return try binaryOp(context, left, kind),
+            .call => return try call(context, left),
         }
     }
 };
 
-fn infix(context: *Context) ?Infix {
+fn infix(context: *Context, left: Expression) ?Infix {
     if (context.tokens.kind.items.len <= context.token_index) return null;
     switch (context.tokens.kind.items[context.token_index]) {
-        .equal => return .{ .kind = .define, .precedence = DEFINE, .asscociativity = .right },
-        .colon => return .{ .kind = .annotate, .precedence = ANNOTATE, .asscociativity = .right },
-        .plus => return .{ .kind = .{ .binary_op = .add }, .precedence = ADD, .asscociativity = .left },
-        .minus => return .{ .kind = .{ .binary_op = .subtract }, .precedence = SUBTRACT, .asscociativity = .left },
-        .times => return .{ .kind = .{ .binary_op = .multiply }, .precedence = MULTIPLY, .asscociativity = .left },
-        .caret => return .{ .kind = .{ .binary_op = .exponentiate }, .precedence = EXPONENTIATE, .asscociativity = .right },
-        .greater => return .{ .kind = .{ .binary_op = .greater }, .precedence = GREATER, .asscociativity = .left },
-        .less => return .{ .kind = .{ .binary_op = .less }, .precedence = LESS, .asscociativity = .left },
-        .arrow => return .{ .kind = .{ .binary_op = .arrow }, .precedence = ARROW, .asscociativity = .right },
-        else => return null,
+        .equal => return .{ .kind = .define, .precedence = DEFINE, .associativity = .right },
+        .colon => return .{ .kind = .annotate, .precedence = ANNOTATE, .associativity = .right },
+        .plus => return .{ .kind = .{ .binary_op = .add }, .precedence = ADD, .associativity = .left },
+        .minus => return .{ .kind = .{ .binary_op = .subtract }, .precedence = SUBTRACT, .associativity = .left },
+        .times => return .{ .kind = .{ .binary_op = .multiply }, .precedence = MULTIPLY, .associativity = .left },
+        .caret => return .{ .kind = .{ .binary_op = .exponentiate }, .precedence = EXPONENTIATE, .associativity = .right },
+        .greater => return .{ .kind = .{ .binary_op = .greater }, .precedence = GREATER, .associativity = .left },
+        .less => return .{ .kind = .{ .binary_op = .less }, .precedence = LESS, .associativity = .left },
+        .arrow => return .{ .kind = .{ .binary_op = .arrow }, .precedence = ARROW, .associativity = .right },
+        else => {
+            switch (context.tokens.kind.items[left]) {
+                .symbol => return .{ .kind = .call, .precedence = CALL, .associativity = .left },
+                else => return null,
+            }
+        },
     }
 }
 
@@ -377,10 +418,10 @@ fn expression(context: *Context) error{OutOfMemory}!Expression {
     var left = try prefix(context);
     const previous = context.precedence;
     while (true) {
-        if (infix(context)) |parser| {
+        if (infix(context, left)) |parser| {
             var next = parser.precedence;
             if (context.precedence > next) return left;
-            if (parser.asscociativity == .left) next += 1;
+            if (parser.associativity == .left) next += 1;
             context.precedence = next;
             left = try parser.parse(context, left);
             context.precedence = previous;
@@ -400,6 +441,7 @@ pub fn parse(allocator: Allocator, tokens: Tokens) !Ast {
         .binary_op = List(BinaryOp).init(allocator),
         .group = List(Group).init(allocator),
         .if_ = List(If).init(allocator),
+        .call = List(Call).init(allocator),
         .top_level = List(Expression).init(allocator),
     };
     var context = Context{
@@ -544,6 +586,17 @@ fn ifToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expressio
     try writer.writeAll(")");
 }
 
+fn callToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) !void {
+    const c = ast.call.items[ast.index.items[expr]];
+    try writer.writeAll("(");
+    try expressionToString(writer, intern, ast, c.function, indent);
+    for (c.arguments.items) |a| {
+        try writer.writeAll(" ");
+        try expressionToString(writer, intern, ast, a, indent);
+    }
+    try writer.writeAll(")");
+}
+
 fn expressionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) error{OutOfMemory}!void {
     switch (ast.kind.items[expr]) {
         .int => try intToString(writer, intern, ast, expr),
@@ -553,6 +606,7 @@ fn expressionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: E
         .binary_op => try binaryOpToString(writer, intern, ast, expr, indent),
         .group => try groupToString(writer, intern, ast, expr, indent),
         .if_ => try ifToString(writer, intern, ast, expr, indent),
+        .call => try callToString(writer, intern, ast, expr, indent),
     }
 }
 
