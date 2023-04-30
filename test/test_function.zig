@@ -52,7 +52,7 @@ test "parse with no annotation" {
 test "tokenize with annotation" {
     const allocator = std.testing.allocator;
     const source =
-        \\double: I32 -> I32 = \x. x + x
+        \\double: i32 -> i32 = \x. x + x
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
@@ -64,9 +64,9 @@ test "tokenize with annotation" {
     const expected =
         \\symbol double
         \\colon
-        \\symbol I32
+        \\symbol i32
         \\arrow
-        \\symbol I32
+        \\symbol i32
         \\equal
         \\backslash
         \\symbol x
@@ -84,7 +84,7 @@ test "tokenize with annotation" {
 test "parse with annotation" {
     const allocator = std.testing.allocator;
     const source =
-        \\double: I32 -> I32 = \x. x + x
+        \\double: i32 -> i32 = \x. x + x
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
@@ -96,7 +96,7 @@ test "parse with annotation" {
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected =
-        \\(def double (-> I32 I32) (fn [x] (+ x x)))
+        \\(def double (-> i32 i32) (fn [x] (+ x x)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -104,7 +104,7 @@ test "parse with annotation" {
 test "tokenize annotating bindings" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = \(x: I32) -> I32. x + x
+        \\double = \(x: i32) -> i32. x + x
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
@@ -120,10 +120,10 @@ test "tokenize annotating bindings" {
         \\left paren
         \\symbol x
         \\colon
-        \\symbol I32
+        \\symbol i32
         \\right paren
         \\arrow
-        \\symbol I32
+        \\symbol i32
         \\dot
         \\symbol x
         \\plus
@@ -138,7 +138,7 @@ test "tokenize annotating bindings" {
 test "parse annotating bindings" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = \(x: I32) -> I32. x + x
+        \\double = \(x: i32) -> i32. x + x
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
@@ -150,7 +150,7 @@ test "parse annotating bindings" {
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected =
-        \\(def double (fn [(x I32)] I32 (+ x x)))
+        \\(def double (fn [(x i32)] i32 (+ x x)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -158,7 +158,7 @@ test "parse annotating bindings" {
 test "parse annotating multiple bindings" {
     const allocator = std.testing.allocator;
     const source =
-        \\add = \(x: I32) (y: I32) -> I32. x + y
+        \\add = \(x: i32) (y: i32) -> i32. x + y
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
@@ -170,7 +170,7 @@ test "parse annotating multiple bindings" {
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected =
-        \\(def add (fn [(x I32) (y I32)] I32 (+ x y)))
+        \\(def add (fn [(x i32) (y i32)] i32 (+ x y)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -178,7 +178,7 @@ test "parse annotating multiple bindings" {
 test "parse annotating multiple bindings with no return type" {
     const allocator = std.testing.allocator;
     const source =
-        \\add = \(x: I32) (y: I32). x + y
+        \\add = \(x: i32) (y: i32). x + y
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
@@ -190,7 +190,7 @@ test "parse annotating multiple bindings with no return type" {
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected =
-        \\(def add (fn [(x I32) (y I32)] (+ x y)))
+        \\(def add (fn [(x i32) (y i32)] (+ x y)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -198,7 +198,7 @@ test "parse annotating multiple bindings with no return type" {
 test "parse multiple parameters annotating only return type" {
     const allocator = std.testing.allocator;
     const source =
-        \\add = \x y -> I32. x + y
+        \\add = \x y -> i32. x + y
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
@@ -210,7 +210,7 @@ test "parse multiple parameters annotating only return type" {
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected =
-        \\(def add (fn [x y] I32 (+ x y)))
+        \\(def add (fn [x y] i32 (+ x y)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -218,7 +218,7 @@ test "parse multiple parameters annotating only return type" {
 test "parse multiple parameters annotating one parameter and return type" {
     const allocator = std.testing.allocator;
     const source =
-        \\add = \(x: I32) y -> I32. x + y
+        \\add = \(x: i32) y -> i32. x + y
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
@@ -230,7 +230,7 @@ test "parse multiple parameters annotating one parameter and return type" {
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected =
-        \\(def add (fn [(x I32) y] I32 (+ x y)))
+        \\(def add (fn [(x i32) y] i32 (+ x y)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -238,7 +238,7 @@ test "parse multiple parameters annotating one parameter and return type" {
 test "parse multi parameter annotation" {
     const allocator = std.testing.allocator;
     const source =
-        \\add: I32 -> I32 -> I32 = \x y. x + y
+        \\add: i32 -> i32 -> i32 = \x y. x + y
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
@@ -250,7 +250,7 @@ test "parse multi parameter annotation" {
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected =
-        \\(def add (-> I32 (-> I32 I32)) (fn [x y] (+ x y)))
+        \\(def add (-> i32 (-> i32 i32)) (fn [x y] (+ x y)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -258,7 +258,7 @@ test "parse multi parameter annotation" {
 test "parse both kinds of annotations" {
     const allocator = std.testing.allocator;
     const source =
-        \\add: I32 -> I32 -> Bool = \(x: I32) (y: I32) -> Bool. x > y
+        \\add: i32 -> i32 -> Bool = \(x: i32) (y: i32) -> Bool. x > y
     ;
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
@@ -270,7 +270,7 @@ test "parse both kinds of annotations" {
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected =
-        \\(def add (-> I32 (-> I32 Bool)) (fn [(x I32) (y I32)] Bool (> x y)))
+        \\(def add (-> i32 (-> i32 Bool)) (fn [(x i32) (y i32)] Bool (> x y)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -278,7 +278,7 @@ test "parse both kinds of annotations" {
 test "parse multi line function" {
     const allocator = std.testing.allocator;
     const source =
-        \\sum_squares = \(x: I32) (y: I32) -> I32.
+        \\sum_squares = \(x: i32) (y: i32) -> i32.
         \\    x_squared = x ^ 2
         \\    y_squared = y ^ 2
         \\    x_squared + y_squared
@@ -293,7 +293,7 @@ test "parse multi line function" {
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected =
-        \\(def sum_squares (fn [(x I32) (y I32)] I32
+        \\(def sum_squares (fn [(x i32) (y i32)] i32
         \\    (block
         \\        (def x_squared (^ x 2))
         \\        (def y_squared (^ y 2))

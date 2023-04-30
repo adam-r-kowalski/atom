@@ -3,9 +3,7 @@ const fusion = @import("fusion");
 
 test "tokenize add then multiply" {
     const allocator = std.testing.allocator;
-    const source =
-        \\x + y * z
-    ;
+    const source = "x + y * z";
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
     const builtins = try fusion.tokenizer.Builtins.init(&intern);
@@ -28,9 +26,7 @@ test "tokenize add then multiply" {
 
 test "parse add then multiply" {
     const allocator = std.testing.allocator;
-    const source =
-        \\x + y * z
-    ;
+    const source = "x + y * z";
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
     const builtins = try fusion.tokenizer.Builtins.init(&intern);
@@ -40,17 +36,13 @@ test "parse add then multiply" {
     defer ast.deinit();
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
-    const expected =
-        \\(+ x (* y z))
-    ;
+    const expected = "(+ x (* y z))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "parse multiply then add" {
     const allocator = std.testing.allocator;
-    const source =
-        \\x * y + z
-    ;
+    const source = "x * y + z";
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
     const builtins = try fusion.tokenizer.Builtins.init(&intern);
@@ -60,17 +52,13 @@ test "parse multiply then add" {
     defer ast.deinit();
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
-    const expected =
-        \\(+ (* x y) z)
-    ;
+    const expected = "(+ (* x y) z)";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "parse multiply then grouped add" {
     const allocator = std.testing.allocator;
-    const source =
-        \\x * (y + z)
-    ;
+    const source = "x * (y + z)";
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
     const builtins = try fusion.tokenizer.Builtins.init(&intern);
@@ -80,17 +68,13 @@ test "parse multiply then grouped add" {
     defer ast.deinit();
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
-    const expected =
-        \\(* x (+ y z))
-    ;
+    const expected = "(* x (+ y z))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "parse multiply is left associative" {
     const allocator = std.testing.allocator;
-    const source =
-        \\x * y * z
-    ;
+    const source = "x * y * z";
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
     const builtins = try fusion.tokenizer.Builtins.init(&intern);
@@ -100,17 +84,13 @@ test "parse multiply is left associative" {
     defer ast.deinit();
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
-    const expected =
-        \\(* (* x y) z)
-    ;
+    const expected = "(* (* x y) z)";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "parse exponentiate is right associative" {
     const allocator = std.testing.allocator;
-    const source =
-        \\x ^ y ^ z
-    ;
+    const source = "x ^ y ^ z";
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
     const builtins = try fusion.tokenizer.Builtins.init(&intern);
@@ -120,9 +100,7 @@ test "parse exponentiate is right associative" {
     defer ast.deinit();
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
-    const expected =
-        \\(^ x (^ y z))
-    ;
+    const expected = "(^ x (^ y z))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
@@ -168,9 +146,7 @@ test "parse grouped arrow" {
 
 test "parse greater has lower precedence then add" {
     const allocator = std.testing.allocator;
-    const source =
-        \\a + b > c + d
-    ;
+    const source = "a + b > c + d";
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
     const builtins = try fusion.tokenizer.Builtins.init(&intern);
@@ -180,17 +156,13 @@ test "parse greater has lower precedence then add" {
     defer ast.deinit();
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
-    const expected =
-        \\(> (+ a b) (+ c d))
-    ;
+    const expected = "(> (+ a b) (+ c d))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "parse grouped greater" {
     const allocator = std.testing.allocator;
-    const source =
-        \\a + (b > c) + d
-    ;
+    const source = "a + (b > c) + d";
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
     const builtins = try fusion.tokenizer.Builtins.init(&intern);
@@ -200,8 +172,6 @@ test "parse grouped greater" {
     defer ast.deinit();
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
-    const expected =
-        \\(+ a (+ (> b c) d))
-    ;
+    const expected = "(+ a (+ (> b c) d))";
     try std.testing.expectEqualStrings(expected, actual);
 }

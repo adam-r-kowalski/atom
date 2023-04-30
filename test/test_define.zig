@@ -3,9 +3,7 @@ const fusion = @import("fusion");
 
 test "tokenize single line define" {
     const allocator = std.testing.allocator;
-    const source =
-        \\x = y + z
-    ;
+    const source = "x = y + z";
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
     const builtins = try fusion.tokenizer.Builtins.init(&intern);
@@ -28,9 +26,7 @@ test "tokenize single line define" {
 
 test "parse single line define" {
     const allocator = std.testing.allocator;
-    const source =
-        \\x = y + z
-    ;
+    const source = "x = y + z";
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
     const builtins = try fusion.tokenizer.Builtins.init(&intern);
@@ -40,17 +36,13 @@ test "parse single line define" {
     defer ast.deinit();
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
-    const expected =
-        \\(def x (+ y z))
-    ;
+    const expected = "(def x (+ y z))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "tokenize annotated single line define" {
     const allocator = std.testing.allocator;
-    const source =
-        \\x: I32 = y + z
-    ;
+    const source = "x: i32 = y + z";
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
     const builtins = try fusion.tokenizer.Builtins.init(&intern);
@@ -61,7 +53,7 @@ test "tokenize annotated single line define" {
     const expected =
         \\symbol x
         \\colon
-        \\symbol I32
+        \\symbol i32
         \\equal
         \\symbol y
         \\plus
@@ -75,9 +67,7 @@ test "tokenize annotated single line define" {
 
 test "parse single line define" {
     const allocator = std.testing.allocator;
-    const source =
-        \\x: I32 = y + z
-    ;
+    const source = "x: i32 = y + z";
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
     const builtins = try fusion.tokenizer.Builtins.init(&intern);
@@ -87,9 +77,7 @@ test "parse single line define" {
     defer ast.deinit();
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
-    const expected =
-        \\(def x I32 (+ y z))
-    ;
+    const expected = "(def x i32 (+ y z))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
@@ -155,8 +143,8 @@ test "parse multi line define" {
 test "parse multi line define with type annotation" {
     const allocator = std.testing.allocator;
     const source =
-        \\x: I32 =
-        \\    a: I32 = y + z
+        \\x: i32 =
+        \\    a: i32 = y + z
         \\    a - b
     ;
     var intern = fusion.Intern.init(allocator);
@@ -169,9 +157,9 @@ test "parse multi line define with type annotation" {
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected =
-        \\(def x I32
+        \\(def x i32
         \\    (block
-        \\        (def a I32 (+ y z))
+        \\        (def a i32 (+ y z))
         \\        (- a b)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
