@@ -446,17 +446,26 @@ fn indentToString(writer: List(u8).Writer, indent: u64) !void {
     }
 }
 
-fn blockToString(writer: List(u8).Writer, intern: Intern, ast: Ast, exprs: List(Expression), indent: u64) !void {
+fn blockToString(writer: List(u8).Writer, intern: Intern, ast: Ast, exprs: List(Expression), indent: u64, new_line: bool) !void {
     if (exprs.items.len == 1) {
-        try writer.writeAll(" ");
+        if (new_line) {
+            try writer.writeAll("\n");
+            try indentToString(writer, indent);
+        } else {
+            try writer.writeAll(" ");
+        }
         try expressionToString(writer, intern, ast, exprs.items[0], indent);
         return;
     }
+    try writer.writeAll("\n");
+    try indentToString(writer, indent);
+    try writer.writeAll("(block");
     for (exprs.items) |expr| {
         try writer.writeAll("\n");
-        try indentToString(writer, indent);
+        try indentToString(writer, indent + 1);
         try expressionToString(writer, intern, ast, expr, indent);
     }
+    try writer.writeAll(")");
 }
 
 fn defineToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) !void {
@@ -467,7 +476,7 @@ fn defineToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expre
         try writer.writeAll(" ");
         try typeToString(writer, intern, ast, t);
     }
-    try blockToString(writer, intern, ast, d.body, indent + 1);
+    try blockToString(writer, intern, ast, d.body, indent + 1, false);
     try writer.writeAll(")");
 }
 
@@ -495,7 +504,7 @@ fn lambdaToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expre
         try writer.writeAll(" ");
         try typeToString(writer, intern, ast, t);
     }
-    try blockToString(writer, intern, ast, l.body, indent);
+    try blockToString(writer, intern, ast, l.body, indent, false);
     try writer.writeAll(")");
 }
 
@@ -526,8 +535,8 @@ fn ifToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expressio
     const i = ast.if_.items[ast.index.items[expr]];
     try writer.writeAll("(if ");
     try expressionToString(writer, intern, ast, i.condition, indent);
-    try blockToString(writer, intern, ast, i.then, indent);
-    try blockToString(writer, intern, ast, i.else_, indent);
+    try blockToString(writer, intern, ast, i.then, indent + 1, false);
+    try blockToString(writer, intern, ast, i.else_, indent + 1, i.then.items.len > 1);
     try writer.writeAll(")");
 }
 
