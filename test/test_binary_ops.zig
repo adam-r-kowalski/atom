@@ -63,6 +63,25 @@ test "parse multiply then add" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
+test "parse multiply then grouped add" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\x * (y + z)
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(* x (+ y z))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
 test "parse multiply is left associative" {
     const allocator = std.testing.allocator;
     const source =
@@ -120,6 +139,25 @@ test "parse arrow is right associative" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
+test "parse grouped arrow" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\(x -> y) -> z
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(-> (-> x y) z)
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
 test "parse greater has lower precedence then add" {
     const allocator = std.testing.allocator;
     const source =
@@ -135,6 +173,25 @@ test "parse greater has lower precedence then add" {
     defer allocator.free(actual);
     const expected =
         \\(> (+ a b) (+ c d))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse grouped greater" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\a + (b > c) + d
+    ;
+    var intern = fusion.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try fusion.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    const actual = try fusion.parser.toString(allocator, intern, ast);
+    defer allocator.free(actual);
+    const expected =
+        \\(+ a (+ (> b c) d))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

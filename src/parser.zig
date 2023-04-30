@@ -16,6 +16,7 @@ const Kind = enum {
     define,
     lambda,
     binary_op,
+    group,
 };
 
 const Define = struct {
@@ -50,6 +51,8 @@ const BinaryOp = struct {
     right: Expression,
 };
 
+const Group = Expression;
+
 pub const Ast = struct {
     kind: List(Kind),
     span: List(Span),
@@ -59,6 +62,7 @@ pub const Ast = struct {
     define: List(Define),
     lambda: List(Lambda),
     binary_op: List(BinaryOp),
+    group: List(Group),
     top_level: List(Expression),
 
     pub fn deinit(self: Ast) void {
@@ -75,6 +79,7 @@ pub const Ast = struct {
         }
         self.lambda.deinit();
         self.binary_op.deinit();
+        self.group.deinit();
         self.top_level.deinit();
     }
 };
@@ -183,11 +188,28 @@ fn lambda(context: *Context) !Expression {
     return self;
 }
 
+fn group(context: *Context) !Expression {
+    const begin = context.tokens.span.items[context.token_index].begin;
+    context.token_index += 1;
+    context.precedence = LOWEST;
+    const expr = try expression(context);
+    std.debug.assert(context.tokens.kind.items[context.token_index] == .right_paren);
+    const end = context.tokens.span.items[context.token_index].end;
+    context.token_index += 1;
+    const self = context.ast.kind.items.len;
+    try context.ast.kind.append(.group);
+    try context.ast.span.append(.{ .begin = begin, .end = end });
+    try context.ast.index.append(context.ast.group.items.len);
+    try context.ast.group.append(expr);
+    return self;
+}
+
 fn prefix(context: *Context) !Expression {
     switch (context.tokens.kind.items[context.token_index]) {
         .int => |s| return try int(context, s),
         .symbol => |s| return try symbol(context, s),
         .backslash => return try lambda(context),
+        .left_paren => return try group(context),
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),
     }
 }
@@ -310,15 +332,15 @@ fn infix(context: *Context) ?Infix {
 
 fn expression(context: *Context) error{OutOfMemory}!Expression {
     var left = try prefix(context);
+    const previous = context.precedence;
     while (true) {
         if (infix(context)) |parser| {
             var next = parser.precedence;
             if (context.precedence > next) return left;
             if (parser.asscociativity == .left) next += 1;
-            const last = context.precedence;
             context.precedence = next;
             left = try parser.parse(context, left);
-            context.precedence = last;
+            context.precedence = previous;
         } else return left;
     }
 }
@@ -333,6 +355,7 @@ pub fn parse(allocator: Allocator, tokens: Tokens) !Ast {
         .define = List(Define).init(allocator),
         .lambda = List(Lambda).init(allocator),
         .binary_op = List(BinaryOp).init(allocator),
+        .group = List(Group).init(allocator),
         .top_level = List(Expression).init(allocator),
     };
     var context = Context{
@@ -426,10 +449,10 @@ fn lambdaToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expre
         try parameterToString(writer, intern, ast, p);
         if (i < l.parameters.items.len - 1) try writer.writeAll(" ");
     }
-    try writer.writeAll("] ");
+    try writer.writeAll("]");
     if (l.return_type) |t| {
-        try typeToString(writer, intern, ast, t);
         try writer.writeAll(" ");
+        try typeToString(writer, intern, ast, t);
     }
     try blockToString(writer, intern, ast, l.body, indent);
     try writer.writeAll(")");
@@ -453,6 +476,11 @@ fn binaryOpToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Exp
     try writer.writeAll(")");
 }
 
+fn groupToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) !void {
+    const g = ast.group.items[ast.index.items[expr]];
+    return try expressionToString(writer, intern, ast, g, indent);
+}
+
 fn expressionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) error{OutOfMemory}!void {
     switch (ast.kind.items[expr]) {
         .int => try intToString(writer, intern, ast, expr),
@@ -460,6 +488,7 @@ fn expressionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: E
         .define => try defineToString(writer, intern, ast, expr, indent),
         .lambda => try lambdaToString(writer, intern, ast, expr, indent),
         .binary_op => try binaryOpToString(writer, intern, ast, expr, indent),
+        .group => try groupToString(writer, intern, ast, expr, indent),
     }
 }
 

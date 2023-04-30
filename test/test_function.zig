@@ -280,7 +280,7 @@ test "parse multi line function" {
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected =
-        \\(def sum_squares (fn [(x I32) (y I32)] I32 
+        \\(def sum_squares (fn [(x I32) (y I32)] I32
         \\    (def x_squared (^ x 2))
         \\    (def y_squared (^ y 2))
         \\    (+ x_squared y_squared)))
