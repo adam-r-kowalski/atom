@@ -350,12 +350,14 @@ fn binaryOp(context: *Context, left: Expression, kind: BinaryOpKind) !Expression
 }
 
 fn call(context: *Context, left: Expression) !Expression {
+    context.token_index += 1;
     var arguments = List(Expression).init(context.allocator);
     while (context.tokens.kind.items.len > context.token_index) {
         switch (context.tokens.kind.items[context.token_index]) {
-            .plus, .minus, .times, .caret, .greater, .less => break,
+            .right_paren => break,
+            .comma => context.token_index += 1,
             else => {
-                context.precedence = HIGHEST;
+                context.precedence = LOWEST;
                 const argument = try expression(context);
                 try arguments.append(argument);
             },
@@ -405,12 +407,11 @@ fn infix(context: *Context, left: Expression) ?Infix {
         .greater => return .{ .kind = .{ .binary_op = .greater }, .precedence = GREATER, .associativity = .left },
         .less => return .{ .kind = .{ .binary_op = .less }, .precedence = LESS, .associativity = .left },
         .arrow => return .{ .kind = .{ .binary_op = .arrow }, .precedence = ARROW, .associativity = .right },
-        else => {
-            switch (context.tokens.kind.items[left]) {
-                .symbol => return .{ .kind = .call, .precedence = CALL, .associativity = .left },
-                else => return null,
-            }
+        .left_paren => switch (context.tokens.kind.items[left]) {
+            .symbol => return .{ .kind = .call, .precedence = CALL, .associativity = .left },
+            else => return null,
         },
+        else => return null,
     }
 }
 

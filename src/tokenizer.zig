@@ -33,6 +33,7 @@ pub const Kind = union(enum) {
     if_,
     then,
     else_,
+    comma,
 };
 
 const Pos = struct {
@@ -83,7 +84,7 @@ fn trim(cursor: *Cursor) void {
 
 fn reserved(c: u8) bool {
     return switch (c) {
-        ' ', '\n', '(', ')', '.', ':' => true,
+        ' ', '\n', '(', ')', '.', ':', ',' => true,
         else => false,
     };
 }
@@ -226,6 +227,7 @@ pub fn tokenize(allocator: Allocator, intern: *Intern, builtins: Builtins, sourc
             '<' => try exact(&tokens, &cursor, .less),
             '(' => try exact(&tokens, &cursor, .left_paren),
             ')' => try exact(&tokens, &cursor, .right_paren),
+            ',' => try exact(&tokens, &cursor, .comma),
             '\n' => try newLine(&tokens, &cursor),
             else => try symbol(&tokens, intern, builtins, &cursor),
         }
@@ -273,6 +275,7 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
             .if_ => try writer.writeAll("if"),
             .then => try writer.writeAll("then"),
             .else_ => try writer.writeAll("else"),
+            .comma => try writer.writeAll("comma"),
         }
     }
     return list.toOwnedSlice();
@@ -332,6 +335,7 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
             .if_ => try writer.writeAll("if"),
             .then => try writer.writeAll("then"),
             .else_ => try writer.writeAll("else"),
+            .comma => try writer.writeAll(","),
         }
     }
     return list.toOwnedSlice();
