@@ -25,16 +25,16 @@ min(x, y) = if x < y then x else y
 
 # you can chain conditionals together
 clamp(x, lb, ub) =
-	if x < lb then lb
-	else if x > ub then ub
-	else x
+    if x < lb then lb
+    else if x > ub then ub
+    else x
 
 # alternatively you can use a terser notation
 clamp(x, lb, ub) =
-	if
-		x < lb then lb
-		x > ub then ub
-		else x
+    if
+        x < lb then lb
+        x > ub then ub
+        else x
 
 # we can also define clamp in terms of min and max
 clamp(x, lb, ub) = max(min(x, ub), lb)
@@ -44,10 +44,10 @@ clamp(x, lb, ub) = x.min(ub).max(lb)
 
 # the type of clamp requires a constrained generic
 clamp[T: Ord](x: T, lb: T, ub: T): T =
-	if
-		x < lb then lb
-		x > ub then ub
-		else x
+    if
+        x < lb then lb
+        x > ub then ub
+        else x
 
 # pattern matching is also done with if
 sum(xs) =
@@ -63,4 +63,13 @@ sum(xs) =
             [] then acc
             [x, ...xs] then sum_impl(xs, acc + x)
     sum_impl(xs, 0)
+
+# a fold expression can help us implement this in parallel
+sum(xs) = fold(xs, 0, +)
+
+# dot call notation allows for a "method" like sugar
+sum(xs) = xs.fold(0, +)
+
+# we can write type annotations here as well
+sum[T](xs: T[]): T = xs.fold(0, +)
 ```
