@@ -59,20 +59,6 @@ pub const Tokens = struct {
     }
 };
 
-pub const Builtins = struct {
-    if_: Interned,
-    then: Interned,
-    else_: Interned,
-
-    pub fn init(intern: *Intern) !Builtins {
-        return Builtins{
-            .if_ = try intern.string("if"),
-            .then = try intern.string("then"),
-            .else_ = try intern.string("else"),
-        };
-    }
-};
-
 fn trim(cursor: *Cursor) void {
     var i: u64 = 0;
     while (i < cursor.source.len and cursor.source[i] == ' ') : (i += 1) {}
@@ -161,7 +147,7 @@ fn choice(tokens: *Tokens, cursor: *Cursor, kind: Kind, choices: []const Choice)
     try tokens.kind.append(kind);
 }
 
-fn symbol(tokens: *Tokens, intern: *Intern, builtins: Builtins, cursor: *Cursor) !void {
+fn symbol(tokens: *Tokens, intern: *Intern, cursor: *Cursor) !void {
     const begin = cursor.pos;
     var i: u64 = 0;
     while (i < cursor.source.len and !reserved(cursor.source[i])) : (i += 1) {}
@@ -169,10 +155,10 @@ fn symbol(tokens: *Tokens, intern: *Intern, builtins: Builtins, cursor: *Cursor)
     const end = cursor.pos;
     const span = Span{ .begin = begin, .end = end };
     try tokens.span.append(span);
+    if (std.mem.eql(u8, string, "if")) return try tokens.kind.append(.if_);
+    if (std.mem.eql(u8, string, "then")) return try tokens.kind.append(.then);
+    if (std.mem.eql(u8, string, "else")) return try tokens.kind.append(.else_);
     const interned = try intern.string(string);
-    if (interned == builtins.if_) return try tokens.kind.append(.if_);
-    if (interned == builtins.then) return try tokens.kind.append(.then);
-    if (interned == builtins.else_) return try tokens.kind.append(.else_);
     try tokens.kind.append(.{ .symbol = interned });
 }
 
@@ -207,7 +193,7 @@ fn newLine(tokens: *Tokens, cursor: *Cursor) !void {
     try tokens.span.append(.{ .begin = begin, .end = cursor.pos });
 }
 
-pub fn tokenize(allocator: Allocator, intern: *Intern, builtins: Builtins, source: []const u8) !Tokens {
+pub fn tokenize(allocator: Allocator, intern: *Intern, source: []const u8) !Tokens {
     var tokens = Tokens{
         .kind = List(Kind).init(allocator),
         .span = List(Span).init(allocator),
@@ -231,7 +217,7 @@ pub fn tokenize(allocator: Allocator, intern: *Intern, builtins: Builtins, sourc
             ')' => try exact(&tokens, &cursor, .right_paren),
             ',' => try exact(&tokens, &cursor, .comma),
             '\n' => try newLine(&tokens, &cursor),
-            else => try symbol(&tokens, intern, builtins, &cursor),
+            else => try symbol(&tokens, intern, &cursor),
         }
     }
     return tokens;

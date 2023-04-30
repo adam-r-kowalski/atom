@@ -6,8 +6,7 @@ test "tokenize with no annotation" {
     const source = "double(x) = x + x";
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const actual = try atom.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
@@ -32,8 +31,7 @@ test "parse with no annotation" {
     const source = "double(x) = x + x";
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -48,8 +46,7 @@ test "tokenize with annotation" {
     const source = "double(x: i32): i32 = x + x";
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const actual = try atom.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
@@ -78,8 +75,7 @@ test "parse with annotation" {
     const source = "double(x: i32): i32 = x + x";
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -94,8 +90,7 @@ test "parse annotating multiple bindings" {
     const source = "add(x: i32, y: i32): i32 = x + y";
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -110,8 +105,7 @@ test "parse annotating multiple bindings with no return type" {
     const source = "add(x: i32, y: i32) = x + y";
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -126,8 +120,7 @@ test "parse multiple parameters annotating only return type" {
     const source = "add(x, y): i32 = x + y";
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -142,8 +135,7 @@ test "parse multiple parameters annotating one parameter and return type" {
     const source = "add(x: i32, y): i32 = x + y";
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -163,8 +155,7 @@ test "parse multi line function" {
     ;
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();

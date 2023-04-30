@@ -8,8 +8,7 @@ test "tokenize if then else" {
     ;
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const actual = try atom.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
@@ -34,8 +33,7 @@ test "parse if then else" {
     ;
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -57,8 +55,7 @@ test "parse if then else across multiple lines" {
     ;
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -81,8 +78,7 @@ test "parse if multi line then else" {
     ;
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -109,8 +105,7 @@ test "parse if then multi line else" {
     ;
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -136,8 +131,7 @@ test "parse let on result of if then else" {
     ;
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -161,8 +155,7 @@ test "parse nested if then else" {
     ;
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();

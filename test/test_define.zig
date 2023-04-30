@@ -6,8 +6,7 @@ test "tokenize single line define" {
     const source = "x = y + z";
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const actual = try atom.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
@@ -29,8 +28,7 @@ test "parse single line define" {
     const source = "x = y + z";
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -45,8 +43,7 @@ test "tokenize annotated single line define" {
     const source = "x: i32 = y + z";
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const actual = try atom.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
@@ -70,8 +67,7 @@ test "parse single line define" {
     const source = "x: i32 = y + z";
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -90,8 +86,7 @@ test "tokenize multi line define" {
     ;
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const actual = try atom.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
@@ -124,8 +119,7 @@ test "parse multi line define" {
     ;
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -149,8 +143,7 @@ test "parse multi line define with type annotation" {
     ;
     var intern = atom.Intern.init(allocator);
     defer intern.deinit();
-    const builtins = try atom.tokenizer.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -164,3 +157,18 @@ test "parse multi line define with type annotation" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+// test "type infer define i32" {
+//     const allocator = std.testing.allocator;
+//     const source = "x = 5";
+//     var intern = atom.Intern.init(allocator);
+//     defer intern.deinit();
+//     const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
+//     defer tokens.deinit();
+//     const ast = try atom.parser.parse(allocator, tokens);
+//     defer ast.deinit();
+//     const actual = try atom.parser.toString(allocator, intern, ast);
+//     defer allocator.free(actual);
+//     const expected = "x: i32 = 5";
+//     try std.testing.expectEqualStrings(expected, actual);
+// }
