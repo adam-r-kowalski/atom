@@ -117,15 +117,13 @@ test "parse annotating multiple bindings with no return type" {
     defer ast.deinit();
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
-    const expected =
-        \\(def add (fn [(x i32) (y i32)] (+ x y)))
-    ;
+    const expected = "(defn add [(x i32) (y i32)] (+ x y))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "parse multiple parameters annotating only return type" {
     const allocator = std.testing.allocator;
-    const source = "add(x y): i32 = x + y";
+    const source = "add(x, y): i32 = x + y";
     var intern = fusion.Intern.init(allocator);
     defer intern.deinit();
     const builtins = try fusion.tokenizer.Builtins.init(&intern);
@@ -135,9 +133,7 @@ test "parse multiple parameters annotating only return type" {
     defer ast.deinit();
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
-    const expected =
-        \\(defn add [x y] i32 (+ x y))
-    ;
+    const expected = "(defn add [x y] i32 (+ x y))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
@@ -153,9 +149,7 @@ test "parse multiple parameters annotating one parameter and return type" {
     defer ast.deinit();
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
-    const expected =
-        \\(def add (fn [(x i32) y] i32 (+ x y)))
-    ;
+    const expected = "(defn add [(x i32) y] i32 (+ x y))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
@@ -177,11 +171,11 @@ test "parse multi line function" {
     const actual = try fusion.parser.toString(allocator, intern, ast);
     defer allocator.free(actual);
     const expected =
-        \\(def sum_squares (fn [(x i32) (y i32)] i32
+        \\(defn sum_squares [(x i32) (y i32)] i32
         \\    (block
         \\        (def x_squared (^ x 2))
         \\        (def y_squared (^ y 2))
-        \\        (+ x_squared y_squared))))
+        \\        (+ x_squared y_squared)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
