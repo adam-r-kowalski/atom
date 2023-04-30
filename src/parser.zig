@@ -14,7 +14,7 @@ const Kind = enum {
     int,
     symbol,
     define,
-    lambda,
+    function,
     binary_op,
     group,
     if_,
@@ -33,6 +33,13 @@ const Parameter = struct {
 };
 
 const Lambda = struct {
+    parameters: List(Parameter),
+    return_type: ?Expression,
+    body: List(Expression),
+};
+
+const Function = struct {
+    name: Expression,
     parameters: List(Parameter),
     return_type: ?Expression,
     body: List(Expression),
@@ -74,7 +81,7 @@ pub const Ast = struct {
     int: List(Interned),
     symbol: List(Interned),
     define: List(Define),
-    lambda: List(Lambda),
+    function: List(Function),
     binary_op: List(BinaryOp),
     group: List(Group),
     if_: List(If),
@@ -89,11 +96,11 @@ pub const Ast = struct {
         self.symbol.deinit();
         for (self.define.items) |d| d.body.deinit();
         self.define.deinit();
-        for (self.lambda.items) |l| {
-            l.parameters.deinit();
-            l.body.deinit();
+        for (self.function.items) |f| {
+            f.parameters.deinit();
+            f.body.deinit();
         }
-        self.lambda.deinit();
+        self.function.deinit();
         self.binary_op.deinit();
         self.group.deinit();
         for (self.if_.items) |i| {
@@ -175,51 +182,6 @@ fn consumeSymbol(context: *Context) !Expression {
     }
 }
 
-fn lambda(context: *Context) !Expression {
-    const begin = context.tokens.span.items[context.token_index].begin;
-    context.token_index += 1;
-    var parameters = List(Parameter).init(context.allocator);
-    var return_type: ?Expression = null;
-    while (true) {
-        switch (context.tokens.kind.items[context.token_index]) {
-            .symbol => |s| {
-                const name = try symbol(context, s);
-                try parameters.append(.{ .name = name, .type = null });
-            },
-            .left_paren => {
-                context.token_index += 1;
-                const name = try consumeSymbol(context);
-                consume(context, .colon);
-                context.precedence = LOWEST;
-                const type_ = try expression(context);
-                consume(context, .right_paren);
-                try parameters.append(.{ .name = name, .type = type_ });
-            },
-            .dot => {
-                context.token_index += 1;
-                break;
-            },
-            .arrow => {
-                context.token_index += 1;
-                return_type = try expression(context);
-            },
-            else => |kind| std.debug.panic("\nExpected symbol, got {}\n", .{kind}),
-        }
-    }
-    const body = try block(context);
-    const self = context.ast.kind.items.len;
-    const end = context.ast.span.items[body.items[body.items.len - 1]].end;
-    try context.ast.kind.append(.lambda);
-    try context.ast.span.append(.{ .begin = begin, .end = end });
-    try context.ast.index.append(context.ast.lambda.items.len);
-    try context.ast.lambda.append(.{
-        .parameters = parameters,
-        .return_type = return_type,
-        .body = body,
-    });
-    return self;
-}
-
 fn group(context: *Context) !Expression {
     const begin = context.tokens.span.items[context.token_index].begin;
     context.token_index += 1;
@@ -259,7 +221,6 @@ fn prefix(context: *Context) !Expression {
     switch (context.tokens.kind.items[context.token_index]) {
         .int => |s| return try int(context, s),
         .symbol => |s| return try symbol(context, s),
-        .backslash => return try lambda(context),
         .left_paren => return try group(context),
         .if_ => return try if_(context),
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),
@@ -349,18 +310,50 @@ fn binaryOp(context: *Context, left: Expression, kind: BinaryOpKind) !Expression
     return self;
 }
 
-fn call(context: *Context, left: Expression) !Expression {
+fn callOrFunction(context: *Context, left: Expression) !Expression {
     context.token_index += 1;
     var arguments = List(Expression).init(context.allocator);
     while (context.tokens.kind.items.len > context.token_index) {
         switch (context.tokens.kind.items[context.token_index]) {
-            .right_paren => break,
+            .right_paren => {
+                context.token_index += 1;
+                break;
+            },
             .comma => context.token_index += 1,
             else => {
                 context.precedence = LOWEST;
                 const argument = try expression(context);
                 try arguments.append(argument);
             },
+        }
+    }
+    if (context.tokens.kind.items.len > context.token_index) {
+        switch (context.tokens.kind.items[context.token_index]) {
+            .equal => {
+                context.token_index += 1;
+                const body = try block(context);
+                const span = Span{
+                    .begin = context.ast.span.items[left].begin,
+                    .end = context.ast.span.items[body.items[body.items.len - 1]].end,
+                };
+                const self = context.ast.kind.items.len;
+                try context.ast.kind.append(.function);
+                try context.ast.span.append(span);
+                try context.ast.index.append(context.ast.function.items.len);
+                var parameters = try List(Parameter).initCapacity(context.allocator, arguments.items.len);
+                for (arguments.items) |argument| {
+                    try parameters.append(Parameter{ .name = argument, .type = null });
+                }
+                arguments.deinit();
+                try context.ast.function.append(Function{
+                    .name = left,
+                    .parameters = parameters,
+                    .return_type = null,
+                    .body = body,
+                });
+                return self;
+            },
+            else => {},
         }
     }
     const span = Span{
@@ -381,7 +374,7 @@ const Infix = struct {
     kind: union(enum) {
         define,
         annotate,
-        call,
+        call_or_function,
         binary_op: BinaryOpKind,
     },
 
@@ -390,7 +383,7 @@ const Infix = struct {
             .define => return try define(context, left),
             .annotate => return try annotate(context, left),
             .binary_op => |kind| return try binaryOp(context, left, kind),
-            .call => return try call(context, left),
+            .call_or_function => return try callOrFunction(context, left),
         }
     }
 };
@@ -406,9 +399,8 @@ fn infix(context: *Context, left: Expression) ?Infix {
         .caret => return .{ .kind = .{ .binary_op = .exponentiate }, .precedence = EXPONENTIATE, .associativity = .right },
         .greater => return .{ .kind = .{ .binary_op = .greater }, .precedence = GREATER, .associativity = .left },
         .less => return .{ .kind = .{ .binary_op = .less }, .precedence = LESS, .associativity = .left },
-        .arrow => return .{ .kind = .{ .binary_op = .arrow }, .precedence = ARROW, .associativity = .right },
         .left_paren => switch (context.tokens.kind.items[left]) {
-            .symbol => return .{ .kind = .call, .precedence = CALL, .associativity = .left },
+            .symbol => return .{ .kind = .call_or_function, .precedence = CALL, .associativity = .left },
             else => return null,
         },
         else => return null,
@@ -438,7 +430,7 @@ pub fn parse(allocator: Allocator, tokens: Tokens) !Ast {
         .int = List(Interned).init(allocator),
         .symbol = List(Interned).init(allocator),
         .define = List(Define).init(allocator),
-        .lambda = List(Lambda).init(allocator),
+        .function = List(Function).init(allocator),
         .binary_op = List(BinaryOp).init(allocator),
         .group = List(Group).init(allocator),
         .if_ = List(If).init(allocator),
@@ -538,19 +530,21 @@ fn parameterToString(writer: List(u8).Writer, intern: Intern, ast: Ast, p: Param
     }
 }
 
-fn lambdaToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) !void {
-    const l = ast.lambda.items[ast.index.items[expr]];
-    try writer.writeAll("(fn [");
-    for (l.parameters.items) |p, i| {
+fn functionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) !void {
+    const f = ast.function.items[ast.index.items[expr]];
+    try writer.writeAll("(defn ");
+    try symbolToString(writer, intern, ast, f.name);
+    try writer.writeAll(" [");
+    for (f.parameters.items) |p, i| {
         try parameterToString(writer, intern, ast, p);
-        if (i < l.parameters.items.len - 1) try writer.writeAll(" ");
+        if (i < f.parameters.items.len - 1) try writer.writeAll(" ");
     }
     try writer.writeAll("]");
-    if (l.return_type) |t| {
+    if (f.return_type) |t| {
         try writer.writeAll(" ");
         try typeToString(writer, intern, ast, t);
     }
-    try blockToString(writer, intern, ast, l.body, indent, false);
+    try blockToString(writer, intern, ast, f.body, indent, false);
     try writer.writeAll(")");
 }
 
@@ -603,7 +597,7 @@ fn expressionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: E
         .int => try intToString(writer, intern, ast, expr),
         .symbol => try symbolToString(writer, intern, ast, expr),
         .define => try defineToString(writer, intern, ast, expr, indent),
-        .lambda => try lambdaToString(writer, intern, ast, expr, indent),
+        .function => try functionToString(writer, intern, ast, expr, indent),
         .binary_op => try binaryOpToString(writer, intern, ast, expr, indent),
         .group => try groupToString(writer, intern, ast, expr, indent),
         .if_ => try ifToString(writer, intern, ast, expr, indent),

@@ -18,14 +18,12 @@ pub const Kind = union(enum) {
     float: Interned,
     indent: Indent,
     equal,
-    backslash,
     dot,
     colon,
     plus,
     minus,
     times,
     caret,
-    arrow,
     greater,
     less,
     left_paren,
@@ -114,7 +112,12 @@ fn number(intern: *Intern, tokens: *Tokens, cursor: *Cursor) !void {
     const string = cursor.source[0..i];
     if (string.len == 1) {
         switch (string[0]) {
-            '-' => return choice(tokens, cursor, .minus, &.{.{ '>', .arrow }}),
+            '-' => {
+                _ = advance(cursor, i);
+                try tokens.span.append(.{ .begin = begin, .end = cursor.pos });
+                try tokens.kind.append(.minus);
+                return;
+            },
             '.' => {
                 _ = advance(cursor, i);
                 try tokens.span.append(.{ .begin = begin, .end = cursor.pos });
@@ -218,7 +221,6 @@ pub fn tokenize(allocator: Allocator, intern: *Intern, builtins: Builtins, sourc
         switch (cursor.source[0]) {
             '0'...'9', '-', '.' => try number(intern, &tokens, &cursor),
             '=' => try exact(&tokens, &cursor, .equal),
-            '\\' => try exact(&tokens, &cursor, .backslash),
             ':' => try exact(&tokens, &cursor, .colon),
             '+' => try exact(&tokens, &cursor, .plus),
             '*' => try exact(&tokens, &cursor, .times),
@@ -260,7 +262,6 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
                 }
             },
             .equal => try writer.writeAll("equal"),
-            .backslash => try writer.writeAll("backslash"),
             .dot => try writer.writeAll("dot"),
             .colon => try writer.writeAll("colon"),
             .plus => try writer.writeAll("plus"),
@@ -269,7 +270,6 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
             .caret => try writer.writeAll("caret"),
             .greater => try writer.writeAll("greater"),
             .less => try writer.writeAll("less"),
-            .arrow => try writer.writeAll("arrow"),
             .left_paren => try writer.writeAll("left paren"),
             .right_paren => try writer.writeAll("right paren"),
             .if_ => try writer.writeAll("if"),
@@ -320,7 +320,6 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
             },
             .indent => |indent| try indentToSource(writer, span, indent),
             .equal => try writer.writeAll("="),
-            .backslash => try writer.writeAll("\\"),
             .dot => try writer.writeAll("."),
             .colon => try writer.writeAll(":"),
             .plus => try writer.writeAll("+"),
@@ -329,7 +328,6 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
             .caret => try writer.writeAll("^"),
             .greater => try writer.writeAll(">"),
             .less => try writer.writeAll("<"),
-            .arrow => try writer.writeAll("->"),
             .left_paren => try writer.writeAll("("),
             .right_paren => try writer.writeAll(")"),
             .if_ => try writer.writeAll("if"),

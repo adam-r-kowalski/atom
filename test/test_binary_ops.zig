@@ -104,46 +104,6 @@ test "parse exponentiate is right associative" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "parse arrow is right associative" {
-    const allocator = std.testing.allocator;
-    const source =
-        \\x -> y -> z
-    ;
-    var intern = fusion.Intern.init(allocator);
-    defer intern.deinit();
-    const builtins = try fusion.tokenizer.Builtins.init(&intern);
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
-    defer tokens.deinit();
-    const ast = try fusion.parser.parse(allocator, tokens);
-    defer ast.deinit();
-    const actual = try fusion.parser.toString(allocator, intern, ast);
-    defer allocator.free(actual);
-    const expected =
-        \\(-> x (-> y z))
-    ;
-    try std.testing.expectEqualStrings(expected, actual);
-}
-
-test "parse grouped arrow" {
-    const allocator = std.testing.allocator;
-    const source =
-        \\(x -> y) -> z
-    ;
-    var intern = fusion.Intern.init(allocator);
-    defer intern.deinit();
-    const builtins = try fusion.tokenizer.Builtins.init(&intern);
-    const tokens = try fusion.tokenizer.tokenize(allocator, &intern, builtins, source);
-    defer tokens.deinit();
-    const ast = try fusion.parser.parse(allocator, tokens);
-    defer ast.deinit();
-    const actual = try fusion.parser.toString(allocator, intern, ast);
-    defer allocator.free(actual);
-    const expected =
-        \\(-> (-> x y) z)
-    ;
-    try std.testing.expectEqualStrings(expected, actual);
-}
-
 test "parse greater has lower precedence then add" {
     const allocator = std.testing.allocator;
     const source = "a + b > c + d";
