@@ -25,16 +25,15 @@ min(x, y) = if x < y then x else y
 
 # you can chain conditionals together
 clamp(x, lb, ub) =
-    if x < lb then lb
-    else if x > ub then ub
-    else x
+  if x < lb then lb
+  else if x > ub then ub
+  else x
 
 # alternatively you can use a terser notation
 clamp(x, lb, ub) =
-    if
-        x < lb then lb
-        x > ub then ub
-        else x
+  if x < lb then lb
+     x > ub then ub
+     else x
 
 # we can also define clamp in terms of min and max
 clamp(x, lb, ub) = max(min(x, ub), lb)
@@ -44,25 +43,24 @@ clamp(x, lb, ub) = x.min(ub).max(lb)
 
 # the type of clamp requires a constrained generic
 clamp[T: Ord](x: T, lb: T, ub: T): T =
-    if
-        x < lb then lb
-        x > ub then ub
-        else x
+  if x < lb then lb
+     x > ub then ub
+     else x
 
 # pattern matching is also done with if
 sum(xs) =
-    if xs is
-        [] then 0
-        [x, ...xs] then x + sum(xs)
+  if xs is
+    [] then 0
+    [x, ...xs] then x + sum(xs)
 
 
 # it would be more optimal to use tail recursion
 sum(xs) =
-    sum_impl(xs, acc) =
-        if xs is
-            [] then acc
-            [x, ...xs] then sum_impl(xs, acc + x)
-    sum_impl(xs, 0)
+  sum_impl(xs, acc) =
+    if xs is
+      [] then acc
+      [x, ...xs] then sum_impl(xs, acc + x)
+  sum_impl(xs, 0)
 
 # a fold expression can help us implement this in parallel
 sum(xs) = fold(xs, 0, +)
@@ -72,4 +70,15 @@ sum(xs) = xs.fold(0, +)
 
 # we can write type annotations here as well
 sum[T](xs: T[]): T = xs.fold(0, +)
+
+# you can import a function from the host
+@import("console", "log")
+print(x: str): void
+
+# you can export a function to the host
+@export
+double(x: i32): i32 = x * 2
+
+# by default the start function is exported
+start() = print("hello world")
 ```
