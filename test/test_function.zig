@@ -43,7 +43,7 @@ test "parse with no annotation" {
 
 test "tokenize with annotation" {
     const allocator = std.testing.allocator;
-    const source = "double(x: i32): i32 = x + x";
+    const source = "double(x: i32) -> i32 = x + x";
     var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
     const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
@@ -57,7 +57,7 @@ test "tokenize with annotation" {
         \\colon
         \\symbol i32
         \\right paren
-        \\colon
+        \\arrow
         \\symbol i32
         \\equal
         \\symbol x
@@ -72,7 +72,7 @@ test "tokenize with annotation" {
 
 test "parse with annotation" {
     const allocator = std.testing.allocator;
-    const source = "double(x: i32): i32 = x + x";
+    const source = "double(x: i32) -> i32 = x + x";
     var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
     const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
@@ -87,7 +87,7 @@ test "parse with annotation" {
 
 test "parse annotating multiple bindings" {
     const allocator = std.testing.allocator;
-    const source = "add(x: i32, y: i32): i32 = x + y";
+    const source = "add(x: i32, y: i32) -> i32 = x + y";
     var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
     const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
@@ -117,7 +117,7 @@ test "parse annotating multiple bindings with no return type" {
 
 test "parse multiple parameters annotating only return type" {
     const allocator = std.testing.allocator;
-    const source = "add(x, y): i32 = x + y";
+    const source = "add(x, y) -> i32 = x + y";
     var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
     const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
@@ -132,7 +132,7 @@ test "parse multiple parameters annotating only return type" {
 
 test "parse multiple parameters annotating one parameter and return type" {
     const allocator = std.testing.allocator;
-    const source = "add(x: i32, y): i32 = x + y";
+    const source = "add(x: i32, y) -> i32 = x + y";
     var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
     const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
@@ -148,7 +148,7 @@ test "parse multiple parameters annotating one parameter and return type" {
 test "parse multi line function" {
     const allocator = std.testing.allocator;
     const source =
-        \\sum_squares(x: i32, y: i32): i32 =
+        \\sum_squares(x: i32, y: i32) -> i32 =
         \\    x_squared = x ^ 2
         \\    y_squared = y ^ 2
         \\    x_squared + y_squared

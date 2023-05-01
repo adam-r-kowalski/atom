@@ -32,6 +32,7 @@ pub const Kind = union(enum) {
     then,
     else_,
     comma,
+    arrow,
 };
 
 const Pos = struct {
@@ -98,12 +99,7 @@ fn number(intern: *Intern, tokens: *Tokens, cursor: *Cursor) !void {
     const string = cursor.source[0..i];
     if (string.len == 1) {
         switch (string[0]) {
-            '-' => {
-                _ = advance(cursor, i);
-                try tokens.span.append(.{ .begin = begin, .end = cursor.pos });
-                try tokens.kind.append(.minus);
-                return;
-            },
+            '-' => return choice(tokens, cursor, .minus, &.{.{ '>', .arrow }}),
             '.' => {
                 _ = advance(cursor, i);
                 try tokens.span.append(.{ .begin = begin, .end = cursor.pos });
@@ -262,6 +258,7 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
             .then => try writer.writeAll("then"),
             .else_ => try writer.writeAll("else"),
             .comma => try writer.writeAll("comma"),
+            .arrow => try writer.writeAll("arrow"),
         }
     }
     return list.toOwnedSlice();
@@ -320,6 +317,7 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
             .then => try writer.writeAll("then"),
             .else_ => try writer.writeAll("else"),
             .comma => try writer.writeAll(","),
+            .arrow => try writer.writeAll("->"),
         }
     }
     return list.toOwnedSlice();

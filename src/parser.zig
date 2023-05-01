@@ -374,7 +374,7 @@ fn function(context: *Context, left: Expression, arguments: *List(Expression)) !
         }
     }
     const return_type = blk: {
-        if (context.tokens.kind.items[context.token_index] == .colon) {
+        if (context.tokens.kind.items[context.token_index] == .arrow) {
             context.token_index += 1;
             context.precedence = DEFINE + 1;
             const expr = try expression(context);
@@ -424,7 +424,7 @@ fn callOrFunction(context: *Context, left: Expression) !Expression {
     if (context.tokens.kind.items.len > context.token_index) {
         switch (context.tokens.kind.items[context.token_index]) {
             .equal => return try convertCallToFunction(context, left, &arguments, .body),
-            .colon => return try convertCallToFunction(context, left, &arguments, .return_type),
+            .arrow => return try convertCallToFunction(context, left, &arguments, .return_type),
             else => {},
         }
     }

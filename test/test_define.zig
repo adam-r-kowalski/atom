@@ -157,21 +157,21 @@ test "parse multi line define with type annotation" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
-//
-// test "type infer define i32" {
-//     const allocator = std.testing.allocator;
-//     const source = "x = 5";
-//     var intern = atom.interner.Intern.init(allocator);
-//     defer intern.deinit();
-//     const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
-//     defer tokens.deinit();
-//     const ast = try atom.parser.parse(allocator, tokens);
-//     const typed_ast = try atom.type_infer.top_level(allocator, ast);
-//     defer typed_ast.deinit();
-//     const x = try atom.interner.store(intern, "x");
-//     try atom.type_infer.infer(typed_ast, x);
-//     const actual = try atom.type_infer.toString(allocator, intern, typed_ast);
-//     defer allocator.free(actual);
-//     const expected = "x: i32 = 5";
-//     try std.testing.expectEqualStrings(expected, actual);
-// }
+
+test "type infer define i32" {
+    const allocator = std.testing.allocator;
+    const source = "x = 5";
+    var intern = atom.interner.Intern.init(allocator);
+    defer intern.deinit();
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
+    defer tokens.deinit();
+    const ast = try atom.parser.parse(allocator, tokens);
+    const typed_ast = try atom.type_infer.module(allocator, ast);
+    defer typed_ast.deinit();
+    const x = try atom.interner.store(intern, "x");
+    try atom.type_infer.infer(typed_ast, x);
+    const actual = try atom.type_infer.toString(allocator, intern, typed_ast);
+    defer allocator.free(actual);
+    const expected = "x: i32 = 5";
+    try std.testing.expectEqualStrings(expected, actual);
+}
