@@ -16,12 +16,12 @@ const Span = tokenizer.Span;
 const parser = @import("parser.zig");
 const Ast = parser.Ast;
 const Expression = parser.Expression;
-pub const TypeVar = u64;
+pub const TVar = u64;
 
 const Type = union(enum) {
     i32,
     type,
-    typevar: TypeVar,
+    tvar: TVar,
 };
 
 const TypeAndSpan = struct {
@@ -54,6 +54,11 @@ fn pushScope(scopes: *Scopes) !void {
     try scopes.append(scope);
 }
 
+fn popScope(scopes: *Scopes) void {
+    var scope = scopes.pop();
+    scope.deinit();
+}
+
 pub const TypedAst = struct {
     ast: Ast,
     type: Map(Expression, Type),
@@ -63,8 +68,16 @@ pub const TypedAst = struct {
         var scope = Scope.init(allocator);
         for (ast.top_level.items) |expr| {
             switch (ast.kind.items[expr]) {
-                .define => try scope.put(ast.define.items[ast.index.items[expr]].name, expr),
-                .function => try scope.put(ast.function.items[ast.index.items[expr]].name, expr),
+                .define => {
+                    const symbol = ast.define.items[ast.index.items[expr]].name;
+                    const name = ast.symbol.items[ast.index.items[symbol]];
+                    try scope.put(name, expr);
+                },
+                .function => {
+                    const symbol = ast.function.items[ast.index.items[expr]].name;
+                    const name = ast.symbol.items[ast.index.items[symbol]];
+                    try scope.put(name, expr);
+                },
                 else => std.debug.panic("\nInvalid top level expression {}", .{ast.kind.items[expr]}),
             }
         }
@@ -86,14 +99,14 @@ const Context = struct {
     constraints: *Constraints,
     typed_ast: *TypedAst,
     scopes: *Scopes,
-    next_typevar: *TypeVar,
+    next_tvar: *TVar,
     builtins: Builtins,
 };
 
-fn freshTypeVar(next_typevar: *TypeVar) Type {
-    const typevar = next_typevar.*;
-    next_typevar.* += 1;
-    return .{ .typevar = typevar };
+fn freshTVar(next_tvar: *TVar) Type {
+    const tvar = next_tvar.*;
+    next_tvar.* += 1;
+    return .{ .tvar = tvar };
 }
 
 fn typeExpression(context: Context, expr: Expression) !Type {
@@ -111,9 +124,10 @@ fn typeExpression(context: Context, expr: Expression) !Type {
 
 fn function(context: Context, expr: Expression) !Type {
     try pushScope(context.scopes);
+    defer popScope(context.scopes);
     var f = context.typed_ast.ast.function.items[context.typed_ast.ast.index.items[expr]];
     for (f.parameters.items) |p| {
-        const type_ = if (p.type) |t| try typeExpression(context, t) else freshTypeVar(context.next_typevar);
+        const type_ = if (p.type) |t| try typeExpression(context, t) else freshTVar(context.next_tvar);
         try context.typed_ast.type.put(p.name, type_);
     }
     return .i32;
@@ -127,14 +141,16 @@ fn infer(context: Context, expr: Expression) !Type {
     }
 }
 
-pub fn constrain(allocator: Allocator, constraints: *Constraints, typed_ast: *TypedAst, builtins: Builtins, next_type_var: *TypeVar, name: Interned) !void {
+pub fn constrain(allocator: Allocator, constraints: *Constraints, typed_ast: *TypedAst, builtins: Builtins, next_type_var: *TVar, name: Interned) !void {
     var scopes = Scopes.init(allocator);
+    try scopes.append(typed_ast.scope);
+    defer scopes.deinit();
     const context = Context{
         .allocator = allocator,
         .constraints = constraints,
         .typed_ast = typed_ast,
         .scopes = &scopes,
-        .next_typevar = next_type_var,
+        .next_tvar = next_type_var,
         .builtins = builtins,
     };
     if (typed_ast.scope.get(name)) |expr| {

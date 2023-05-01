@@ -187,7 +187,7 @@ test "type infer discover return type" {
     var constraints = atom.type_infer.Constraints.init(allocator);
     defer constraints.deinit();
     const id = try atom.interner.store(&intern, "id");
-    var next_type_var: atom.type_infer.TypeVar = 0;
+    var next_type_var: atom.type_infer.TVar = 0;
     try atom.type_infer.constrain(allocator, &constraints, &typed_ast, builtins, &next_type_var, id);
     // const substitution = try atom.type_infer.solve(constraints);
     // try atom.type_infer.apply(substitution, typed_ast);
