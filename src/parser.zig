@@ -32,12 +32,6 @@ const Parameter = struct {
     type: ?Expression,
 };
 
-const Lambda = struct {
-    parameters: List(Parameter),
-    return_type: ?Expression,
-    body: List(Expression),
-};
-
 const Function = struct {
     name: Expression,
     parameters: List(Parameter),
@@ -130,7 +124,7 @@ const CALL = EXPONENTIATE + DELTA;
 const ARROW = EXPONENTIATE + DELTA;
 const HIGHEST = ARROW + DELTA;
 
-const Expression = u64;
+pub const Expression = u64;
 
 const Context = struct {
     allocator: Allocator,

@@ -6,7 +6,8 @@ test "tokenize with no annotation" {
     const source = "double(x) = x + x";
     var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try atom.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const actual = try atom.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
@@ -169,4 +170,29 @@ test "parse multi line function" {
         \\    (+ x_squared y_squared)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer discover return type" {
+    const allocator = std.testing.allocator;
+    const source = "id(x: i32) = x";
+    var intern = atom.interner.Intern.init(allocator);
+    defer intern.deinit();
+    const builtins = try atom.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    defer tokens.deinit();
+    const ast = try atom.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    var typed_ast = try atom.type_infer.TypedAst.init(allocator, ast);
+    defer typed_ast.deinit();
+    var constraints = atom.type_infer.Constraints.init(allocator);
+    defer constraints.deinit();
+    const id = try atom.interner.store(&intern, "id");
+    var next_type_var: atom.type_infer.TypeVar = 0;
+    try atom.type_infer.constrain(allocator, &constraints, &typed_ast, builtins, &next_type_var, id);
+    // const substitution = try atom.type_infer.solve(constraints);
+    // try atom.type_infer.apply(substitution, typed_ast);
+    // const actual = try atom.type_infer.toString(allocator, typed_ast);
+    // defer allocator.free(actual);
+    // const expected = "id(x: i32) -> i32 = x";
+    // try std.testing.expectEqualStrings(expected, actual);
 }
