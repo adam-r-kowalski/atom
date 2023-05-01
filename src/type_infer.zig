@@ -16,27 +16,53 @@ const Span = tokenizer.Span;
 const parser = @import("parser.zig");
 const Ast = parser.Ast;
 const Expression = parser.Expression;
-pub const TVar = u64;
+pub const TypeVar = u64;
 
-const Type = union(enum) {
+const Kind = union(enum) {
     i32,
     type,
-    tvar: TVar,
+    typevar: TypeVar,
+    function: u64,
 };
 
-const TypeAndSpan = struct {
-    type: Type,
-    span: Span,
+const Function = struct {
+    parameters: List(Type),
+    return_type: Type,
 };
 
-const EqualConstraint = Tuple(&.{ TypeAndSpan, TypeAndSpan });
+const Type = u64;
+
+pub const Types = struct {
+    kind: List(Kind),
+    function: List(Function),
+    span: Map(Type, Span),
+    next_type_var: TypeVar,
+
+    pub fn init(allocator: Allocator) Types {
+        return Types{
+            .kind = List(Kind).init(allocator),
+            .function = List(Function).init(allocator),
+            .span = Map(Type, Span).init(allocator),
+            .next_type_var = 0,
+        };
+    }
+
+    pub fn deinit(self: *Types) void {
+        self.kind.deinit();
+        self.span.deinit();
+        for (self.function.items) |f| f.parameters.deinit();
+        self.function.deinit();
+    }
+};
+
+const Equal = Tuple(&.{ Type, Type });
 
 pub const Constraints = struct {
-    equal: List(EqualConstraint),
+    equal: List(Equal),
 
     pub fn init(allocator: Allocator) Constraints {
         return Constraints{
-            .equal = List(EqualConstraint).init(allocator),
+            .equal = List(Equal).init(allocator),
         };
     }
 
@@ -45,7 +71,7 @@ pub const Constraints = struct {
     }
 };
 
-const Scope = Map(Interned, Expression);
+const Scope = Map(Interned, Type);
 
 const Scopes = List(Scope);
 
@@ -59,6 +85,10 @@ fn popScope(scopes: *Scopes) void {
     scope.deinit();
 }
 
+fn putInScope(scopes: *Scopes, name: Interned, type_: Type) !void {
+    try scopes.items[scopes.items.len - 1].put(name, type_);
+}
+
 pub const TypedAst = struct {
     ast: Ast,
     type: Map(Expression, Type),
@@ -69,13 +99,13 @@ pub const TypedAst = struct {
         for (ast.top_level.items) |expr| {
             switch (ast.kind.items[expr]) {
                 .define => {
-                    const symbol = ast.define.items[ast.index.items[expr]].name;
-                    const name = ast.symbol.items[ast.index.items[symbol]];
+                    const s = ast.define.items[ast.index.items[expr]].name;
+                    const name = ast.symbol.items[ast.index.items[s]];
                     try scope.put(name, expr);
                 },
                 .function => {
-                    const symbol = ast.function.items[ast.index.items[expr]].name;
-                    const name = ast.symbol.items[ast.index.items[symbol]];
+                    const s = ast.function.items[ast.index.items[expr]].name;
+                    const name = ast.symbol.items[ast.index.items[s]];
                     try scope.put(name, expr);
                 },
                 else => std.debug.panic("\nInvalid top level expression {}", .{ast.kind.items[expr]}),
@@ -98,50 +128,113 @@ const Context = struct {
     allocator: Allocator,
     constraints: *Constraints,
     typed_ast: *TypedAst,
+    types: *Types,
     scopes: *Scopes,
-    next_tvar: *TVar,
     builtins: Builtins,
 };
 
-fn freshTVar(next_tvar: *TVar) Type {
-    const tvar = next_tvar.*;
-    next_tvar.* += 1;
-    return .{ .tvar = tvar };
+fn freshTypeVar(types: *Types) Kind {
+    const type_var = types.next_type_var;
+    types.next_type_var += 1;
+    return .{ .typevar = type_var };
 }
 
-fn typeExpression(context: Context, expr: Expression) !Type {
-    try context.typed_ast.type.put(expr, .type);
+fn typeExpression(context: Context, expr: Expression) !Kind {
+    const type_ = context.types.kind.items.len;
+    try context.types.kind.append(.type);
+    try context.types.span.putNoClobber(type_, context.typed_ast.ast.span.items[expr]);
+    try context.typed_ast.type.put(expr, type_);
     const kind = context.typed_ast.ast.kind.items[expr];
     switch (kind) {
         .symbol => {
-            const symbol = context.typed_ast.ast.symbol.items[context.typed_ast.ast.index.items[expr]];
-            if (symbol == context.builtins.i32) return .i32;
-            std.debug.panic("\nCannot type symbol {}", .{symbol});
+            const s = context.typed_ast.ast.symbol.items[context.typed_ast.ast.index.items[expr]];
+            if (s == context.builtins.i32) return .i32;
+            std.debug.panic("\nCannot type symbol {}", .{s});
         },
         else => std.debug.panic("\nCannot type expression {}", .{kind}),
     }
 }
 
+// Need to put function name in scope before inferring body to allow for recursion
 fn function(context: Context, expr: Expression) !Type {
     try pushScope(context.scopes);
     defer popScope(context.scopes);
-    var f = context.typed_ast.ast.function.items[context.typed_ast.ast.index.items[expr]];
+    const f = context.typed_ast.ast.function.items[context.typed_ast.ast.index.items[expr]];
+    var parameters = List(Type).init(context.allocator);
+    var full_span = context.typed_ast.ast.span.items[f.name];
     for (f.parameters.items) |p| {
-        const type_ = if (p.type) |t| try typeExpression(context, t) else freshTVar(context.next_tvar);
+        var type_ = context.types.kind.items.len;
+        var span = context.typed_ast.ast.span.items[p.name];
+        if (p.type) |t| {
+            const kind = try typeExpression(context, t);
+            try context.types.kind.append(kind);
+            span.end = context.typed_ast.ast.span.items[t].end;
+            type_ = context.types.kind.items.len;
+        } else {
+            const kind = freshTypeVar(context.types);
+            try context.types.kind.append(kind);
+        }
+        full_span.end = span.end;
+        try context.types.span.putNoClobber(type_, span);
         try context.typed_ast.type.put(p.name, type_);
+        try parameters.append(type_);
+        const s = context.typed_ast.ast.symbol.items[context.typed_ast.ast.index.items[p.name]];
+        try putInScope(context.scopes, s, type_);
     }
-    return .i32;
+    const return_type = blk: {
+        const type_ = context.types.kind.items.len;
+        if (f.return_type) |t| {
+            const kind = try typeExpression(context, t);
+            try context.types.kind.append(kind);
+            const span = context.typed_ast.ast.span.items[t];
+            full_span.end = span.end;
+            try context.types.span.putNoClobber(type_, span);
+        } else {
+            const kind = freshTypeVar(context.types);
+            try context.types.kind.append(kind);
+        }
+        break :blk type_;
+    };
+    var last: Type = 0;
+    for (f.body.items) |b| last = try infer(context, b);
+    try context.constraints.equal.append(.{ last, return_type });
+    const index = context.types.function.items.len;
+    try context.types.function.append(.{
+        .parameters = parameters,
+        .return_type = return_type,
+    });
+    const type_ = context.types.kind.items.len;
+    try context.types.kind.append(.{ .function = index });
+    try context.types.span.putNoClobber(type_, full_span);
+    try context.typed_ast.type.put(expr, type_);
+    return type_;
 }
 
-fn infer(context: Context, expr: Expression) !Type {
+// TODO: need to instantiate the type if it's a forall
+fn symbol(context: Context, expr: Expression) !Type {
+    const s = context.typed_ast.ast.symbol.items[context.typed_ast.ast.index.items[expr]];
+    var i: u64 = context.scopes.items.len;
+    while (i > 0) : (i -= 1) {
+        if (context.scopes.items[i - 1].get(s)) |t| {
+            const type_ = context.types.kind.items.len;
+            try context.types.kind.append(context.types.kind.items[t]);
+            try context.types.span.putNoClobber(type_, context.typed_ast.ast.span.items[expr]);
+            return type_;
+        }
+    }
+    std.debug.panic("\nCannot find symbol {}", .{s});
+}
+
+fn infer(context: Context, expr: Expression) error{OutOfMemory}!Type {
     const kind = context.typed_ast.ast.kind.items[expr];
     switch (kind) {
         .function => return try function(context, expr),
+        .symbol => return try symbol(context, expr),
         else => std.debug.panic("\nCannot infer type of expression {}", .{kind}),
     }
 }
 
-pub fn constrain(allocator: Allocator, constraints: *Constraints, typed_ast: *TypedAst, builtins: Builtins, next_type_var: *TVar, name: Interned) !void {
+pub fn constrain(allocator: Allocator, constraints: *Constraints, typed_ast: *TypedAst, types: *Types, builtins: Builtins, name: Interned) !void {
     var scopes = Scopes.init(allocator);
     try scopes.append(typed_ast.scope);
     defer scopes.deinit();
@@ -149,12 +242,14 @@ pub fn constrain(allocator: Allocator, constraints: *Constraints, typed_ast: *Ty
         .allocator = allocator,
         .constraints = constraints,
         .typed_ast = typed_ast,
+        .types = types,
         .scopes = &scopes,
-        .next_tvar = next_type_var,
         .builtins = builtins,
     };
     if (typed_ast.scope.get(name)) |expr| {
-        if (!typed_ast.type.contains(expr)) _ = try infer(context, expr);
+        if (!typed_ast.type.contains(expr)) {
+            _ = try infer(context, expr);
+        }
     } else {
         std.debug.panic("\nUndefined name {}", .{name});
     }
