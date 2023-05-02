@@ -3,15 +3,8 @@ const atom = @import("atom");
 
 test "tokenize if then else" {
     const allocator = std.testing.allocator;
-    const source =
-        \\if x then y else z
-    ;
-    var intern = atom.interner.Intern.init(allocator);
-    defer intern.deinit();
-    const builtins = try atom.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
-    defer tokens.deinit();
-    const actual = try atom.tokenizer.toString(allocator, intern, tokens);
+    const source = "if x then y else z";
+    const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\if
@@ -22,28 +15,14 @@ test "tokenize if then else" {
         \\symbol z
     ;
     try std.testing.expectEqualStrings(expected, actual);
-    const reconstructed = try atom.tokenizer.toSource(allocator, intern, tokens);
-    defer allocator.free(reconstructed);
-    try std.testing.expectEqualStrings(source, reconstructed);
 }
 
 test "parse if then else" {
     const allocator = std.testing.allocator;
-    const source =
-        \\if x then y else z
-    ;
-    var intern = atom.interner.Intern.init(allocator);
-    defer intern.deinit();
-    const builtins = try atom.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
-    defer tokens.deinit();
-    const ast = try atom.parser.parse(allocator, tokens);
-    defer ast.deinit();
-    const actual = try atom.parser.toString(allocator, intern, ast);
+    const source = "if x then y else z";
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected =
-        \\(if x y z)
-    ;
+    const expected = "(if x y z)";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
@@ -55,18 +34,9 @@ test "parse if then else across multiple lines" {
         \\else
         \\  z
     ;
-    var intern = atom.interner.Intern.init(allocator);
-    defer intern.deinit();
-    const builtins = try atom.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
-    defer tokens.deinit();
-    const ast = try atom.parser.parse(allocator, tokens);
-    defer ast.deinit();
-    const actual = try atom.parser.toString(allocator, intern, ast);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected =
-        \\(if x y z)
-    ;
+    const expected = "(if x y z)";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
@@ -79,14 +49,7 @@ test "parse if multi line then else" {
         \\else
         \\    z
     ;
-    var intern = atom.interner.Intern.init(allocator);
-    defer intern.deinit();
-    const builtins = try atom.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
-    defer tokens.deinit();
-    const ast = try atom.parser.parse(allocator, tokens);
-    defer ast.deinit();
-    const actual = try atom.parser.toString(allocator, intern, ast);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(if x
@@ -107,14 +70,7 @@ test "parse if then multi line else" {
         \\  a = z ^ 2
         \\  a * 5
     ;
-    var intern = atom.interner.Intern.init(allocator);
-    defer intern.deinit();
-    const builtins = try atom.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
-    defer tokens.deinit();
-    const ast = try atom.parser.parse(allocator, tokens);
-    defer ast.deinit();
-    const actual = try atom.parser.toString(allocator, intern, ast);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(if x y
@@ -134,14 +90,7 @@ test "parse let on result of if then else" {
         \\      a = z ^ 2
         \\      a * 5
     ;
-    var intern = atom.interner.Intern.init(allocator);
-    defer intern.deinit();
-    const builtins = try atom.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
-    defer tokens.deinit();
-    const ast = try atom.parser.parse(allocator, tokens);
-    defer ast.deinit();
-    const actual = try atom.parser.toString(allocator, intern, ast);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def b (if x y
@@ -159,17 +108,8 @@ test "parse nested if then else" {
         \\else if x < y then -1
         \\else 0
     ;
-    var intern = atom.interner.Intern.init(allocator);
-    defer intern.deinit();
-    const builtins = try atom.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
-    defer tokens.deinit();
-    const ast = try atom.parser.parse(allocator, tokens);
-    defer ast.deinit();
-    const actual = try atom.parser.toString(allocator, intern, ast);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected =
-        \\(if (> x y) 1 (if (< x y) -1 0))
-    ;
+    const expected = "(if (> x y) 1 (if (< x y) -1 0))";
     try std.testing.expectEqualStrings(expected, actual);
 }

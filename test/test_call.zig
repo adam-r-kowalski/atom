@@ -4,12 +4,7 @@ const atom = @import("atom");
 test "tokenize call" {
     const allocator = std.testing.allocator;
     const source = "f(x, y, z)";
-    var intern = atom.interner.Intern.init(allocator);
-    defer intern.deinit();
-    const builtins = try atom.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
-    defer tokens.deinit();
-    const actual = try atom.tokenizer.toString(allocator, intern, tokens);
+    const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\symbol f
@@ -22,22 +17,12 @@ test "tokenize call" {
         \\right paren
     ;
     try std.testing.expectEqualStrings(expected, actual);
-    const reconstructed = try atom.tokenizer.toSource(allocator, intern, tokens);
-    defer allocator.free(reconstructed);
-    try std.testing.expectEqualStrings(source, reconstructed);
 }
 
 test "parse call" {
     const allocator = std.testing.allocator;
     const source = "f(x, y, z)";
-    var intern = atom.interner.Intern.init(allocator);
-    defer intern.deinit();
-    const builtins = try atom.Builtins.init(&intern);
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
-    defer tokens.deinit();
-    const ast = try atom.parser.parse(allocator, tokens);
-    defer ast.deinit();
-    const actual = try atom.parser.toString(allocator, intern, ast);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(f x y z)";
     try std.testing.expectEqualStrings(expected, actual);
