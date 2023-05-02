@@ -154,8 +154,8 @@ fn symbol(tokens: *Tokens, intern: *Intern, builtins: Builtins, cursor: *Cursor)
     try tokens.span.append(span);
     const interned = try interner.store(intern, string);
     if (interned == builtins.if_) return try tokens.kind.append(.if_);
-    if (interned == builtins.then) return try tokens.kind.append(.if_);
-    if (interned == builtins.else_) return try tokens.kind.append(.if_);
+    if (interned == builtins.then) return try tokens.kind.append(.then);
+    if (interned == builtins.else_) return try tokens.kind.append(.else_);
     try tokens.kind.append(.{ .symbol = interned });
 }
 

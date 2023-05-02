@@ -6,7 +6,8 @@ test "tokenize call" {
     const source = "f(x, y, z)";
     var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try atom.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const actual = try atom.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
@@ -31,7 +32,8 @@ test "parse call" {
     const source = "f(x, y, z)";
     var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try atom.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();

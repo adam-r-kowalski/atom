@@ -6,7 +6,8 @@ test "tokenize add then multiply" {
     const source = "x + y * z";
     var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try atom.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const actual = try atom.tokenizer.toString(allocator, intern, tokens);
     defer allocator.free(actual);
@@ -28,7 +29,8 @@ test "parse add then multiply" {
     const source = "x + y * z";
     var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try atom.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -43,7 +45,8 @@ test "parse multiply then add" {
     const source = "x * y + z";
     var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try atom.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -58,7 +61,8 @@ test "parse multiply then grouped add" {
     const source = "x * (y + z)";
     var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try atom.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -73,7 +77,8 @@ test "parse multiply is left associative" {
     const source = "x * y * z";
     var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try atom.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -88,7 +93,8 @@ test "parse exponentiate is right associative" {
     const source = "x ^ y ^ z";
     var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try atom.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -103,7 +109,8 @@ test "parse greater has lower precedence then add" {
     const source = "a + b > c + d";
     var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try atom.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
@@ -118,7 +125,8 @@ test "parse grouped greater" {
     const source = "a + (b > c) + d";
     var intern = atom.interner.Intern.init(allocator);
     defer intern.deinit();
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, source);
+    const builtins = try atom.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     defer tokens.deinit();
     const ast = try atom.parser.parse(allocator, tokens);
     defer ast.deinit();
