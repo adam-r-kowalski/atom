@@ -225,3 +225,30 @@ test "type infer discover parameter type" {
     const expected = "id(x: i32) -> i32 = x";
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "type infer consistency check" {
+    const allocator = std.testing.allocator;
+    const source = "id(x: i32) -> i32 = x";
+    var intern = atom.interner.Intern.init(allocator);
+    defer intern.deinit();
+    const builtins = try atom.Builtins.init(&intern);
+    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    defer tokens.deinit();
+    const ast = try atom.parser.parse(allocator, tokens);
+    defer ast.deinit();
+    var typed_ast = try atom.type_infer.TypedAst.init(allocator, ast);
+    defer typed_ast.deinit();
+    var constraints = atom.type_infer.Constraints.init(allocator);
+    defer constraints.deinit();
+    const id = try atom.interner.store(&intern, "id");
+    var types = atom.type_infer.Types.init(allocator);
+    defer types.deinit();
+    try atom.type_infer.constrain(allocator, &constraints, &typed_ast, &types, builtins, id);
+    var substitution = try atom.type_infer.solve(allocator, types, constraints);
+    defer substitution.deinit();
+    atom.type_infer.apply(substitution, &types);
+    const actual = try atom.type_infer.toString(allocator, intern, typed_ast, types);
+    defer allocator.free(actual);
+    const expected = "id(x: i32) -> i32 = x";
+    try std.testing.expectEqualStrings(expected, actual);
+}

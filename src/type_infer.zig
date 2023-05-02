@@ -185,9 +185,10 @@ fn function(context: Context, expr: Expression) !Type {
         try putInScope(context.scopes, s, type_);
     }
     const return_type = blk: {
-        const type_ = context.types.kind.items.len;
+        var type_ = context.types.kind.items.len;
         if (f.return_type) |t| {
             const kind = try typeExpression(context, t);
+            type_ = context.types.kind.items.len;
             try context.types.kind.append(kind);
             const span = context.typed_ast.ast.span.items[t];
             full_span.end = span.end;
