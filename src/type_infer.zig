@@ -2,7 +2,6 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const List = std.ArrayList;
 const Map = std.AutoHashMap;
-const Tuple = std.meta.Tuple;
 
 fn Set(comptime T: type) type {
     return std.AutoHashMap(T, void);
@@ -11,6 +10,7 @@ fn Set(comptime T: type) type {
 const Builtins = @import("builtins.zig").Builtins;
 const interner = @import("interner.zig");
 const Interned = interner.Interned;
+const Intern = interner.Intern;
 const tokenizer = @import("tokenizer.zig");
 const Span = tokenizer.Span;
 const parser = @import("parser.zig");
@@ -55,7 +55,10 @@ pub const Types = struct {
     }
 };
 
-const Equal = Tuple(&.{ Type, Type });
+const Equal = struct {
+    left: Type,
+    right: Type,
+};
 
 pub const Constraints = struct {
     equal: List(Equal),
@@ -167,9 +170,9 @@ fn function(context: Context, expr: Expression) !Type {
         var span = context.typed_ast.ast.span.items[p.name];
         if (p.type) |t| {
             const kind = try typeExpression(context, t);
+            type_ = context.types.kind.items.len;
             try context.types.kind.append(kind);
             span.end = context.typed_ast.ast.span.items[t].end;
-            type_ = context.types.kind.items.len;
         } else {
             const kind = freshTypeVar(context.types);
             try context.types.kind.append(kind);
@@ -197,7 +200,7 @@ fn function(context: Context, expr: Expression) !Type {
     };
     var last: Type = 0;
     for (f.body.items) |b| last = try infer(context, b);
-    try context.constraints.equal.append(.{ last, return_type });
+    try context.constraints.equal.append(.{ .left = last, .right = return_type });
     const index = context.types.function.items.len;
     try context.types.function.append(.{
         .parameters = parameters,
@@ -217,7 +220,8 @@ fn symbol(context: Context, expr: Expression) !Type {
     while (i > 0) : (i -= 1) {
         if (context.scopes.items[i - 1].get(s)) |t| {
             const type_ = context.types.kind.items.len;
-            try context.types.kind.append(context.types.kind.items[t]);
+            const kind = context.types.kind.items[t];
+            try context.types.kind.append(kind);
             try context.types.span.putNoClobber(type_, context.typed_ast.ast.span.items[expr]);
             return type_;
         }
@@ -253,4 +257,101 @@ pub fn constrain(allocator: Allocator, constraints: *Constraints, typed_ast: *Ty
     } else {
         std.debug.panic("\nUndefined name {}", .{name});
     }
+}
+
+const Substitution = Map(TypeVar, Type);
+
+fn equal(substitution: *Substitution, types: Types, e: Equal) !void {
+    const left_kind = types.kind.items[e.left];
+    const right_kind = types.kind.items[e.right];
+    if (left_kind == .typevar) {
+        if (right_kind == .typevar) {
+            if (left_kind.typevar == right_kind.typevar) return;
+            return try substitution.putNoClobber(left_kind.typevar, e.right);
+        }
+        return try substitution.putNoClobber(left_kind.typevar, e.right);
+    }
+    if (right_kind == .typevar) {
+        if (left_kind == .typevar) {
+            if (left_kind.typevar == right_kind.typevar) return;
+            return try substitution.putNoClobber(right_kind.typevar, e.left);
+        }
+        return try substitution.putNoClobber(right_kind.typevar, e.left);
+    }
+    if (left_kind == .function and right_kind == .function) {
+        std.debug.panic("\nCannot handle function types yet", .{});
+    }
+    if (std.meta.eql(left_kind, right_kind)) return;
+    std.debug.panic("\nCannot unify types {} and {}", .{ left_kind, right_kind });
+}
+
+pub fn solve(allocator: Allocator, types: Types, constraints: Constraints) !Substitution {
+    var substitution = Substitution.init(allocator);
+    for (constraints.equal.items) |e| try equal(&substitution, types, e);
+    return substitution;
+}
+
+pub fn apply(substitution: Substitution, types: *Types) void {
+    for (types.kind.items) |*kind| {
+        switch (kind.*) {
+            .typevar => |typevar| {
+                if (substitution.get(typevar)) |type_| {
+                    kind.* = types.kind.items[type_];
+                }
+            },
+            else => {},
+        }
+    }
+}
+
+fn typeToString(writer: List(u8).Writer, types: Types, type_: Type) !void {
+    const kind = types.kind.items[type_];
+    switch (kind) {
+        .i32 => try writer.writeAll("i32"),
+        else => unreachable,
+    }
+}
+
+fn symbolToString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, expr: Expression) !void {
+    const s = typed_ast.ast.symbol.items[typed_ast.ast.index.items[expr]];
+    try writer.writeAll(interner.lookup(intern, s));
+}
+
+fn blockToString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, exprs: List(Expression), indent: u64) !void {
+    std.debug.assert(exprs.items.len == 1);
+    try expressionToString(writer, intern, typed_ast, types, exprs.items[0], indent);
+}
+
+fn functionToString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
+    const f = typed_ast.ast.function.items[typed_ast.ast.index.items[expr]];
+    const type_ = typed_ast.type.get(expr).?;
+    const kind = types.kind.items[type_];
+    const f_type = types.function.items[kind.function];
+    try symbolToString(writer, intern, typed_ast, f.name);
+    try writer.writeAll("(");
+    for (f.parameters.items) |p, i| {
+        try symbolToString(writer, intern, typed_ast, p.name);
+        try writer.writeAll(": ");
+        try typeToString(writer, types, f_type.parameters.items[i]);
+    }
+    try writer.writeAll(") -> ");
+    try typeToString(writer, types, f_type.return_type);
+    try writer.writeAll(" = ");
+    try blockToString(writer, intern, typed_ast, types, f.body, indent);
+}
+
+fn expressionToString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) error{OutOfMemory}!void {
+    switch (typed_ast.ast.kind.items[expr]) {
+        .function => try functionToString(writer, intern, typed_ast, types, expr, indent),
+        .symbol => try symbolToString(writer, intern, typed_ast, expr),
+        else => unreachable,
+    }
+}
+
+pub fn toString(allocator: Allocator, intern: Intern, typed_ast: TypedAst, types: Types) ![]const u8 {
+    var list = List(u8).init(allocator);
+    const writer = list.writer();
+    const indent: u64 = 0;
+    for (typed_ast.ast.top_level.items) |expr| try expressionToString(writer, intern, typed_ast, types, expr, indent);
+    return list.toOwnedSlice();
 }
