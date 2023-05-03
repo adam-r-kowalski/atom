@@ -31,7 +31,7 @@ pub fn parse(allocator: Allocator, source: []const u8) ![]const u8 {
     return try parser.toString(allocator, intern, ast);
 }
 
-pub fn typeInfer(allocator: Allocator, source: []const u8) ![]const u8 {
+pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]const u8 {
     var intern = Intern.init(allocator);
     defer intern.deinit();
     const builtins = try Builtins.init(&intern);
@@ -43,7 +43,7 @@ pub fn typeInfer(allocator: Allocator, source: []const u8) ![]const u8 {
     defer typed_ast.deinit();
     var constraints = type_infer.Constraints.init(allocator);
     defer constraints.deinit();
-    const id = try interner.store(&intern, "id");
+    const id = try interner.store(&intern, name);
     var types = type_infer.Types.init(allocator);
     defer types.deinit();
     try type_infer.constrain(allocator, &constraints, &typed_ast, &types, builtins, id);

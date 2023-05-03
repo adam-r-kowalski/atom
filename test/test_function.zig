@@ -118,7 +118,7 @@ test "parse multi line function" {
 test "type infer discover return type" {
     const allocator = std.testing.allocator;
     const source = "id(x: i32) = x";
-    const actual = try atom.testing.typeInfer(allocator, source);
+    const actual = try atom.testing.typeInfer(allocator, source, "id");
     defer allocator.free(actual);
     const expected = "id(x: i32) -> i32 = x";
     try std.testing.expectEqualStrings(expected, actual);
@@ -127,7 +127,7 @@ test "type infer discover return type" {
 test "type infer discover parameter type" {
     const allocator = std.testing.allocator;
     const source = "id(x) -> i32 = x";
-    const actual = try atom.testing.typeInfer(allocator, source);
+    const actual = try atom.testing.typeInfer(allocator, source, "id");
     defer allocator.free(actual);
     const expected = "id(x: i32) -> i32 = x";
     try std.testing.expectEqualStrings(expected, actual);
@@ -136,7 +136,7 @@ test "type infer discover parameter type" {
 test "type infer consistency check" {
     const allocator = std.testing.allocator;
     const source = "id(x: i32) -> i32 = x";
-    const actual = try atom.testing.typeInfer(allocator, source);
+    const actual = try atom.testing.typeInfer(allocator, source, "id");
     defer allocator.free(actual);
     const expected = "id(x: i32) -> i32 = x";
     try std.testing.expectEqualStrings(expected, actual);

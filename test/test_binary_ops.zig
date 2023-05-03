@@ -78,3 +78,21 @@ test "parse grouped greater" {
     const expected = "(+ a (+ (> b c) d))";
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "type result of add has same type as operands" {
+    const allocator = std.testing.allocator;
+    const source = "add(x: i32, y: i32) = x + y";
+    const actual = try atom.testing.typeInfer(allocator, source, "add");
+    defer allocator.free(actual);
+    const expected = "add(x: i32, y: i32) -> i32 = x + y";
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type operands should have the same type as the result" {
+    const allocator = std.testing.allocator;
+    const source = "add(x, y) -> i32 = x + y";
+    const actual = try atom.testing.typeInfer(allocator, source, "add");
+    defer allocator.free(actual);
+    const expected = "add(x: i32, y: i32) -> i32 = x + y";
+    try std.testing.expectEqualStrings(expected, actual);
+}

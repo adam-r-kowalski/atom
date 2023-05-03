@@ -214,6 +214,18 @@ fn function(context: Context, expr: Expression) !Type {
     return type_;
 }
 
+fn binaryOp(context: Context, expr: Expression) !Type {
+    const b = context.typed_ast.ast.binary_op.items[context.typed_ast.ast.index.items[expr]];
+    const left = try infer(context, b.left);
+    const right = try infer(context, b.left);
+    try context.constraints.equal.append(.{ .left = left, .right = right });
+    const type_ = context.types.kind.items.len;
+    try context.types.kind.append(context.types.kind.items[left]);
+    try context.types.span.putNoClobber(type_, context.typed_ast.ast.span.items[expr]);
+    try context.typed_ast.type.put(expr, type_);
+    return left;
+}
+
 // TODO: need to instantiate the type if it's a forall
 fn symbol(context: Context, expr: Expression) !Type {
     const s = context.typed_ast.ast.symbol.items[context.typed_ast.ast.index.items[expr]];
@@ -235,6 +247,7 @@ fn infer(context: Context, expr: Expression) error{OutOfMemory}!Type {
     switch (kind) {
         .function => return try function(context, expr),
         .symbol => return try symbol(context, expr),
+        .binary_op => return try binaryOp(context, expr),
         else => std.debug.panic("\nCannot infer type of expression {}", .{kind}),
     }
 }
@@ -309,7 +322,7 @@ fn typeToString(writer: List(u8).Writer, types: Types, type_: Type) !void {
     const kind = types.kind.items[type_];
     switch (kind) {
         .i32 => try writer.writeAll("i32"),
-        else => unreachable,
+        else => std.debug.panic("\nCannot convert type {} to string", .{kind}),
     }
 }
 
@@ -331,6 +344,7 @@ fn functionToString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst
     try symbolToString(writer, intern, typed_ast, f.name);
     try writer.writeAll("(");
     for (f.parameters.items) |p, i| {
+        if (i > 0) try writer.writeAll(", ");
         try symbolToString(writer, intern, typed_ast, p.name);
         try writer.writeAll(": ");
         try typeToString(writer, types, f_type.parameters.items[i]);
@@ -341,10 +355,23 @@ fn functionToString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst
     try blockToString(writer, intern, typed_ast, types, f.body, indent);
 }
 
+fn binaryOpToString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
+    const b = typed_ast.ast.binary_op.items[typed_ast.ast.index.items[expr]];
+    try expressionToString(writer, intern, typed_ast, types, b.left, indent);
+    try writer.writeAll(" ");
+    switch (b.kind) {
+        .add => try writer.writeAll("+"),
+        else => unreachable,
+    }
+    try writer.writeAll(" ");
+    try expressionToString(writer, intern, typed_ast, types, b.right, indent);
+}
+
 fn expressionToString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) error{OutOfMemory}!void {
     switch (typed_ast.ast.kind.items[expr]) {
         .function => try functionToString(writer, intern, typed_ast, types, expr, indent),
         .symbol => try symbolToString(writer, intern, typed_ast, expr),
+        .binary_op => try binaryOpToString(writer, intern, typed_ast, types, expr, indent),
         else => unreachable,
     }
 }
