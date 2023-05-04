@@ -146,7 +146,7 @@ fn typeExpression(context: Context, expr: Expression) !Kind {
     const type_ = context.types.kind.items.len;
     try context.types.kind.append(.type);
     try context.types.span.putNoClobber(type_, context.typed_ast.ast.span.items[expr]);
-    try context.typed_ast.type.put(expr, type_);
+    try context.typed_ast.type.putNoClobber(expr, type_);
     const kind = context.typed_ast.ast.kind.items[expr];
     switch (kind) {
         .symbol => {
@@ -179,7 +179,7 @@ fn function(context: Context, expr: Expression) !Type {
         }
         full_span.end = span.end;
         try context.types.span.putNoClobber(type_, span);
-        try context.typed_ast.type.put(p.name, type_);
+        try context.typed_ast.type.putNoClobber(p.name, type_);
         try parameters.append(type_);
         const s = context.typed_ast.ast.symbol.items[context.typed_ast.ast.index.items[p.name]];
         try putInScope(context.scopes, s, type_);
@@ -201,6 +201,10 @@ fn function(context: Context, expr: Expression) !Type {
     };
     var last: Type = 0;
     for (f.body.items) |b| last = try infer(context, b);
+    std.debug.print("\nLast kind: {} Return Kind: {}\n", .{
+        context.types.kind.items[last],
+        context.types.kind.items[return_type],
+    });
     try context.constraints.equal.append(.{ .left = last, .right = return_type });
     const index = context.types.function.items.len;
     try context.types.function.append(.{
@@ -210,7 +214,7 @@ fn function(context: Context, expr: Expression) !Type {
     const type_ = context.types.kind.items.len;
     try context.types.kind.append(.{ .function = index });
     try context.types.span.putNoClobber(type_, full_span);
-    try context.typed_ast.type.put(expr, type_);
+    try context.typed_ast.type.putNoClobber(expr, type_);
     return type_;
 }
 
@@ -222,7 +226,7 @@ fn binaryOp(context: Context, expr: Expression) !Type {
     const type_ = context.types.kind.items.len;
     try context.types.kind.append(context.types.kind.items[left]);
     try context.types.span.putNoClobber(type_, context.typed_ast.ast.span.items[expr]);
-    try context.typed_ast.type.put(expr, type_);
+    try context.typed_ast.type.putNoClobber(expr, type_);
     return left;
 }
 
@@ -382,4 +386,133 @@ pub fn toString(allocator: Allocator, intern: Intern, typed_ast: TypedAst, types
     const indent: u64 = 0;
     for (typed_ast.ast.top_level.items) |expr| try expressionToString(writer, intern, typed_ast, types, expr, indent);
     return list.toOwnedSlice();
+}
+
+fn indentToString(writer: List(u8).Writer, indent: u64) !void {
+    try writer.writeAll("\n");
+    var i: u64 = 0;
+    while (i < indent) {
+        try writer.writeAll("  ");
+        i += 1;
+    }
+}
+
+fn symbolToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
+    try indentToString(writer, indent);
+    const s = typed_ast.ast.symbol.items[typed_ast.ast.index.items[expr]];
+    try writer.writeAll("symbol = ");
+    try indentToString(writer, indent + 1);
+    try writer.writeAll("name = ");
+    try writer.writeAll(interner.lookup(intern, s));
+    try indentToString(writer, indent + 1);
+    try writer.writeAll("type = ");
+    if (typed_ast.type.get(expr)) |t| {
+        try typeToVerboseString(writer, types, t);
+    } else {
+        try writer.writeAll("unknown");
+    }
+}
+
+fn typeToVerboseString(writer: List(u8).Writer, types: Types, type_: Type) !void {
+    const kind = types.kind.items[type_];
+    switch (kind) {
+        .i32 => try writer.writeAll("i32"),
+        .typevar => |i| try std.fmt.format(writer, "typevar {}", .{i}),
+        .function => |i| {
+            const f = types.function.items[i];
+            try writer.writeAll("function (");
+            for (f.parameters.items) |p, j| {
+                if (j > 0) try writer.writeAll(", ");
+                try typeToVerboseString(writer, types, p);
+            }
+            try writer.writeAll(") -> ");
+            try typeToVerboseString(writer, types, f.return_type);
+        },
+        else => std.debug.panic("\nCannot convert type {} to string", .{kind}),
+    }
+}
+
+fn blockToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, exprs: List(Expression), indent: u64) !void {
+    std.debug.assert(exprs.items.len == 1);
+    try expressionToVerboseString(writer, intern, typed_ast, types, exprs.items[0], indent);
+}
+
+fn functionToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
+    const f = typed_ast.ast.function.items[typed_ast.ast.index.items[expr]];
+    const f_type = typed_ast.type.get(expr).?;
+    try writer.writeAll("function");
+    try indentToString(writer, indent + 1);
+    try writer.writeAll("name = ");
+    try symbolToVerboseString(writer, intern, typed_ast, types, f.name, indent + 2);
+    try indentToString(writer, indent + 1);
+    try writer.writeAll("type = ");
+    try typeToVerboseString(writer, types, f_type);
+    try indentToString(writer, indent + 1);
+    try writer.writeAll("parameters = ");
+    for (f.parameters.items) |p| {
+        try indentToString(writer, indent + 2);
+        try writer.writeAll("parameter = ");
+        try indentToString(writer, indent + 3);
+        try writer.writeAll("name = ");
+        try symbolToVerboseString(writer, intern, typed_ast, types, p.name, indent + 4);
+        try indentToString(writer, indent + 3);
+        try writer.writeAll("type = ");
+        const p_type = typed_ast.type.get(p.name).?;
+        try typeToVerboseString(writer, types, p_type);
+    }
+    try indentToString(writer, indent + 1);
+    try writer.writeAll("body = ");
+    try blockToVerboseString(writer, intern, typed_ast, types, f.body, indent);
+}
+
+fn binaryOpToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
+    const b = typed_ast.ast.binary_op.items[typed_ast.ast.index.items[expr]];
+    try indentToString(writer, indent + 2);
+    try writer.writeAll("binary op");
+    try indentToString(writer, indent + 3);
+    try writer.writeAll("kind = ");
+    switch (b.kind) {
+        .add => try writer.writeAll("+"),
+        else => unreachable,
+    }
+    try indentToString(writer, indent + 3);
+    try writer.writeAll("type = ");
+    try typeToVerboseString(writer, types, typed_ast.type.get(expr).?);
+    try indentToString(writer, indent + 3);
+    try writer.writeAll("lhs = ");
+    try expressionToVerboseString(writer, intern, typed_ast, types, b.left, indent + 4);
+    try indentToString(writer, indent + 3);
+    try writer.writeAll("rhs = ");
+    try expressionToVerboseString(writer, intern, typed_ast, types, b.right, indent + 4);
+}
+
+fn expressionToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) error{OutOfMemory}!void {
+    switch (typed_ast.ast.kind.items[expr]) {
+        .function => try functionToVerboseString(writer, intern, typed_ast, types, expr, indent),
+        .binary_op => try binaryOpToVerboseString(writer, intern, typed_ast, types, expr, indent),
+        .symbol => try symbolToVerboseString(writer, intern, typed_ast, types, expr, indent),
+        else => std.debug.panic("\nCannot convert expression {} to string", .{typed_ast.ast.kind.items[expr]}),
+    }
+}
+
+pub fn toVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types) !void {
+    const indent: u64 = 0;
+    for (typed_ast.ast.top_level.items) |expr| try expressionToVerboseString(writer, intern, typed_ast, types, expr, indent);
+}
+
+pub fn substitutionsToVerboseString(writer: List(u8).Writer, substitution: Substitution, types: Types) !void {
+    var iterator = substitution.iterator();
+    while (iterator.next()) |entry| {
+        try std.fmt.format(writer, "\n{} -> ", .{entry.key_ptr.*});
+        try typeToVerboseString(writer, types, entry.value_ptr.*);
+    }
+}
+
+pub fn constraintsToVerboseString(writer: List(u8).Writer, constraints: Constraints, types: Types) !void {
+    for (constraints.equal.items) |c| {
+        try writer.writeAll("\n");
+        try typeToVerboseString(writer, types, c.left);
+        try writer.writeAll(" == ");
+        try typeToVerboseString(writer, types, c.right);
+    }
 }
