@@ -201,10 +201,6 @@ fn function(context: Context, expr: Expression) !Type {
     };
     var last: Type = 0;
     for (f.body.items) |b| last = try infer(context, b);
-    std.debug.print("\nLast kind: {} Return Kind: {}\n", .{
-        context.types.kind.items[last],
-        context.types.kind.items[return_type],
-    });
     try context.constraints.equal.append(.{ .left = last, .right = return_type });
     const index = context.types.function.items.len;
     try context.types.function.append(.{
@@ -221,7 +217,7 @@ fn function(context: Context, expr: Expression) !Type {
 fn binaryOp(context: Context, expr: Expression) !Type {
     const b = context.typed_ast.ast.binary_op.items[context.typed_ast.ast.index.items[expr]];
     const left = try infer(context, b.left);
-    const right = try infer(context, b.left);
+    const right = try infer(context, b.right);
     try context.constraints.equal.append(.{ .left = left, .right = right });
     const type_ = context.types.kind.items.len;
     try context.types.kind.append(context.types.kind.items[left]);
@@ -240,6 +236,7 @@ fn symbol(context: Context, expr: Expression) !Type {
             const kind = context.types.kind.items[t];
             try context.types.kind.append(kind);
             try context.types.span.putNoClobber(type_, context.typed_ast.ast.span.items[expr]);
+            try context.typed_ast.type.putNoClobber(expr, type_);
             return type_;
         }
     }
@@ -279,22 +276,43 @@ pub fn constrain(allocator: Allocator, constraints: *Constraints, typed_ast: *Ty
 
 const Substitution = Map(TypeVar, Type);
 
+fn mapTypeVar(substitution: *Substitution, types: Types, typevar: TypeVar, type_: Type) !void {
+    const result = try substitution.getOrPut(typevar);
+    if (result.found_existing) {
+        switch (types.kind.items[result.value_ptr.*]) {
+            .typevar => |t| {
+                result.value_ptr.* = type_;
+                try mapTypeVar(substitution, types, t, type_);
+            },
+            else => {
+                std.debug.panic("\nCannot map typevar {} to non typevar {} if it's already mapped to {}", .{
+                    typevar,
+                    types.kind.items[type_],
+                    types.kind.items[result.value_ptr.*],
+                });
+            },
+        }
+        return;
+    }
+    result.value_ptr.* = type_;
+}
+
 fn equal(substitution: *Substitution, types: Types, e: Equal) !void {
     const left_kind = types.kind.items[e.left];
     const right_kind = types.kind.items[e.right];
     if (left_kind == .typevar) {
         if (right_kind == .typevar) {
             if (left_kind.typevar == right_kind.typevar) return;
-            return try substitution.putNoClobber(left_kind.typevar, e.right);
+            return try mapTypeVar(substitution, types, left_kind.typevar, e.right);
         }
-        return try substitution.putNoClobber(left_kind.typevar, e.right);
+        return try mapTypeVar(substitution, types, left_kind.typevar, e.right);
     }
     if (right_kind == .typevar) {
         if (left_kind == .typevar) {
             if (left_kind.typevar == right_kind.typevar) return;
-            return try substitution.putNoClobber(right_kind.typevar, e.left);
+            return try mapTypeVar(substitution, types, right_kind.typevar, e.left);
         }
-        return try substitution.putNoClobber(right_kind.typevar, e.left);
+        return try mapTypeVar(substitution, types, right_kind.typevar, e.left);
     }
     if (left_kind == .function and right_kind == .function) {
         std.debug.panic("\nCannot handle function types yet", .{});
