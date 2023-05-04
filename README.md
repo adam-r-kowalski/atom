@@ -13,10 +13,10 @@ square(3)
 square(x: i32) = x^2
 
 # you can also annotate the return type
-square(x: i32): i32 = x^2
+square(x: i32) -> i32 = x^2
 
 # you annotate the return type but not the argument types
-square(x): i32 = x^2
+square(x) -> i32 = x^2
 
 # conditionals use an if then else syntax
 max(x, y) = if x > y then x else y
@@ -42,7 +42,7 @@ clamp(x, lb, ub) = max(min(x, ub), lb)
 clamp(x, lb, ub) = x.min(ub).max(lb)
 
 # the type of clamp requires a constrained generic
-clamp[T: Ord](x: T, lb: T, ub: T): T =
+clamp[T: Ord](x: T, lb: T, ub: T) -> T =
   if x < lb then lb
      x > ub then ub
      else x
@@ -69,15 +69,15 @@ sum(xs) = fold(xs, 0, +)
 sum(xs) = xs.fold(0, +)
 
 # we can write type annotations here as well
-sum[T](xs: T[]): T = xs.fold(0, +)
+sum[T](xs: T[]) -> T = xs.fold(0, +)
 
 # you can import a function from the host
 @import("console", "log")
-print(x: str): void
+print(x: str) -> void
 
 # you can export a function to the host
 @export
-double(x: i32): i32 = x * 2
+double(x: i32) -> i32 = x * 2
 
 # by default the start function is exported
 start() = print("hello world")

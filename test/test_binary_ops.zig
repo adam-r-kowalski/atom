@@ -96,3 +96,21 @@ test "type operands should have the same type as the result" {
     const expected = "add(x: i32, y: i32) -> i32 = x + y";
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "type infer can figure out second parameter and return type" {
+    const allocator = std.testing.allocator;
+    const source = "add(x: i32, y) = x + y";
+    const actual = try atom.testing.typeInfer(allocator, source, "add");
+    defer allocator.free(actual);
+    const expected = "add(x: i32, y: i32) -> i32 = x + y";
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer can figure out first parameter and return type" {
+    const allocator = std.testing.allocator;
+    const source = "add(x, y: i32) = x + y";
+    const actual = try atom.testing.typeInfer(allocator, source, "add");
+    defer allocator.free(actual);
+    const expected = "add(x: i32, y: i32) -> i32 = x + y";
+    try std.testing.expectEqualStrings(expected, actual);
+}

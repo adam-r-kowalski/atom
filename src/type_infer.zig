@@ -285,11 +285,13 @@ fn mapTypeVar(substitution: *Substitution, types: Types, typevar: TypeVar, type_
                 try mapTypeVar(substitution, types, t, type_);
             },
             else => {
-                std.debug.panic("\nCannot map typevar {} to non typevar {} if it's already mapped to {}", .{
-                    typevar,
-                    types.kind.items[type_],
-                    types.kind.items[result.value_ptr.*],
-                });
+                switch (types.kind.items[type_]) {
+                    .typevar => |t| try mapTypeVar(substitution, types, t, result.value_ptr.*),
+                    else => std.debug.panic("\nCannot map {} to {}", .{
+                        types.kind.items[type_],
+                        types.kind.items[result.value_ptr.*],
+                    }),
+                }
             },
         }
         return;
