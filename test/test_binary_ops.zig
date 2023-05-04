@@ -114,3 +114,12 @@ test "type infer can figure out first parameter and return type" {
     const expected = "add(x: i32, y: i32) -> i32 = x + y";
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "type infer fully generic add" {
+    const allocator = std.testing.allocator;
+    const source = "add(x, y) = x + y";
+    const actual = try atom.testing.typeInfer(allocator, source, "add");
+    defer allocator.free(actual);
+    const expected = "add[A](x: A, y: A) -> A = x + y";
+    try std.testing.expectEqualStrings(expected, actual);
+}

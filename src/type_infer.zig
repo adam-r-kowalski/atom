@@ -342,10 +342,20 @@ pub fn apply(substitution: Substitution, types: *Types) void {
     }
 }
 
-fn typeToString(writer: List(u8).Writer, types: Types, type_: Type) !void {
+const Vars = Map(TypeVar, u8);
+
+fn typeToString(writer: List(u8).Writer, types: Types, type_: Type, vars: *Vars) !void {
     const kind = types.kind.items[type_];
     switch (kind) {
         .i32 => try writer.writeAll("i32"),
+        .typevar => |t| {
+            const result = try vars.getOrPut(t);
+            if (result.found_existing) {
+                return try std.fmt.format(writer, "{c}", .{result.value_ptr.*});
+            }
+            result.value_ptr.* = 'A' + @intCast(u8, vars.count() - 1);
+            try std.fmt.format(writer, "{c}", .{result.value_ptr.*});
+        },
         else => std.debug.panic("\nCannot convert type {} to string", .{kind}),
     }
 }
@@ -355,47 +365,63 @@ fn symbolToString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, 
     try writer.writeAll(interner.lookup(intern, s));
 }
 
-fn blockToString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, exprs: List(Expression), indent: u64) !void {
+fn blockToString(allocator: Allocator, writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, exprs: List(Expression), indent: u64) !void {
     std.debug.assert(exprs.items.len == 1);
-    try expressionToString(writer, intern, typed_ast, types, exprs.items[0], indent);
+    try expressionToString(allocator, writer, intern, typed_ast, types, exprs.items[0], indent);
 }
 
-fn functionToString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
+fn functionToString(allocator: Allocator, writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
+    var vars = Vars.init(allocator);
+    defer vars.deinit();
+    var list = List(u8).init(allocator);
+    defer list.deinit();
+    const sub_writer = list.writer();
     const f = typed_ast.ast.function.items[typed_ast.ast.index.items[expr]];
     const type_ = typed_ast.type.get(expr).?;
     const kind = types.kind.items[type_];
     const f_type = types.function.items[kind.function];
     try symbolToString(writer, intern, typed_ast, f.name);
-    try writer.writeAll("(");
+    try sub_writer.writeAll("(");
     for (f.parameters.items) |p, i| {
-        if (i > 0) try writer.writeAll(", ");
-        try symbolToString(writer, intern, typed_ast, p.name);
-        try writer.writeAll(": ");
-        try typeToString(writer, types, f_type.parameters.items[i]);
+        if (i > 0) try sub_writer.writeAll(", ");
+        try symbolToString(sub_writer, intern, typed_ast, p.name);
+        try sub_writer.writeAll(": ");
+        try typeToString(sub_writer, types, f_type.parameters.items[i], &vars);
     }
-    try writer.writeAll(") -> ");
-    try typeToString(writer, types, f_type.return_type);
-    try writer.writeAll(" = ");
-    try blockToString(writer, intern, typed_ast, types, f.body, indent);
+    try sub_writer.writeAll(") -> ");
+    try typeToString(sub_writer, types, f_type.return_type, &vars);
+    try sub_writer.writeAll(" = ");
+    try blockToString(allocator, sub_writer, intern, typed_ast, types, f.body, indent);
+    const num_vars = vars.count();
+    if (num_vars > 0) {
+        try writer.writeAll("[");
+        var i: usize = 0;
+        while (i < num_vars) : (i += 1) {
+            if (i > 0) try writer.writeAll(", ");
+            try std.fmt.format(writer, "{c}", .{'A' + @intCast(u8, i)});
+        }
+        try writer.writeAll("]");
+    }
+    try writer.writeAll(list.items);
 }
 
-fn binaryOpToString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
+fn binaryOpToString(allocator: Allocator, writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
     const b = typed_ast.ast.binary_op.items[typed_ast.ast.index.items[expr]];
-    try expressionToString(writer, intern, typed_ast, types, b.left, indent);
+    try expressionToString(allocator, writer, intern, typed_ast, types, b.left, indent);
     try writer.writeAll(" ");
     switch (b.kind) {
         .add => try writer.writeAll("+"),
         else => unreachable,
     }
     try writer.writeAll(" ");
-    try expressionToString(writer, intern, typed_ast, types, b.right, indent);
+    try expressionToString(allocator, writer, intern, typed_ast, types, b.right, indent);
 }
 
-fn expressionToString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) error{OutOfMemory}!void {
+fn expressionToString(allocator: Allocator, writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) error{OutOfMemory}!void {
     switch (typed_ast.ast.kind.items[expr]) {
-        .function => try functionToString(writer, intern, typed_ast, types, expr, indent),
+        .function => try functionToString(allocator, writer, intern, typed_ast, types, expr, indent),
         .symbol => try symbolToString(writer, intern, typed_ast, expr),
-        .binary_op => try binaryOpToString(writer, intern, typed_ast, types, expr, indent),
+        .binary_op => try binaryOpToString(allocator, writer, intern, typed_ast, types, expr, indent),
         else => unreachable,
     }
 }
@@ -404,7 +430,7 @@ pub fn toString(allocator: Allocator, intern: Intern, typed_ast: TypedAst, types
     var list = List(u8).init(allocator);
     const writer = list.writer();
     const indent: u64 = 0;
-    for (typed_ast.ast.top_level.items) |expr| try expressionToString(writer, intern, typed_ast, types, expr, indent);
+    for (typed_ast.ast.top_level.items) |expr| try expressionToString(allocator, writer, intern, typed_ast, types, expr, indent);
     return list.toOwnedSlice();
 }
 
