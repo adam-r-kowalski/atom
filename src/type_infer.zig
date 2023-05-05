@@ -20,6 +20,7 @@ pub const TypeVar = u64;
 
 const Kind = union(enum) {
     i32,
+    bool,
     type,
     typevar: TypeVar,
     function: u64,
@@ -152,10 +153,18 @@ fn typeExpression(context: Context, expr: Expression) !Kind {
         .symbol => {
             const s = context.typed_ast.ast.symbol.items[context.typed_ast.ast.index.items[expr]];
             if (s == context.builtins.i32) return .i32;
+            if (s == context.builtins.bool) return .bool;
             std.debug.panic("\nCannot type symbol {}", .{s});
         },
         else => std.debug.panic("\nCannot type expression {}", .{kind}),
     }
+}
+
+fn block(context: Context, exprs: List(Expression)) !Type {
+    std.debug.assert(exprs.items.len > 0);
+    var last: Type = 0;
+    for (exprs.items) |expr| last = try infer(context, expr);
+    return last;
 }
 
 // Need to put function name in scope before inferring body to allow for recursion
@@ -199,8 +208,7 @@ fn function(context: Context, expr: Expression) !Type {
         }
         break :blk type_;
     };
-    var last: Type = 0;
-    for (f.body.items) |b| last = try infer(context, b);
+    const last = try block(context, f.body);
     try context.constraints.equal.append(.{ .left = last, .right = return_type });
     const index = context.types.function.items.len;
     try context.types.function.append(.{
@@ -227,6 +235,23 @@ fn binaryOp(context: Context, expr: Expression) !Type {
     return type_;
 }
 
+fn if_(context: Context, expr: Expression) !Type {
+    const i = context.typed_ast.ast.if_.items[context.typed_ast.ast.index.items[expr]];
+    const condition = try infer(context, i.condition);
+    const bool_type = context.types.kind.items.len;
+    try context.types.kind.append(.bool);
+    try context.constraints.equal.append(.{ .left = condition, .right = bool_type });
+    const then = try block(context, i.then);
+    const else_ = try block(context, i.else_);
+    const type_ = context.types.kind.items.len;
+    try context.types.kind.append(freshTypeVar(context.types));
+    try context.types.span.putNoClobber(type_, context.typed_ast.ast.span.items[expr]);
+    try context.typed_ast.type.putNoClobber(expr, type_);
+    try context.constraints.equal.append(.{ .left = then, .right = type_ });
+    try context.constraints.equal.append(.{ .left = type_, .right = else_ });
+    return type_;
+}
+
 // TODO: need to instantiate the type if it's a forall
 fn symbol(context: Context, expr: Expression) !Type {
     const s = context.typed_ast.ast.symbol.items[context.typed_ast.ast.index.items[expr]];
@@ -250,6 +275,7 @@ fn infer(context: Context, expr: Expression) error{OutOfMemory}!Type {
         .function => return try function(context, expr),
         .symbol => return try symbol(context, expr),
         .binary_op => return try binaryOp(context, expr),
+        .if_ => return try if_(context, expr),
         else => std.debug.panic("\nCannot infer type of expression {}", .{kind}),
     }
 }
@@ -383,6 +409,7 @@ fn typeToString(writer: List(u8).Writer, types: Types, type_: Type, vars: *Vars)
     const kind = types.kind.items[type_];
     switch (kind) {
         .i32 => try writer.writeAll("i32"),
+        .bool => try writer.writeAll("bool"),
         .typevar => |t| {
             const result = try vars.getOrPut(t);
             if (result.found_existing) {
@@ -453,11 +480,22 @@ fn binaryOpToString(allocator: Allocator, writer: List(u8).Writer, intern: Inter
     try expressionToString(allocator, writer, intern, typed_ast, types, b.right, indent);
 }
 
+fn ifToString(allocator: Allocator, writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
+    const i = typed_ast.ast.if_.items[typed_ast.ast.index.items[expr]];
+    try writer.writeAll("if ");
+    try expressionToString(allocator, writer, intern, typed_ast, types, i.condition, indent);
+    try writer.writeAll(" then ");
+    try blockToString(allocator, writer, intern, typed_ast, types, i.then, indent);
+    try writer.writeAll(" else ");
+    try blockToString(allocator, writer, intern, typed_ast, types, i.else_, indent);
+}
+
 fn expressionToString(allocator: Allocator, writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) error{OutOfMemory}!void {
     switch (typed_ast.ast.kind.items[expr]) {
         .function => try functionToString(allocator, writer, intern, typed_ast, types, expr, indent),
         .symbol => try symbolToString(writer, intern, typed_ast, expr),
         .binary_op => try binaryOpToString(allocator, writer, intern, typed_ast, types, expr, indent),
+        .if_ => try ifToString(allocator, writer, intern, typed_ast, types, expr, indent),
         else => unreachable,
     }
 }
@@ -499,6 +537,7 @@ fn typeToVerboseString(writer: List(u8).Writer, types: Types, type_: Type) !void
     const kind = types.kind.items[type_];
     switch (kind) {
         .i32 => try writer.writeAll("i32"),
+        .bool => try writer.writeAll("bool"),
         .typevar => |i| try std.fmt.format(writer, "typevar {}", .{i}),
         .function => |i| {
             const f = types.function.items[i];
@@ -569,10 +608,26 @@ fn binaryOpToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: T
     try expressionToVerboseString(writer, intern, typed_ast, types, b.right, indent + 2);
 }
 
+fn ifToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
+    const i = typed_ast.ast.if_.items[typed_ast.ast.index.items[expr]];
+    try indentToString(writer, indent);
+    try writer.writeAll("if");
+    try indentToString(writer, indent + 1);
+    try writer.writeAll("condition = ");
+    try expressionToVerboseString(writer, intern, typed_ast, types, i.condition, indent + 2);
+    try indentToString(writer, indent + 1);
+    try writer.writeAll("then = ");
+    try blockToVerboseString(writer, intern, typed_ast, types, i.then, indent + 2);
+    try indentToString(writer, indent + 1);
+    try writer.writeAll("else = ");
+    try blockToVerboseString(writer, intern, typed_ast, types, i.else_, indent + 2);
+}
+
 fn expressionToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) error{OutOfMemory}!void {
     switch (typed_ast.ast.kind.items[expr]) {
         .function => try functionToVerboseString(writer, intern, typed_ast, types, expr, indent),
         .binary_op => try binaryOpToVerboseString(writer, intern, typed_ast, types, expr, indent),
+        .if_ => try ifToVerboseString(writer, intern, typed_ast, types, expr, indent),
         .symbol => try symbolToVerboseString(writer, intern, typed_ast, types, expr, indent),
         else => std.debug.panic("\nCannot convert expression {} to string", .{typed_ast.ast.kind.items[expr]}),
     }

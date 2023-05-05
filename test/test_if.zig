@@ -113,3 +113,39 @@ test "parse nested if then else" {
     const expected = "(if (> x y) 1 (if (< x y) -1 0))";
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "type infer if then else infer condition, else and return type" {
+    const allocator = std.testing.allocator;
+    const source = "f(c, x: i32, y) = if c then x else y";
+    const actual = try atom.testing.typeInfer(allocator, source, "f");
+    defer allocator.free(actual);
+    const expected = "f(c: bool, x: i32, y: i32) -> i32 = if c then x else y";
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer if then else infer condition, then and return type" {
+    const allocator = std.testing.allocator;
+    const source = "f(c, x, y: i32) = if c then x else y";
+    const actual = try atom.testing.typeInfer(allocator, source, "f");
+    defer allocator.free(actual);
+    const expected = "f(c: bool, x: i32, y: i32) -> i32 = if c then x else y";
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer if then else infer condition, then and else" {
+    const allocator = std.testing.allocator;
+    const source = "f(c, x, y) -> i32 = if c then x else y";
+    const actual = try atom.testing.typeInfer(allocator, source, "f");
+    defer allocator.free(actual);
+    const expected = "f(c: bool, x: i32, y: i32) -> i32 = if c then x else y";
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer fully generic if then else" {
+    const allocator = std.testing.allocator;
+    const source = "f(c, x, y) = if c then x else y";
+    const actual = try atom.testing.typeInfer(allocator, source, "f");
+    defer allocator.free(actual);
+    const expected = "f[A](c: bool, x: A, y: A) -> A = if c then x else y";
+    try std.testing.expectEqualStrings(expected, actual);
+}

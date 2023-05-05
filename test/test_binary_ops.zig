@@ -204,3 +204,12 @@ test "type infer add then multiply infer all parameter types" {
     const expected = "f(x: i32, y: i32, z: i32) -> i32 = x + y * z";
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "type infer fully generic add then multiply" {
+    const allocator = std.testing.allocator;
+    const source = "f(x, y, z) = x + y * z";
+    const actual = try atom.testing.typeInfer(allocator, source, "f");
+    defer allocator.free(actual);
+    const expected = "f[A](x: A, y: A, z: A) -> A = x + y * z";
+    try std.testing.expectEqualStrings(expected, actual);
+}
