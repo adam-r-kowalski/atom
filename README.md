@@ -72,13 +72,17 @@ sum(xs) = xs.fold(0, +)
 sum[T](xs: T[]) -> T = xs.fold(0, +)
 
 # you can import a function from the host
-@import("console", "log")
-print(x: str) -> void
+print(x: str) -> void = ffi("console", "log")
 
 # you can export a function to the host
-@export
-double(x: i32) -> i32 = x * 2
+pub double(x: i32) -> i32 = x * 2
 
 # by default the start function is exported
 start() = print("hello world")
+
+# create a unit test
+test "double makes the number twice as large" =
+    assert double(2) == 4
+    assert double(4) == 8
+    assert double(5) == 10
 ```

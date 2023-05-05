@@ -218,12 +218,13 @@ fn binaryOp(context: Context, expr: Expression) !Type {
     const b = context.typed_ast.ast.binary_op.items[context.typed_ast.ast.index.items[expr]];
     const left = try infer(context, b.left);
     const right = try infer(context, b.right);
-    try context.constraints.equal.append(.{ .left = left, .right = right });
     const type_ = context.types.kind.items.len;
-    try context.types.kind.append(context.types.kind.items[left]);
+    try context.types.kind.append(freshTypeVar(context.types));
     try context.types.span.putNoClobber(type_, context.typed_ast.ast.span.items[expr]);
     try context.typed_ast.type.putNoClobber(expr, type_);
-    return left;
+    try context.constraints.equal.append(.{ .left = left, .right = type_ });
+    try context.constraints.equal.append(.{ .left = type_, .right = right });
+    return type_;
 }
 
 // TODO: need to instantiate the type if it's a forall
@@ -278,25 +279,41 @@ const Substitution = Map(TypeVar, Type);
 
 fn mapTypeVar(substitution: *Substitution, types: Types, typevar: TypeVar, type_: Type) !void {
     const result = try substitution.getOrPut(typevar);
-    if (result.found_existing) {
-        switch (types.kind.items[result.value_ptr.*]) {
-            .typevar => |t| {
-                result.value_ptr.* = type_;
-                try mapTypeVar(substitution, types, t, type_);
-            },
-            else => {
-                switch (types.kind.items[type_]) {
-                    .typevar => |t| try mapTypeVar(substitution, types, t, result.value_ptr.*),
-                    else => std.debug.panic("\nCannot map {} to {}", .{
-                        types.kind.items[type_],
-                        types.kind.items[result.value_ptr.*],
-                    }),
-                }
-            },
-        }
+    if (!result.found_existing) {
+        result.value_ptr.* = type_;
         return;
     }
-    result.value_ptr.* = type_;
+    const result_kind = types.kind.items[result.value_ptr.*];
+    const type_kind = types.kind.items[type_];
+    switch (result_kind) {
+        .typevar => |t| {
+            switch (type_kind) {
+                .typevar => |t2| {
+                    if (t == t2) return;
+                    result.value_ptr.* = type_;
+                    try mapTypeVar(substitution, types, t, type_);
+                    return;
+                },
+                else => {
+                    result.value_ptr.* = type_;
+                    try mapTypeVar(substitution, types, t, type_);
+                    return;
+                },
+            }
+        },
+        else => {
+            switch (type_kind) {
+                .typevar => |t| try mapTypeVar(substitution, types, t, result.value_ptr.*),
+                else => {
+                    if (std.meta.eql(type_kind, result_kind)) return;
+                    std.debug.panic("\nCannot unify types {} and {}", .{
+                        type_kind,
+                        result_kind,
+                    });
+                },
+            }
+        },
+    }
 }
 
 fn equal(substitution: *Substitution, types: Types, e: Equal) !void {
@@ -326,7 +343,25 @@ fn equal(substitution: *Substitution, types: Types, e: Equal) !void {
 pub fn solve(allocator: Allocator, types: Types, constraints: Constraints) !Substitution {
     var substitution = Substitution.init(allocator);
     for (constraints.equal.items) |e| try equal(&substitution, types, e);
-    return substitution;
+    //TODO: there has to be a better way to approach this
+    var i: u64 = 0;
+    while (i < 3) : (i += 1) {
+        var solved: u64 = 0;
+        var iterator = substitution.iterator();
+        while (iterator.next()) |entry| {
+            switch (types.kind.items[entry.value_ptr.*]) {
+                .typevar => |t| {
+                    if (substitution.get(t)) |type_| {
+                        entry.value_ptr.* = type_;
+                        solved += 1;
+                    }
+                },
+                else => {},
+            }
+        }
+        if (solved == 0) return substitution;
+    }
+    std.debug.panic("\nCannot solve constraints", .{});
 }
 
 pub fn apply(substitution: Substitution, types: *Types) void {
@@ -411,6 +446,7 @@ fn binaryOpToString(allocator: Allocator, writer: List(u8).Writer, intern: Inter
     try writer.writeAll(" ");
     switch (b.kind) {
         .add => try writer.writeAll("+"),
+        .multiply => try writer.writeAll("*"),
         else => unreachable,
     }
     try writer.writeAll(" ");
@@ -508,28 +544,29 @@ fn functionToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: T
     }
     try indentToString(writer, indent + 1);
     try writer.writeAll("body = ");
-    try blockToVerboseString(writer, intern, typed_ast, types, f.body, indent);
+    try blockToVerboseString(writer, intern, typed_ast, types, f.body, indent + 2);
 }
 
 fn binaryOpToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
     const b = typed_ast.ast.binary_op.items[typed_ast.ast.index.items[expr]];
-    try indentToString(writer, indent + 2);
+    try indentToString(writer, indent);
     try writer.writeAll("binary op");
-    try indentToString(writer, indent + 3);
+    try indentToString(writer, indent + 1);
     try writer.writeAll("kind = ");
     switch (b.kind) {
         .add => try writer.writeAll("+"),
+        .multiply => try writer.writeAll("*"),
         else => unreachable,
     }
-    try indentToString(writer, indent + 3);
+    try indentToString(writer, indent + 1);
     try writer.writeAll("type = ");
     try typeToVerboseString(writer, types, typed_ast.type.get(expr).?);
-    try indentToString(writer, indent + 3);
+    try indentToString(writer, indent + 1);
     try writer.writeAll("lhs = ");
-    try expressionToVerboseString(writer, intern, typed_ast, types, b.left, indent + 4);
-    try indentToString(writer, indent + 3);
+    try expressionToVerboseString(writer, intern, typed_ast, types, b.left, indent + 2);
+    try indentToString(writer, indent + 1);
     try writer.writeAll("rhs = ");
-    try expressionToVerboseString(writer, intern, typed_ast, types, b.right, indent + 4);
+    try expressionToVerboseString(writer, intern, typed_ast, types, b.right, indent + 2);
 }
 
 fn expressionToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) error{OutOfMemory}!void {
