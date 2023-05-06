@@ -30,9 +30,9 @@ test "parse if then else across multiple lines" {
     const allocator = std.testing.allocator;
     const source =
         \\if x then
-        \\  y
+        \\    y
         \\else
-        \\  z
+        \\    z
     ;
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
@@ -44,8 +44,8 @@ test "parse if multi line then else" {
     const allocator = std.testing.allocator;
     const source =
         \\if x then
-        \\  a = y ^ 2
-        \\  a * 5
+        \\    a = y ^ 2
+        \\    a * 5
         \\else
         \\    z
     ;
@@ -53,10 +53,10 @@ test "parse if multi line then else" {
     defer allocator.free(actual);
     const expected =
         \\(if x
-        \\  (block
-        \\    (def a (^ y 2))
-        \\    (* a 5))
-        \\  z)
+        \\    (block
+        \\        (def a (^ y 2))
+        \\        (* a 5))
+        \\    z)
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -65,18 +65,18 @@ test "parse if then multi line else" {
     const allocator = std.testing.allocator;
     const source =
         \\if x then
-        \\  y
+        \\    y
         \\else
-        \\  a = z ^ 2
-        \\  a * 5
+        \\    a = z ^ 2
+        \\    a * 5
     ;
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(if x y
-        \\  (block
-        \\    (def a (^ z 2))
-        \\    (* a 5)))
+        \\    (block
+        \\        (def a (^ z 2))
+        \\        (* a 5)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -85,18 +85,18 @@ test "parse let on result of if then else" {
     const allocator = std.testing.allocator;
     const source =
         \\b = if x then
-        \\      y
+        \\        y
         \\    else
-        \\      a = z ^ 2
-        \\      a * 5
+        \\        a = z ^ 2
+        \\        a * 5
     ;
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def b (if x y
-        \\    (block
-        \\      (def a (^ z 2))
-        \\      (* a 5))))
+        \\        (block
+        \\            (def a (^ z 2))
+        \\            (* a 5))))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

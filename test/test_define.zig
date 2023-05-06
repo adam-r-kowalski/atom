@@ -55,21 +55,21 @@ test "tokenize multi line define" {
     const allocator = std.testing.allocator;
     const source =
         \\x =
-        \\  a = y + z
-        \\  a - b
+        \\    a = y + z
+        \\    a - b
     ;
     const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\symbol x
         \\equal
-        \\space 2
+        \\space 4
         \\symbol a
         \\equal
         \\symbol y
         \\plus
         \\symbol z
-        \\space 2
+        \\space 4
         \\symbol a
         \\minus
         \\symbol b
@@ -81,16 +81,16 @@ test "parse multi line define" {
     const allocator = std.testing.allocator;
     const source =
         \\x =
-        \\  a = y + z
-        \\  a - b
+        \\    a = y + z
+        \\    a - b
     ;
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def x
-        \\  (block
-        \\    (def a (+ y z))
-        \\    (- a b)))
+        \\    (block
+        \\        (def a (+ y z))
+        \\        (- a b)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -99,16 +99,16 @@ test "parse multi line define with type annotation" {
     const allocator = std.testing.allocator;
     const source =
         \\x: i32 =
-        \\  a: i32 = y + z
-        \\  a - b
+        \\    a: i32 = y + z
+        \\    a - b
     ;
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def x i32
-        \\  (block
-        \\    (def a i32 (+ y z))
-        \\    (- a b)))
+        \\    (block
+        \\        (def a i32 (+ y z))
+        \\        (- a b)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -117,17 +117,17 @@ test "infer type of define based on body" {
     const allocator = std.testing.allocator;
     const source =
         \\sum_of_squares(x: i32, y: i32) -> i32 =
-        \\  a = x * x
-        \\  b = y * y
-        \\  a + b
+        \\    a = x * x
+        \\    b = y * y
+        \\    a + b
     ;
     const actual = try atom.testing.typeInfer(allocator, source, "sum_of_squares");
     defer allocator.free(actual);
     const expected =
         \\sum_of_squares(x: i32, y: i32) -> i32 =
-        \\  a: i32 = x * x
-        \\  b: i32 = y * y
-        \\  a + b
+        \\    a: i32 = x * x
+        \\    b: i32 = y * y
+        \\    a + b
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -136,17 +136,17 @@ test "infer parameter types and return type based on type of define" {
     const allocator = std.testing.allocator;
     const source =
         \\sum_of_squares(x, y) =
-        \\  a: i32 = x * x
-        \\  b = y * y
-        \\  a + b
+        \\    a: i32 = x * x
+        \\    b = y * y
+        \\    a + b
     ;
     const actual = try atom.testing.typeInfer(allocator, source, "sum_of_squares");
     defer allocator.free(actual);
     const expected =
         \\sum_of_squares(x: i32, y: i32) -> i32 =
-        \\  a: i32 = x * x
-        \\  b: i32 = y * y
-        \\  a + b
+        \\    a: i32 = x * x
+        \\    b: i32 = y * y
+        \\    a + b
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -155,17 +155,17 @@ test "type infer of fully generic define" {
     const allocator = std.testing.allocator;
     const source =
         \\sum_of_squares(x, y) =
-        \\  a = x * x
-        \\  b = y * y
-        \\  a + b
+        \\    a = x * x
+        \\    b = y * y
+        \\    a + b
     ;
     const actual = try atom.testing.typeInfer(allocator, source, "sum_of_squares");
     defer allocator.free(actual);
     const expected =
         \\sum_of_squares[A](x: A, y: A) -> A =
-        \\  a: A = x * x
-        \\  b: A = y * y
-        \\  a + b
+        \\    a: A = x * x
+        \\    b: A = y * y
+        \\    a + b
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -174,21 +174,21 @@ test "parse nested define" {
     const allocator = std.testing.allocator;
     const source =
         \\f(x: i32, y: i32) =
-        \\  a =
-        \\    b = y * y
-        \\    b + x
-        \\  a + x
+        \\    a =
+        \\        b = y * y
+        \\        b + x
+        \\    a + x
     ;
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(defn f [(x i32) (y i32)]
-        \\  (block
-        \\    (def a
-        \\      (block
-        \\        (def b (* y y))
-        \\        (+ b x)))
-        \\    (+ a x)))
+        \\    (block
+        \\        (def a
+        \\            (block
+        \\                (def b (* y y))
+        \\                (+ b x)))
+        \\        (+ a x)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -197,19 +197,19 @@ test "type infer nested define" {
     const allocator = std.testing.allocator;
     const source =
         \\f(x: i32, y: i32) =
-        \\  a =
-        \\    b = y * y
-        \\    b + x
-        \\  a + x
+        \\    a =
+        \\        b = y * y
+        \\        b + x
+        \\    a + x
     ;
     const actual = try atom.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
         \\f(x: i32, y: i32) -> i32 =
-        \\  a: i32 =
-        \\    b: i32 = y * y
-        \\    b + x
-        \\  a + x
+        \\    a: i32 =
+        \\        b: i32 = y * y
+        \\        b + x
+        \\    a + x
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -218,19 +218,19 @@ test "type infer by annotating inside nested define" {
     const allocator = std.testing.allocator;
     const source =
         \\f(x, y) =
-        \\  a =
-        \\    b: i32 = y * y
-        \\    b + x
-        \\  a + x
+        \\    a =
+        \\        b: i32 = y * y
+        \\        b + x
+        \\    a + x
     ;
     const actual = try atom.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
         \\f(x: i32, y: i32) -> i32 =
-        \\  a: i32 =
-        \\    b: i32 = y * y
-        \\    b + x
-        \\  a + x
+        \\    a: i32 =
+        \\        b: i32 = y * y
+        \\        b + x
+        \\    a + x
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

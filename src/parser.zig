@@ -546,7 +546,7 @@ fn indentToString(writer: List(u8).Writer, indent: u64) !void {
     try writer.writeAll("\n");
     var i: u64 = 0;
     while (i < indent) {
-        try writer.writeAll("  ");
+        try writer.writeAll("    ");
         i += 1;
     }
 }
