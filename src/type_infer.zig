@@ -21,6 +21,7 @@ pub const TypeVar = u64;
 const Kind = union(enum) {
     i32,
     bool,
+    unit,
     type,
     typevar: TypeVar,
     function: u64,
@@ -222,6 +223,36 @@ fn function(context: Context, expr: Expression) !Type {
     return type_;
 }
 
+fn define(context: Context, expr: Expression) !Type {
+    const d = context.typed_ast.ast.define.items[context.typed_ast.ast.index.items[expr]];
+    const body_type = try block(context, d.body);
+    const annotated_type = blk: {
+        var type_ = context.types.kind.items.len;
+        if (d.type) |t| {
+            const kind = try typeExpression(context, t);
+            type_ = context.types.kind.items.len;
+            try context.types.kind.append(kind);
+            const span = context.typed_ast.ast.span.items[t];
+            try context.types.span.putNoClobber(type_, span);
+        } else {
+            const kind = freshTypeVar(context.types);
+            try context.types.kind.append(kind);
+        }
+        break :blk type_;
+    };
+    try context.typed_ast.type.putNoClobber(d.name, annotated_type);
+    try context.constraints.equal.append(.{ .left = annotated_type, .right = body_type });
+    const type_ = context.types.kind.items.len;
+    try context.types.kind.append(.unit);
+    const span = context.typed_ast.ast.span.items[expr];
+    try context.types.span.putNoClobber(type_, span);
+    try context.typed_ast.type.putNoClobber(expr, type_);
+    const s = context.typed_ast.ast.symbol.items[context.typed_ast.ast.index.items[d.name]];
+    // TODO: need to generalize this to allow for polymorphic functions
+    try putInScope(context.scopes, s, annotated_type);
+    return type_;
+}
+
 fn binaryOp(context: Context, expr: Expression) !Type {
     const b = context.typed_ast.ast.binary_op.items[context.typed_ast.ast.index.items[expr]];
     const left = try infer(context, b.left);
@@ -273,6 +304,7 @@ fn infer(context: Context, expr: Expression) error{OutOfMemory}!Type {
     const kind = context.typed_ast.ast.kind.items[expr];
     switch (kind) {
         .function => return try function(context, expr),
+        .define => return try define(context, expr),
         .symbol => return try symbol(context, expr),
         .binary_op => return try binaryOp(context, expr),
         .if_ => return try if_(context, expr),
@@ -474,6 +506,19 @@ fn functionToString(allocator: Allocator, writer: List(u8).Writer, intern: Inter
     try writer.writeAll(list.items);
 }
 
+fn defineToString(allocator: Allocator, writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
+    //TODO: this should come from the function
+    var vars = Vars.init(allocator);
+    defer vars.deinit();
+    const d = typed_ast.ast.define.items[typed_ast.ast.index.items[expr]];
+    try symbolToString(writer, intern, typed_ast, d.name);
+    try writer.writeAll(": ");
+    const name_type = typed_ast.type.get(d.name).?;
+    try typeToString(writer, types, name_type, &vars);
+    try writer.writeAll(" =");
+    try blockToString(allocator, writer, intern, typed_ast, types, d.body, indent + 1);
+}
+
 fn binaryOpToString(allocator: Allocator, writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
     const b = typed_ast.ast.binary_op.items[typed_ast.ast.index.items[expr]];
     try expressionToString(allocator, writer, intern, typed_ast, types, b.left, indent);
@@ -500,6 +545,7 @@ fn ifToString(allocator: Allocator, writer: List(u8).Writer, intern: Intern, typ
 fn expressionToString(allocator: Allocator, writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) error{OutOfMemory}!void {
     switch (typed_ast.ast.kind.items[expr]) {
         .function => try functionToString(allocator, writer, intern, typed_ast, types, expr, indent),
+        .define => try defineToString(allocator, writer, intern, typed_ast, types, expr, indent),
         .symbol => try symbolToString(writer, intern, typed_ast, expr),
         .binary_op => try binaryOpToString(allocator, writer, intern, typed_ast, types, expr, indent),
         .if_ => try ifToString(allocator, writer, intern, typed_ast, types, expr, indent),

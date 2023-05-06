@@ -113,19 +113,59 @@ test "parse multi line define with type annotation" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "type infer define" {
+test "infer type of define based on body" {
     const allocator = std.testing.allocator;
     const source =
-        \\f(x: i32, y: i32) -> i32 =
-        \\  x * x
-        \\  y * y
+        \\sum_of_squares(x: i32, y: i32) -> i32 =
+        \\  a = x * x
+        \\  b = y * y
+        \\  a + b
     ;
-    const actual = try atom.testing.typeInfer(allocator, source, "f");
+    const actual = try atom.testing.typeInfer(allocator, source, "sum_of_squares");
     defer allocator.free(actual);
     const expected =
-        \\f(x: i32, y: i32) -> i32 =
-        \\  x * x
-        \\  y * y
+        \\sum_of_squares(x: i32, y: i32) -> i32 =
+        \\  a: i32 = x * x
+        \\  b: i32 = y * y
+        \\  a + b
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "infer parameter types and return type based on type of define" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\sum_of_squares(x, y) =
+        \\  a: i32 = x * x
+        \\  b = y * y
+        \\  a + b
+    ;
+    const actual = try atom.testing.typeInfer(allocator, source, "sum_of_squares");
+    defer allocator.free(actual);
+    const expected =
+        \\sum_of_squares(x: i32, y: i32) -> i32 =
+        \\  a: i32 = x * x
+        \\  b: i32 = y * y
+        \\  a + b
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer of fully generic define" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\sum_of_squares(x, y) =
+        \\  a = x * x
+        \\  b = y * y
+        \\  a + b
+    ;
+    const actual = try atom.testing.typeInfer(allocator, source, "sum_of_squares");
+    defer allocator.free(actual);
+    const expected =
+        \\sum_of_squares[A](x: A, y: A) -> A =
+        \\  a: A = x * x
+        \\  b: A = y * y
+        \\  a + b
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
