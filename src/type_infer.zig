@@ -23,6 +23,7 @@ const Kind = union(enum) {
     bool,
     unit,
     type,
+    int_literal: Interned,
     typevar: TypeVar,
     function: u64,
 };
@@ -300,6 +301,15 @@ fn symbol(context: Context, expr: Expression) !Type {
     std.debug.panic("\nCannot find symbol {}", .{s});
 }
 
+fn int(context: Context, expr: Expression) !Type {
+    const i = context.typed_ast.ast.int.items[context.typed_ast.ast.index.items[expr]];
+    const type_ = context.types.kind.items.len;
+    try context.types.kind.append(.{ .int_literal = i });
+    try context.types.span.putNoClobber(type_, context.typed_ast.ast.span.items[expr]);
+    try context.typed_ast.type.putNoClobber(expr, type_);
+    return type_;
+}
+
 fn infer(context: Context, expr: Expression) error{OutOfMemory}!Type {
     const kind = context.typed_ast.ast.kind.items[expr];
     switch (kind) {
@@ -308,6 +318,7 @@ fn infer(context: Context, expr: Expression) error{OutOfMemory}!Type {
         .symbol => return try symbol(context, expr),
         .binary_op => return try binaryOp(context, expr),
         .if_ => return try if_(context, expr),
+        .int => return try int(context, expr),
         else => std.debug.panic("\nCannot infer type of expression {}", .{kind}),
     }
 }
@@ -391,9 +402,16 @@ fn equal(substitution: *Substitution, types: Types, e: Equal) !void {
         }
         return try mapTypeVar(substitution, types, right_kind.typevar, e.left);
     }
-    if (left_kind == .function and right_kind == .function) {
+    if (left_kind == .function and right_kind == .function)
         std.debug.panic("\nCannot handle function types yet", .{});
-    }
+    if (left_kind == .int_literal) switch (right_kind) {
+        .int_literal, .i32 => return,
+        else => std.debug.panic("\nCannot unify types {} and {}", .{ left_kind, right_kind }),
+    };
+    if (right_kind == .int_literal) switch (left_kind) {
+        .int_literal, .i32 => return,
+        else => std.debug.panic("\nCannot unify types {} and {}", .{ left_kind, right_kind }),
+    };
     if (std.meta.eql(left_kind, right_kind)) return;
     std.debug.panic("\nCannot unify types {} and {}", .{ left_kind, right_kind });
 }
@@ -437,7 +455,7 @@ pub fn apply(substitution: Substitution, types: *Types) void {
 
 const Vars = Map(TypeVar, u8);
 
-fn typeToString(writer: List(u8).Writer, types: Types, type_: Type, vars: *Vars) !void {
+fn typeToString(writer: List(u8).Writer, intern: Intern, types: Types, type_: Type, vars: *Vars) !void {
     const kind = types.kind.items[type_];
     switch (kind) {
         .i32 => try writer.writeAll("i32"),
@@ -450,6 +468,7 @@ fn typeToString(writer: List(u8).Writer, types: Types, type_: Type, vars: *Vars)
             result.value_ptr.* = 'A' + @intCast(u8, vars.count() - 1);
             try std.fmt.format(writer, "{c}", .{result.value_ptr.*});
         },
+        .int_literal => |i| try writer.writeAll(interner.lookup(intern, i)),
         else => std.debug.panic("\nCannot convert type {} to string", .{kind}),
     }
 }
@@ -487,10 +506,10 @@ fn functionToString(allocator: Allocator, writer: List(u8).Writer, intern: Inter
         if (i > 0) try sub_writer.writeAll(", ");
         try symbolToString(sub_writer, intern, typed_ast, p.name);
         try sub_writer.writeAll(": ");
-        try typeToString(sub_writer, types, f_type.parameters.items[i], &vars);
+        try typeToString(sub_writer, intern, types, f_type.parameters.items[i], &vars);
     }
     try sub_writer.writeAll(") -> ");
-    try typeToString(sub_writer, types, f_type.return_type, &vars);
+    try typeToString(sub_writer, intern, types, f_type.return_type, &vars);
     try sub_writer.writeAll(" =");
     try blockToString(allocator, sub_writer, intern, typed_ast, types, f.body, indent + 1);
     const num_vars = vars.count();
@@ -514,7 +533,7 @@ fn defineToString(allocator: Allocator, writer: List(u8).Writer, intern: Intern,
     try symbolToString(writer, intern, typed_ast, d.name);
     try writer.writeAll(": ");
     const name_type = typed_ast.type.get(d.name).?;
-    try typeToString(writer, types, name_type, &vars);
+    try typeToString(writer, intern, types, name_type, &vars);
     try writer.writeAll(" =");
     try blockToString(allocator, writer, intern, typed_ast, types, d.body, indent + 1);
 }
@@ -542,6 +561,11 @@ fn ifToString(allocator: Allocator, writer: List(u8).Writer, intern: Intern, typ
     try blockToString(allocator, writer, intern, typed_ast, types, i.else_, indent);
 }
 
+fn intToString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, expr: Expression) !void {
+    const i = typed_ast.ast.int.items[typed_ast.ast.index.items[expr]];
+    try writer.writeAll(interner.lookup(intern, i));
+}
+
 fn expressionToString(allocator: Allocator, writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) error{OutOfMemory}!void {
     switch (typed_ast.ast.kind.items[expr]) {
         .function => try functionToString(allocator, writer, intern, typed_ast, types, expr, indent),
@@ -549,6 +573,7 @@ fn expressionToString(allocator: Allocator, writer: List(u8).Writer, intern: Int
         .symbol => try symbolToString(writer, intern, typed_ast, expr),
         .binary_op => try binaryOpToString(allocator, writer, intern, typed_ast, types, expr, indent),
         .if_ => try ifToString(allocator, writer, intern, typed_ast, types, expr, indent),
+        .int => try intToString(writer, intern, typed_ast, expr),
         else => unreachable,
     }
 }
