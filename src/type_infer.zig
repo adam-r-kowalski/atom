@@ -428,8 +428,15 @@ fn symbolToString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, 
 }
 
 fn blockToString(allocator: Allocator, writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, exprs: List(Expression), indent: u64) !void {
-    std.debug.assert(exprs.items.len == 1);
-    try expressionToString(allocator, writer, intern, typed_ast, types, exprs.items[0], indent);
+    if (exprs.items.len == 1) {
+        try writer.writeAll(" ");
+        try expressionToString(allocator, writer, intern, typed_ast, types, exprs.items[0], indent);
+        return;
+    }
+    for (exprs.items) |expr| {
+        try indentToString(writer, indent);
+        try expressionToString(allocator, writer, intern, typed_ast, types, expr, indent);
+    }
 }
 
 fn functionToString(allocator: Allocator, writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
@@ -452,8 +459,8 @@ fn functionToString(allocator: Allocator, writer: List(u8).Writer, intern: Inter
     }
     try sub_writer.writeAll(") -> ");
     try typeToString(sub_writer, types, f_type.return_type, &vars);
-    try sub_writer.writeAll(" = ");
-    try blockToString(allocator, sub_writer, intern, typed_ast, types, f.body, indent);
+    try sub_writer.writeAll(" =");
+    try blockToString(allocator, sub_writer, intern, typed_ast, types, f.body, indent + 1);
     const num_vars = vars.count();
     if (num_vars > 0) {
         try writer.writeAll("[");
@@ -484,9 +491,9 @@ fn ifToString(allocator: Allocator, writer: List(u8).Writer, intern: Intern, typ
     const i = typed_ast.ast.if_.items[typed_ast.ast.index.items[expr]];
     try writer.writeAll("if ");
     try expressionToString(allocator, writer, intern, typed_ast, types, i.condition, indent);
-    try writer.writeAll(" then ");
+    try writer.writeAll(" then");
     try blockToString(allocator, writer, intern, typed_ast, types, i.then, indent);
-    try writer.writeAll(" else ");
+    try writer.writeAll(" else");
     try blockToString(allocator, writer, intern, typed_ast, types, i.else_, indent);
 }
 

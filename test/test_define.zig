@@ -112,3 +112,20 @@ test "parse multi line define with type annotation" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "type infer define" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\f(x: i32, y: i32) -> i32 =
+        \\  x * x
+        \\  y * y
+    ;
+    const actual = try atom.testing.typeInfer(allocator, source, "f");
+    defer allocator.free(actual);
+    const expected =
+        \\f(x: i32, y: i32) -> i32 =
+        \\  x * x
+        \\  y * y
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
