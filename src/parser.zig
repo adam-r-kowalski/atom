@@ -239,7 +239,7 @@ fn block(context: *Context) !List(Expression) {
                 if (context.tokens.kind.items.len <= context.token_index) break;
                 switch (context.tokens.kind.items[context.token_index]) {
                     .indent => |next_indent| {
-                        if (!std.meta.eql(context.indent, next_indent)) break;
+                        if (!std.meta.eql(indent, next_indent)) break;
                         context.token_index += 1;
                     },
                     else => break,
@@ -543,6 +543,7 @@ fn typeToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Express
 }
 
 fn indentToString(writer: List(u8).Writer, indent: u64) !void {
+    try writer.writeAll("\n");
     var i: u64 = 0;
     while (i < indent) {
         try writer.writeAll("  ");
@@ -553,7 +554,6 @@ fn indentToString(writer: List(u8).Writer, indent: u64) !void {
 fn blockToString(writer: List(u8).Writer, intern: Intern, ast: Ast, exprs: List(Expression), indent: u64, new_line: bool) !void {
     if (exprs.items.len == 1) {
         if (new_line) {
-            try writer.writeAll("\n");
             try indentToString(writer, indent);
         } else {
             try writer.writeAll(" ");
@@ -561,13 +561,11 @@ fn blockToString(writer: List(u8).Writer, intern: Intern, ast: Ast, exprs: List(
         try expressionToString(writer, intern, ast, exprs.items[0], indent);
         return;
     }
-    try writer.writeAll("\n");
     try indentToString(writer, indent);
     try writer.writeAll("(block");
     for (exprs.items) |expr| {
-        try writer.writeAll("\n");
         try indentToString(writer, indent + 1);
-        try expressionToString(writer, intern, ast, expr, indent);
+        try expressionToString(writer, intern, ast, expr, indent + 1);
     }
     try writer.writeAll(")");
 }

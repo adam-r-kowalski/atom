@@ -591,6 +591,7 @@ fn typeToVerboseString(writer: List(u8).Writer, types: Types, type_: Type) !void
     switch (kind) {
         .i32 => try writer.writeAll("i32"),
         .bool => try writer.writeAll("bool"),
+        .unit => try writer.writeAll("unit"),
         .typevar => |i| try std.fmt.format(writer, "typevar {}", .{i}),
         .function => |i| {
             const f = types.function.items[i];
@@ -607,8 +608,10 @@ fn typeToVerboseString(writer: List(u8).Writer, types: Types, type_: Type) !void
 }
 
 fn blockToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, exprs: List(Expression), indent: u64) !void {
-    std.debug.assert(exprs.items.len == 1);
-    try expressionToVerboseString(writer, intern, typed_ast, types, exprs.items[0], indent);
+    for (exprs.items) |expr| {
+        try indentToString(writer, indent);
+        try expressionToVerboseString(writer, intern, typed_ast, types, expr, indent);
+    }
 }
 
 fn functionToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
@@ -637,6 +640,21 @@ fn functionToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: T
     try indentToString(writer, indent + 1);
     try writer.writeAll("body = ");
     try blockToVerboseString(writer, intern, typed_ast, types, f.body, indent + 2);
+}
+
+fn defineToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
+    const d = typed_ast.ast.define.items[typed_ast.ast.index.items[expr]];
+    const d_type = typed_ast.type.get(d.name).?;
+    try writer.writeAll("define");
+    try indentToString(writer, indent + 1);
+    try writer.writeAll("name = ");
+    try symbolToVerboseString(writer, intern, typed_ast, types, d.name, indent + 2);
+    try indentToString(writer, indent + 1);
+    try writer.writeAll("type = ");
+    try typeToVerboseString(writer, types, d_type);
+    try indentToString(writer, indent + 1);
+    try writer.writeAll("body = ");
+    try blockToVerboseString(writer, intern, typed_ast, types, d.body, indent + 2);
 }
 
 fn binaryOpToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) !void {
@@ -679,6 +697,7 @@ fn ifToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAs
 fn expressionToVerboseString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) error{OutOfMemory}!void {
     switch (typed_ast.ast.kind.items[expr]) {
         .function => try functionToVerboseString(writer, intern, typed_ast, types, expr, indent),
+        .define => try defineToVerboseString(writer, intern, typed_ast, types, expr, indent),
         .binary_op => try binaryOpToVerboseString(writer, intern, typed_ast, types, expr, indent),
         .if_ => try ifToVerboseString(writer, intern, typed_ast, types, expr, indent),
         .symbol => try symbolToVerboseString(writer, intern, typed_ast, types, expr, indent),

@@ -169,3 +169,68 @@ test "type infer of fully generic define" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "parse nested define" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\f(x: i32, y: i32) =
+        \\  a =
+        \\    b = y * y
+        \\    b + x
+        \\  a + x
+    ;
+    const actual = try atom.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(defn f [(x i32) (y i32)]
+        \\  (block
+        \\    (def a
+        \\      (block
+        \\        (def b (* y y))
+        \\        (+ b x)))
+        \\    (+ a x)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer nested define" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\f(x: i32, y: i32) =
+        \\  a =
+        \\    b = y * y
+        \\    b + x
+        \\  a + x
+    ;
+    const actual = try atom.testing.typeInfer(allocator, source, "f");
+    defer allocator.free(actual);
+    const expected =
+        \\f(x: i32, y: i32) -> i32 =
+        \\  a: i32 =
+        \\    b: i32 = y * y
+        \\    b + x
+        \\  a + x
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer by annotating inside nested define" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\f(x, y) =
+        \\  a =
+        \\    b: i32 = y * y
+        \\    b + x
+        \\  a + x
+    ;
+    const actual = try atom.testing.typeInfer(allocator, source, "f");
+    defer allocator.free(actual);
+    const expected =
+        \\f(x: i32, y: i32) -> i32 =
+        \\  a: i32 =
+        \\    b: i32 = y * y
+        \\    b + x
+        \\  a + x
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
