@@ -107,37 +107,37 @@ interface Mul[T] =
 
 # for expressions are a generalization of einstein summation notation
 matmul[T: Num, m, n, p](a: T[m, n], b: T[n, p]) -> T[m, p] =
-	for[i, j, k] sum(a[i, k] * b[k, j])
+    for[i, j, k] sum(a[i, k] * b[k, j])
 
 dot[T: Num, n](a: T[n], b: T[n]) -> T =
-	for[i] sum(a[i] * b[i])
+    for[i] sum(a[i] * b[i])
 
 transpose[T, m, n](a: T[m, n]) -> T[n, m] =
-	for[i, j] a[j, i]
+    for[i, j] a[j, i]
 
 # sum can also be implemented using for and accumulation
 sum[T: Add](xs: T[n]) -> T =
-	acc := 0
-	for[i] acc += xs[i]
-	acc
+    acc := 0
+    for[i] acc += xs[i]
+    acc
 
 
 # extensible records allow writing code which looks like json
 # but is statically typed
 linear = {
-	m: 10,
-	b: 3
+    m: 10,
+    b: 3
 }
 
 predict(model, x) = model.m * x + model.b
 
 loss(model, xs, ys) =
-	for[i] (predict(model, xs[i]) - ys[i])^2
+    for[i] (predict(model, xs[i]) - ys[i])^2
 
 step(model, xs, ys, lr) =
-	gs = grad(loss)(model, xs, ys)
-	(m, g) <- zip(model, gs)
-	m - lr * g
+    gs = grad(loss)(model, xs, ys)
+    (m, g) <- zip(model, gs)
+    m - lr * g
 
 linear = step(linear, [1, 2, 3], [4, 5, 6], 0.1)
 ```
