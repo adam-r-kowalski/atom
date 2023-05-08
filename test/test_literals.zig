@@ -28,11 +28,29 @@ test "type infer bool literal as i32" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "type infer bool literal" {
+test "type infer bool literal true" {
     const allocator = std.testing.allocator;
     const source = "f() = true";
     const actual = try atom.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected = "f() -> true = true";
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer bool literal false" {
+    const allocator = std.testing.allocator;
+    const source = "f() = false";
+    const actual = try atom.testing.typeInfer(allocator, source, "f");
+    defer allocator.free(actual);
+    const expected = "f() -> false = false";
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer int literal as f32" {
+    const allocator = std.testing.allocator;
+    const source = "f() -> f32 = 42";
+    const actual = try atom.testing.typeInfer(allocator, source, "f");
+    defer allocator.free(actual);
+    const expected = "f() -> f32 = 42";
     try std.testing.expectEqualStrings(expected, actual);
 }

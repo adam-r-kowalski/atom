@@ -1,6 +1,6 @@
 # Atom
 
-```
+```julia
 # this is a comment
 
 # this defines a function which squares x
@@ -81,27 +81,27 @@ export double(x: i32) -> i32 = x * 2
 start() = print("hello world")
 
 # create a unit test
-test "double makes the number twice as large" =
+test "double makes the number twice as large"
     expect double(2) == 4
     expect double(4) == 8
     expect double(5) == 10
 
 # nested tests form a suite
-test "suite of tests" =
-    test "unit test 1" =
+test "suite of tests"
+    test "unit test 1"
         expect double(2) == 4
         expect double(4) == 8
-    test "unit test 2" =
+    test "unit test 2"
         expect double(5) == 10
 
-interface Add[T] =
+interface Add[T]
     add(x: T, y: T) -> T
     zero: T
 
-interface Sub[T: Add] =
+interface Sub[T: Add]
     sub(x: T, y: T) -> T
 
-interface Mul[T] =
+interface Mul[T]
     mul(x: T, y: T) -> T
     one: T
 
@@ -121,23 +121,11 @@ sum[T: Add](xs: T[n]) -> T =
     for[i] acc += xs[i]
     acc
 
+double(x) = x + x
 
-# extensible records allow writing code which looks like json
-# but is statically typed
-linear = {
-    m: 10,
-    b: 3
-}
+# method call syntax can omit the parenthesis if it's a single arg function
+5.double == double(5) == 5.double()
 
-predict(model, x) = model.m * x + model.b
-
-loss(model, xs, ys) =
-    for[i] (predict(model, xs[i]) - ys[i])^2
-
-step(model, xs, ys, lr) =
-    gs = grad(loss)(model, xs, ys)
-    (m, g) <- zip(model, gs)
-    m - lr * g
-
-linear = step(linear, [1, 2, 3], [4, 5, 6], 0.1)
+# you can chain together methods
+5.double.double == double(double(5)) == 5.double().double()
 ```

@@ -20,6 +20,7 @@ pub const TypeVar = u64;
 
 const Kind = union(enum) {
     i32,
+    f32,
     bool,
     unit,
     type,
@@ -156,6 +157,7 @@ fn typeExpression(context: Context, expr: Expression) !Kind {
         .symbol => {
             const s = context.typed_ast.ast.symbol.items[context.typed_ast.ast.index.items[expr]];
             if (s == context.builtins.i32) return .i32;
+            if (s == context.builtins.f32) return .f32;
             if (s == context.builtins.bool) return .bool;
             std.debug.panic("\nCannot type symbol {}", .{s});
         },
@@ -416,11 +418,11 @@ fn equal(substitution: *Substitution, types: Types, e: Equal) !void {
     if (left_kind == .function and right_kind == .function)
         std.debug.panic("\nCannot handle function types yet", .{});
     if (left_kind == .int_literal) switch (right_kind) {
-        .int_literal, .i32 => return,
+        .int_literal, .i32, .f32 => return,
         else => std.debug.panic("\nCannot unify types {} and {}", .{ left_kind, right_kind }),
     };
     if (right_kind == .int_literal) switch (left_kind) {
-        .int_literal, .i32 => return,
+        .int_literal, .i32, .f32 => return,
         else => std.debug.panic("\nCannot unify types {} and {}", .{ left_kind, right_kind }),
     };
     if (left_kind == .bool_literal) switch (right_kind) {
@@ -478,6 +480,7 @@ fn typeToString(writer: List(u8).Writer, intern: Intern, types: Types, type_: Ty
     const kind = types.kind.items[type_];
     switch (kind) {
         .i32 => try writer.writeAll("i32"),
+        .f32 => try writer.writeAll("f32"),
         .bool => try writer.writeAll("bool"),
         .typevar => |t| {
             const result = try vars.getOrPut(t);

@@ -15,11 +15,13 @@ const Kind = enum {
     symbol,
     define,
     function,
+    declaration,
     binary_op,
     group,
     if_,
     call,
     bool,
+    import,
 };
 
 const Define = struct {
@@ -38,6 +40,12 @@ const Function = struct {
     parameters: List(Parameter),
     return_type: ?Expression,
     body: List(Expression),
+};
+
+const Declaration = struct {
+    name: Expression,
+    parameters: List(Parameter),
+    return_type: ?Expression,
 };
 
 const BinaryOpKind = enum {
@@ -77,11 +85,13 @@ pub const Ast = struct {
     symbol: List(Interned),
     define: List(Define),
     function: List(Function),
+    declaration: List(Declaration),
     binary_op: List(BinaryOp),
     group: List(Group),
     if_: List(If),
     call: List(Call),
     bool: List(bool),
+    import: List(Expression),
     top_level: List(Expression),
 
     pub fn deinit(self: Ast) void {
@@ -97,6 +107,8 @@ pub const Ast = struct {
             f.body.deinit();
         }
         self.function.deinit();
+        for (self.declaration.items) |d| d.parameters.deinit();
+        self.declaration.deinit();
         self.binary_op.deinit();
         self.group.deinit();
         for (self.if_.items) |i| {
@@ -107,6 +119,7 @@ pub const Ast = struct {
         for (self.call.items) |c| c.arguments.deinit();
         self.call.deinit();
         self.bool.deinit();
+        self.import.deinit();
         self.top_level.deinit();
     }
 };
@@ -139,6 +152,7 @@ const Context = struct {
 };
 
 fn int(context: *Context, s: Interned) !Expression {
+    std.debug.print("\nint", .{});
     const self = context.ast.kind.items.len;
     const span = context.tokens.span.items[context.token_index];
     try context.ast.kind.append(.int);
@@ -150,6 +164,7 @@ fn int(context: *Context, s: Interned) !Expression {
 }
 
 fn symbol(context: *Context, s: Interned) !Expression {
+    std.debug.print("\nsymbol", .{});
     const self = context.ast.kind.items.len;
     const span = context.tokens.span.items[context.token_index];
     try context.ast.kind.append(.symbol);
@@ -161,6 +176,7 @@ fn symbol(context: *Context, s: Interned) !Expression {
 }
 
 fn boolean(context: *Context, b: bool) !Expression {
+    std.debug.print("\nboolean", .{});
     const self = context.ast.kind.items.len;
     const span = context.tokens.span.items[context.token_index];
     try context.ast.kind.append(.bool);
@@ -174,6 +190,13 @@ fn boolean(context: *Context, b: bool) !Expression {
 fn consume(context: *Context, kind: tokenizer.Kind) void {
     std.debug.assert(std.meta.activeTag(context.tokens.kind.items[context.token_index]) == kind);
     context.token_index += 1;
+}
+
+fn tryConsume(context: *Context, kind: tokenizer.Kind) bool {
+    if (context.token_index >= context.tokens.kind.items.len) return false;
+    if (std.meta.activeTag(context.tokens.kind.items[context.token_index]) != kind) return false;
+    context.token_index += 1;
+    return true;
 }
 
 fn consumeIndent(context: *Context) void {
@@ -191,6 +214,7 @@ fn consumeSymbol(context: *Context) !Expression {
 }
 
 fn group(context: *Context) !Expression {
+    std.debug.print("\ngroup", .{});
     const begin = context.tokens.span.items[context.token_index].begin;
     context.token_index += 1;
     context.precedence = LOWEST;
@@ -207,6 +231,7 @@ fn group(context: *Context) !Expression {
 }
 
 fn if_(context: *Context) !Expression {
+    std.debug.print("\nif", .{});
     const begin = context.tokens.span.items[context.token_index].begin;
     context.token_index += 1;
     context.precedence = LOWEST;
@@ -225,13 +250,32 @@ fn if_(context: *Context) !Expression {
     return self;
 }
 
+fn import(context: *Context) !Expression {
+    std.debug.print("\nimport", .{});
+    const begin = context.tokens.span.items[context.token_index].begin;
+    context.token_index += 1;
+    context.precedence = LOWEST;
+    std.debug.print("\nbefore import expr", .{});
+    const expr = try expression(context);
+    std.debug.print("\nafter import expr", .{});
+    const end = context.tokens.span.items[expr].end;
+    const self = context.ast.kind.items.len;
+    try context.ast.kind.append(.import);
+    try context.ast.span.append(.{ .begin = begin, .end = end });
+    try context.ast.index.append(context.ast.import.items.len);
+    try context.ast.import.append(expr);
+    return self;
+}
+
 fn prefix(context: *Context) !Expression {
+    std.debug.print("\nprefix", .{});
     switch (context.tokens.kind.items[context.token_index]) {
         .int => |s| return try int(context, s),
         .symbol => |s| return try symbol(context, s),
         .bool => |s| return try boolean(context, s),
         .left_paren => return try group(context),
         .if_ => return try if_(context),
+        .import => return try import(context),
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),
     }
 }
@@ -242,6 +286,7 @@ const Asscociativity = enum {
 };
 
 fn block(context: *Context) !List(Expression) {
+    std.debug.print("\nblock", .{});
     var exprs = List(Expression).init(context.allocator);
     switch (context.tokens.kind.items[context.token_index]) {
         .indent => |indent| {
@@ -271,6 +316,7 @@ fn block(context: *Context) !List(Expression) {
 }
 
 fn define(context: *Context, name: Expression) !Expression {
+    std.debug.print("\ndefine", .{});
     context.token_index += 1;
     const body = try block(context);
     const span = Span{
@@ -286,6 +332,7 @@ fn define(context: *Context, name: Expression) !Expression {
 }
 
 fn annotate(context: *Context, name: Expression) !Expression {
+    std.debug.print("\nannotate", .{});
     context.token_index += 1;
     context.precedence = ARROW;
     const type_ = try expression(context);
@@ -305,6 +352,7 @@ fn annotate(context: *Context, name: Expression) !Expression {
 }
 
 fn binaryOp(context: *Context, left: Expression, kind: BinaryOpKind) !Expression {
+    std.debug.print("\nbinaryOp", .{});
     context.token_index += 1;
     const right = try expression(context);
     const span = Span{
@@ -322,6 +370,7 @@ fn binaryOp(context: *Context, left: Expression, kind: BinaryOpKind) !Expression
 const Stage = enum { return_type, body };
 
 fn convertCallToFunction(context: *Context, left: Expression, arguments: *List(Expression), stage: Stage) !Expression {
+    std.debug.print("\nconvertCallToFunction", .{});
     context.token_index += 1;
     const return_type = blk: {
         if (stage == .return_type) {
@@ -355,6 +404,7 @@ fn convertCallToFunction(context: *Context, left: Expression, arguments: *List(E
 }
 
 fn function(context: *Context, left: Expression, arguments: *List(Expression)) !Expression {
+    std.debug.print("\nfunction", .{});
     var parameters = try List(Parameter).initCapacity(context.allocator, arguments.items.len);
     for (arguments.items) |argument| {
         try parameters.append(Parameter{ .name = argument, .type = null });
@@ -390,7 +440,22 @@ fn function(context: *Context, left: Expression, arguments: *List(Expression)) !
             break :blk expr;
         } else break :blk null;
     };
-    consume(context, .equal);
+    if (!tryConsume(context, .equal)) {
+        const span = Span{
+            .begin = context.ast.span.items[left].begin,
+            .end = context.ast.span.items[return_type.?].end,
+        };
+        const self = context.ast.kind.items.len;
+        try context.ast.kind.append(.declaration);
+        try context.ast.span.append(span);
+        try context.ast.index.append(context.ast.declaration.items.len);
+        try context.ast.declaration.append(Declaration{
+            .name = left,
+            .parameters = parameters,
+            .return_type = return_type,
+        });
+        return self;
+    }
     const body = try block(context);
     const span = Span{
         .begin = context.ast.span.items[left].begin,
@@ -410,6 +475,7 @@ fn function(context: *Context, left: Expression, arguments: *List(Expression)) !
 }
 
 fn callOrFunction(context: *Context, left: Expression) !Expression {
+    std.debug.print("\ncallOrFunction", .{});
     context.token_index += 1;
     var arguments = List(Expression).init(context.allocator);
     while (context.tokens.kind.items.len > context.token_index) {
@@ -462,6 +528,7 @@ const Infix = struct {
 
 fn infix(context: *Context, left: Expression) ?Infix {
     if (context.tokens.kind.items.len <= context.token_index) return null;
+    std.debug.print("\nnext token kind {}, left kind {}", .{ context.tokens.kind.items[context.token_index], context.tokens.kind.items[left] });
     switch (context.tokens.kind.items[context.token_index]) {
         .equal => return .{ .kind = .define, .precedence = DEFINE, .associativity = .right },
         .colon => return .{ .kind = .annotate, .precedence = ANNOTATE, .associativity = .right },
@@ -480,6 +547,7 @@ fn infix(context: *Context, left: Expression) ?Infix {
 }
 
 fn parseInfix(parser: Infix, context: *Context, left: Expression) !Expression {
+    std.debug.print("\ninfix", .{});
     switch (parser.kind) {
         .define => return try define(context, left),
         .annotate => return try annotate(context, left),
@@ -489,17 +557,23 @@ fn parseInfix(parser: Infix, context: *Context, left: Expression) !Expression {
 }
 
 fn expression(context: *Context) error{OutOfMemory}!Expression {
+    std.debug.print("\nexpression", .{});
     var left = try prefix(context);
     const previous = context.precedence;
+    std.debug.print("\nentering loop", .{});
     while (true) {
         if (infix(context, left)) |parser| {
+            std.debug.print("\nfound infix parser", .{});
             var next = parser.precedence;
             if (context.precedence > next) return left;
             if (parser.associativity == .left) next += 1;
             context.precedence = next;
             left = try parseInfix(parser, context, left);
             context.precedence = previous;
-        } else return left;
+        } else {
+            std.debug.print("\nno infix parser found", .{});
+            return left;
+        }
     }
 }
 
@@ -512,11 +586,13 @@ pub fn parse(allocator: Allocator, tokens: Tokens) !Ast {
         .symbol = List(Interned).init(allocator),
         .define = List(Define).init(allocator),
         .function = List(Function).init(allocator),
+        .declaration = List(Declaration).init(allocator),
         .binary_op = List(BinaryOp).init(allocator),
         .group = List(Group).init(allocator),
         .if_ = List(If).init(allocator),
         .call = List(Call).init(allocator),
         .bool = List(bool).init(allocator),
+        .import = List(Expression).init(allocator),
         .top_level = List(Expression).init(allocator),
     };
     var context = Context{
@@ -528,6 +604,7 @@ pub fn parse(allocator: Allocator, tokens: Tokens) !Ast {
         .indent = Indent{ .space = 0 },
     };
     const expr = try expression(&context);
+    std.debug.print("\ntop level {} expr kind {}\n", .{ expr, context.ast.kind.items[expr] });
     try context.ast.top_level.append(expr);
     return ast;
 }
@@ -633,6 +710,23 @@ fn functionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Exp
     try writer.writeAll(")");
 }
 
+fn declarationToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) !void {
+    const d = ast.declaration.items[ast.index.items[expr]];
+    try writer.writeAll("(declare ");
+    try symbolToString(writer, intern, ast, d.name);
+    try writer.writeAll(" [");
+    for (d.parameters.items) |p, i| {
+        try parameterToString(writer, intern, ast, p);
+        if (i < d.parameters.items.len - 1) try writer.writeAll(" ");
+    }
+    try writer.writeAll("]");
+    if (d.return_type) |t| {
+        try writer.writeAll(" ");
+        try typeToString(writer, intern, ast, t);
+    }
+    try writer.writeAll(")");
+}
+
 fn binaryOpToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) !void {
     const b = ast.binary_op.items[ast.index.items[expr]];
     try writer.writeAll("(");
@@ -684,10 +778,12 @@ fn expressionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: E
         .bool => try boolToString(writer, ast, expr),
         .define => try defineToString(writer, intern, ast, expr, indent),
         .function => try functionToString(writer, intern, ast, expr, indent),
+        .declaration => try declarationToString(writer, intern, ast, expr),
         .binary_op => try binaryOpToString(writer, intern, ast, expr, indent),
         .group => try groupToString(writer, intern, ast, expr, indent),
         .if_ => try ifToString(writer, intern, ast, expr, indent),
         .call => try callToString(writer, intern, ast, expr, indent),
+        .import => unreachable,
     }
 }
 

@@ -35,6 +35,8 @@ pub const Kind = union(enum) {
     else_,
     comma,
     arrow,
+    import,
+    export_,
 };
 
 const Pos = struct {
@@ -154,6 +156,8 @@ fn symbol(tokens: *Tokens, intern: *Intern, builtins: Builtins, cursor: *Cursor)
     const span = Span{ .begin = begin, .end = end };
     try tokens.span.append(span);
     const interned = try interner.store(intern, string);
+    if (interned == builtins.import) return try tokens.kind.append(.import);
+    if (interned == builtins.export_) return try tokens.kind.append(.export_);
     if (interned == builtins.if_) return try tokens.kind.append(.if_);
     if (interned == builtins.then) return try tokens.kind.append(.then);
     if (interned == builtins.else_) return try tokens.kind.append(.else_);
@@ -264,6 +268,8 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
             .else_ => try writer.writeAll("else"),
             .comma => try writer.writeAll("comma"),
             .arrow => try writer.writeAll("arrow"),
+            .import => try writer.writeAll("import"),
+            .export_ => try writer.writeAll("export"),
         }
     }
     return list.toOwnedSlice();
@@ -324,6 +330,8 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
             .else_ => try writer.writeAll("else"),
             .comma => try writer.writeAll(","),
             .arrow => try writer.writeAll("->"),
+            .import => try writer.writeAll("import"),
+            .export_ => try writer.writeAll("export"),
         }
     }
     return list.toOwnedSlice();
