@@ -152,7 +152,6 @@ const Context = struct {
 };
 
 fn int(context: *Context, s: Interned) !Expression {
-    std.debug.print("\nint", .{});
     const self = context.ast.kind.items.len;
     const span = context.tokens.span.items[context.token_index];
     try context.ast.kind.append(.int);
@@ -164,7 +163,6 @@ fn int(context: *Context, s: Interned) !Expression {
 }
 
 fn symbol(context: *Context, s: Interned) !Expression {
-    std.debug.print("\nsymbol", .{});
     const self = context.ast.kind.items.len;
     const span = context.tokens.span.items[context.token_index];
     try context.ast.kind.append(.symbol);
@@ -176,7 +174,6 @@ fn symbol(context: *Context, s: Interned) !Expression {
 }
 
 fn boolean(context: *Context, b: bool) !Expression {
-    std.debug.print("\nboolean", .{});
     const self = context.ast.kind.items.len;
     const span = context.tokens.span.items[context.token_index];
     try context.ast.kind.append(.bool);
@@ -214,7 +211,6 @@ fn consumeSymbol(context: *Context) !Expression {
 }
 
 fn group(context: *Context) !Expression {
-    std.debug.print("\ngroup", .{});
     const begin = context.tokens.span.items[context.token_index].begin;
     context.token_index += 1;
     context.precedence = LOWEST;
@@ -231,7 +227,6 @@ fn group(context: *Context) !Expression {
 }
 
 fn if_(context: *Context) !Expression {
-    std.debug.print("\nif", .{});
     const begin = context.tokens.span.items[context.token_index].begin;
     context.token_index += 1;
     context.precedence = LOWEST;
@@ -251,13 +246,10 @@ fn if_(context: *Context) !Expression {
 }
 
 fn import(context: *Context) !Expression {
-    std.debug.print("\nimport", .{});
     const begin = context.tokens.span.items[context.token_index].begin;
     context.token_index += 1;
     context.precedence = LOWEST;
-    std.debug.print("\nbefore import expr", .{});
     const expr = try expression(context);
-    std.debug.print("\nafter import expr", .{});
     const end = context.tokens.span.items[expr].end;
     const self = context.ast.kind.items.len;
     try context.ast.kind.append(.import);
@@ -268,7 +260,6 @@ fn import(context: *Context) !Expression {
 }
 
 fn prefix(context: *Context) !Expression {
-    std.debug.print("\nprefix", .{});
     switch (context.tokens.kind.items[context.token_index]) {
         .int => |s| return try int(context, s),
         .symbol => |s| return try symbol(context, s),
@@ -286,7 +277,6 @@ const Asscociativity = enum {
 };
 
 fn block(context: *Context) !List(Expression) {
-    std.debug.print("\nblock", .{});
     var exprs = List(Expression).init(context.allocator);
     switch (context.tokens.kind.items[context.token_index]) {
         .indent => |indent| {
@@ -316,7 +306,6 @@ fn block(context: *Context) !List(Expression) {
 }
 
 fn define(context: *Context, name: Expression) !Expression {
-    std.debug.print("\ndefine", .{});
     context.token_index += 1;
     const body = try block(context);
     const span = Span{
@@ -332,7 +321,6 @@ fn define(context: *Context, name: Expression) !Expression {
 }
 
 fn annotate(context: *Context, name: Expression) !Expression {
-    std.debug.print("\nannotate", .{});
     context.token_index += 1;
     context.precedence = ARROW;
     const type_ = try expression(context);
@@ -352,7 +340,6 @@ fn annotate(context: *Context, name: Expression) !Expression {
 }
 
 fn binaryOp(context: *Context, left: Expression, kind: BinaryOpKind) !Expression {
-    std.debug.print("\nbinaryOp", .{});
     context.token_index += 1;
     const right = try expression(context);
     const span = Span{
@@ -370,7 +357,6 @@ fn binaryOp(context: *Context, left: Expression, kind: BinaryOpKind) !Expression
 const Stage = enum { return_type, body };
 
 fn convertCallToFunction(context: *Context, left: Expression, arguments: *List(Expression), stage: Stage) !Expression {
-    std.debug.print("\nconvertCallToFunction", .{});
     context.token_index += 1;
     const return_type = blk: {
         if (stage == .return_type) {
@@ -404,7 +390,6 @@ fn convertCallToFunction(context: *Context, left: Expression, arguments: *List(E
 }
 
 fn function(context: *Context, left: Expression, arguments: *List(Expression)) !Expression {
-    std.debug.print("\nfunction", .{});
     var parameters = try List(Parameter).initCapacity(context.allocator, arguments.items.len);
     for (arguments.items) |argument| {
         try parameters.append(Parameter{ .name = argument, .type = null });
@@ -475,7 +460,6 @@ fn function(context: *Context, left: Expression, arguments: *List(Expression)) !
 }
 
 fn callOrFunction(context: *Context, left: Expression) !Expression {
-    std.debug.print("\ncallOrFunction", .{});
     context.token_index += 1;
     var arguments = List(Expression).init(context.allocator);
     while (context.tokens.kind.items.len > context.token_index) {
@@ -528,7 +512,6 @@ const Infix = struct {
 
 fn infix(context: *Context, left: Expression) ?Infix {
     if (context.tokens.kind.items.len <= context.token_index) return null;
-    std.debug.print("\nnext token kind {}, left kind {}", .{ context.tokens.kind.items[context.token_index], context.tokens.kind.items[left] });
     switch (context.tokens.kind.items[context.token_index]) {
         .equal => return .{ .kind = .define, .precedence = DEFINE, .associativity = .right },
         .colon => return .{ .kind = .annotate, .precedence = ANNOTATE, .associativity = .right },
@@ -538,7 +521,7 @@ fn infix(context: *Context, left: Expression) ?Infix {
         .caret => return .{ .kind = .{ .binary_op = .exponentiate }, .precedence = EXPONENTIATE, .associativity = .right },
         .greater => return .{ .kind = .{ .binary_op = .greater }, .precedence = GREATER, .associativity = .left },
         .less => return .{ .kind = .{ .binary_op = .less }, .precedence = LESS, .associativity = .left },
-        .left_paren => switch (context.tokens.kind.items[left]) {
+        .left_paren => switch (context.ast.kind.items[left]) {
             .symbol => return .{ .kind = .call_or_function, .precedence = CALL, .associativity = .left },
             else => return null,
         },
@@ -547,7 +530,6 @@ fn infix(context: *Context, left: Expression) ?Infix {
 }
 
 fn parseInfix(parser: Infix, context: *Context, left: Expression) !Expression {
-    std.debug.print("\ninfix", .{});
     switch (parser.kind) {
         .define => return try define(context, left),
         .annotate => return try annotate(context, left),
@@ -557,13 +539,10 @@ fn parseInfix(parser: Infix, context: *Context, left: Expression) !Expression {
 }
 
 fn expression(context: *Context) error{OutOfMemory}!Expression {
-    std.debug.print("\nexpression", .{});
     var left = try prefix(context);
     const previous = context.precedence;
-    std.debug.print("\nentering loop", .{});
     while (true) {
         if (infix(context, left)) |parser| {
-            std.debug.print("\nfound infix parser", .{});
             var next = parser.precedence;
             if (context.precedence > next) return left;
             if (parser.associativity == .left) next += 1;
@@ -571,7 +550,6 @@ fn expression(context: *Context) error{OutOfMemory}!Expression {
             left = try parseInfix(parser, context, left);
             context.precedence = previous;
         } else {
-            std.debug.print("\nno infix parser found", .{});
             return left;
         }
     }
@@ -604,7 +582,6 @@ pub fn parse(allocator: Allocator, tokens: Tokens) !Ast {
         .indent = Indent{ .space = 0 },
     };
     const expr = try expression(&context);
-    std.debug.print("\ntop level {} expr kind {}\n", .{ expr, context.ast.kind.items[expr] });
     try context.ast.top_level.append(expr);
     return ast;
 }
@@ -771,6 +748,13 @@ fn callToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Express
     try writer.writeAll(")");
 }
 
+fn importToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) !void {
+    const i = ast.import.items[ast.index.items[expr]];
+    try writer.writeAll("(import ");
+    try expressionToString(writer, intern, ast, i, indent);
+    try writer.writeAll(")");
+}
+
 fn expressionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) error{OutOfMemory}!void {
     switch (ast.kind.items[expr]) {
         .int => try intToString(writer, intern, ast, expr),
@@ -783,7 +767,7 @@ fn expressionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: E
         .group => try groupToString(writer, intern, ast, expr, indent),
         .if_ => try ifToString(writer, intern, ast, expr, indent),
         .call => try callToString(writer, intern, ast, expr, indent),
-        .import => unreachable,
+        .import => try importToString(writer, intern, ast, expr, indent),
     }
 }
 

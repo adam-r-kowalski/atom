@@ -25,6 +25,6 @@ test "parse add then multiply" {
     const source = "import print(msg: str) -> unit";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(declare print [(msg str)] unit)";
+    const expected = "(import (declare print [(msg str)] unit))";
     try std.testing.expectEqualStrings(expected, actual);
 }
