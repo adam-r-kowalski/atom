@@ -24,6 +24,7 @@ const Kind = union(enum) {
     unit,
     type,
     int_literal: Interned,
+    bool_literal: bool,
     typevar: TypeVar,
     function: u64,
 };
@@ -310,6 +311,15 @@ fn int(context: Context, expr: Expression) !Type {
     return type_;
 }
 
+fn boolean(context: Context, expr: Expression) !Type {
+    const b = context.typed_ast.ast.bool.items[context.typed_ast.ast.index.items[expr]];
+    const type_ = context.types.kind.items.len;
+    try context.types.kind.append(.{ .bool_literal = b });
+    try context.types.span.putNoClobber(type_, context.typed_ast.ast.span.items[expr]);
+    try context.typed_ast.type.putNoClobber(expr, type_);
+    return type_;
+}
+
 fn infer(context: Context, expr: Expression) error{OutOfMemory}!Type {
     const kind = context.typed_ast.ast.kind.items[expr];
     switch (kind) {
@@ -319,6 +329,7 @@ fn infer(context: Context, expr: Expression) error{OutOfMemory}!Type {
         .binary_op => return try binaryOp(context, expr),
         .if_ => return try if_(context, expr),
         .int => return try int(context, expr),
+        .bool => return try boolean(context, expr),
         else => std.debug.panic("\nCannot infer type of expression {}", .{kind}),
     }
 }
@@ -412,6 +423,14 @@ fn equal(substitution: *Substitution, types: Types, e: Equal) !void {
         .int_literal, .i32 => return,
         else => std.debug.panic("\nCannot unify types {} and {}", .{ left_kind, right_kind }),
     };
+    if (left_kind == .bool_literal) switch (right_kind) {
+        .bool_literal, .bool => return,
+        else => std.debug.panic("\nCannot unify types {} and {}", .{ left_kind, right_kind }),
+    };
+    if (right_kind == .bool_literal) switch (left_kind) {
+        .bool_literal, .bool => return,
+        else => std.debug.panic("\nCannot unify types {} and {}", .{ left_kind, right_kind }),
+    };
     if (std.meta.eql(left_kind, right_kind)) return;
     std.debug.panic("\nCannot unify types {} and {}", .{ left_kind, right_kind });
 }
@@ -469,6 +488,7 @@ fn typeToString(writer: List(u8).Writer, intern: Intern, types: Types, type_: Ty
             try std.fmt.format(writer, "{c}", .{result.value_ptr.*});
         },
         .int_literal => |i| try writer.writeAll(interner.lookup(intern, i)),
+        .bool_literal => |b| try writer.writeAll(if (b) "true" else "false"),
         else => std.debug.panic("\nCannot convert type {} to string", .{kind}),
     }
 }
@@ -566,6 +586,11 @@ fn intToString(writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, exp
     try writer.writeAll(interner.lookup(intern, i));
 }
 
+fn boolToString(writer: List(u8).Writer, typed_ast: TypedAst, expr: Expression) !void {
+    const b = typed_ast.ast.bool.items[typed_ast.ast.index.items[expr]];
+    try writer.writeAll(if (b) "true" else "false");
+}
+
 fn expressionToString(allocator: Allocator, writer: List(u8).Writer, intern: Intern, typed_ast: TypedAst, types: Types, expr: Expression, indent: u64) error{OutOfMemory}!void {
     switch (typed_ast.ast.kind.items[expr]) {
         .function => try functionToString(allocator, writer, intern, typed_ast, types, expr, indent),
@@ -574,6 +599,7 @@ fn expressionToString(allocator: Allocator, writer: List(u8).Writer, intern: Int
         .binary_op => try binaryOpToString(allocator, writer, intern, typed_ast, types, expr, indent),
         .if_ => try ifToString(allocator, writer, intern, typed_ast, types, expr, indent),
         .int => try intToString(writer, intern, typed_ast, expr),
+        .bool => try boolToString(writer, typed_ast, expr),
         else => unreachable,
     }
 }

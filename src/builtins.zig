@@ -8,6 +8,8 @@ pub const Builtins = struct {
     else_: Interned,
     i32: Interned,
     bool: Interned,
+    true_: Interned,
+    false_: Interned,
 
     pub fn init(intern: *Intern) !Builtins {
         return Builtins{
@@ -16,6 +18,8 @@ pub const Builtins = struct {
             .else_ = try interner.store(intern, "else"),
             .i32 = try interner.store(intern, "i32"),
             .bool = try interner.store(intern, "bool"),
+            .true_ = try interner.store(intern, "true"),
+            .false_ = try interner.store(intern, "false"),
         };
     }
 };

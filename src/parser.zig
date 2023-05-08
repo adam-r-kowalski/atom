@@ -19,6 +19,7 @@ const Kind = enum {
     group,
     if_,
     call,
+    bool,
 };
 
 const Define = struct {
@@ -80,6 +81,7 @@ pub const Ast = struct {
     group: List(Group),
     if_: List(If),
     call: List(Call),
+    bool: List(bool),
     top_level: List(Expression),
 
     pub fn deinit(self: Ast) void {
@@ -104,6 +106,7 @@ pub const Ast = struct {
         self.if_.deinit();
         for (self.call.items) |c| c.arguments.deinit();
         self.call.deinit();
+        self.bool.deinit();
         self.top_level.deinit();
     }
 };
@@ -153,6 +156,17 @@ fn symbol(context: *Context, s: Interned) !Expression {
     try context.ast.span.append(span);
     try context.ast.index.append(context.ast.symbol.items.len);
     try context.ast.symbol.append(s);
+    context.token_index += 1;
+    return self;
+}
+
+fn boolean(context: *Context, b: bool) !Expression {
+    const self = context.ast.kind.items.len;
+    const span = context.tokens.span.items[context.token_index];
+    try context.ast.kind.append(.bool);
+    try context.ast.span.append(span);
+    try context.ast.index.append(context.ast.bool.items.len);
+    try context.ast.bool.append(b);
     context.token_index += 1;
     return self;
 }
@@ -215,6 +229,7 @@ fn prefix(context: *Context) !Expression {
     switch (context.tokens.kind.items[context.token_index]) {
         .int => |s| return try int(context, s),
         .symbol => |s| return try symbol(context, s),
+        .bool => |s| return try boolean(context, s),
         .left_paren => return try group(context),
         .if_ => return try if_(context),
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),
@@ -501,6 +516,7 @@ pub fn parse(allocator: Allocator, tokens: Tokens) !Ast {
         .group = List(Group).init(allocator),
         .if_ = List(If).init(allocator),
         .call = List(Call).init(allocator),
+        .bool = List(bool).init(allocator),
         .top_level = List(Expression).init(allocator),
     };
     var context = Context{
@@ -524,6 +540,11 @@ fn intToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expressi
 fn symbolToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) !void {
     const s = ast.symbol.items[ast.index.items[expr]];
     try writer.writeAll(interner.lookup(intern, s));
+}
+
+fn boolToString(writer: List(u8).Writer, ast: Ast, expr: Expression) !void {
+    const b = ast.bool.items[ast.index.items[expr]];
+    try writer.writeAll(if (b) "true" else "false");
 }
 
 fn typeToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression) !void {
@@ -660,6 +681,7 @@ fn expressionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: E
     switch (ast.kind.items[expr]) {
         .int => try intToString(writer, intern, ast, expr),
         .symbol => try symbolToString(writer, intern, ast, expr),
+        .bool => try boolToString(writer, ast, expr),
         .define => try defineToString(writer, intern, ast, expr, indent),
         .function => try functionToString(writer, intern, ast, expr, indent),
         .binary_op => try binaryOpToString(writer, intern, ast, expr, indent),

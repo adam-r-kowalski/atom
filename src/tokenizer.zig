@@ -18,6 +18,7 @@ pub const Kind = union(enum) {
     int: Interned,
     float: Interned,
     indent: Indent,
+    bool: bool,
     equal,
     dot,
     colon,
@@ -156,6 +157,8 @@ fn symbol(tokens: *Tokens, intern: *Intern, builtins: Builtins, cursor: *Cursor)
     if (interned == builtins.if_) return try tokens.kind.append(.if_);
     if (interned == builtins.then) return try tokens.kind.append(.then);
     if (interned == builtins.else_) return try tokens.kind.append(.else_);
+    if (interned == builtins.true_) return try tokens.kind.append(.{ .bool = true });
+    if (interned == builtins.false_) return try tokens.kind.append(.{ .bool = false });
     try tokens.kind.append(.{ .symbol = interned });
 }
 
@@ -238,6 +241,7 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
                 const string = interner.lookup(intern, interned);
                 try std.fmt.format(writer, "float {s}", .{string});
             },
+            .bool => |b| try std.fmt.format(writer, "bool {}", .{b}),
             .indent => |indent| {
                 switch (indent) {
                     .space => try std.fmt.format(writer, "space {d}", .{indent.space}),
@@ -302,6 +306,7 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u
                 const string = interner.lookup(intern, interned);
                 try writer.writeAll(string);
             },
+            .bool => |b| try writer.writeAll(if (b) "true" else "false"),
             .indent => |indent| try indentToSource(writer, span, indent),
             .equal => try writer.writeAll("="),
             .dot => try writer.writeAll("."),

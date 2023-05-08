@@ -18,3 +18,21 @@ test "type infer int literal" {
     const expected = "f() -> 42 = 42";
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "type infer bool literal as i32" {
+    const allocator = std.testing.allocator;
+    const source = "f() -> bool = true";
+    const actual = try atom.testing.typeInfer(allocator, source, "f");
+    defer allocator.free(actual);
+    const expected = "f() -> bool = true";
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer bool literal" {
+    const allocator = std.testing.allocator;
+    const source = "f() = true";
+    const actual = try atom.testing.typeInfer(allocator, source, "f");
+    defer allocator.free(actual);
+    const expected = "f() -> true = true";
+    try std.testing.expectEqualStrings(expected, actual);
+}
