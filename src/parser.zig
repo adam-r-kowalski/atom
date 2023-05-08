@@ -22,6 +22,7 @@ const Kind = enum {
     call,
     bool,
     import,
+    export_,
 };
 
 const Define = struct {
@@ -92,6 +93,7 @@ pub const Ast = struct {
     call: List(Call),
     bool: List(bool),
     import: List(Expression),
+    export_: List(Expression),
     top_level: List(Expression),
 
     pub fn deinit(self: Ast) void {
@@ -120,6 +122,7 @@ pub const Ast = struct {
         self.call.deinit();
         self.bool.deinit();
         self.import.deinit();
+        self.export_.deinit();
         self.top_level.deinit();
     }
 };
@@ -196,10 +199,13 @@ fn tryConsume(context: *Context, kind: tokenizer.Kind) bool {
     return true;
 }
 
-fn consumeIndent(context: *Context) void {
+fn consumeIndent(context: *Context) bool {
     switch (context.tokens.kind.items[context.token_index]) {
-        .indent => context.token_index += 1,
-        else => {},
+        .indent => {
+            context.token_index += 1;
+            return true;
+        },
+        else => return false,
     }
 }
 
@@ -233,7 +239,7 @@ fn if_(context: *Context) !Expression {
     const condition = try expression(context);
     consume(context, .then);
     const then = try block(context);
-    consumeIndent(context);
+    _ = consumeIndent(context);
     consume(context, .else_);
     const else_ = try block(context);
     const end = context.tokens.span.items[else_.items[else_.items.len - 1]].end;
@@ -259,6 +265,20 @@ fn import(context: *Context) !Expression {
     return self;
 }
 
+fn export_(context: *Context) !Expression {
+    const begin = context.tokens.span.items[context.token_index].begin;
+    context.token_index += 1;
+    context.precedence = LOWEST;
+    const expr = try expression(context);
+    const end = context.tokens.span.items[expr].end;
+    const self = context.ast.kind.items.len;
+    try context.ast.kind.append(.export_);
+    try context.ast.span.append(.{ .begin = begin, .end = end });
+    try context.ast.index.append(context.ast.export_.items.len);
+    try context.ast.export_.append(expr);
+    return self;
+}
+
 fn prefix(context: *Context) !Expression {
     switch (context.tokens.kind.items[context.token_index]) {
         .int => |s| return try int(context, s),
@@ -267,6 +287,7 @@ fn prefix(context: *Context) !Expression {
         .left_paren => return try group(context),
         .if_ => return try if_(context),
         .import => return try import(context),
+        .export_ => return try export_(context),
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),
     }
 }
@@ -571,6 +592,7 @@ pub fn parse(allocator: Allocator, tokens: Tokens) !Ast {
         .call = List(Call).init(allocator),
         .bool = List(bool).init(allocator),
         .import = List(Expression).init(allocator),
+        .export_ = List(Expression).init(allocator),
         .top_level = List(Expression).init(allocator),
     };
     var context = Context{
@@ -581,8 +603,11 @@ pub fn parse(allocator: Allocator, tokens: Tokens) !Ast {
         .precedence = LOWEST,
         .indent = Indent{ .space = 0 },
     };
-    const expr = try expression(&context);
-    try context.ast.top_level.append(expr);
+    while (context.tokens.kind.items.len > context.token_index) {
+        while (consumeIndent(&context)) {}
+        if (context.tokens.kind.items.len <= context.token_index) break;
+        try context.ast.top_level.append(try expression(&context));
+    }
     return ast;
 }
 
@@ -755,6 +780,13 @@ fn importToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expre
     try writer.writeAll(")");
 }
 
+fn exportToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) !void {
+    const e = ast.export_.items[ast.index.items[expr]];
+    try writer.writeAll("(export ");
+    try expressionToString(writer, intern, ast, e, indent);
+    try writer.writeAll(")");
+}
+
 fn expressionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: Expression, indent: u64) error{OutOfMemory}!void {
     switch (ast.kind.items[expr]) {
         .int => try intToString(writer, intern, ast, expr),
@@ -768,6 +800,7 @@ fn expressionToString(writer: List(u8).Writer, intern: Intern, ast: Ast, expr: E
         .if_ => try ifToString(writer, intern, ast, expr, indent),
         .call => try callToString(writer, intern, ast, expr, indent),
         .import => try importToString(writer, intern, ast, expr, indent),
+        .export_ => try exportToString(writer, intern, ast, expr, indent),
     }
 }
 
@@ -775,6 +808,9 @@ pub fn toString(allocator: Allocator, intern: Intern, ast: Ast) ![]u8 {
     var list = List(u8).init(allocator);
     const writer = list.writer();
     const indent: u64 = 0;
-    for (ast.top_level.items) |expr| try expressionToString(writer, intern, ast, expr, indent);
+    for (ast.top_level.items) |expr, i| {
+        if (i > 0) try writer.writeAll("\n\n");
+        try expressionToString(writer, intern, ast, expr, indent);
+    }
     return list.toOwnedSlice();
 }
