@@ -10,25 +10,23 @@ const parser = @import("parser.zig");
 const type_infer = @import("type_infer.zig");
 
 pub fn tokenize(allocator: Allocator, source: []const u8) ![]const u8 {
-    var intern = Intern.init(allocator);
-    defer intern.deinit();
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+    var intern = Intern.init(arena.allocator());
     const builtins = try Builtins.init(&intern);
-    const tokens = try tokenizer.tokenize(allocator, &intern, builtins, source);
-    defer allocator.free(tokens);
-    const reconstructed = try tokenizer.toSource(allocator, intern, tokens);
-    defer allocator.free(reconstructed);
+    const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
+    const reconstructed = try tokenizer.toSource(arena.allocator(), intern, tokens);
     try std.testing.expectEqualStrings(source, reconstructed);
     return try tokenizer.toString(allocator, intern, tokens);
 }
 
 pub fn parse(allocator: Allocator, source: []const u8) ![]const u8 {
-    var intern = Intern.init(allocator);
-    defer intern.deinit();
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+    var intern = Intern.init(arena.allocator());
     const builtins = try Builtins.init(&intern);
-    const tokens = try tokenizer.tokenize(allocator, &intern, builtins, source);
-    defer tokens.deinit();
-    const ast = try parser.parse(allocator, tokens);
-    defer ast.deinit();
+    const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
+    const ast = try parser.parse(arena.allocator(), tokens);
     return try parser.toString(allocator, intern, ast);
 }
 
