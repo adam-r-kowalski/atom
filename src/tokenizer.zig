@@ -49,19 +49,14 @@ pub const Span = struct {
     end: Pos,
 };
 
+pub const Token = struct {
+    kind: Kind,
+    span: Span,
+};
+
 const Cursor = struct {
     source: []const u8,
     pos: Pos,
-};
-
-pub const Tokens = struct {
-    kind: List(Kind),
-    span: List(Span),
-
-    pub fn deinit(self: Tokens) void {
-        self.kind.deinit();
-        self.span.deinit();
-    }
 };
 
 fn trim(cursor: *Cursor) void {
@@ -85,7 +80,7 @@ fn advance(cursor: *Cursor, n: u64) []const u8 {
     return value;
 }
 
-fn number(intern: *Intern, tokens: *Tokens, cursor: *Cursor) !void {
+fn number(intern: *Intern, cursor: *Cursor) !Token {
     const begin = cursor.pos;
     var i: u64 = 1;
     var decimals: u64 = if (cursor.source[0] == '.') 1 else 0;
@@ -103,136 +98,134 @@ fn number(intern: *Intern, tokens: *Tokens, cursor: *Cursor) !void {
     const string = cursor.source[0..i];
     if (string.len == 1) {
         switch (string[0]) {
-            '-' => return choice(tokens, cursor, .minus, &.{.{ '>', .arrow }}),
+            '-' => return choice(cursor, .minus, &.{.{ '>', .arrow }}),
             '.' => {
                 _ = advance(cursor, i);
-                try tokens.span.append(.{ .begin = begin, .end = cursor.pos });
-                try tokens.kind.append(.dot);
-                return;
+                return Token{ .kind = .dot, .span = .{ .begin = begin, .end = cursor.pos } };
             },
             else => {},
         }
     }
     _ = advance(cursor, i);
-    try tokens.span.append(.{ .begin = begin, .end = cursor.pos });
+    const span = Span{ .begin = begin, .end = cursor.pos };
     const interned = try interner.store(intern, string);
-    if (decimals == 0) return try tokens.kind.append(.{ .int = interned });
-    try tokens.kind.append(.{ .float = interned });
+    if (decimals == 0) return Token{ .kind = .{ .int = interned }, .span = span };
+    return Token{ .kind = .{ .float = interned }, .span = span };
 }
 
-fn exact(tokens: *Tokens, cursor: *Cursor, kind: Kind) !void {
+fn exact(cursor: *Cursor, kind: Kind) Token {
     const begin = cursor.pos;
     _ = advance(cursor, 1);
-    try tokens.kind.append(kind);
-    try tokens.span.append(.{ .begin = begin, .end = cursor.pos });
+    return Token{ .kind = kind, .span = .{ .begin = begin, .end = cursor.pos } };
 }
 
 const Choice = Tuple(&.{ u8, Kind });
 
-fn choice(tokens: *Tokens, cursor: *Cursor, kind: Kind, choices: []const Choice) !void {
+fn choice(cursor: *Cursor, kind: Kind, choices: []const Choice) Token {
     const begin = cursor.pos;
     if (cursor.source.len > 1) {
         const t = cursor.source[1];
         for (choices) |c| {
             if (t == c[0]) {
                 _ = advance(cursor, 2);
-                try tokens.span.append(.{ .begin = begin, .end = cursor.pos });
-                try tokens.kind.append(c[1]);
-                return;
+                return Token{ .kind = c[1], .span = .{ .begin = begin, .end = cursor.pos } };
             }
         }
     }
     _ = advance(cursor, 1);
-    try tokens.span.append(.{ .begin = begin, .end = cursor.pos });
-    try tokens.kind.append(kind);
+    return Token{ .kind = kind, .span = .{ .begin = begin, .end = cursor.pos } };
 }
 
-fn symbol(tokens: *Tokens, intern: *Intern, builtins: Builtins, cursor: *Cursor) !void {
+fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !Token {
     const begin = cursor.pos;
     var i: u64 = 0;
     while (i < cursor.source.len and !reserved(cursor.source[i])) : (i += 1) {}
     const string = advance(cursor, i);
     const end = cursor.pos;
     const span = Span{ .begin = begin, .end = end };
-    try tokens.span.append(span);
     const interned = try interner.store(intern, string);
-    if (interned == builtins.import) return try tokens.kind.append(.import);
-    if (interned == builtins.export_) return try tokens.kind.append(.export_);
-    if (interned == builtins.if_) return try tokens.kind.append(.if_);
-    if (interned == builtins.then) return try tokens.kind.append(.then);
-    if (interned == builtins.else_) return try tokens.kind.append(.else_);
-    if (interned == builtins.true_) return try tokens.kind.append(.{ .bool = true });
-    if (interned == builtins.false_) return try tokens.kind.append(.{ .bool = false });
-    try tokens.kind.append(.{ .symbol = interned });
+    if (interned == builtins.import) return Token{ .kind = .import, .span = span };
+    if (interned == builtins.export_) return Token{ .kind = .export_, .span = span };
+    if (interned == builtins.if_) return Token{ .kind = .if_, .span = span };
+    if (interned == builtins.then) return Token{ .kind = .then, .span = span };
+    if (interned == builtins.else_) return Token{ .kind = .else_, .span = span };
+    if (interned == builtins.true_) return Token{ .kind = .{ .bool = true }, .span = span };
+    if (interned == builtins.false_) return Token{ .kind = .{ .bool = false }, .span = span };
+    return Token{ .kind = .{ .symbol = interned }, .span = span };
 }
 
-fn newLine(tokens: *Tokens, cursor: *Cursor) !void {
+fn newLine(cursor: *Cursor) ?Token {
     var begin = cursor.pos;
     cursor.pos.column = 1;
     var i: u64 = 0;
     while (cursor.source.len > i and cursor.source[i] == '\n') : (i += 1) {}
     cursor.pos.line += i;
     cursor.source = cursor.source[i..];
-    if (cursor.source.len == 0) return;
+    if (cursor.source.len == 0) return null;
     i = 0;
     if (cursor.source[0] == ' ') {
         while (cursor.source.len > i and cursor.source[i] == ' ') : (i += 1) {}
         cursor.pos.column += i;
         cursor.source = cursor.source[i..];
-        if (cursor.source.len == 0) return;
-        try tokens.kind.append(.{ .indent = .{ .space = i } });
-        try tokens.span.append(.{ .begin = begin, .end = cursor.pos });
-        return;
+        if (cursor.source.len == 0) return null;
+        return Token{
+            .kind = .{ .indent = .{ .space = i } },
+            .span = .{ .begin = begin, .end = cursor.pos },
+        };
     }
     if (cursor.source[0] == '\t') {
         while (cursor.source.len > i and cursor.source[i] == '\t') : (i += 1) {}
         cursor.pos.column += i;
         cursor.source = cursor.source[i..];
-        if (cursor.source.len == 0) return;
-        try tokens.kind.append(.{ .indent = .{ .tab = i } });
-        try tokens.span.append(.{ .begin = begin, .end = cursor.pos });
-        return;
+        if (cursor.source.len == 0) return null;
+        return Token{
+            .kind = .{ .indent = .{ .tab = i } },
+            .span = .{ .begin = begin, .end = cursor.pos },
+        };
     }
-    try tokens.kind.append(.{ .indent = .{ .space = 0 } });
-    try tokens.span.append(.{ .begin = begin, .end = cursor.pos });
+    return Token{
+        .kind = .{ .indent = .{ .space = 0 } },
+        .span = .{ .begin = begin, .end = cursor.pos },
+    };
 }
 
-pub fn tokenize(allocator: Allocator, intern: *Intern, builtins: Builtins, source: []const u8) !Tokens {
-    var tokens = Tokens{
-        .kind = List(Kind).init(allocator),
-        .span = List(Span).init(allocator),
+fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?Token {
+    trim(cursor);
+    if (cursor.source.len == 0) return null;
+    return switch (cursor.source[0]) {
+        '0'...'9', '-', '.' => try number(intern, cursor),
+        '=' => exact(cursor, .equal),
+        ':' => exact(cursor, .colon),
+        '+' => exact(cursor, .plus),
+        '*' => exact(cursor, .times),
+        '^' => exact(cursor, .caret),
+        '>' => exact(cursor, .greater),
+        '<' => exact(cursor, .less),
+        '(' => exact(cursor, .left_paren),
+        ')' => exact(cursor, .right_paren),
+        ',' => exact(cursor, .comma),
+        '\n' => newLine(cursor),
+        else => try symbol(intern, builtins, cursor),
     };
+}
+
+pub fn tokenize(allocator: Allocator, intern: *Intern, builtins: Builtins, source: []const u8) ![]const Token {
     var cursor = Cursor{
         .source = source,
         .pos = .{ .line = 1, .column = 1 },
     };
-    while (cursor.source.len != 0) {
-        trim(&cursor);
-        switch (cursor.source[0]) {
-            '0'...'9', '-', '.' => try number(intern, &tokens, &cursor),
-            '=' => try exact(&tokens, &cursor, .equal),
-            ':' => try exact(&tokens, &cursor, .colon),
-            '+' => try exact(&tokens, &cursor, .plus),
-            '*' => try exact(&tokens, &cursor, .times),
-            '^' => try exact(&tokens, &cursor, .caret),
-            '>' => try exact(&tokens, &cursor, .greater),
-            '<' => try exact(&tokens, &cursor, .less),
-            '(' => try exact(&tokens, &cursor, .left_paren),
-            ')' => try exact(&tokens, &cursor, .right_paren),
-            ',' => try exact(&tokens, &cursor, .comma),
-            '\n' => try newLine(&tokens, &cursor),
-            else => try symbol(&tokens, intern, builtins, &cursor),
-        }
-    }
-    return tokens;
+    var tokens = List(Token).init(allocator);
+    while (try nextToken(&cursor, intern, builtins)) |token|
+        try tokens.append(token);
+    return tokens.toOwnedSlice();
 }
 
-pub fn toString(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u8 {
+pub fn toString(allocator: Allocator, intern: Intern, tokens: []const Token) ![]const u8 {
     var list = List(u8).init(allocator);
     const writer = list.writer();
-    for (tokens.kind.items) |kind, i| {
+    for (tokens) |token, i| {
         if (i != 0) try writer.writeAll("\n");
-        switch (kind) {
+        switch (token.kind) {
             .symbol => |interned| {
                 const string = interner.lookup(intern, interned);
                 try std.fmt.format(writer, "symbol {s}", .{string});
@@ -300,20 +293,19 @@ fn indentToSource(writer: List(u8).Writer, span: Span, indent: Indent) !void {
     }
 }
 
-pub fn toSource(allocator: Allocator, intern: Intern, tokens: Tokens) ![]const u8 {
+pub fn toSource(allocator: Allocator, intern: Intern, tokens: []const Token) ![]const u8 {
     var list = List(u8).init(allocator);
     const writer = list.writer();
     var pos = Pos{ .line = 1, .column = 1 };
-    for (tokens.kind.items) |kind, i| {
-        const span = tokens.span.items[i];
-        try spaceToSource(writer, span, &pos);
-        switch (kind) {
+    for (tokens) |token| {
+        try spaceToSource(writer, token.span, &pos);
+        switch (token.kind) {
             .symbol, .int, .float => |interned| {
                 const string = interner.lookup(intern, interned);
                 try writer.writeAll(string);
             },
             .bool => |b| try writer.writeAll(if (b) "true" else "false"),
-            .indent => |indent| try indentToSource(writer, span, indent),
+            .indent => |indent| try indentToSource(writer, token.span, indent),
             .equal => try writer.writeAll("="),
             .dot => try writer.writeAll("."),
             .colon => try writer.writeAll(":"),

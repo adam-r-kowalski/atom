@@ -14,7 +14,7 @@ pub fn tokenize(allocator: Allocator, source: []const u8) ![]const u8 {
     defer intern.deinit();
     const builtins = try Builtins.init(&intern);
     const tokens = try tokenizer.tokenize(allocator, &intern, builtins, source);
-    defer tokens.deinit();
+    defer allocator.free(tokens);
     const reconstructed = try tokenizer.toSource(allocator, intern, tokens);
     defer allocator.free(reconstructed);
     try std.testing.expectEqualStrings(source, reconstructed);
