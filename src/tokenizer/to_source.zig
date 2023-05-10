@@ -12,6 +12,9 @@ const Span = types.Span;
 const Pos = types.Pos;
 const Indent = types.Indent;
 const Token = types.Token;
+const Symbol = types.Symbol;
+const Int = types.Int;
+const Float = types.Float;
 
 fn repeat(writer: List(u8).Writer, c: u8, times: u64) !void {
     var i: u64 = 0;
@@ -23,16 +26,39 @@ fn space(writer: List(u8).Writer, span: Span, pos: *Pos) !void {
     pos.* = span.end;
 }
 
-fn indent(writer: List(u8).Writer, span: Span, i: Indent) !void {
-    try repeat(writer, '\n', span.end.line - span.begin.line);
+fn indent(writer: List(u8).Writer, i: Indent, pos: *Pos) !void {
     switch (i) {
-        .space => |s| try repeat(writer, ' ', s),
-        .tab => |tab| try repeat(writer, '\t', tab),
+        .space => |s| {
+            try space(writer, s.span, pos);
+            try repeat(writer, '\n', s.span.end.line - s.span.begin.line);
+            try repeat(writer, ' ', s.count);
+        },
+        .tab => |t| {
+            try space(writer, t.span, pos);
+            try repeat(writer, '\n', t.span.end.line - t.span.begin.line);
+            try repeat(writer, ' ', t.count);
+        },
     }
 }
 
-fn interned(writer: List(u8).Writer, intern: Intern, s: Interned) !void {
-    try writer.writeAll(interner.lookup(intern, s));
+fn symbol(writer: List(u8).Writer, intern: Intern, s: Symbol, pos: *Pos) !void {
+    try space(writer, s.span, pos);
+    try writer.writeAll(interner.lookup(intern, s.value));
+}
+
+fn int(writer: List(u8).Writer, intern: Intern, i: Int, pos: *Pos) !void {
+    try space(writer, i.span, pos);
+    try writer.writeAll(interner.lookup(intern, i.value));
+}
+
+fn float(writer: List(u8).Writer, intern: Intern, f: Float, pos: *Pos) !void {
+    try space(writer, f.span, pos);
+    try writer.writeAll(interner.lookup(intern, f.value));
+}
+
+fn write(writer: List(u8).Writer, span: Span, pos: *Pos, s: []const u8) !void {
+    try space(writer, span, pos);
+    try writer.writeAll(s);
 }
 
 pub fn toSource(allocator: Allocator, intern: Intern, tokens: []const Token) ![]const u8 {
@@ -40,29 +66,30 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
     const writer = list.writer();
     var pos = Pos{ .line = 1, .column = 1 };
     for (tokens) |token| {
-        try space(writer, token.span, &pos);
-        switch (token.kind) {
-            .symbol, .int, .float => |s| try interned(writer, intern, s),
-            .bool => |b| try writer.writeAll(if (b) "true" else "false"),
-            .indent => |in| try indent(writer, token.span, in),
-            .equal => try writer.writeAll("="),
-            .dot => try writer.writeAll("."),
-            .colon => try writer.writeAll(":"),
-            .plus => try writer.writeAll("+"),
-            .minus => try writer.writeAll("-"),
-            .times => try writer.writeAll("*"),
-            .caret => try writer.writeAll("^"),
-            .greater => try writer.writeAll(">"),
-            .less => try writer.writeAll("<"),
-            .left_paren => try writer.writeAll("("),
-            .right_paren => try writer.writeAll(")"),
-            .if_ => try writer.writeAll("if"),
-            .then => try writer.writeAll("then"),
-            .else_ => try writer.writeAll("else"),
-            .comma => try writer.writeAll(","),
-            .arrow => try writer.writeAll("->"),
-            .import => try writer.writeAll("import"),
-            .export_ => try writer.writeAll("export"),
+        switch (token) {
+            .symbol => |s| try symbol(writer, intern, s, &pos),
+            .int => |i| try int(writer, intern, i, &pos),
+            .float => |f| try float(writer, intern, f, &pos),
+            .bool => |b| try write(writer, b.span, &pos, if (b.value) "true" else "false"),
+            .indent => |i| try indent(writer, i, &pos),
+            .equal => |e| try write(writer, e.span, &pos, "="),
+            .dot => |d| try write(writer, d.span, &pos, "."),
+            .colon => |c| try write(writer, c.span, &pos, ":"),
+            .plus => |p| try write(writer, p.span, &pos, "+"),
+            .minus => |m| try write(writer, m.span, &pos, "-"),
+            .times => |t| try write(writer, t.span, &pos, "*"),
+            .caret => |c| try write(writer, c.span, &pos, "^"),
+            .greater => |g| try write(writer, g.span, &pos, ">"),
+            .less => |l| try write(writer, l.span, &pos, "<"),
+            .left_paren => |l| try write(writer, l.span, &pos, "("),
+            .right_paren => |r| try write(writer, r.span, &pos, ")"),
+            .if_ => |i| try write(writer, i.span, &pos, "if"),
+            .then => |t| try write(writer, t.span, &pos, "then"),
+            .else_ => |e| try write(writer, e.span, &pos, "else"),
+            .comma => |c| try write(writer, c.span, &pos, ","),
+            .arrow => |a| try write(writer, a.span, &pos, "->"),
+            .import => |i| try write(writer, i.span, &pos, "import"),
+            .export_ => |e| try write(writer, e.span, &pos, "export"),
         }
     }
     return list.toOwnedSlice();

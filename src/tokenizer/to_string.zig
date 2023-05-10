@@ -12,23 +12,26 @@ const Token = types.Token;
 const Span = types.Span;
 const Pos = types.Pos;
 const Indent = types.Indent;
+const Symbol = types.Symbol;
+const Int = types.Int;
+const Float = types.Float;
 
-fn symbol(writer: List(u8).Writer, intern: Intern, s: Interned) !void {
-    try std.fmt.format(writer, "symbol {s}", .{interner.lookup(intern, s)});
+fn symbol(writer: List(u8).Writer, intern: Intern, s: Symbol) !void {
+    try std.fmt.format(writer, "symbol {s}", .{interner.lookup(intern, s.value)});
 }
 
-fn int(writer: List(u8).Writer, intern: Intern, s: Interned) !void {
-    try std.fmt.format(writer, "int {s}", .{interner.lookup(intern, s)});
+fn int(writer: List(u8).Writer, intern: Intern, i: Int) !void {
+    try std.fmt.format(writer, "int {s}", .{interner.lookup(intern, i.value)});
 }
 
-fn float(writer: List(u8).Writer, intern: Intern, s: Interned) !void {
-    try std.fmt.format(writer, "float {s}", .{interner.lookup(intern, s)});
+fn float(writer: List(u8).Writer, intern: Intern, f: Float) !void {
+    try std.fmt.format(writer, "float {s}", .{interner.lookup(intern, f.value)});
 }
 
 fn indent(writer: List(u8).Writer, i: Indent) !void {
     switch (i) {
-        .space => |space| try std.fmt.format(writer, "space {d}", .{space}),
-        .tab => |tab| try std.fmt.format(writer, "tab {d}", .{tab}),
+        .space => |space| try std.fmt.format(writer, "space {d}", .{space.count}),
+        .tab => |tab| try std.fmt.format(writer, "tab {d}", .{tab.count}),
     }
 }
 
@@ -37,7 +40,7 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
     const writer = list.writer();
     for (tokens) |token, i| {
         if (i != 0) try writer.writeAll("\n");
-        switch (token.kind) {
+        switch (token) {
             .symbol => |s| try symbol(writer, intern, s),
             .int => |s| try int(writer, intern, s),
             .float => |s| try float(writer, intern, s),
