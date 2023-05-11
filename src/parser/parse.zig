@@ -63,7 +63,7 @@ fn consume(context: *Context, kind: std.meta.Tag(Token)) void {
 
 fn tryConsume(context: *Context, kind: std.meta.Tag(Token)) bool {
     if (context.token_index >= context.tokens.len) return false;
-    if (std.meta.activeTag(context.tokens[context.token_index].kind) != kind) return false;
+    if (std.meta.activeTag(context.tokens[context.token_index]) != kind) return false;
     context.token_index += 1;
     return true;
 }
@@ -91,7 +91,10 @@ fn tokenSpan(token: Token) Span {
         .symbol => |s| s.span,
         .int => |i| i.span,
         .float => |f| f.span,
-        .indent => |i| i.span,
+        .indent => |i| switch (i) {
+            .space => |s| s.span,
+            .tab => |t| t.span,
+        },
         .bool => |b| b.span,
         .equal => |e| e.span,
         .dot => |d| d.span,
@@ -255,28 +258,26 @@ fn annotate(context: *Context, name: Ast) !Ast {
     consume(context, .equal);
     context.precedence = LOWEST;
     const body = try block(context);
-    const span = Span{ .begin = name.span.begin, .end = body[body.len - 1].span.end };
-    return Ast{
-        .kind = .{ .define = .{
-            .name = try alloc(context, name),
-            .type = type_,
-            .body = body,
-        } },
+    const span = Span{ .begin = astSpan(name).begin, .end = astSpan(body[body.len - 1]).end };
+    return Ast{ .define = .{
+        .name = try alloc(context, name),
+        .type = type_,
+        .body = body,
         .span = span,
-    };
+    } };
 }
 
 fn binaryOp(context: *Context, left: Ast, kind: BinaryOpKind) !Ast {
     context.token_index += 1;
     const right = try expression(context);
-    const span = Span{ .begin = left.span.begin, .end = right.span.end };
+    const span = Span{ .begin = astSpan(left).begin, .end = astSpan(right).end };
     return Ast{
-        .kind = .{ .binary_op = .{
+        .binary_op = .{
             .kind = kind,
             .left = try alloc(context, left),
             .right = try alloc(context, right),
-        } },
-        .span = span,
+            .span = span,
+        },
     };
 }
 
@@ -294,20 +295,20 @@ fn convertCallToFunction(context: *Context, name: Ast, arguments: []const Ast, s
     };
     const body = try block(context);
     const span = Span{
-        .begin = name.span.begin,
-        .end = body[body.len - 1].span.end,
+        .begin = astSpan(name).begin,
+        .end = astSpan(body[body.len - 1]).end,
     };
     const parameters = try context.allocator.alloc(Parameter, arguments.len);
     for (arguments) |argument, i|
         parameters[i] = Parameter{ .name = argument, .type = null };
     return Ast{
-        .kind = .{ .function = .{
+        .function = .{
             .name = try alloc(context, name),
             .parameters = parameters,
             .return_type = return_type,
             .body = body,
-        } },
-        .span = span,
+            .span = span,
+        },
     };
 }
 
@@ -319,7 +320,7 @@ fn function(context: *Context, name: Ast, arguments: []const Ast) !Ast {
     context.precedence = LOWEST;
     parameters.items[parameters.items.len - 1].type = try expression(context);
     while (context.tokens.len > context.token_index) {
-        switch (context.tokens[context.token_index].kind) {
+        switch (context.tokens[context.token_index]) {
             .right_paren => {
                 context.token_index += 1;
                 break;
@@ -329,7 +330,7 @@ fn function(context: *Context, name: Ast, arguments: []const Ast) !Ast {
                 context.precedence = HIGHEST;
                 const parameter = try expression(context);
                 try parameters.append(Parameter{ .name = parameter, .type = null });
-                if (context.tokens[context.token_index].kind == .colon) {
+                if (context.tokens[context.token_index] == .colon) {
                     context.token_index += 1;
                     context.precedence = LOWEST;
                     parameters.items[parameters.items.len - 1].type = try expression(context);
@@ -338,7 +339,7 @@ fn function(context: *Context, name: Ast, arguments: []const Ast) !Ast {
         }
     }
     const return_type = blk: {
-        if (context.tokens[context.token_index].kind == .arrow) {
+        if (context.tokens[context.token_index] == .arrow) {
             context.token_index += 1;
             context.precedence = DEFINE + 1;
             const expr = try expressionAlloc(context);
@@ -347,31 +348,31 @@ fn function(context: *Context, name: Ast, arguments: []const Ast) !Ast {
     };
     if (!tryConsume(context, .equal)) {
         const span = Span{
-            .begin = name.span.begin,
-            .end = return_type.?.span.end,
+            .begin = astSpan(name).begin,
+            .end = astSpan(return_type.?.*).end,
         };
         return Ast{
-            .kind = .{ .declaration = .{
+            .declaration = .{
                 .name = try alloc(context, name),
                 .parameters = parameters.toOwnedSlice(),
                 .return_type = return_type,
-            } },
-            .span = span,
+                .span = span,
+            },
         };
     }
     const body = try block(context);
     const span = Span{
-        .begin = name.span.begin,
-        .end = body[body.len - 1].span.end,
+        .begin = astSpan(name).begin,
+        .end = astSpan(body[body.len - 1]).end,
     };
     return Ast{
-        .kind = .{ .function = .{
+        .function = .{
             .name = try alloc(context, name),
             .parameters = parameters.toOwnedSlice(),
             .return_type = return_type,
             .body = body,
-        } },
-        .span = span,
+            .span = span,
+        },
     };
 }
 
@@ -379,7 +380,7 @@ fn callOrFunction(context: *Context, left: Ast) !Ast {
     context.token_index += 1;
     var arguments = List(Ast).init(context.allocator);
     while (context.tokens.len > context.token_index) {
-        switch (context.tokens[context.token_index].kind) {
+        switch (context.tokens[context.token_index]) {
             .right_paren => {
                 context.token_index += 1;
                 break;
@@ -388,7 +389,7 @@ fn callOrFunction(context: *Context, left: Ast) !Ast {
                 context.precedence = HIGHEST;
                 const argument = try expression(context);
                 try arguments.append(argument);
-                switch (context.tokens[context.token_index].kind) {
+                switch (context.tokens[context.token_index]) {
                     .comma => context.token_index += 1,
                     .colon => return try function(context, left, arguments.toOwnedSlice()),
                     else => {},
@@ -397,22 +398,22 @@ fn callOrFunction(context: *Context, left: Ast) !Ast {
         }
     }
     if (context.tokens.len > context.token_index) {
-        switch (context.tokens[context.token_index].kind) {
+        switch (context.tokens[context.token_index]) {
             .equal => return try convertCallToFunction(context, left, arguments.toOwnedSlice(), .body),
             .arrow => return try convertCallToFunction(context, left, arguments.toOwnedSlice(), .return_type),
             else => {},
         }
     }
     const span = Span{
-        .begin = left.span.begin,
-        .end = arguments.items[arguments.items.len - 1].span.end,
+        .begin = astSpan(left).begin,
+        .end = astSpan(arguments.items[arguments.items.len - 1]).end,
     };
     return Ast{
-        .kind = .{ .call = .{
+        .call = .{
             .function = try alloc(context, left),
             .arguments = arguments.toOwnedSlice(),
-        } },
-        .span = span,
+            .span = span,
+        },
     };
 }
 
@@ -429,7 +430,7 @@ const Infix = struct {
 
 fn infix(context: *Context, left: Ast) ?Infix {
     if (context.tokens.len <= context.token_index) return null;
-    switch (context.tokens[context.token_index].kind) {
+    switch (context.tokens[context.token_index]) {
         .equal => return .{ .kind = .define, .precedence = DEFINE, .associativity = .right },
         .colon => return .{ .kind = .annotate, .precedence = ANNOTATE, .associativity = .right },
         .plus => return .{ .kind = .{ .binary_op = .add }, .precedence = ADD, .associativity = .left },
@@ -438,7 +439,7 @@ fn infix(context: *Context, left: Ast) ?Infix {
         .caret => return .{ .kind = .{ .binary_op = .exponentiate }, .precedence = EXPONENTIATE, .associativity = .right },
         .greater => return .{ .kind = .{ .binary_op = .greater }, .precedence = GREATER, .associativity = .left },
         .less => return .{ .kind = .{ .binary_op = .less }, .precedence = LESS, .associativity = .left },
-        .left_paren => switch (left.kind) {
+        .left_paren => switch (left) {
             .symbol => return .{ .kind = .call_or_function, .precedence = CALL, .associativity = .left },
             else => return null,
         },

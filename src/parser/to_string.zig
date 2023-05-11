@@ -22,7 +22,7 @@ fn interned(writer: List(u8).Writer, intern: Intern, s: Interned) !void {
 }
 
 fn type_(writer: List(u8).Writer, intern: Intern, ast: Ast) !void {
-    switch (ast.kind) {
+    switch (ast) {
         .binary_op => |b| {
             std.debug.assert(b.kind == .arrow);
             try writer.writeAll("(-> ");
@@ -31,7 +31,7 @@ fn type_(writer: List(u8).Writer, intern: Intern, ast: Ast) !void {
             try type_(writer, intern, b.right.*);
             try writer.writeAll(")");
         },
-        .symbol => |s| try interned(writer, intern, s),
+        .symbol => |s| try interned(writer, intern, s.value),
         else => std.debug.panic("\ncannot convert type to string {}\n", .{ast}),
     }
 }
@@ -65,7 +65,7 @@ fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Ast, indent: u6
 
 fn define(writer: List(u8).Writer, intern: Intern, d: Define, indent: u64) !void {
     try writer.writeAll("(def ");
-    try interned(writer, intern, d.name.kind.symbol);
+    try interned(writer, intern, d.name.symbol.value);
     if (d.type) |t| {
         try writer.writeAll(" ");
         try type_(writer, intern, t.*);
@@ -77,18 +77,18 @@ fn define(writer: List(u8).Writer, intern: Intern, d: Define, indent: u64) !void
 fn parameter(writer: List(u8).Writer, intern: Intern, p: Parameter) !void {
     if (p.type) |t| {
         try writer.writeAll("(");
-        try interned(writer, intern, p.name.kind.symbol);
+        try interned(writer, intern, p.name.symbol.value);
         try writer.writeAll(" ");
         try type_(writer, intern, t);
         try writer.writeAll(")");
     } else {
-        try interned(writer, intern, p.name.kind.symbol);
+        try interned(writer, intern, p.name.symbol.value);
     }
 }
 
 fn function(writer: List(u8).Writer, intern: Intern, f: Function, indent: u64) !void {
     try writer.writeAll("(defn ");
-    try interned(writer, intern, f.name.kind.symbol);
+    try interned(writer, intern, f.name.symbol.value);
     try writer.writeAll(" [");
     for (f.parameters) |p, i| {
         try parameter(writer, intern, p);
@@ -105,7 +105,7 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function, indent: u64) !
 
 fn declaration(writer: List(u8).Writer, intern: Intern, d: Declaration) !void {
     try writer.writeAll("(declare ");
-    try interned(writer, intern, d.name.kind.symbol);
+    try interned(writer, intern, d.name.symbol.value);
     try writer.writeAll(" [");
     for (d.parameters) |p, i| {
         try parameter(writer, intern, p);
@@ -168,25 +168,26 @@ fn export_(writer: List(u8).Writer, intern: Intern, ast: Ast, indent: u64) !void
 }
 
 fn module(writer: List(u8).Writer, intern: Intern, m: Module, indent: u64) !void {
-    for (m) |ast, i| {
+    for (m.expressions) |ast, i| {
         if (i > 0) try writer.writeAll("\n\n");
         try expression(writer, intern, ast, indent);
     }
 }
 
 fn expression(writer: List(u8).Writer, intern: Intern, ast: Ast, indent: u64) error{OutOfMemory}!void {
-    switch (ast.kind) {
-        .int, .symbol => |s| try interned(writer, intern, s),
-        .bool => |b| try writer.writeAll(if (b) "true" else "false"),
+    switch (ast) {
+        .int => |i| try interned(writer, intern, i.value),
+        .symbol => |s| try interned(writer, intern, s.value),
+        .bool => |b| try writer.writeAll(if (b.value) "true" else "false"),
         .define => |d| try define(writer, intern, d, indent),
         .function => |f| try function(writer, intern, f, indent),
         .declaration => |d| try declaration(writer, intern, d),
         .binary_op => |b| try binaryOp(writer, intern, b, indent),
-        .group => |g| try expression(writer, intern, g.*, indent),
+        .group => |g| try expression(writer, intern, g.expression.*, indent),
         .if_ => |i| try if_(writer, intern, i, indent),
         .call => |c| try call(writer, intern, c, indent),
-        .import => |i| try import(writer, intern, i.*, indent),
-        .export_ => |e| try export_(writer, intern, e.*, indent),
+        .import => |i| try import(writer, intern, i.expression.*, indent),
+        .export_ => |e| try export_(writer, intern, e.expression.*, indent),
         .module => |m| try module(writer, intern, m, indent),
     }
 }
