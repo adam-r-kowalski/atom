@@ -204,6 +204,19 @@ const Asscociativity = enum {
     right,
 };
 
+fn sameIndent(x: Indent, y: Indent) bool {
+    switch (x) {
+        .space => |s| switch (y) {
+            .space => |s2| return s.count == s2.count,
+            .tab => return false,
+        },
+        .tab => |t| switch (y) {
+            .space => return false,
+            .tab => |t2| return t.count == t2.count,
+        },
+    }
+}
+
 fn block(context: *Context) ![]const Ast {
     var exprs = List(Ast).init(context.allocator);
     switch (context.tokens[context.token_index]) {
@@ -217,7 +230,7 @@ fn block(context: *Context) ![]const Ast {
                 if (context.tokens.len <= context.token_index) break;
                 switch (context.tokens[context.token_index]) {
                     .indent => |next_indent| {
-                        if (!std.meta.eql(indent, next_indent)) break;
+                        if (!sameIndent(indent, next_indent)) break;
                         context.token_index += 1;
                     },
                     else => break,
