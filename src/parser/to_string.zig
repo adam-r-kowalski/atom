@@ -65,7 +65,7 @@ fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Ast, indent: u6
 
 fn define(writer: List(u8).Writer, intern: Intern, d: Define, indent: u64) !void {
     try writer.writeAll("(def ");
-    try interned(writer, intern, d.name.symbol.value);
+    try interned(writer, intern, d.name.value);
     if (d.type) |t| {
         try writer.writeAll(" ");
         try type_(writer, intern, t.*);
@@ -77,18 +77,18 @@ fn define(writer: List(u8).Writer, intern: Intern, d: Define, indent: u64) !void
 fn parameter(writer: List(u8).Writer, intern: Intern, p: Parameter) !void {
     if (p.type) |t| {
         try writer.writeAll("(");
-        try interned(writer, intern, p.name.symbol.value);
+        try interned(writer, intern, p.name.value);
         try writer.writeAll(" ");
         try type_(writer, intern, t);
         try writer.writeAll(")");
     } else {
-        try interned(writer, intern, p.name.symbol.value);
+        try interned(writer, intern, p.name.value);
     }
 }
 
 fn function(writer: List(u8).Writer, intern: Intern, f: Function, indent: u64) !void {
     try writer.writeAll("(defn ");
-    try interned(writer, intern, f.name.symbol.value);
+    try interned(writer, intern, f.name.value);
     try writer.writeAll(" [");
     for (f.parameters) |p, i| {
         try parameter(writer, intern, p);
@@ -105,7 +105,7 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function, indent: u64) !
 
 fn declaration(writer: List(u8).Writer, intern: Intern, d: Declaration) !void {
     try writer.writeAll("(declare ");
-    try interned(writer, intern, d.name.symbol.value);
+    try interned(writer, intern, d.name.value);
     try writer.writeAll(" [");
     for (d.parameters) |p, i| {
         try parameter(writer, intern, p);

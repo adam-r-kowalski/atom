@@ -5,35 +5,52 @@ const tokenizer_types = @import("../tokenizer/types.zig");
 const Token = tokenizer_types.Token;
 const Span = tokenizer_types.Span;
 const Indent = tokenizer_types.Indent;
-pub const Int = tokenizer_types.Int;
-pub const Symbol = tokenizer_types.Symbol;
-pub const Bool = tokenizer_types.Bool;
+
+pub const MonoType = union(enum) {
+    i32,
+    bool,
+};
+
+pub const Symbol = struct {
+    value: Interned,
+    span: Span,
+    type: MonoType,
+};
+
+pub const Int = struct {
+    value: Interned,
+    span: Span,
+    type: MonoType,
+};
+
+pub const Bool = struct {
+    value: bool,
+    span: Span,
+    type: MonoType,
+};
 
 pub const Define = struct {
     name: Symbol,
-    type: ?*const Ast,
     body: []const Ast,
     span: Span,
-};
-
-pub const Parameter = struct {
-    name: Symbol,
-    type: ?Ast,
+    type: MonoType,
 };
 
 pub const Function = struct {
     name: Symbol,
-    parameters: []const Parameter,
-    return_type: ?*const Ast,
+    parameters: []const Symbol,
+    return_type: MonoType,
     body: []const Ast,
     span: Span,
+    type: MonoType,
 };
 
 pub const Declaration = struct {
     name: Symbol,
-    parameters: []const Parameter,
-    return_type: ?*const Ast,
+    parameters: []const Symbol,
+    return_type: MonoType,
     span: Span,
+    type: MonoType,
 };
 
 pub const BinaryOpKind = enum {
@@ -51,11 +68,13 @@ pub const BinaryOp = struct {
     left: *const Ast,
     right: *const Ast,
     span: Span,
+    type: MonoType,
 };
 
 pub const Group = struct {
     expression: *const Ast,
     span: Span,
+    type: MonoType,
 };
 
 pub const If = struct {
@@ -63,27 +82,32 @@ pub const If = struct {
     then: []const Ast,
     else_: []const Ast,
     span: Span,
+    type: MonoType,
 };
 
 pub const Call = struct {
     function: *const Ast,
     arguments: []const Ast,
     span: Span,
+    type: MonoType,
 };
 
 pub const Import = struct {
     expression: *const Ast,
     span: Span,
+    type: MonoType,
 };
 
 pub const Export = struct {
     expression: *const Ast,
     span: Span,
+    type: MonoType,
 };
 
 pub const Module = struct {
     expressions: []const Ast,
     span: Span,
+    type: MonoType,
 };
 
 pub const Ast = union(enum) {

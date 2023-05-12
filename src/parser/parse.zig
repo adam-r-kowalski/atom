@@ -252,28 +252,30 @@ fn alloc(context: *Context, ast: Ast) !*const Ast {
     return ptr;
 }
 
-fn define(context: *Context, name: Ast) !Ast {
+fn define(context: *Context, left: Ast) !Ast {
+    const name = left.symbol;
     context.token_index += 1;
     const body = try block(context);
-    const span = Span{ .begin = astSpan(name).begin, .end = astSpan(body[body.len - 1]).end };
+    const span = Span{ .begin = name.span.begin, .end = astSpan(body[body.len - 1]).end };
     return Ast{ .define = .{
-        .name = try alloc(context, name),
+        .name = name,
         .type = null,
         .body = body,
         .span = span,
     } };
 }
 
-fn annotate(context: *Context, name: Ast) !Ast {
+fn annotate(context: *Context, left: Ast) !Ast {
+    const name = left.symbol;
     context.token_index += 1;
     context.precedence = ARROW;
     const type_ = try expressionAlloc(context);
     consume(context, .equal);
     context.precedence = LOWEST;
     const body = try block(context);
-    const span = Span{ .begin = astSpan(name).begin, .end = astSpan(body[body.len - 1]).end };
+    const span = Span{ .begin = name.span.begin, .end = astSpan(body[body.len - 1]).end };
     return Ast{ .define = .{
-        .name = try alloc(context, name),
+        .name = name,
         .type = type_,
         .body = body,
         .span = span,
@@ -296,7 +298,8 @@ fn binaryOp(context: *Context, left: Ast, kind: BinaryOpKind) !Ast {
 
 const Stage = enum { return_type, body };
 
-fn convertCallToFunction(context: *Context, name: Ast, arguments: []const Ast, stage: Stage) !Ast {
+fn convertCallToFunction(context: *Context, left: Ast, arguments: []const Ast, stage: Stage) !Ast {
+    const name = left.symbol;
     context.token_index += 1;
     const return_type = blk: {
         if (stage == .return_type) {
@@ -308,15 +311,15 @@ fn convertCallToFunction(context: *Context, name: Ast, arguments: []const Ast, s
     };
     const body = try block(context);
     const span = Span{
-        .begin = astSpan(name).begin,
+        .begin = name.span.begin,
         .end = astSpan(body[body.len - 1]).end,
     };
     const parameters = try context.allocator.alloc(Parameter, arguments.len);
     for (arguments) |argument, i|
-        parameters[i] = Parameter{ .name = argument, .type = null };
+        parameters[i] = Parameter{ .name = argument.symbol, .type = null };
     return Ast{
         .function = .{
-            .name = try alloc(context, name),
+            .name = name,
             .parameters = parameters,
             .return_type = return_type,
             .body = body,
@@ -325,24 +328,19 @@ fn convertCallToFunction(context: *Context, name: Ast, arguments: []const Ast, s
     };
 }
 
-fn function(context: *Context, name: Ast, arguments: []const Ast) !Ast {
-    var parameters = try List(Parameter).initCapacity(context.allocator, arguments.len);
-    for (arguments) |argument|
-        try parameters.append(Parameter{ .name = argument, .type = null });
-    context.token_index += 1;
-    context.precedence = LOWEST;
-    parameters.items[parameters.items.len - 1].type = try expression(context);
+fn functionParameters(context: *Context, parameters: *List(Parameter)) !Span {
     while (context.tokens.len > context.token_index) {
         switch (context.tokens[context.token_index]) {
-            .right_paren => {
+            .right_paren => |r| {
+                const span = r.span;
                 context.token_index += 1;
-                break;
+                return span;
             },
             .comma => context.token_index += 1,
             else => {
                 context.precedence = HIGHEST;
                 const parameter = try expression(context);
-                try parameters.append(Parameter{ .name = parameter, .type = null });
+                try parameters.append(Parameter{ .name = parameter.symbol, .type = null });
                 if (context.tokens[context.token_index] == .colon) {
                     context.token_index += 1;
                     context.precedence = LOWEST;
@@ -351,6 +349,18 @@ fn function(context: *Context, name: Ast, arguments: []const Ast) !Ast {
             },
         }
     }
+    std.debug.panic("\nExpected right paren when reading function parameters", .{});
+}
+
+fn function(context: *Context, left: Ast, arguments: []const Ast) !Ast {
+    const name = left.symbol;
+    var parameters = try List(Parameter).initCapacity(context.allocator, arguments.len);
+    for (arguments) |argument|
+        try parameters.append(Parameter{ .name = argument.symbol, .type = null });
+    context.token_index += 1;
+    context.precedence = LOWEST;
+    parameters.items[parameters.items.len - 1].type = try expression(context);
+    const right_paren_span = try functionParameters(context, &parameters);
     const return_type = blk: {
         if (context.tokens[context.token_index] == .arrow) {
             context.token_index += 1;
@@ -360,13 +370,11 @@ fn function(context: *Context, name: Ast, arguments: []const Ast) !Ast {
         } else break :blk null;
     };
     if (!tryConsume(context, .equal)) {
-        const span = Span{
-            .begin = astSpan(name).begin,
-            .end = astSpan(return_type.?.*).end,
-        };
+        const end = if (return_type) |t| astSpan(t.*).end else right_paren_span.end;
+        const span = Span{ .begin = name.span.begin, .end = end };
         return Ast{
             .declaration = .{
-                .name = try alloc(context, name),
+                .name = name,
                 .parameters = parameters.toOwnedSlice(),
                 .return_type = return_type,
                 .span = span,
@@ -375,12 +383,12 @@ fn function(context: *Context, name: Ast, arguments: []const Ast) !Ast {
     }
     const body = try block(context);
     const span = Span{
-        .begin = astSpan(name).begin,
+        .begin = name.span.begin,
         .end = astSpan(body[body.len - 1]).end,
     };
     return Ast{
         .function = .{
-            .name = try alloc(context, name),
+            .name = name,
             .parameters = parameters.toOwnedSlice(),
             .return_type = return_type,
             .body = body,
