@@ -86,38 +86,23 @@ test "double makes the number twice as large"
     expect double(4) == 8
     expect double(5) == 10
 
-# nested tests form a suite
-test "suite of tests"
-    test "unit test 1"
-        expect double(2) == 4
-        expect double(4) == 8
-    test "unit test 2"
-        expect double(5) == 10
-
-interface Add[T]
-    add(x: T, y: T) -> T
-    zero: T
-
-interface Sub[T: Add]
-    sub(x: T, y: T) -> T
-
-interface Mul[T]
-    mul(x: T, y: T) -> T
-    one: T
+interface Add[L, R = L]
+    O: type
+    add(x: L, y: R) -> O
 
 # for expressions are a generalization of einstein summation notation
 matmul[T: Num, m, n, p](a: T[m, n], b: T[n, p]) -> T[m, p] =
-    for[i, j, k] sum(a[i, k] * b[k, j])
+    for i, j, k in sum(a[i, k] * b[k, j])
 
 dot[T: Num, n](a: T[n], b: T[n]) -> T =
-    for[i] sum(a[i] * b[i])
+    for i in sum(a[i] * b[i])
 
 transpose[T, m, n](a: T[m, n]) -> T[n, m] =
-    for[i, j] a[j, i]
+    for i, j in a[j, i]
 
 # sum can also be implemented using for and accumulation
 sum[T: Add](xs: T[n]) -> T =
-    acc := 0
+    mut acc = 0
     for[i] acc += xs[i]
     acc
 

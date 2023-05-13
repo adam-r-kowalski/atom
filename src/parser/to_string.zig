@@ -17,6 +17,8 @@ const Block = types.Block;
 const Call = types.Call;
 const TopLevel = types.TopLevel;
 const Module = types.Module;
+const Import = types.Import;
+const Export = types.Export;
 
 fn interned(writer: List(u8).Writer, intern: Intern, s: Interned) !void {
     try writer.writeAll(interner.lookup(intern, s));
@@ -156,15 +158,15 @@ fn call(writer: List(u8).Writer, intern: Intern, c: Call, indent: u64) !void {
     try writer.writeAll(")");
 }
 
-fn import(writer: List(u8).Writer, intern: Intern, expr: Expression, indent: u64) !void {
+fn import(writer: List(u8).Writer, intern: Intern, i: Import, indent: u64) !void {
     try writer.writeAll("(import ");
-    try expression(writer, intern, expr, indent);
+    try function(writer, intern, i.function, indent);
     try writer.writeAll(")");
 }
 
-fn export_(writer: List(u8).Writer, intern: Intern, expr: Expression, indent: u64) !void {
+fn export_(writer: List(u8).Writer, intern: Intern, e: Export, indent: u64) !void {
     try writer.writeAll("(export ");
-    try expression(writer, intern, expr, indent);
+    try function(writer, intern, e.function, indent);
     try writer.writeAll(")");
 }
 
@@ -185,8 +187,8 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, indent:
 
 fn topLevel(writer: List(u8).Writer, intern: Intern, top_level: TopLevel) !void {
     switch (top_level) {
-        .import => |i| try import(writer, intern, i.expression.*, 0),
-        .export_ => |e| try export_(writer, intern, e.expression.*, 0),
+        .import => |i| try import(writer, intern, i, 0),
+        .export_ => |e| try export_(writer, intern, e, 0),
         .define => |d| try define(writer, intern, d, 0),
         .function => |f| try function(writer, intern, f, 0),
     }

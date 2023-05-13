@@ -83,12 +83,12 @@ pub const Expression = union(enum) {
 };
 
 pub const Import = struct {
-    expression: *const Expression,
+    function: Function,
     span: Span,
 };
 
 pub const Export = struct {
-    expression: *const Expression,
+    function: Function,
     span: Span,
 };
 

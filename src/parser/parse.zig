@@ -21,19 +21,19 @@ const Module = types.Module;
 
 const Precedence = u32;
 
-const DELTA = 10;
-const LOWEST = 0;
-const DEFINE = LOWEST + DELTA;
-const ANNOTATE = DEFINE;
-const GREATER = ANNOTATE + DELTA;
-const LESS = GREATER;
-const ADD = GREATER + DELTA;
-const SUBTRACT = ADD;
-const MULTIPLY = ADD + DELTA;
-const EXPONENTIATE = MULTIPLY + DELTA;
-const CALL = EXPONENTIATE + DELTA;
-const ARROW = EXPONENTIATE + DELTA;
-const HIGHEST = ARROW + DELTA;
+const DELTA: Precedence = 10;
+const LOWEST: Precedence = 0;
+const DEFINE: Precedence = LOWEST + DELTA;
+const ANNOTATE: Precedence = DEFINE;
+const GREATER: Precedence = ANNOTATE + DELTA;
+const LESS: Precedence = GREATER;
+const ADD: Precedence = GREATER + DELTA;
+const SUBTRACT: Precedence = ADD;
+const MULTIPLY: Precedence = ADD + DELTA;
+const EXPONENTIATE: Precedence = MULTIPLY + DELTA;
+const CALL: Precedence = EXPONENTIATE + DELTA;
+const ARROW: Precedence = EXPONENTIATE + DELTA;
+const HIGHEST: Precedence = ARROW + DELTA;
 
 const Context = struct {
     allocator: Allocator,
@@ -90,12 +90,11 @@ fn consumeSymbol(context: *Context) !Expression {
 }
 
 fn span(value: anytype) Span {
-    const Tag = std.meta.Tag(@TypeOf(value));
-    const tag = @as(Tag, value);
+    const tag_name = @tagName(value);
     inline for (std.meta.fields(@TypeOf(value))) |field|
-        if (std.mem.eql(u8, field.name, @tagName(tag)))
+        if (std.mem.eql(u8, field.name, tag_name))
             return @field(value, field.name).span;
-    std.debug.panic("\nNo span for {}\n", .{tag});
+    std.debug.panic("\nNo span for {}\n", .{value});
 }
 
 fn group(context: *Context) !Expression {
@@ -439,18 +438,26 @@ fn import(context: *Context) !TopLevel {
     const begin = span(context.tokens[context.token_index]).begin;
     context.token_index += 1;
     context.precedence = LOWEST;
-    const expr = try expressionAlloc(context);
-    const end = span(expr.*).end;
-    return TopLevel{ .import = .{ .expression = expr, .span = .{ .begin = begin, .end = end } } };
+    switch (try expression(context)) {
+        .function => |f| return TopLevel{ .import = .{ .function = f, .span = .{
+            .begin = begin,
+            .end = f.span.end,
+        } } },
+        else => std.debug.panic("\nCan only import function", .{}),
+    }
 }
 
 fn export_(context: *Context) !TopLevel {
     const begin = span(context.tokens[context.token_index]).begin;
     context.token_index += 1;
     context.precedence = LOWEST;
-    const expr = try expressionAlloc(context);
-    const end = span(expr.*).end;
-    return TopLevel{ .export_ = .{ .expression = expr, .span = .{ .begin = begin, .end = end } } };
+    switch (try expression(context)) {
+        .function => |f| return TopLevel{ .export_ = .{ .function = f, .span = .{
+            .begin = begin,
+            .end = f.span.end,
+        } } },
+        else => std.debug.panic("\nCan only export function", .{}),
+    }
 }
 
 fn topLevel(context: *Context) !?TopLevel {
