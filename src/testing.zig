@@ -40,6 +40,6 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     var module = try type_checker.infer.module(arena.allocator(), untyped_module);
     const interned = try interner.store(&intern, name);
     var next_type_var: type_checker.types.TypeVar = 0;
-    try type_checker.infer.infer(allocator, &module, builtins, &next_type_var, interned);
+    try type_checker.infer.infer(arena.allocator(), &module, builtins, &next_type_var, interned);
     return try type_checker.toString(allocator, intern, module);
 }

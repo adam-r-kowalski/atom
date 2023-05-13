@@ -15,6 +15,7 @@ const Function = types.Function;
 const MonoType = types.MonoType;
 const Symbol = types.Symbol;
 const TypeVar = types.TypeVar;
+const Expression = types.Expression;
 const Builtins = @import("../builtins.zig").Builtins;
 
 fn nameOf(top_level: parser_types.TopLevel) Interned {
@@ -76,8 +77,27 @@ fn returnType(allocator: Allocator, builtins: Builtins, next_type_var: *TypeVar,
     return result;
 }
 
-fn block(_: []const parser_types.Expression) ![]const types.Expression {
-    unreachable;
+fn symbol(s: parser_types.Symbol) Symbol {
+    // TODO: look up type from scopes
+    return Symbol{
+        .value = s.value,
+        .span = s.span,
+        .type = .void,
+    };
+}
+
+fn expression(expr: parser_types.Expression) !Expression {
+    switch (expr) {
+        .symbol => |s| return .{ .symbol = symbol(s) },
+        else => |e| std.debug.panic("\nUnsupported expression {}", .{e}),
+    }
+}
+
+fn block(allocator: Allocator, exprs: []const parser_types.Expression) ![]const Expression {
+    const expressions = try allocator.alloc(Expression, exprs.len);
+    for (exprs) |expr, i|
+        expressions[i] = try expression(expr);
+    return expressions;
 }
 
 fn function(allocator: Allocator, scopes: *Scopes, builtins: Builtins, next_type_var: *TypeVar, f: parser_types.Function) !Function {
@@ -96,7 +116,7 @@ fn function(allocator: Allocator, scopes: *Scopes, builtins: Builtins, next_type
         try putInScope(scopes, p.name.value, type_);
     }
     const return_type = try returnType(allocator, builtins, next_type_var, f);
-    const body = try block(f.body);
+    const body = try block(allocator, f.body);
     const name = Symbol{
         .value = f.name.value,
         .span = f.name.span,
@@ -127,8 +147,8 @@ fn topLevel(allocator: Allocator, scope: Scope, builtins: Builtins, next_type_va
 }
 
 pub fn infer(allocator: Allocator, m: *Module, builtins: Builtins, next_type_var: *TypeVar, name: Interned) !void {
-    if (m.untyped.get(name)) |t| {
-        const top_level = try topLevel(allocator, m.scope, builtins, next_type_var, t);
+    if (m.untyped.fetchRemove(name)) |entry| {
+        const top_level = try topLevel(allocator, m.scope, builtins, next_type_var, entry.value);
         try m.typed.putNoClobber(name, top_level);
     }
 }
