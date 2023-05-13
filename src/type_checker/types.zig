@@ -1,10 +1,9 @@
 const interner = @import("../interner.zig");
 const Intern = interner.Intern;
 const Interned = interner.Interned;
-const tokenizer_types = @import("../tokenizer/types.zig");
-const Token = tokenizer_types.Token;
-const Span = tokenizer_types.Span;
-const Indent = tokenizer_types.Indent;
+const parser_types = @import("../parser/types.zig");
+const Span = parser_types.Span;
+const BinaryOpKind = parser_types.BinaryOpKind;
 
 pub const MonoType = union(enum) {
     i32,
@@ -51,16 +50,6 @@ pub const Declaration = struct {
     return_type: MonoType,
     span: Span,
     type: MonoType,
-};
-
-pub const BinaryOpKind = enum {
-    add,
-    subtract,
-    multiply,
-    exponentiate,
-    greater,
-    less,
-    arrow,
 };
 
 pub const BinaryOp = struct {

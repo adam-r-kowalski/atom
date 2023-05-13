@@ -2,37 +2,35 @@ const interner = @import("../interner.zig");
 const Intern = interner.Intern;
 const Interned = interner.Interned;
 const tokenizer_types = @import("../tokenizer/types.zig");
-const Token = tokenizer_types.Token;
-const Span = tokenizer_types.Span;
-const Indent = tokenizer_types.Indent;
+pub const Span = tokenizer_types.Span;
 pub const Int = tokenizer_types.Int;
 pub const Symbol = tokenizer_types.Symbol;
 pub const Bool = tokenizer_types.Bool;
 
 pub const Define = struct {
     name: Symbol,
-    type: ?*const Ast,
-    body: []const Ast,
+    type: ?*const Expression,
+    body: []const Expression,
     span: Span,
 };
 
 pub const Parameter = struct {
     name: Symbol,
-    type: ?Ast,
+    type: ?Expression,
 };
 
 pub const Function = struct {
     name: Symbol,
     parameters: []const Parameter,
-    return_type: ?*const Ast,
-    body: []const Ast,
+    return_type: ?*const Expression,
+    body: []const Expression,
     span: Span,
 };
 
 pub const Declaration = struct {
     name: Symbol,
     parameters: []const Parameter,
-    return_type: ?*const Ast,
+    return_type: ?*const Expression,
     span: Span,
 };
 
@@ -48,45 +46,30 @@ pub const BinaryOpKind = enum {
 
 pub const BinaryOp = struct {
     kind: BinaryOpKind,
-    left: *const Ast,
-    right: *const Ast,
+    left: *const Expression,
+    right: *const Expression,
     span: Span,
 };
 
 pub const Group = struct {
-    expression: *const Ast,
+    expression: *const Expression,
     span: Span,
 };
 
 pub const If = struct {
-    condition: *const Ast,
-    then: []const Ast,
-    else_: []const Ast,
+    condition: *const Expression,
+    then: []const Expression,
+    else_: []const Expression,
     span: Span,
 };
 
 pub const Call = struct {
-    function: *const Ast,
-    arguments: []const Ast,
+    function: *const Expression,
+    arguments: []const Expression,
     span: Span,
 };
 
-pub const Import = struct {
-    expression: *const Ast,
-    span: Span,
-};
-
-pub const Export = struct {
-    expression: *const Ast,
-    span: Span,
-};
-
-pub const Module = struct {
-    expressions: []const Ast,
-    span: Span,
-};
-
-pub const Ast = union(enum) {
+pub const Expression = union(enum) {
     int: Int,
     symbol: Symbol,
     define: Define,
@@ -97,7 +80,26 @@ pub const Ast = union(enum) {
     if_: If,
     call: Call,
     bool: Bool,
+};
+
+pub const Import = struct {
+    expression: *const Expression,
+    span: Span,
+};
+
+pub const Export = struct {
+    expression: *const Expression,
+    span: Span,
+};
+
+pub const TopLevel = union(enum) {
     import: Import,
     export_: Export,
-    module: Module,
+    define: Define,
+    function: Function,
+};
+
+pub const Module = struct {
+    top_level: []const TopLevel,
+    span: Span,
 };

@@ -6,7 +6,7 @@ const interner = @import("../interner.zig");
 const Interned = interner.Interned;
 const Intern = interner.Intern;
 const types = @import("types.zig");
-const Ast = types.Ast;
+const Expression = types.Expression;
 const Define = types.Define;
 const Function = types.Function;
 const Declaration = types.Declaration;
@@ -15,14 +15,15 @@ const If = types.If;
 const Parameter = types.Parameter;
 const Block = types.Block;
 const Call = types.Call;
+const TopLevel = types.TopLevel;
 const Module = types.Module;
 
 fn interned(writer: List(u8).Writer, intern: Intern, s: Interned) !void {
     try writer.writeAll(interner.lookup(intern, s));
 }
 
-fn type_(writer: List(u8).Writer, intern: Intern, ast: Ast) !void {
-    switch (ast) {
+fn type_(writer: List(u8).Writer, intern: Intern, expr: Expression) !void {
+    switch (expr) {
         .binary_op => |b| {
             std.debug.assert(b.kind == .arrow);
             try writer.writeAll("(-> ");
@@ -32,7 +33,7 @@ fn type_(writer: List(u8).Writer, intern: Intern, ast: Ast) !void {
             try writer.writeAll(")");
         },
         .symbol => |s| try interned(writer, intern, s.value),
-        else => std.debug.panic("\ncannot convert type to string {}\n", .{ast}),
+        else => std.debug.panic("\ncannot convert type to string {}\n", .{expr}),
     }
 }
 
@@ -45,7 +46,7 @@ fn newlineAndIndent(writer: List(u8).Writer, indent: u64) !void {
     }
 }
 
-fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Ast, indent: u64, new_line: bool) !void {
+fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Expression, indent: u64, new_line: bool) !void {
     if (exprs.len == 1) {
         if (new_line) {
             try newlineAndIndent(writer, indent);
@@ -56,9 +57,9 @@ fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Ast, indent: u6
     }
     try newlineAndIndent(writer, indent);
     try writer.writeAll("(block");
-    for (exprs) |ast| {
+    for (exprs) |expr| {
         try newlineAndIndent(writer, indent + 1);
-        try expression(writer, intern, ast, indent + 1);
+        try expression(writer, intern, expr, indent + 1);
     }
     try writer.writeAll(")");
 }
@@ -155,27 +156,20 @@ fn call(writer: List(u8).Writer, intern: Intern, c: Call, indent: u64) !void {
     try writer.writeAll(")");
 }
 
-fn import(writer: List(u8).Writer, intern: Intern, ast: Ast, indent: u64) !void {
+fn import(writer: List(u8).Writer, intern: Intern, expr: Expression, indent: u64) !void {
     try writer.writeAll("(import ");
-    try expression(writer, intern, ast, indent);
+    try expression(writer, intern, expr, indent);
     try writer.writeAll(")");
 }
 
-fn export_(writer: List(u8).Writer, intern: Intern, ast: Ast, indent: u64) !void {
+fn export_(writer: List(u8).Writer, intern: Intern, expr: Expression, indent: u64) !void {
     try writer.writeAll("(export ");
-    try expression(writer, intern, ast, indent);
+    try expression(writer, intern, expr, indent);
     try writer.writeAll(")");
 }
 
-fn module(writer: List(u8).Writer, intern: Intern, m: Module, indent: u64) !void {
-    for (m.expressions) |ast, i| {
-        if (i > 0) try writer.writeAll("\n\n");
-        try expression(writer, intern, ast, indent);
-    }
-}
-
-fn expression(writer: List(u8).Writer, intern: Intern, ast: Ast, indent: u64) error{OutOfMemory}!void {
-    switch (ast) {
+fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, indent: u64) error{OutOfMemory}!void {
+    switch (expr) {
         .int => |i| try interned(writer, intern, i.value),
         .symbol => |s| try interned(writer, intern, s.value),
         .bool => |b| try writer.writeAll(if (b.value) "true" else "false"),
@@ -186,16 +180,24 @@ fn expression(writer: List(u8).Writer, intern: Intern, ast: Ast, indent: u64) er
         .group => |g| try expression(writer, intern, g.expression.*, indent),
         .if_ => |i| try if_(writer, intern, i, indent),
         .call => |c| try call(writer, intern, c, indent),
-        .import => |i| try import(writer, intern, i.expression.*, indent),
-        .export_ => |e| try export_(writer, intern, e.expression.*, indent),
-        .module => |m| try module(writer, intern, m, indent),
     }
 }
 
-pub fn toString(allocator: Allocator, intern: Intern, ast: Ast) ![]u8 {
+fn topLevel(writer: List(u8).Writer, intern: Intern, top_level: TopLevel) !void {
+    switch (top_level) {
+        .import => |i| try import(writer, intern, i.expression.*, 0),
+        .export_ => |e| try export_(writer, intern, e.expression.*, 0),
+        .define => |d| try define(writer, intern, d, 0),
+        .function => |f| try function(writer, intern, f, 0),
+    }
+}
+
+pub fn toString(allocator: Allocator, intern: Intern, module: Module) ![]u8 {
     var list = List(u8).init(allocator);
     const writer = list.writer();
-    const indent: u64 = 0;
-    try expression(writer, intern, ast, indent);
+    for (module.top_level) |top_level, i| {
+        if (i > 0) try writer.writeAll("\n\n");
+        try topLevel(writer, intern, top_level);
+    }
     return list.toOwnedSlice();
 }

@@ -10,12 +10,14 @@ const Token = tokenizer_types.Token;
 const Span = tokenizer_types.Span;
 const Indent = tokenizer_types.Indent;
 const types = @import("types.zig");
-const Ast = types.Ast;
+const Expression = types.Expression;
+const TopLevel = types.TopLevel;
 const BinaryOpKind = types.BinaryOpKind;
 const Parameter = types.Parameter;
 const Int = types.Int;
 const Symbol = types.Symbol;
 const Bool = types.Bool;
+const Module = types.Module;
 
 const Precedence = u32;
 
@@ -41,19 +43,19 @@ const Context = struct {
     indent: Indent,
 };
 
-fn int(context: *Context, i: Int) Ast {
+fn int(context: *Context, i: Int) Expression {
     context.token_index += 1;
-    return Ast{ .int = i };
+    return Expression{ .int = i };
 }
 
-fn symbol(context: *Context, s: Symbol) !Ast {
+fn symbol(context: *Context, s: Symbol) !Expression {
     context.token_index += 1;
-    return Ast{ .symbol = s };
+    return Expression{ .symbol = s };
 }
 
-fn boolean(context: *Context, b: Bool) !Ast {
+fn boolean(context: *Context, b: Bool) !Expression {
     context.token_index += 1;
-    return Ast{ .bool = b };
+    return Expression{ .bool = b };
 }
 
 fn consume(context: *Context, kind: std.meta.Tag(Token)) void {
@@ -78,7 +80,7 @@ fn consumeIndent(context: *Context) bool {
     }
 }
 
-fn consumeSymbol(context: *Context) !Ast {
+fn consumeSymbol(context: *Context) !Expression {
     const token = context.tokens[context.token_index];
     switch (token.kind) {
         .symbol => return try symbol(context, token),
@@ -117,8 +119,8 @@ fn tokenSpan(token: Token) Span {
     };
 }
 
-fn astSpan(ast: Ast) Span {
-    return switch (ast) {
+fn exprSpan(expr: Expression) Span {
+    return switch (expr) {
         .int => |i| i.span,
         .symbol => |s| s.span,
         .define => |d| d.span,
@@ -129,13 +131,19 @@ fn astSpan(ast: Ast) Span {
         .if_ => |i| i.span,
         .call => |c| c.span,
         .bool => |b| b.span,
-        .import => |i| i.span,
-        .export_ => |e| e.span,
-        .module => |m| m.span,
     };
 }
 
-fn group(context: *Context) !Ast {
+fn topLevelSpan(top_level: TopLevel) Span {
+    return switch (top_level) {
+        .import => |i| i.span,
+        .export_ => |e| e.span,
+        .define => |d| d.span,
+        .function => |f| f.span,
+    };
+}
+
+fn group(context: *Context) !Expression {
     const begin = tokenSpan(context.tokens[context.token_index]).begin;
     context.token_index += 1;
     context.precedence = LOWEST;
@@ -143,10 +151,10 @@ fn group(context: *Context) !Ast {
     std.debug.assert(context.tokens[context.token_index] == .right_paren);
     const end = tokenSpan(context.tokens[context.token_index]).end;
     context.token_index += 1;
-    return Ast{ .group = .{ .expression = expr, .span = .{ .begin = begin, .end = end } } };
+    return Expression{ .group = .{ .expression = expr, .span = .{ .begin = begin, .end = end } } };
 }
 
-fn if_(context: *Context) !Ast {
+fn if_(context: *Context) !Expression {
     const begin = tokenSpan(context.tokens[context.token_index]).begin;
     context.token_index += 1;
     context.precedence = LOWEST;
@@ -156,8 +164,8 @@ fn if_(context: *Context) !Ast {
     _ = consumeIndent(context);
     consume(context, .else_);
     const else_ = try block(context);
-    const end = astSpan(else_[else_.len - 1]).end;
-    return Ast{
+    const end = exprSpan(else_[else_.len - 1]).end;
+    return Expression{
         .if_ = .{
             .condition = condition,
             .then = then,
@@ -167,25 +175,7 @@ fn if_(context: *Context) !Ast {
     };
 }
 
-fn import(context: *Context) !Ast {
-    const begin = tokenSpan(context.tokens[context.token_index]).begin;
-    context.token_index += 1;
-    context.precedence = LOWEST;
-    const expr = try expressionAlloc(context);
-    const end = astSpan(expr.*).end;
-    return Ast{ .import = .{ .expression = expr, .span = .{ .begin = begin, .end = end } } };
-}
-
-fn export_(context: *Context) !Ast {
-    const begin = tokenSpan(context.tokens[context.token_index]).begin;
-    context.token_index += 1;
-    context.precedence = LOWEST;
-    const expr = try expressionAlloc(context);
-    const end = astSpan(expr.*).end;
-    return Ast{ .export_ = .{ .expression = expr, .span = .{ .begin = begin, .end = end } } };
-}
-
-fn prefix(context: *Context) !Ast {
+fn prefix(context: *Context) !Expression {
     const token = context.tokens[context.token_index];
     switch (token) {
         .int => |i| return int(context, i),
@@ -193,8 +183,6 @@ fn prefix(context: *Context) !Ast {
         .bool => |b| return boolean(context, b),
         .left_paren => return try group(context),
         .if_ => return try if_(context),
-        .import => return try import(context),
-        .export_ => return try export_(context),
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),
     }
 }
@@ -217,8 +205,8 @@ fn sameIndent(x: Indent, y: Indent) bool {
     }
 }
 
-fn block(context: *Context) ![]const Ast {
-    var exprs = List(Ast).init(context.allocator);
+fn block(context: *Context) ![]const Expression {
+    var exprs = List(Expression).init(context.allocator);
     switch (context.tokens[context.token_index]) {
         .indent => |indent| {
             context.token_index += 1;
@@ -246,26 +234,28 @@ fn block(context: *Context) ![]const Ast {
     return exprs.toOwnedSlice();
 }
 
-fn alloc(context: *Context, ast: Ast) !*const Ast {
-    const ptr = try context.allocator.create(Ast);
+fn alloc(context: *Context, ast: Expression) !*const Expression {
+    const ptr = try context.allocator.create(Expression);
     ptr.* = ast;
     return ptr;
 }
 
-fn define(context: *Context, left: Ast) !Ast {
+fn define(context: *Context, left: Expression) !Expression {
     const name = left.symbol;
     context.token_index += 1;
     const body = try block(context);
-    const span = Span{ .begin = name.span.begin, .end = astSpan(body[body.len - 1]).end };
-    return Ast{ .define = .{
+    return Expression{ .define = .{
         .name = name,
         .type = null,
         .body = body,
-        .span = span,
+        .span = Span{
+            .begin = name.span.begin,
+            .end = exprSpan(body[body.len - 1]).end,
+        },
     } };
 }
 
-fn annotate(context: *Context, left: Ast) !Ast {
+fn annotate(context: *Context, left: Expression) !Expression {
     const name = left.symbol;
     context.token_index += 1;
     context.precedence = ARROW;
@@ -273,32 +263,36 @@ fn annotate(context: *Context, left: Ast) !Ast {
     consume(context, .equal);
     context.precedence = LOWEST;
     const body = try block(context);
-    const span = Span{ .begin = name.span.begin, .end = astSpan(body[body.len - 1]).end };
-    return Ast{ .define = .{
+    return Expression{ .define = .{
         .name = name,
         .type = type_,
         .body = body,
-        .span = span,
+        .span = Span{
+            .begin = name.span.begin,
+            .end = exprSpan(body[body.len - 1]).end,
+        },
     } };
 }
 
-fn binaryOp(context: *Context, left: Ast, kind: BinaryOpKind) !Ast {
+fn binaryOp(context: *Context, left: Expression, kind: BinaryOpKind) !Expression {
     context.token_index += 1;
     const right = try expression(context);
-    const span = Span{ .begin = astSpan(left).begin, .end = astSpan(right).end };
-    return Ast{
+    return Expression{
         .binary_op = .{
             .kind = kind,
             .left = try alloc(context, left),
             .right = try alloc(context, right),
-            .span = span,
+            .span = Span{
+                .begin = exprSpan(left).begin,
+                .end = exprSpan(right).end,
+            },
         },
     };
 }
 
 const Stage = enum { return_type, body };
 
-fn convertCallToFunction(context: *Context, left: Ast, arguments: []const Ast, stage: Stage) !Ast {
+fn convertCallToFunction(context: *Context, left: Expression, arguments: []const Expression, stage: Stage) !Expression {
     const name = left.symbol;
     context.token_index += 1;
     const return_type = blk: {
@@ -310,20 +304,19 @@ fn convertCallToFunction(context: *Context, left: Ast, arguments: []const Ast, s
         } else break :blk null;
     };
     const body = try block(context);
-    const span = Span{
-        .begin = name.span.begin,
-        .end = astSpan(body[body.len - 1]).end,
-    };
     const parameters = try context.allocator.alloc(Parameter, arguments.len);
     for (arguments) |argument, i|
         parameters[i] = Parameter{ .name = argument.symbol, .type = null };
-    return Ast{
+    return Expression{
         .function = .{
             .name = name,
             .parameters = parameters,
             .return_type = return_type,
             .body = body,
-            .span = span,
+            .span = Span{
+                .begin = name.span.begin,
+                .end = exprSpan(body[body.len - 1]).end,
+            },
         },
     };
 }
@@ -332,9 +325,8 @@ fn functionParameters(context: *Context, parameters: *List(Parameter)) !Span {
     while (context.tokens.len > context.token_index) {
         switch (context.tokens[context.token_index]) {
             .right_paren => |r| {
-                const span = r.span;
                 context.token_index += 1;
-                return span;
+                return r.span;
             },
             .comma => context.token_index += 1,
             else => {
@@ -352,7 +344,7 @@ fn functionParameters(context: *Context, parameters: *List(Parameter)) !Span {
     std.debug.panic("\nExpected right paren when reading function parameters", .{});
 }
 
-fn function(context: *Context, left: Ast, arguments: []const Ast) !Ast {
+fn function(context: *Context, left: Expression, arguments: []const Expression) !Expression {
     const name = left.symbol;
     var parameters = try List(Parameter).initCapacity(context.allocator, arguments.len);
     for (arguments) |argument|
@@ -370,36 +362,34 @@ fn function(context: *Context, left: Ast, arguments: []const Ast) !Ast {
         } else break :blk null;
     };
     if (!tryConsume(context, .equal)) {
-        const end = if (return_type) |t| astSpan(t.*).end else right_paren_span.end;
-        const span = Span{ .begin = name.span.begin, .end = end };
-        return Ast{
+        const end = if (return_type) |t| exprSpan(t.*).end else right_paren_span.end;
+        return Expression{
             .declaration = .{
                 .name = name,
                 .parameters = parameters.toOwnedSlice(),
                 .return_type = return_type,
-                .span = span,
+                .span = Span{ .begin = name.span.begin, .end = end },
             },
         };
     }
     const body = try block(context);
-    const span = Span{
-        .begin = name.span.begin,
-        .end = astSpan(body[body.len - 1]).end,
-    };
-    return Ast{
+    return Expression{
         .function = .{
             .name = name,
             .parameters = parameters.toOwnedSlice(),
             .return_type = return_type,
             .body = body,
-            .span = span,
+            .span = Span{
+                .begin = name.span.begin,
+                .end = exprSpan(body[body.len - 1]).end,
+            },
         },
     };
 }
 
-fn callOrFunction(context: *Context, left: Ast) !Ast {
+fn callOrFunction(context: *Context, left: Expression) !Expression {
     context.token_index += 1;
-    var arguments = List(Ast).init(context.allocator);
+    var arguments = List(Expression).init(context.allocator);
     while (context.tokens.len > context.token_index) {
         switch (context.tokens[context.token_index]) {
             .right_paren => {
@@ -425,15 +415,14 @@ fn callOrFunction(context: *Context, left: Ast) !Ast {
             else => {},
         }
     }
-    const span = Span{
-        .begin = astSpan(left).begin,
-        .end = astSpan(arguments.items[arguments.items.len - 1]).end,
-    };
-    return Ast{
+    return Expression{
         .call = .{
             .function = try alloc(context, left),
             .arguments = arguments.toOwnedSlice(),
-            .span = span,
+            .span = Span{
+                .begin = exprSpan(left).begin,
+                .end = exprSpan(arguments.items[arguments.items.len - 1]).end,
+            },
         },
     };
 }
@@ -449,7 +438,7 @@ const Infix = struct {
     },
 };
 
-fn infix(context: *Context, left: Ast) ?Infix {
+fn infix(context: *Context, left: Expression) ?Infix {
     if (context.tokens.len <= context.token_index) return null;
     switch (context.tokens[context.token_index]) {
         .equal => return .{ .kind = .define, .precedence = DEFINE, .associativity = .right },
@@ -468,7 +457,7 @@ fn infix(context: *Context, left: Ast) ?Infix {
     }
 }
 
-fn parseInfix(parser: Infix, context: *Context, left: Ast) !Ast {
+fn parseInfix(parser: Infix, context: *Context, left: Expression) !Expression {
     switch (parser.kind) {
         .define => return try define(context, left),
         .annotate => return try annotate(context, left),
@@ -477,7 +466,7 @@ fn parseInfix(parser: Infix, context: *Context, left: Ast) !Ast {
     }
 }
 
-fn expression(context: *Context) error{OutOfMemory}!Ast {
+fn expression(context: *Context) error{OutOfMemory}!Expression {
     var left = try prefix(context);
     const previous = context.precedence;
     while (true) {
@@ -494,13 +483,47 @@ fn expression(context: *Context) error{OutOfMemory}!Ast {
     }
 }
 
-fn expressionAlloc(context: *Context) !*const Ast {
-    const ast = try context.allocator.create(Ast);
+fn expressionAlloc(context: *Context) !*const Expression {
+    const ast = try context.allocator.create(Expression);
     ast.* = try expression(context);
     return ast;
 }
 
-pub fn parse(allocator: Allocator, tokens: []const Token) !Ast {
+fn import(context: *Context) !TopLevel {
+    const begin = tokenSpan(context.tokens[context.token_index]).begin;
+    context.token_index += 1;
+    context.precedence = LOWEST;
+    const expr = try expressionAlloc(context);
+    const end = exprSpan(expr.*).end;
+    return TopLevel{ .import = .{ .expression = expr, .span = .{ .begin = begin, .end = end } } };
+}
+
+fn export_(context: *Context) !TopLevel {
+    const begin = tokenSpan(context.tokens[context.token_index]).begin;
+    context.token_index += 1;
+    context.precedence = LOWEST;
+    const expr = try expressionAlloc(context);
+    const end = exprSpan(expr.*).end;
+    return TopLevel{ .export_ = .{ .expression = expr, .span = .{ .begin = begin, .end = end } } };
+}
+
+fn topLevel(context: *Context) !TopLevel {
+    const token = context.tokens[context.token_index];
+    switch (token) {
+        .import => return try import(context),
+        .export_ => return try export_(context),
+        else => {
+            const expr = try expression(context);
+            switch (expr) {
+                .define => |d| return TopLevel{ .define = d },
+                .function => |f| return TopLevel{ .function = f },
+                else => |e| std.debug.panic("\nInvalid top level expression {}", .{e}),
+            }
+        },
+    }
+}
+
+pub fn parse(allocator: Allocator, tokens: []const Token) !Module {
     var context = Context{
         .allocator = allocator,
         .tokens = tokens,
@@ -514,21 +537,19 @@ pub fn parse(allocator: Allocator, tokens: []const Token) !Ast {
             },
         } },
     };
-    var list = List(Ast).init(allocator);
+    var list = List(TopLevel).init(allocator);
     while (context.tokens.len > context.token_index) {
         while (consumeIndent(&context)) {}
         if (context.tokens.len <= context.token_index) break;
-        const ast = try expression(&context);
+        const ast = try topLevel(&context);
         try list.append(ast);
     }
-    const expressions = list.toOwnedSlice();
-    return Ast{
-        .module = .{
-            .expressions = expressions,
-            .span = .{
-                .begin = astSpan(expressions[0]).begin,
-                .end = astSpan(expressions[expressions.len - 1]).end,
-            },
+    const top_level = list.toOwnedSlice();
+    return Module{
+        .top_level = top_level,
+        .span = .{
+            .begin = topLevelSpan(top_level[0]).begin,
+            .end = topLevelSpan(top_level[top_level.len - 1]).end,
         },
     };
 }
