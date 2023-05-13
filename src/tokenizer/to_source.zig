@@ -27,18 +27,9 @@ fn space(writer: List(u8).Writer, span: Span, pos: *Pos) !void {
 }
 
 fn indent(writer: List(u8).Writer, i: Indent, pos: *Pos) !void {
-    switch (i) {
-        .space => |s| {
-            try space(writer, s.span, pos);
-            try repeat(writer, '\n', s.span.end.line - s.span.begin.line);
-            try repeat(writer, ' ', s.count);
-        },
-        .tab => |t| {
-            try space(writer, t.span, pos);
-            try repeat(writer, '\n', t.span.end.line - t.span.begin.line);
-            try repeat(writer, ' ', t.count);
-        },
-    }
+    try space(writer, i.span, pos);
+    try repeat(writer, '\n', i.span.end.line - i.span.begin.line);
+    try repeat(writer, if (i.kind == .space) ' ' else '\t', i.count);
 }
 
 fn symbol(writer: List(u8).Writer, intern: Intern, s: Symbol, pos: *Pos) !void {

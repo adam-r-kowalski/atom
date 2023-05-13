@@ -29,9 +29,9 @@ fn float(writer: List(u8).Writer, intern: Intern, f: Float) !void {
 }
 
 fn indent(writer: List(u8).Writer, i: Indent) !void {
-    switch (i) {
-        .space => |space| try std.fmt.format(writer, "space {d}", .{space.count}),
-        .tab => |tab| try std.fmt.format(writer, "tab {d}", .{tab.count}),
+    switch (i.kind) {
+        .space => try std.fmt.format(writer, "space {d}", .{i.count}),
+        .tab => try std.fmt.format(writer, "tab {d}", .{i.count}),
     }
 }
 

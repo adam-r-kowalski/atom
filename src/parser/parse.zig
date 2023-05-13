@@ -71,6 +71,7 @@ fn tryConsume(context: *Context, kind: std.meta.Tag(Token)) bool {
 }
 
 fn consumeIndent(context: *Context) bool {
+    if (context.tokens.len <= context.token_index) return false;
     switch (context.tokens[context.token_index]) {
         .indent => {
             context.token_index += 1;
@@ -88,74 +89,28 @@ fn consumeSymbol(context: *Context) !Expression {
     }
 }
 
-fn tokenSpan(token: Token) Span {
-    return switch (token) {
-        .symbol => |s| s.span,
-        .int => |i| i.span,
-        .float => |f| f.span,
-        .indent => |i| switch (i) {
-            .space => |s| s.span,
-            .tab => |t| t.span,
-        },
-        .bool => |b| b.span,
-        .equal => |e| e.span,
-        .dot => |d| d.span,
-        .colon => |c| c.span,
-        .plus => |p| p.span,
-        .minus => |m| m.span,
-        .times => |t| t.span,
-        .caret => |c| c.span,
-        .greater => |g| g.span,
-        .less => |l| l.span,
-        .left_paren => |l| l.span,
-        .right_paren => |r| r.span,
-        .if_ => |i| i.span,
-        .then => |t| t.span,
-        .else_ => |e| e.span,
-        .comma => |c| c.span,
-        .arrow => |a| a.span,
-        .import => |i| i.span,
-        .export_ => |e| e.span,
-    };
-}
-
-fn exprSpan(expr: Expression) Span {
-    return switch (expr) {
-        .int => |i| i.span,
-        .symbol => |s| s.span,
-        .define => |d| d.span,
-        .function => |f| f.span,
-        .declaration => |d| d.span,
-        .binary_op => |b| b.span,
-        .group => |g| g.span,
-        .if_ => |i| i.span,
-        .call => |c| c.span,
-        .bool => |b| b.span,
-    };
-}
-
-fn topLevelSpan(top_level: TopLevel) Span {
-    return switch (top_level) {
-        .import => |i| i.span,
-        .export_ => |e| e.span,
-        .define => |d| d.span,
-        .function => |f| f.span,
-    };
+fn span(value: anytype) Span {
+    const Tag = std.meta.Tag(@TypeOf(value));
+    const tag = @as(Tag, value);
+    inline for (std.meta.fields(@TypeOf(value))) |field|
+        if (std.mem.eql(u8, field.name, @tagName(tag)))
+            return @field(value, field.name).span;
+    std.debug.panic("\nNo span for {}\n", .{tag});
 }
 
 fn group(context: *Context) !Expression {
-    const begin = tokenSpan(context.tokens[context.token_index]).begin;
+    const begin = span(context.tokens[context.token_index]).begin;
     context.token_index += 1;
     context.precedence = LOWEST;
     const expr = try expressionAlloc(context);
     std.debug.assert(context.tokens[context.token_index] == .right_paren);
-    const end = tokenSpan(context.tokens[context.token_index]).end;
+    const end = span(context.tokens[context.token_index]).end;
     context.token_index += 1;
     return Expression{ .group = .{ .expression = expr, .span = .{ .begin = begin, .end = end } } };
 }
 
 fn if_(context: *Context) !Expression {
-    const begin = tokenSpan(context.tokens[context.token_index]).begin;
+    const begin = span(context.tokens[context.token_index]).begin;
     context.token_index += 1;
     context.precedence = LOWEST;
     const condition = try expressionAlloc(context);
@@ -164,7 +119,7 @@ fn if_(context: *Context) !Expression {
     _ = consumeIndent(context);
     consume(context, .else_);
     const else_ = try block(context);
-    const end = exprSpan(else_[else_.len - 1]).end;
+    const end = span(else_[else_.len - 1]).end;
     return Expression{
         .if_ = .{
             .condition = condition,
@@ -193,16 +148,7 @@ const Asscociativity = enum {
 };
 
 fn sameIndent(x: Indent, y: Indent) bool {
-    switch (x) {
-        .space => |s| switch (y) {
-            .space => |s2| return s.count == s2.count,
-            .tab => return false,
-        },
-        .tab => |t| switch (y) {
-            .space => return false,
-            .tab => |t2| return t.count == t2.count,
-        },
-    }
+    return x.kind == y.kind and x.count == y.count;
 }
 
 fn block(context: *Context) ![]const Expression {
@@ -250,7 +196,7 @@ fn define(context: *Context, left: Expression) !Expression {
         .body = body,
         .span = Span{
             .begin = name.span.begin,
-            .end = exprSpan(body[body.len - 1]).end,
+            .end = span(body[body.len - 1]).end,
         },
     } };
 }
@@ -269,7 +215,7 @@ fn annotate(context: *Context, left: Expression) !Expression {
         .body = body,
         .span = Span{
             .begin = name.span.begin,
-            .end = exprSpan(body[body.len - 1]).end,
+            .end = span(body[body.len - 1]).end,
         },
     } };
 }
@@ -283,8 +229,8 @@ fn binaryOp(context: *Context, left: Expression, kind: BinaryOpKind) !Expression
             .left = try alloc(context, left),
             .right = try alloc(context, right),
             .span = Span{
-                .begin = exprSpan(left).begin,
-                .end = exprSpan(right).end,
+                .begin = span(left).begin,
+                .end = span(right).end,
             },
         },
     };
@@ -315,7 +261,7 @@ fn convertCallToFunction(context: *Context, left: Expression, arguments: []const
             .body = body,
             .span = Span{
                 .begin = name.span.begin,
-                .end = exprSpan(body[body.len - 1]).end,
+                .end = span(body[body.len - 1]).end,
             },
         },
     };
@@ -362,7 +308,7 @@ fn function(context: *Context, left: Expression, arguments: []const Expression) 
         } else break :blk null;
     };
     if (!tryConsume(context, .equal)) {
-        const end = if (return_type) |t| exprSpan(t.*).end else right_paren_span.end;
+        const end = if (return_type) |t| span(t.*).end else right_paren_span.end;
         return Expression{
             .declaration = .{
                 .name = name,
@@ -381,7 +327,7 @@ fn function(context: *Context, left: Expression, arguments: []const Expression) 
             .body = body,
             .span = Span{
                 .begin = name.span.begin,
-                .end = exprSpan(body[body.len - 1]).end,
+                .end = span(body[body.len - 1]).end,
             },
         },
     };
@@ -420,8 +366,8 @@ fn callOrFunction(context: *Context, left: Expression) !Expression {
             .function = try alloc(context, left),
             .arguments = arguments.toOwnedSlice(),
             .span = Span{
-                .begin = exprSpan(left).begin,
-                .end = exprSpan(arguments.items[arguments.items.len - 1]).end,
+                .begin = span(left).begin,
+                .end = span(arguments.items[arguments.items.len - 1]).end,
             },
         },
     };
@@ -490,35 +436,34 @@ fn expressionAlloc(context: *Context) !*const Expression {
 }
 
 fn import(context: *Context) !TopLevel {
-    const begin = tokenSpan(context.tokens[context.token_index]).begin;
+    const begin = span(context.tokens[context.token_index]).begin;
     context.token_index += 1;
     context.precedence = LOWEST;
     const expr = try expressionAlloc(context);
-    const end = exprSpan(expr.*).end;
+    const end = span(expr.*).end;
     return TopLevel{ .import = .{ .expression = expr, .span = .{ .begin = begin, .end = end } } };
 }
 
 fn export_(context: *Context) !TopLevel {
-    const begin = tokenSpan(context.tokens[context.token_index]).begin;
+    const begin = span(context.tokens[context.token_index]).begin;
     context.token_index += 1;
     context.precedence = LOWEST;
     const expr = try expressionAlloc(context);
-    const end = exprSpan(expr.*).end;
+    const end = span(expr.*).end;
     return TopLevel{ .export_ = .{ .expression = expr, .span = .{ .begin = begin, .end = end } } };
 }
 
-fn topLevel(context: *Context) !TopLevel {
+fn topLevel(context: *Context) !?TopLevel {
+    while (consumeIndent(context)) {}
+    if (context.tokens.len <= context.token_index) return null;
     const token = context.tokens[context.token_index];
     switch (token) {
         .import => return try import(context),
         .export_ => return try export_(context),
-        else => {
-            const expr = try expression(context);
-            switch (expr) {
-                .define => |d| return TopLevel{ .define = d },
-                .function => |f| return TopLevel{ .function = f },
-                else => |e| std.debug.panic("\nInvalid top level expression {}", .{e}),
-            }
+        else => switch (try expression(context)) {
+            .define => |d| return TopLevel{ .define = d },
+            .function => |f| return TopLevel{ .function = f },
+            else => |e| std.debug.panic("\nInvalid top level expression {}", .{e}),
         },
     }
 }
@@ -529,27 +474,23 @@ pub fn parse(allocator: Allocator, tokens: []const Token) !Module {
         .tokens = tokens,
         .token_index = 0,
         .precedence = LOWEST,
-        .indent = Indent{ .space = .{
+        .indent = Indent{
+            .kind = .space,
             .count = 0,
             .span = .{
                 .begin = .{ .line = 1, .column = 1 },
                 .end = .{ .line = 1, .column = 1 },
             },
-        } },
+        },
     };
     var list = List(TopLevel).init(allocator);
-    while (context.tokens.len > context.token_index) {
-        while (consumeIndent(&context)) {}
-        if (context.tokens.len <= context.token_index) break;
-        const ast = try topLevel(&context);
-        try list.append(ast);
-    }
+    while (try topLevel(&context)) |t| try list.append(t);
     const top_level = list.toOwnedSlice();
     return Module{
         .top_level = top_level,
         .span = .{
-            .begin = topLevelSpan(top_level[0]).begin,
-            .end = topLevelSpan(top_level[top_level.len - 1]).end,
+            .begin = span(top_level[0]).begin,
+            .end = span(top_level[top_level.len - 1]).end,
         },
     };
 }

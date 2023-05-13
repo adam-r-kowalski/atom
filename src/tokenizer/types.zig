@@ -10,19 +10,13 @@ pub const Span = struct {
     end: Pos,
 };
 
-pub const Space = struct {
+pub const Indent = struct {
+    kind: enum {
+        space,
+        tab,
+    },
     count: u64,
     span: Span,
-};
-
-pub const Tab = struct {
-    count: u64,
-    span: Span,
-};
-
-pub const Indent = union(enum) {
-    space: Space,
-    tab: Tab,
 };
 
 pub const Symbol = struct {

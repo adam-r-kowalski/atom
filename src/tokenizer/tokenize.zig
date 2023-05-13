@@ -127,8 +127,8 @@ fn repeated(cursor: *Cursor, begin: Pos, comptime kind: Repeat) ?Token {
     cursor.source = cursor.source[i..];
     if (cursor.source.len == 0) return null;
     const span = Span{ .begin = begin, .end = cursor.pos };
-    if (kind == .space) return Token{ .indent = .{ .space = .{ .count = i, .span = span } } };
-    return Token{ .indent = .{ .tab = .{ .count = i, .span = span } } };
+    if (kind == .space) return Token{ .indent = .{ .kind = .space, .count = i, .span = span } };
+    return Token{ .indent = .{ .kind = .tab, .count = i, .span = span } };
 }
 
 fn newLine(cursor: *Cursor) ?Token {
@@ -143,12 +143,13 @@ fn newLine(cursor: *Cursor) ?Token {
     switch (cursor.source[0]) {
         ' ' => return repeated(cursor, begin, .space),
         '\t' => return repeated(cursor, begin, .tab),
-        else => return Token{ .indent = .{
-            .space = .{
+        else => return Token{
+            .indent = .{
+                .kind = .space,
                 .count = 0,
                 .span = .{ .begin = begin, .end = cursor.pos },
             },
-        } },
+        },
     }
 }
 
