@@ -148,7 +148,7 @@ test "type infer if then else infer condition, then and else" {
 test "type infer fully generic if then else" {
     const allocator = std.testing.allocator;
     const source = "f(c, x, y) = if c then x else y";
-    const actual = try atom.testing.typeInfer(allocator, source, "f");
+    const actual = try atom.testing.typeInferVerbose(allocator, source, "f");
     defer allocator.free(actual);
     const expected = "f[A](c: bool, x: A, y: A) -> A = if c then x else y";
     try std.testing.expectEqualStrings(expected, actual);

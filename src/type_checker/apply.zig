@@ -24,7 +24,7 @@ fn monotype(allocator: Allocator, s: Substitution, m: MonoType) !MonoType {
         },
         .typevar => |t| {
             if (s.get(t)) |mono| return mono;
-            std.debug.panic("\nUnbound type variable {}", .{t});
+            return m;
         },
         else => std.debug.panic("\nUnsupported monotype {}", .{m}),
     }
