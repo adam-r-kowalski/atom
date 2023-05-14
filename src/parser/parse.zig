@@ -360,14 +360,12 @@ fn callOrFunction(context: *Context, left: Expression) !Expression {
             else => {},
         }
     }
+    const end = span(arguments.items[arguments.items.len - 1]).end;
     return Expression{
         .call = .{
             .function = try alloc(context, left),
             .arguments = arguments.toOwnedSlice(),
-            .span = Span{
-                .begin = span(left).begin,
-                .end = span(arguments.items[arguments.items.len - 1]).end,
-            },
+            .span = Span{ .begin = span(left).begin, .end = end },
         },
     };
 }

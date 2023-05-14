@@ -21,10 +21,10 @@ test "tokenize call" {
 
 test "parse call" {
     const allocator = std.testing.allocator;
-    const source = "f(x, y, z)";
+    const source = "a = f(x, y, z)";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(f x y z)";
+    const expected = "(def a (f x y z))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
