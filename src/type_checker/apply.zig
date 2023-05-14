@@ -12,6 +12,7 @@ const Symbol = types.Symbol;
 const Expression = types.Expression;
 const If = types.If;
 const BinaryOp = types.BinaryOp;
+const Define = types.Define;
 
 fn monotype(allocator: Allocator, s: Substitution, m: MonoType) !MonoType {
     switch (m) {
@@ -61,6 +62,15 @@ fn binaryOp(allocator: Allocator, s: Substitution, b: BinaryOp) !BinaryOp {
     };
 }
 
+fn define(allocator: Allocator, s: Substitution, d: Define) !Define {
+    return Define{
+        .name = try symbol(allocator, s, d.name),
+        .body = try block(allocator, s, d.body),
+        .span = d.span,
+        .type = try monotype(allocator, s, d.type),
+    };
+}
+
 fn expression(allocator: Allocator, s: Substitution, e: Expression) error{OutOfMemory}!Expression {
     switch (e) {
         .symbol => |sym| return .{ .symbol = try symbol(allocator, s, sym) },
@@ -68,6 +78,7 @@ fn expression(allocator: Allocator, s: Substitution, e: Expression) error{OutOfM
         .bool => |b| return .{ .bool = b },
         .if_ => |i| return .{ .if_ = try if_(allocator, s, i) },
         .binary_op => |b| return .{ .binary_op = try binaryOp(allocator, s, b) },
+        .define => |d| return .{ .define = try define(allocator, s, d) },
         else => std.debug.panic("\nUnsupported expression {}", .{e}),
     }
 }

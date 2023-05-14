@@ -15,9 +15,19 @@ const MonoType = types.MonoType;
 const Expression = types.Expression;
 const If = types.If;
 const BinaryOp = types.BinaryOp;
+const Define = types.Define;
 const TypeVar = types.TypeVar;
 
 const Vars = Map(TypeVar, u32);
+const Indent = u64;
+
+fn indent(writer: List(u8).Writer, i: Indent) !void {
+    var j: Indent = 0;
+    try writer.writeAll("\n");
+    while (j < i) : (j += 1) {
+        try writer.writeAll("    ");
+    }
+}
 
 fn symbol(writer: List(u8).Writer, intern: Intern, s: Symbol) !void {
     const name = interner.lookup(intern, s.value);
@@ -48,17 +58,17 @@ fn monotype(vars: *Vars, writer: List(u8).Writer, intern: Intern, m: MonoType) !
     }
 }
 
-fn if_(writer: List(u8).Writer, intern: Intern, i: If) !void {
+fn if_(vars: *Vars, writer: List(u8).Writer, intern: Intern, i: If, in: Indent) !void {
     try writer.writeAll("if ");
-    try expression(writer, intern, i.condition.*);
-    try writer.writeAll(" then ");
-    try block(writer, intern, i.then);
-    try writer.writeAll(" else ");
-    try block(writer, intern, i.else_);
+    try expression(vars, writer, intern, i.condition.*, in);
+    try writer.writeAll(" then");
+    try block(vars, writer, intern, i.then, in);
+    try writer.writeAll(" else");
+    try block(vars, writer, intern, i.else_, in);
 }
 
-fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp) !void {
-    try expression(writer, intern, b.left.*);
+fn binaryOp(vars: *Vars, writer: List(u8).Writer, intern: Intern, b: BinaryOp, i: Indent) !void {
+    try expression(vars, writer, intern, b.left.*, i);
     try writer.writeAll(" ");
     switch (b.kind) {
         .add => try writer.writeAll("+"),
@@ -66,23 +76,39 @@ fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp) !void {
         else => unreachable,
     }
     try writer.writeAll(" ");
-    try expression(writer, intern, b.right.*);
+    try expression(vars, writer, intern, b.right.*, i);
 }
 
-fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression) error{OutOfMemory}!void {
+fn define(vars: *Vars, writer: List(u8).Writer, intern: Intern, d: Define, i: Indent) !void {
+    try symbol(writer, intern, d.name);
+    try writer.writeAll(": ");
+    try monotype(vars, writer, intern, d.name.type);
+    try writer.writeAll(" =");
+    try block(vars, writer, intern, d.body, i + 1);
+}
+
+fn expression(vars: *Vars, writer: List(u8).Writer, intern: Intern, expr: Expression, in: Indent) error{OutOfMemory}!void {
     switch (expr) {
         .symbol => |s| try symbol(writer, intern, s),
         .int => |i| try int(writer, intern, i),
         .bool => |b| try writer.print("{}", .{b.value}),
-        .if_ => |i| try if_(writer, intern, i),
-        .binary_op => |b| try binaryOp(writer, intern, b),
+        .if_ => |i| try if_(vars, writer, intern, i, in),
+        .binary_op => |b| try binaryOp(vars, writer, intern, b, in),
+        .define => |d| try define(vars, writer, intern, d, in),
         else => std.debug.panic("\nUnhandled expression type {}", .{expr}),
     }
 }
 
-fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Expression) !void {
-    std.debug.assert(exprs.len == 1);
-    try expression(writer, intern, exprs[0]);
+fn block(vars: *Vars, writer: List(u8).Writer, intern: Intern, exprs: []const Expression, i: Indent) !void {
+    if (exprs.len == 1) {
+        try writer.writeAll(" ");
+        try expression(vars, writer, intern, exprs[0], i);
+        return;
+    }
+    for (exprs) |e| {
+        try indent(writer, i);
+        try expression(vars, writer, intern, e, i);
+    }
 }
 
 fn function(allocator: Allocator, writer: List(u8).Writer, intern: Intern, f: Function) !void {
@@ -102,8 +128,8 @@ fn function(allocator: Allocator, writer: List(u8).Writer, intern: Intern, f: Fu
     }
     try sub_writer.print(") -> ", .{});
     try monotype(&vars, sub_writer, intern, f.return_type);
-    try sub_writer.print(" = ", .{});
-    try block(sub_writer, intern, f.body);
+    try sub_writer.print(" =", .{});
+    try block(&vars, sub_writer, intern, f.body, 1);
     const var_count = vars.count();
     if (var_count > 0) {
         try writer.writeAll("[");

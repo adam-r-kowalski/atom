@@ -14,7 +14,10 @@ fn set(substitution: *Substitution, t: TypeVar, m: MonoType) !void {
         if (std.meta.eql(result.value_ptr.*, m)) return;
         switch (m) {
             .typevar => |t1| try set(substitution, t1, result.value_ptr.*),
-            else => std.debug.panic("\nType mismatch: {} != {}\n", .{ result.value_ptr.*, m }),
+            else => switch (result.value_ptr.*) {
+                .typevar => |t1| try set(substitution, t1, m),
+                else => std.debug.panic("\nType mismatch: {} != {}\n", .{ result.value_ptr.*, m }),
+            },
         }
     }
     result.value_ptr.* = m;

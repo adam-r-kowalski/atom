@@ -21,6 +21,7 @@ const TypeVar = types.TypeVar;
 const Expression = types.Expression;
 const Constraints = types.Constraints;
 const If = types.If;
+const Define = types.Define;
 const Builtins = @import("../builtins.zig").Builtins;
 
 fn nameOf(top_level: parser_types.TopLevel) Interned {
@@ -107,10 +108,10 @@ fn boolean(b: parser_types.Bool) Bool {
     return Bool{ .value = b.value, .span = b.span, .type = .{ .bool_literal = b.value } };
 }
 
-fn if_(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, i: parser_types.If) !If {
-    const condition = try expressionAlloc(allocator, constraints, scopes, next_type_var, i.condition.*);
-    const then = try block(allocator, constraints, scopes, next_type_var, i.then);
-    const else_ = try block(allocator, constraints, scopes, next_type_var, i.else_);
+fn if_(allocator: Allocator, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, i: parser_types.If) !If {
+    const condition = try expressionAlloc(allocator, builtins, constraints, scopes, next_type_var, i.condition.*);
+    const then = try block(allocator, builtins, constraints, scopes, next_type_var, i.then);
+    const else_ = try block(allocator, builtins, constraints, scopes, next_type_var, i.else_);
     const type_ = freshTypeVar(next_type_var);
     try constraints.equal.append(.{ .left = typeOf(condition.*), .right = .bool });
     try constraints.equal.append(.{ .left = typeOf(then[then.len - 1]), .right = type_ });
@@ -124,9 +125,9 @@ fn if_(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, next_ty
     };
 }
 
-fn binaryOp(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, b: parser_types.BinaryOp) !BinaryOp {
-    const left = try expressionAlloc(allocator, constraints, scopes, next_type_var, b.left.*);
-    const right = try expressionAlloc(allocator, constraints, scopes, next_type_var, b.right.*);
+fn binaryOp(allocator: Allocator, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, b: parser_types.BinaryOp) !BinaryOp {
+    const left = try expressionAlloc(allocator, builtins, constraints, scopes, next_type_var, b.left.*);
+    const right = try expressionAlloc(allocator, builtins, constraints, scopes, next_type_var, b.right.*);
     const type_ = freshTypeVar(next_type_var);
     try constraints.equal.append(.{ .left = typeOf(left.*), .right = type_ });
     try constraints.equal.append(.{ .left = typeOf(right.*), .right = type_ });
@@ -139,27 +140,50 @@ fn binaryOp(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, ne
     };
 }
 
-fn expression(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, expr: parser_types.Expression) error{OutOfMemory}!Expression {
+fn explicitTypeOrVar(builtins: Builtins, next_type_var: *TypeVar, e: ?*const parser_types.Expression) MonoType {
+    return if (e) |t| expressionToMonoType(t.*, builtins) else freshTypeVar(next_type_var);
+}
+
+fn define(allocator: Allocator, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, d: parser_types.Define) !Define {
+    const body = try block(allocator, builtins, constraints, scopes, next_type_var, d.body);
+    const type_ = explicitTypeOrVar(builtins, next_type_var, d.type);
+    try constraints.equal.append(.{ .left = typeOf(body[body.len - 1]), .right = type_ });
+    const name = Symbol{
+        .value = d.name.value,
+        .span = d.name.span,
+        .type = type_,
+    };
+    try putInScope(scopes, d.name.value, type_);
+    return Define{
+        .name = name,
+        .body = body,
+        .span = d.span,
+        .type = .void,
+    };
+}
+
+fn expression(allocator: Allocator, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, expr: parser_types.Expression) error{OutOfMemory}!Expression {
     switch (expr) {
         .symbol => |s| return .{ .symbol = symbol(scopes.*, s) },
         .int => |i| return .{ .int = int(i) },
         .bool => |b| return .{ .bool = boolean(b) },
-        .if_ => |i| return .{ .if_ = try if_(allocator, constraints, scopes, next_type_var, i) },
-        .binary_op => |b| return .{ .binary_op = try binaryOp(allocator, constraints, scopes, next_type_var, b) },
+        .if_ => |i| return .{ .if_ = try if_(allocator, builtins, constraints, scopes, next_type_var, i) },
+        .binary_op => |b| return .{ .binary_op = try binaryOp(allocator, builtins, constraints, scopes, next_type_var, b) },
+        .define => |d| return .{ .define = try define(allocator, builtins, constraints, scopes, next_type_var, d) },
         else => |e| std.debug.panic("\nUnsupported expression {}", .{e}),
     }
 }
 
-fn expressionAlloc(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, expr: parser_types.Expression) !*const Expression {
+fn expressionAlloc(allocator: Allocator, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, expr: parser_types.Expression) !*const Expression {
     const result = try allocator.create(Expression);
-    result.* = try expression(allocator, constraints, scopes, next_type_var, expr);
+    result.* = try expression(allocator, builtins, constraints, scopes, next_type_var, expr);
     return result;
 }
 
-fn block(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, exprs: []const parser_types.Expression) ![]const Expression {
+fn block(allocator: Allocator, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, exprs: []const parser_types.Expression) ![]const Expression {
     const expressions = try allocator.alloc(Expression, exprs.len);
     for (exprs) |expr, i|
-        expressions[i] = try expression(allocator, constraints, scopes, next_type_var, expr);
+        expressions[i] = try expression(allocator, builtins, constraints, scopes, next_type_var, expr);
     return expressions;
 }
 
@@ -190,7 +214,7 @@ fn function(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, bu
         try putInScope(scopes, p.name.value, type_);
     }
     const return_type = returnType(builtins, next_type_var, f);
-    const body = try block(allocator, constraints, scopes, next_type_var, f.body);
+    const body = try block(allocator, builtins, constraints, scopes, next_type_var, f.body);
     try constraints.equal.append(.{
         .left = return_type,
         .right = typeOf(body[body.len - 1]),
