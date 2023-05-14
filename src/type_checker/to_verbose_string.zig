@@ -17,6 +17,7 @@ const Constraints = types.Constraints;
 const Equal = types.Equal;
 const Substitution = types.Substitution;
 const If = types.If;
+const BinaryOp = types.BinaryOp;
 
 const Indent = u64;
 
@@ -82,6 +83,30 @@ fn if_(writer: List(u8).Writer, intern: Intern, i: If, in: Indent) !void {
     try indent(writer, in + 1);
     try writer.writeAll("else =");
     try block(writer, intern, i.else_, in + 2);
+    try indent(writer, in + 1);
+    try writer.print("type = ", .{});
+    try monotype(writer, intern, i.type);
+}
+
+fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp, i: Indent) !void {
+    try indent(writer, i);
+    try writer.writeAll("binary_op =");
+    try indent(writer, i + 1);
+    try writer.writeAll("kind =");
+    switch (b.kind) {
+        .add => try writer.writeAll("+"),
+        .multiply => try writer.writeAll("*"),
+        else => unreachable,
+    }
+    try indent(writer, i + 1);
+    try writer.writeAll("left =");
+    try expression(writer, intern, b.left.*, i + 2);
+    try indent(writer, i + 1);
+    try writer.writeAll("right =");
+    try expression(writer, intern, b.right.*, i + 2);
+    try indent(writer, i + 1);
+    try writer.print("type = ", .{});
+    try monotype(writer, intern, b.type);
 }
 
 fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, in: Indent) error{OutOfMemory}!void {
@@ -90,6 +115,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, in: Ind
         .int => |i| try int(writer, intern, i, in),
         .bool => |b| try boolean(writer, intern, b, in),
         .if_ => |i| try if_(writer, intern, i, in),
+        .binary_op => |b| try binaryOp(writer, intern, b, in),
         else => std.debug.panic("\nUnhandled expression type {}", .{expr}),
     }
 }

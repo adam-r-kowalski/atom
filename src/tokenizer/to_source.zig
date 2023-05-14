@@ -1,7 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const List = std.ArrayList;
-const Tuple = std.meta.Tuple;
 
 const interner = @import("../interner.zig");
 const Intern = interner.Intern;

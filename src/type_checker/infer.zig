@@ -16,6 +16,7 @@ const MonoType = types.MonoType;
 const Symbol = types.Symbol;
 const Int = types.Int;
 const Bool = types.Bool;
+const BinaryOp = types.BinaryOp;
 const TypeVar = types.TypeVar;
 const Expression = types.Expression;
 const Constraints = types.Constraints;
@@ -26,7 +27,7 @@ fn nameOf(top_level: parser_types.TopLevel) Interned {
     switch (top_level) {
         .function => |f| return f.name.value,
         .define => |d| return d.name.value,
-        .import => |i| return i.function.name.value,
+        .import => |i| return i.declaration.name.value,
         .export_ => |e| return e.function.name.value,
     }
 }
@@ -123,12 +124,28 @@ fn if_(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, next_ty
     };
 }
 
+fn binaryOp(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, b: parser_types.BinaryOp) !BinaryOp {
+    const left = try expressionAlloc(allocator, constraints, scopes, next_type_var, b.left.*);
+    const right = try expressionAlloc(allocator, constraints, scopes, next_type_var, b.right.*);
+    const type_ = freshTypeVar(next_type_var);
+    try constraints.equal.append(.{ .left = typeOf(left.*), .right = type_ });
+    try constraints.equal.append(.{ .left = typeOf(right.*), .right = type_ });
+    return BinaryOp{
+        .kind = b.kind,
+        .left = left,
+        .right = right,
+        .span = b.span,
+        .type = type_,
+    };
+}
+
 fn expression(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, expr: parser_types.Expression) error{OutOfMemory}!Expression {
     switch (expr) {
         .symbol => |s| return .{ .symbol = symbol(scopes.*, s) },
         .int => |i| return .{ .int = int(i) },
         .bool => |b| return .{ .bool = boolean(b) },
         .if_ => |i| return .{ .if_ = try if_(allocator, constraints, scopes, next_type_var, i) },
+        .binary_op => |b| return .{ .binary_op = try binaryOp(allocator, constraints, scopes, next_type_var, b) },
         else => |e| std.debug.panic("\nUnsupported expression {}", .{e}),
     }
 }
@@ -152,6 +169,7 @@ fn typeOf(expr: Expression) MonoType {
         .int => |i| return i.type,
         .bool => |b| return b.type,
         .if_ => |i| return i.type,
+        .binary_op => |b| return b.type,
         else => std.debug.panic("\nUnsupported expression {}", .{expr}),
     }
 }

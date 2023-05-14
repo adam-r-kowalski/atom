@@ -14,6 +14,7 @@ const Int = types.Int;
 const MonoType = types.MonoType;
 const Expression = types.Expression;
 const If = types.If;
+const BinaryOp = types.BinaryOp;
 const TypeVar = types.TypeVar;
 
 const Vars = Map(TypeVar, u32);
@@ -56,12 +57,25 @@ fn if_(writer: List(u8).Writer, intern: Intern, i: If) !void {
     try block(writer, intern, i.else_);
 }
 
+fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp) !void {
+    try expression(writer, intern, b.left.*);
+    try writer.writeAll(" ");
+    switch (b.kind) {
+        .add => try writer.writeAll("+"),
+        .multiply => try writer.writeAll("*"),
+        else => unreachable,
+    }
+    try writer.writeAll(" ");
+    try expression(writer, intern, b.right.*);
+}
+
 fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression) error{OutOfMemory}!void {
     switch (expr) {
         .symbol => |s| try symbol(writer, intern, s),
         .int => |i| try int(writer, intern, i),
         .bool => |b| try writer.print("{}", .{b.value}),
         .if_ => |i| try if_(writer, intern, i),
+        .binary_op => |b| try binaryOp(writer, intern, b),
         else => std.debug.panic("\nUnhandled expression type {}", .{expr}),
     }
 }
