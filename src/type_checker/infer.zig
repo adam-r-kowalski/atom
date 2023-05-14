@@ -14,6 +14,8 @@ const TopLevel = types.TopLevel;
 const Function = types.Function;
 const MonoType = types.MonoType;
 const Symbol = types.Symbol;
+const Int = types.Int;
+const Bool = types.Bool;
 const TypeVar = types.TypeVar;
 const Expression = types.Expression;
 const Constraints = types.Constraints;
@@ -51,6 +53,8 @@ fn expressionToMonoType(e: parser_types.Expression, builtins: Builtins) MonoType
     switch (e) {
         .symbol => |s| {
             if (s.value == builtins.i32) return .i32;
+            if (s.value == builtins.f32) return .f32;
+            if (s.value == builtins.bool) return .bool;
             std.debug.panic("\nCannot convert symbol {} to mono type", .{s});
         },
         else => std.debug.panic("\nCannot convert expression {} to mono type", .{e}),
@@ -94,6 +98,14 @@ fn symbol(scopes: Scopes, s: parser_types.Symbol) Symbol {
     return Symbol{ .value = s.value, .span = s.span, .type = findInScope(scopes, s.value) };
 }
 
+fn int(i: parser_types.Int) Int {
+    return Int{ .value = i.value, .span = i.span, .type = .{ .int_literal = i.value } };
+}
+
+fn boolean(b: parser_types.Bool) Bool {
+    return Bool{ .value = b.value, .span = b.span, .type = .{ .bool_literal = b.value } };
+}
+
 fn if_(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, i: parser_types.If) !If {
     const condition = try expressionAlloc(allocator, constraints, scopes, next_type_var, i.condition.*);
     const then = try block(allocator, constraints, scopes, next_type_var, i.then);
@@ -114,6 +126,8 @@ fn if_(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, next_ty
 fn expression(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, expr: parser_types.Expression) error{OutOfMemory}!Expression {
     switch (expr) {
         .symbol => |s| return .{ .symbol = symbol(scopes.*, s) },
+        .int => |i| return .{ .int = int(i) },
+        .bool => |b| return .{ .bool = boolean(b) },
         .if_ => |i| return .{ .if_ = try if_(allocator, constraints, scopes, next_type_var, i) },
         else => |e| std.debug.panic("\nUnsupported expression {}", .{e}),
     }
@@ -135,6 +149,8 @@ fn block(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, next_
 fn typeOf(expr: Expression) MonoType {
     switch (expr) {
         .symbol => |s| return s.type,
+        .int => |i| return i.type,
+        .bool => |b| return b.type,
         .if_ => |i| return i.type,
         else => std.debug.panic("\nUnsupported expression {}", .{expr}),
     }

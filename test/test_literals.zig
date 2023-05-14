@@ -19,7 +19,7 @@ test "type infer int literal" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "type infer bool literal as i32" {
+test "type infer bool literal as bool" {
     const allocator = std.testing.allocator;
     const source = "f() -> bool = true";
     const actual = try atom.testing.typeInfer(allocator, source, "f");

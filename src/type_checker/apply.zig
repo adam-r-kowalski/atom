@@ -15,6 +15,8 @@ const If = types.If;
 fn monotype(allocator: Allocator, s: Substitution, m: MonoType) !MonoType {
     switch (m) {
         .i32 => return .i32,
+        .f32 => return .f32,
+        .bool => return .bool,
         .void => return .void,
         .module => return .module,
         .function => |f| {
@@ -51,6 +53,8 @@ fn if_(allocator: Allocator, s: Substitution, i: If) !If {
 fn expression(allocator: Allocator, s: Substitution, e: Expression) error{OutOfMemory}!Expression {
     switch (e) {
         .symbol => |sym| return .{ .symbol = try symbol(allocator, s, sym) },
+        .int => |i| return .{ .int = i },
+        .bool => |b| return .{ .bool = b },
         .if_ => |i| return .{ .if_ = try if_(allocator, s, i) },
         else => std.debug.panic("\nUnsupported expression {}", .{e}),
     }

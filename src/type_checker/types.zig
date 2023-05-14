@@ -14,8 +14,11 @@ pub const TypeVar = u64;
 pub const MonoType = union(enum) {
     void,
     i32,
+    f32,
     bool,
     module,
+    int_literal: Interned,
+    bool_literal: bool,
     typevar: TypeVar,
     function: []const MonoType,
 };

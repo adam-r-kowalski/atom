@@ -10,6 +10,7 @@ const Module = types.Module;
 const TopLevel = types.TopLevel;
 const Function = types.Function;
 const Symbol = types.Symbol;
+const Int = types.Int;
 const MonoType = types.MonoType;
 const Expression = types.Expression;
 const If = types.If;
@@ -22,10 +23,18 @@ fn symbol(writer: List(u8).Writer, intern: Intern, s: Symbol) !void {
     try writer.print("{s}", .{name});
 }
 
-fn monotype(vars: *Vars, writer: List(u8).Writer, m: MonoType) !void {
+fn int(writer: List(u8).Writer, intern: Intern, i: Int) !void {
+    const value = interner.lookup(intern, i.value);
+    try writer.print("{s}", .{value});
+}
+
+fn monotype(vars: *Vars, writer: List(u8).Writer, intern: Intern, m: MonoType) !void {
     switch (m) {
         .i32 => try writer.print("i32", .{}),
+        .f32 => try writer.print("f32", .{}),
         .bool => try writer.print("bool", .{}),
+        .int_literal => |i| try writer.writeAll(interner.lookup(intern, i)),
+        .bool_literal => |b| try writer.print("{}", .{b}),
         .typevar => |t| {
             const result = try vars.getOrPut(t);
             if (!result.found_existing) {
@@ -50,6 +59,8 @@ fn if_(writer: List(u8).Writer, intern: Intern, i: If) !void {
 fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression) error{OutOfMemory}!void {
     switch (expr) {
         .symbol => |s| try symbol(writer, intern, s),
+        .int => |i| try int(writer, intern, i),
+        .bool => |b| try writer.print("{}", .{b.value}),
         .if_ => |i| try if_(writer, intern, i),
         else => std.debug.panic("\nUnhandled expression type {}", .{expr}),
     }
@@ -73,10 +84,10 @@ fn function(allocator: Allocator, writer: List(u8).Writer, intern: Intern, f: Fu
         if (i > 0) try sub_writer.writeAll(", ");
         try symbol(sub_writer, intern, p);
         try sub_writer.writeAll(": ");
-        try monotype(&vars, sub_writer, p.type);
+        try monotype(&vars, sub_writer, intern, p.type);
     }
     try sub_writer.print(") -> ", .{});
-    try monotype(&vars, sub_writer, f.return_type);
+    try monotype(&vars, sub_writer, intern, f.return_type);
     try sub_writer.print(" = ", .{});
     try block(sub_writer, intern, f.body);
     const var_count = vars.count();
