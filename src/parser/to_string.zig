@@ -158,9 +158,9 @@ fn call(writer: List(u8).Writer, intern: Intern, c: Call, indent: u64) !void {
     try writer.writeAll(")");
 }
 
-fn import(writer: List(u8).Writer, intern: Intern, i: Import, indent: u64) !void {
+fn import(writer: List(u8).Writer, intern: Intern, i: Import) !void {
     try writer.writeAll("(import ");
-    try function(writer, intern, i.function, indent);
+    try declaration(writer, intern, i.declaration);
     try writer.writeAll(")");
 }
 
@@ -187,7 +187,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, indent:
 
 fn topLevel(writer: List(u8).Writer, intern: Intern, top_level: TopLevel) !void {
     switch (top_level) {
-        .import => |i| try import(writer, intern, i, 0),
+        .import => |i| try import(writer, intern, i),
         .export_ => |e| try export_(writer, intern, e, 0),
         .define => |d| try define(writer, intern, d, 0),
         .function => |f| try function(writer, intern, f, 0),

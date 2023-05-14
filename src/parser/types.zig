@@ -83,7 +83,7 @@ pub const Expression = union(enum) {
 };
 
 pub const Import = struct {
-    function: Function,
+    declaration: Declaration,
     span: Span,
 };
 

@@ -439,10 +439,13 @@ fn import(context: *Context) !TopLevel {
     context.token_index += 1;
     context.precedence = LOWEST;
     switch (try expression(context)) {
-        .function => |f| return TopLevel{ .import = .{ .function = f, .span = .{
-            .begin = begin,
-            .end = f.span.end,
-        } } },
+        .declaration => |d| return TopLevel{ .import = .{
+            .declaration = d,
+            .span = .{
+                .begin = begin,
+                .end = d.span.end,
+            },
+        } },
         else => std.debug.panic("\nCan only import function", .{}),
     }
 }
@@ -452,10 +455,13 @@ fn export_(context: *Context) !TopLevel {
     context.token_index += 1;
     context.precedence = LOWEST;
     switch (try expression(context)) {
-        .function => |f| return TopLevel{ .export_ = .{ .function = f, .span = .{
-            .begin = begin,
-            .end = f.span.end,
-        } } },
+        .function => |f| return TopLevel{ .export_ = .{
+            .function = f,
+            .span = .{
+                .begin = begin,
+                .end = f.span.end,
+            },
+        } },
         else => std.debug.panic("\nCan only export function", .{}),
     }
 }
