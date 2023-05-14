@@ -1,6 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const List = std.ArrayList;
+const Map = std.AutoHashMap;
 
 const interner = @import("../interner.zig");
 const Intern = interner.Intern;
@@ -12,17 +13,27 @@ const Symbol = types.Symbol;
 const MonoType = types.MonoType;
 const Expression = types.Expression;
 const If = types.If;
+const TypeVar = types.TypeVar;
+
+const Vars = Map(TypeVar, u32);
 
 fn symbol(writer: List(u8).Writer, intern: Intern, s: Symbol) !void {
     const name = interner.lookup(intern, s.value);
     try writer.print("{s}", .{name});
 }
 
-fn monotype(writer: List(u8).Writer, m: MonoType) !void {
+fn monotype(vars: *Vars, writer: List(u8).Writer, m: MonoType) !void {
     switch (m) {
         .i32 => try writer.print("i32", .{}),
         .bool => try writer.print("bool", .{}),
-        .typevar => |t| try writer.print("${}", .{t}),
+        .typevar => |t| {
+            const result = try vars.getOrPut(t);
+            if (!result.found_existing) {
+                const mapped = @as(u32, 'A') + vars.count() - 1;
+                result.value_ptr.* = mapped;
+            }
+            try writer.print("{c}", .{@intCast(u8, result.value_ptr.*)});
+        },
         else => std.debug.panic("\nUnhandled monotype type {}", .{m}),
     }
 }
@@ -49,24 +60,40 @@ fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Expression) !vo
     try expression(writer, intern, exprs[0]);
 }
 
-fn function(writer: List(u8).Writer, intern: Intern, f: Function) !void {
+fn function(allocator: Allocator, writer: List(u8).Writer, intern: Intern, f: Function) !void {
     const name = interner.lookup(intern, f.name.value);
-    try writer.print("{s}(", .{name});
+    try writer.print("{s}", .{name});
+    var vars = Vars.init(allocator);
+    defer vars.deinit();
+    var list = List(u8).init(allocator);
+    defer list.deinit();
+    const sub_writer = list.writer();
+    try sub_writer.writeAll("(");
     for (f.parameters) |p, i| {
-        if (i > 0) try writer.writeAll(", ");
-        try symbol(writer, intern, p);
-        try writer.writeAll(": ");
-        try monotype(writer, p.type);
+        if (i > 0) try sub_writer.writeAll(", ");
+        try symbol(sub_writer, intern, p);
+        try sub_writer.writeAll(": ");
+        try monotype(&vars, sub_writer, p.type);
     }
-    try writer.print(") -> ", .{});
-    try monotype(writer, f.return_type);
-    try writer.print(" = ", .{});
-    try block(writer, intern, f.body);
+    try sub_writer.print(") -> ", .{});
+    try monotype(&vars, sub_writer, f.return_type);
+    try sub_writer.print(" = ", .{});
+    try block(sub_writer, intern, f.body);
+    const var_count = vars.count();
+    if (var_count > 0) {
+        try writer.writeAll("[");
+        var i: u32 = 0;
+        while (i < var_count) : (i += 1) {
+            try writer.print("{c}", .{'A' + @intCast(u8, i)});
+        }
+        try writer.writeAll("]");
+    }
+    try writer.writeAll(list.items);
 }
 
-fn topLevel(writer: List(u8).Writer, intern: Intern, t: TopLevel) !void {
+fn topLevel(allocator: Allocator, writer: List(u8).Writer, intern: Intern, t: TopLevel) !void {
     switch (t) {
-        .function => |f| try function(writer, intern, f),
+        .function => |f| try function(allocator, writer, intern, f),
         else => std.debug.panic("\nUnhandled top level type {}", .{t}),
     }
 }
@@ -75,7 +102,7 @@ pub fn toString(allocator: Allocator, intern: Intern, module: Module) ![]const u
     var list = List(u8).init(allocator);
     const writer = list.writer();
     for (module.order) |name| {
-        if (module.typed.get(name)) |t| try topLevel(writer, intern, t);
+        if (module.typed.get(name)) |t| try topLevel(allocator, writer, intern, t);
     }
     return list.toOwnedSlice();
 }
