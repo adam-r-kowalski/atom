@@ -17,21 +17,21 @@ const Int = types.Int;
 const Float = types.Float;
 
 fn symbol(writer: List(u8).Writer, intern: Intern, s: Symbol) !void {
-    try std.fmt.format(writer, "symbol {s}", .{interner.lookup(intern, s.value)});
+    try writer.print("symbol {s}", .{interner.lookup(intern, s.value)});
 }
 
 fn int(writer: List(u8).Writer, intern: Intern, i: Int) !void {
-    try std.fmt.format(writer, "int {s}", .{interner.lookup(intern, i.value)});
+    try writer.print("int {s}", .{interner.lookup(intern, i.value)});
 }
 
 fn float(writer: List(u8).Writer, intern: Intern, f: Float) !void {
-    try std.fmt.format(writer, "float {s}", .{interner.lookup(intern, f.value)});
+    try writer.print("float {s}", .{interner.lookup(intern, f.value)});
 }
 
 fn indent(writer: List(u8).Writer, i: Indent) !void {
     switch (i.kind) {
-        .space => try std.fmt.format(writer, "space {d}", .{i.count}),
-        .tab => try std.fmt.format(writer, "tab {d}", .{i.count}),
+        .space => try writer.print("space {d}", .{i.count}),
+        .tab => try writer.print("tab {d}", .{i.count}),
     }
 }
 
@@ -44,7 +44,7 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
             .symbol => |s| try symbol(writer, intern, s),
             .int => |s| try int(writer, intern, s),
             .float => |s| try float(writer, intern, s),
-            .bool => |b| try std.fmt.format(writer, "bool {}", .{b}),
+            .bool => |b| try writer.print("bool {}", .{b}),
             .indent => |in| try indent(writer, in),
             .equal => try writer.writeAll("equal"),
             .dot => try writer.writeAll("dot"),

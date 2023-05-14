@@ -16,6 +16,7 @@ const MonoType = types.MonoType;
 const Symbol = types.Symbol;
 const TypeVar = types.TypeVar;
 const Expression = types.Expression;
+const Constraints = types.Constraints;
 const Builtins = @import("../builtins.zig").Builtins;
 
 fn nameOf(top_level: parser_types.TopLevel) Interned {
@@ -61,50 +62,63 @@ fn freshTypeVar(next_typevar: *TypeVar) MonoType {
     return .{ .typevar = typevar };
 }
 
-fn pushScope(_: *Scopes) !void {}
+fn pushScope(scopes: *Scopes) !void {
+    try scopes.append(Scope.init(scopes.allocator));
+}
 
-fn popScope(_: *Scopes) void {}
+fn popScope(scopes: *Scopes) void {
+    _ = scopes.pop();
+}
 
-fn putInScope(_: *Scopes, _: Interned, _: MonoType) !void {}
+fn putInScope(scopes: *Scopes, name: Interned, type_: MonoType) !void {
+    try scopes.items[scopes.items.len - 1].put(name, type_);
+}
+
+fn findInScope(scopes: Scopes, name: Interned) MonoType {
+    var i = scopes.items.len;
+    while (i != 0) : (i -= 1)
+        if (scopes.items[i - 1].get(name)) |type_| return type_;
+    std.debug.panic("\nCould not find {} in scopes", .{name});
+}
 
 fn parameterType(builtins: Builtins, next_type_var: *TypeVar, p: parser_types.Parameter) !MonoType {
     return if (p.type) |t| expressionToMonoType(t, builtins) else freshTypeVar(next_type_var);
 }
 
-fn returnType(allocator: Allocator, builtins: Builtins, next_type_var: *TypeVar, f: parser_types.Function) !*const MonoType {
-    var result = try allocator.create(MonoType);
-    result.* = if (f.return_type) |t| expressionToMonoType(t.*, builtins) else freshTypeVar(next_type_var);
-    return result;
+fn returnType(builtins: Builtins, next_type_var: *TypeVar, f: parser_types.Function) MonoType {
+    return if (f.return_type) |t| expressionToMonoType(t.*, builtins) else freshTypeVar(next_type_var);
 }
 
-fn symbol(s: parser_types.Symbol) Symbol {
-    // TODO: look up type from scopes
-    return Symbol{
-        .value = s.value,
-        .span = s.span,
-        .type = .void,
-    };
+fn symbol(scopes: Scopes, s: parser_types.Symbol) Symbol {
+    return Symbol{ .value = s.value, .span = s.span, .type = findInScope(scopes, s.value) };
 }
 
-fn expression(expr: parser_types.Expression) !Expression {
+fn expression(scopes: *Scopes, expr: parser_types.Expression) !Expression {
     switch (expr) {
-        .symbol => |s| return .{ .symbol = symbol(s) },
+        .symbol => |s| return .{ .symbol = symbol(scopes.*, s) },
         else => |e| std.debug.panic("\nUnsupported expression {}", .{e}),
     }
 }
 
-fn block(allocator: Allocator, exprs: []const parser_types.Expression) ![]const Expression {
+fn block(allocator: Allocator, scopes: *Scopes, exprs: []const parser_types.Expression) ![]const Expression {
     const expressions = try allocator.alloc(Expression, exprs.len);
     for (exprs) |expr, i|
-        expressions[i] = try expression(expr);
+        expressions[i] = try expression(scopes, expr);
     return expressions;
 }
 
-fn function(allocator: Allocator, scopes: *Scopes, builtins: Builtins, next_type_var: *TypeVar, f: parser_types.Function) !Function {
+fn typeOf(expr: Expression) MonoType {
+    switch (expr) {
+        .symbol => |s| return s.type,
+        else => std.debug.panic("\nUnsupported expression {}", .{expr}),
+    }
+}
+
+fn function(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, builtins: Builtins, next_type_var: *TypeVar, f: parser_types.Function) !Function {
     try pushScope(scopes);
     defer popScope(scopes);
     const parameters = try allocator.alloc(Symbol, f.parameters.len);
-    const parameterTypes = try allocator.alloc(MonoType, f.parameters.len);
+    const function_type = try allocator.alloc(MonoType, f.parameters.len + 1);
     for (f.parameters) |p, i| {
         const type_ = try parameterType(builtins, next_type_var, p);
         parameters[i] = Symbol{
@@ -112,43 +126,45 @@ fn function(allocator: Allocator, scopes: *Scopes, builtins: Builtins, next_type
             .span = p.name.span,
             .type = type_,
         };
-        parameterTypes[i] = type_;
+        function_type[i] = type_;
         try putInScope(scopes, p.name.value, type_);
     }
-    const return_type = try returnType(allocator, builtins, next_type_var, f);
-    const body = try block(allocator, f.body);
+    const return_type = returnType(builtins, next_type_var, f);
+    const body = try block(allocator, scopes, f.body);
+    try constraints.equal.append(.{
+        .left = return_type,
+        .right = typeOf(body[body.len - 1]),
+    });
+    function_type[f.parameters.len] = return_type;
     const name = Symbol{
         .value = f.name.value,
         .span = f.name.span,
-        .type = MonoType{ .function = .{
-            .parameters = parameterTypes,
-            .return_type = return_type,
-        } },
+        .type = .{ .function = function_type },
     };
     return Function{
         .name = name,
         .parameters = parameters,
-        .return_type = return_type.*,
+        .return_type = return_type,
         .body = body,
         .span = f.span,
         .type = .void,
     };
 }
 
-fn topLevel(allocator: Allocator, scope: Scope, builtins: Builtins, next_type_var: *TypeVar, t: parser_types.TopLevel) !TopLevel {
+fn topLevel(allocator: Allocator, constraints: *Constraints, scope: Scope, builtins: Builtins, next_type_var: *TypeVar, t: parser_types.TopLevel) !TopLevel {
     switch (t) {
         .function => |f| {
             var scopes = Scopes.init(allocator);
             try scopes.append(scope);
-            return .{ .function = try function(allocator, &scopes, builtins, next_type_var, f) };
+            return .{ .function = try function(allocator, constraints, &scopes, builtins, next_type_var, f) };
         },
         else => |e| std.debug.panic("\nUnsupported top level {}", .{e}),
     }
 }
 
-pub fn infer(allocator: Allocator, m: *Module, builtins: Builtins, next_type_var: *TypeVar, name: Interned) !void {
+pub fn infer(allocator: Allocator, constraints: *Constraints, m: *Module, builtins: Builtins, next_type_var: *TypeVar, name: Interned) !void {
     if (m.untyped.fetchRemove(name)) |entry| {
-        const top_level = try topLevel(allocator, m.scope, builtins, next_type_var, entry.value);
+        const top_level = try topLevel(allocator, constraints, m.scope, builtins, next_type_var, entry.value);
         try m.typed.putNoClobber(name, top_level);
     }
 }

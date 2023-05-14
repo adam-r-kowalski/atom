@@ -17,10 +17,7 @@ pub const MonoType = union(enum) {
     bool,
     module,
     typevar: TypeVar,
-    function: struct {
-        parameters: []const MonoType,
-        return_type: *const MonoType,
-    },
+    function: []const MonoType,
 };
 
 pub const Symbol = struct {
@@ -143,3 +140,12 @@ pub const Scope = Map(Interned, MonoType);
 pub const Scopes = List(Scope);
 
 pub const Substitution = Map(TypeVar, MonoType);
+
+pub const Equal = struct {
+    left: MonoType,
+    right: MonoType,
+};
+
+pub const Constraints = struct {
+    equal: List(Equal),
+};

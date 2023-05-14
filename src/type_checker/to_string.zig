@@ -20,7 +20,7 @@ fn symbol(writer: List(u8).Writer, intern: Intern, s: Symbol) !void {
 fn monotype(writer: List(u8).Writer, m: MonoType) !void {
     switch (m) {
         .i32 => try writer.print("i32", .{}),
-        .typevar => |t| try std.fmt.format(writer, "${}", .{t}),
+        .typevar => |t| try writer.print("${}", .{t}),
         else => std.debug.panic("\nUnhandled monotype type {}", .{m}),
     }
 }
