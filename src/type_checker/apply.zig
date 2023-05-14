@@ -10,6 +10,7 @@ const TopLevel = types.TopLevel;
 const Function = types.Function;
 const Symbol = types.Symbol;
 const Expression = types.Expression;
+const If = types.If;
 
 fn monotype(allocator: Allocator, s: Substitution, m: MonoType) !MonoType {
     switch (m) {
@@ -37,11 +38,28 @@ fn symbol(allocator: Allocator, s: Substitution, sym: Symbol) !Symbol {
     };
 }
 
-fn expression(allocator: Allocator, s: Substitution, e: Expression) !Expression {
+fn if_(allocator: Allocator, s: Substitution, i: If) !If {
+    return If{
+        .condition = try expressionAlloc(allocator, s, i.condition.*),
+        .then = try block(allocator, s, i.then),
+        .else_ = try block(allocator, s, i.else_),
+        .span = i.span,
+        .type = try monotype(allocator, s, i.type),
+    };
+}
+
+fn expression(allocator: Allocator, s: Substitution, e: Expression) error{OutOfMemory}!Expression {
     switch (e) {
         .symbol => |sym| return .{ .symbol = try symbol(allocator, s, sym) },
+        .if_ => |i| return .{ .if_ = try if_(allocator, s, i) },
         else => std.debug.panic("\nUnsupported expression {}", .{e}),
     }
+}
+
+fn expressionAlloc(allocator: Allocator, s: Substitution, e: Expression) !*const Expression {
+    const expr = try allocator.create(Expression);
+    expr.* = try expression(allocator, s, e);
+    return expr;
 }
 
 fn block(allocator: Allocator, s: Substitution, exprs: []const Expression) ![]const Expression {

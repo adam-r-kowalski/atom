@@ -19,44 +19,46 @@ test "tokenize if then else" {
 
 test "parse if then else" {
     const allocator = std.testing.allocator;
-    const source = "if x then y else z";
+    const source = "f(x, y, z) = if x then y else z";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(if x y z)";
+    const expected = "(defn f [x y z] (if x y z))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "parse if then else across multiple lines" {
     const allocator = std.testing.allocator;
     const source =
-        \\if x then
-        \\    y
-        \\else
-        \\    z
+        \\f(x, y, z) =
+        \\    if x then
+        \\        y
+        \\    else
+        \\        z
     ;
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(if x y z)";
+    const expected = "(defn f [x y z] (if x y z))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "parse if multi line then else" {
     const allocator = std.testing.allocator;
     const source =
-        \\if x then
-        \\    a = y ^ 2
-        \\    a * 5
-        \\else
-        \\    z
+        \\f(x, y, z) =
+        \\    if x then
+        \\        a = y ^ 2
+        \\        a * 5
+        \\    else
+        \\        z
     ;
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(if x
-        \\    (block
-        \\        (def a (^ y 2))
-        \\        (* a 5))
-        \\    z)
+        \\(defn f [x y z] (if x
+        \\        (block
+        \\            (def a (^ y 2))
+        \\            (* a 5))
+        \\        z))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -64,19 +66,20 @@ test "parse if multi line then else" {
 test "parse if then multi line else" {
     const allocator = std.testing.allocator;
     const source =
-        \\if x then
-        \\    y
-        \\else
-        \\    a = z ^ 2
-        \\    a * 5
+        \\f(x, y, z) =
+        \\    if x then
+        \\        y
+        \\    else
+        \\        a = z ^ 2
+        \\        a * 5
     ;
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(if x y
-        \\    (block
-        \\        (def a (^ z 2))
-        \\        (* a 5)))
+        \\(defn f [x y z] (if x y
+        \\        (block
+        \\            (def a (^ z 2))
+        \\            (* a 5))))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -104,13 +107,14 @@ test "parse let on result of if then else" {
 test "parse nested if then else" {
     const allocator = std.testing.allocator;
     const source =
-        \\if x > y then 1
-        \\else if x < y then -1
-        \\else 0
+        \\f(x, y) =
+        \\    if x > y then 1
+        \\    else if x < y then -1
+        \\    else 0
     ;
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(if (> x y) 1 (if (< x y) -1 0))";
+    const expected = "(defn f [x y] (if (> x y) 1 (if (< x y) -1 0)))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 

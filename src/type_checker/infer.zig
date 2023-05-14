@@ -17,6 +17,7 @@ const Symbol = types.Symbol;
 const TypeVar = types.TypeVar;
 const Expression = types.Expression;
 const Constraints = types.Constraints;
+const If = types.If;
 const Builtins = @import("../builtins.zig").Builtins;
 
 fn nameOf(top_level: parser_types.TopLevel) Interned {
@@ -93,23 +94,48 @@ fn symbol(scopes: Scopes, s: parser_types.Symbol) Symbol {
     return Symbol{ .value = s.value, .span = s.span, .type = findInScope(scopes, s.value) };
 }
 
-fn expression(scopes: *Scopes, expr: parser_types.Expression) !Expression {
+fn if_(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, i: parser_types.If) !If {
+    const condition = try expressionAlloc(allocator, constraints, scopes, next_type_var, i.condition.*);
+    const then = try block(allocator, constraints, scopes, next_type_var, i.then);
+    const else_ = try block(allocator, constraints, scopes, next_type_var, i.else_);
+    const type_ = freshTypeVar(next_type_var);
+    try constraints.equal.append(.{ .left = typeOf(condition.*), .right = .bool });
+    try constraints.equal.append(.{ .left = typeOf(then[then.len - 1]), .right = type_ });
+    try constraints.equal.append(.{ .left = typeOf(else_[else_.len - 1]), .right = type_ });
+    return If{
+        .condition = condition,
+        .then = then,
+        .else_ = else_,
+        .type = type_,
+        .span = i.span,
+    };
+}
+
+fn expression(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, expr: parser_types.Expression) error{OutOfMemory}!Expression {
     switch (expr) {
         .symbol => |s| return .{ .symbol = symbol(scopes.*, s) },
+        .if_ => |i| return .{ .if_ = try if_(allocator, constraints, scopes, next_type_var, i) },
         else => |e| std.debug.panic("\nUnsupported expression {}", .{e}),
     }
 }
 
-fn block(allocator: Allocator, scopes: *Scopes, exprs: []const parser_types.Expression) ![]const Expression {
+fn expressionAlloc(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, expr: parser_types.Expression) !*const Expression {
+    const result = try allocator.create(Expression);
+    result.* = try expression(allocator, constraints, scopes, next_type_var, expr);
+    return result;
+}
+
+fn block(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, exprs: []const parser_types.Expression) ![]const Expression {
     const expressions = try allocator.alloc(Expression, exprs.len);
     for (exprs) |expr, i|
-        expressions[i] = try expression(scopes, expr);
+        expressions[i] = try expression(allocator, constraints, scopes, next_type_var, expr);
     return expressions;
 }
 
 fn typeOf(expr: Expression) MonoType {
     switch (expr) {
         .symbol => |s| return s.type,
+        .if_ => |i| return i.type,
         else => std.debug.panic("\nUnsupported expression {}", .{expr}),
     }
 }
@@ -130,7 +156,7 @@ fn function(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, bu
         try putInScope(scopes, p.name.value, type_);
     }
     const return_type = returnType(builtins, next_type_var, f);
-    const body = try block(allocator, scopes, f.body);
+    const body = try block(allocator, constraints, scopes, next_type_var, f.body);
     try constraints.equal.append(.{
         .left = return_type,
         .right = typeOf(body[body.len - 1]),

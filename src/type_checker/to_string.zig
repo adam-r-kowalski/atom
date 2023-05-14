@@ -11,6 +11,7 @@ const Function = types.Function;
 const Symbol = types.Symbol;
 const MonoType = types.MonoType;
 const Expression = types.Expression;
+const If = types.If;
 
 fn symbol(writer: List(u8).Writer, intern: Intern, s: Symbol) !void {
     const name = interner.lookup(intern, s.value);
@@ -20,14 +21,25 @@ fn symbol(writer: List(u8).Writer, intern: Intern, s: Symbol) !void {
 fn monotype(writer: List(u8).Writer, m: MonoType) !void {
     switch (m) {
         .i32 => try writer.print("i32", .{}),
+        .bool => try writer.print("bool", .{}),
         .typevar => |t| try writer.print("${}", .{t}),
         else => std.debug.panic("\nUnhandled monotype type {}", .{m}),
     }
 }
 
-fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression) !void {
+fn if_(writer: List(u8).Writer, intern: Intern, i: If) !void {
+    try writer.writeAll("if ");
+    try expression(writer, intern, i.condition.*);
+    try writer.writeAll(" then ");
+    try block(writer, intern, i.then);
+    try writer.writeAll(" else ");
+    try block(writer, intern, i.else_);
+}
+
+fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression) error{OutOfMemory}!void {
     switch (expr) {
         .symbol => |s| try symbol(writer, intern, s),
+        .if_ => |i| try if_(writer, intern, i),
         else => std.debug.panic("\nUnhandled expression type {}", .{expr}),
     }
 }
@@ -40,7 +52,8 @@ fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Expression) !vo
 fn function(writer: List(u8).Writer, intern: Intern, f: Function) !void {
     const name = interner.lookup(intern, f.name.value);
     try writer.print("{s}(", .{name});
-    for (f.parameters) |p| {
+    for (f.parameters) |p, i| {
+        if (i > 0) try writer.writeAll(", ");
         try symbol(writer, intern, p);
         try writer.writeAll(": ");
         try monotype(writer, p.type);

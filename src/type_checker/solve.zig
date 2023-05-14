@@ -18,8 +18,22 @@ fn equal(substitution: *Substitution, e: Equal) !void {
     std.debug.panic("\nUnsupported type in equal: {} {}\n", .{ e.left, e.right });
 }
 
+fn simplify(substitution: *Substitution) !void {
+    var iterator = substitution.iterator();
+    while (iterator.next()) |entry| {
+        switch (entry.value_ptr.*) {
+            .typevar => |t| {
+                if (substitution.get(t)) |v|
+                    entry.value_ptr.* = v;
+            },
+            else => {},
+        }
+    }
+}
+
 pub fn solve(allocator: Allocator, c: Constraints) !Substitution {
     var substitution = Substitution.init(allocator);
     for (c.equal.items) |e| try equal(&substitution, e);
+    try simplify(&substitution);
     return substitution;
 }

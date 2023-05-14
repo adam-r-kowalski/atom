@@ -14,6 +14,7 @@ const Expression = types.Expression;
 const Constraints = types.Constraints;
 const Equal = types.Equal;
 const Substitution = types.Substitution;
+const If = types.If;
 
 const Indent = u64;
 
@@ -37,15 +38,31 @@ fn symbol(writer: List(u8).Writer, intern: Intern, s: Symbol, i: Indent) !void {
 fn monotype(writer: List(u8).Writer, m: MonoType) !void {
     switch (m) {
         .i32 => try writer.print("i32", .{}),
+        .bool => try writer.print("bool", .{}),
         .void => try writer.print("void", .{}),
         .typevar => |t| try writer.print("${}", .{t}),
         else => std.debug.panic("\nUnhandled monotype type {}", .{m}),
     }
 }
 
-fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Indent) !void {
+fn if_(writer: List(u8).Writer, intern: Intern, i: If, in: Indent) !void {
+    try indent(writer, in);
+    try writer.writeAll("if =");
+    try indent(writer, in + 1);
+    try writer.writeAll("condition =");
+    try expression(writer, intern, i.condition.*, in + 2);
+    try indent(writer, in + 1);
+    try writer.writeAll("then =");
+    try block(writer, intern, i.then, in + 2);
+    try indent(writer, in + 1);
+    try writer.writeAll("else =");
+    try block(writer, intern, i.else_, in + 2);
+}
+
+fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Indent) error{OutOfMemory}!void {
     switch (expr) {
         .symbol => |s| try symbol(writer, intern, s, i),
+        .if_ => |e| try if_(writer, intern, e, i),
         else => std.debug.panic("\nUnhandled expression type {}", .{expr}),
     }
 }
@@ -101,15 +118,18 @@ fn equal(writer: List(u8).Writer, e: Equal) !void {
 }
 
 pub fn constraints(writer: List(u8).Writer, c: Constraints) !void {
-    try writer.writeAll("\n\n=== Constraints ===\n");
-    for (c.equal.items) |e| try equal(writer, e);
+    try writer.writeAll("\n\n=== Constraints ===");
+    for (c.equal.items) |e| {
+        try writer.writeAll("\n");
+        try equal(writer, e);
+    }
 }
 
 pub fn substitution(writer: List(u8).Writer, s: Substitution) !void {
-    try writer.writeAll("\n\n=== Substitution ===\n");
+    try writer.writeAll("\n\n=== Substitution ===");
     var iterator = s.iterator();
     while (iterator.next()) |t| {
-        try writer.print("${} = ", .{t.key_ptr.*});
+        try writer.print("\n${} = ", .{t.key_ptr.*});
         try monotype(writer, t.value_ptr.*);
     }
 }
