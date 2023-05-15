@@ -103,7 +103,7 @@ transpose[T, m, n](a: T[m, n]) -> T[n, m] =
 # sum can also be implemented using for and accumulation
 sum[T: Add](xs: T[n]) -> T =
     mut acc = 0
-    for[i] acc += xs[i]
+    for i in acc += xs[i]
     acc
 
 double(x) = x + x
