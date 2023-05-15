@@ -100,12 +100,12 @@ fn symbol(scopes: Scopes, s: parser_types.Symbol) Symbol {
     return Symbol{ .value = s.value, .span = s.span, .type = findInScope(scopes, s.value) };
 }
 
-fn int(i: parser_types.Int) Int {
-    return Int{ .value = i.value, .span = i.span, .type = .{ .int_literal = i.value } };
+fn int(i: parser_types.Int, next_type_var: *TypeVar) Int {
+    return Int{ .value = i.value, .span = i.span, .type = freshTypeVar(next_type_var) };
 }
 
 fn boolean(b: parser_types.Bool) Bool {
-    return Bool{ .value = b.value, .span = b.span, .type = .{ .bool_literal = b.value } };
+    return Bool{ .value = b.value, .span = b.span, .type = .bool };
 }
 
 fn if_(allocator: Allocator, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, i: parser_types.If) !If {
@@ -165,7 +165,7 @@ fn define(allocator: Allocator, builtins: Builtins, constraints: *Constraints, s
 fn expression(allocator: Allocator, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, expr: parser_types.Expression) error{OutOfMemory}!Expression {
     switch (expr) {
         .symbol => |s| return .{ .symbol = symbol(scopes.*, s) },
-        .int => |i| return .{ .int = int(i) },
+        .int => |i| return .{ .int = int(i, next_type_var) },
         .bool => |b| return .{ .bool = boolean(b) },
         .if_ => |i| return .{ .if_ = try if_(allocator, builtins, constraints, scopes, next_type_var, i) },
         .binary_op => |b| return .{ .binary_op = try binaryOp(allocator, builtins, constraints, scopes, next_type_var, b) },

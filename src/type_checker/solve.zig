@@ -32,12 +32,6 @@ fn equal(substitution: *Substitution, e: Equal) !void {
         return try set(substitution, e.right.typevar, e.left);
     if (left_tag == right_tag)
         return;
-    if (left_tag == .i32 and right_tag == .int_literal)
-        return;
-    if (left_tag == .f32 and right_tag == .int_literal)
-        return;
-    if (left_tag == .bool and right_tag == .bool_literal)
-        return;
     std.debug.panic("\nUnsupported type in equal: {} {}\n", .{ e.left, e.right });
 }
 

@@ -39,13 +39,11 @@ fn int(writer: List(u8).Writer, intern: Intern, i: Int) !void {
     try writer.print("{s}", .{value});
 }
 
-fn monotype(vars: *Vars, writer: List(u8).Writer, intern: Intern, m: MonoType) !void {
+fn monotype(vars: *Vars, writer: List(u8).Writer, m: MonoType) !void {
     switch (m) {
         .i32 => try writer.print("i32", .{}),
         .f32 => try writer.print("f32", .{}),
         .bool => try writer.print("bool", .{}),
-        .int_literal => |i| try writer.writeAll(interner.lookup(intern, i)),
-        .bool_literal => |b| try writer.print("{}", .{b}),
         .typevar => |t| {
             const result = try vars.getOrPut(t);
             if (!result.found_existing) {
@@ -82,7 +80,7 @@ fn binaryOp(vars: *Vars, writer: List(u8).Writer, intern: Intern, b: BinaryOp, i
 fn define(vars: *Vars, writer: List(u8).Writer, intern: Intern, d: Define, i: Indent) !void {
     try symbol(writer, intern, d.name);
     try writer.writeAll(": ");
-    try monotype(vars, writer, intern, d.name.type);
+    try monotype(vars, writer, d.name.type);
     try writer.writeAll(" =");
     try block(vars, writer, intern, d.body, i + 1);
 }
@@ -124,10 +122,10 @@ fn function(allocator: Allocator, writer: List(u8).Writer, intern: Intern, f: Fu
         if (i > 0) try sub_writer.writeAll(", ");
         try symbol(sub_writer, intern, p);
         try sub_writer.writeAll(": ");
-        try monotype(&vars, sub_writer, intern, p.type);
+        try monotype(&vars, sub_writer, p.type);
     }
     try sub_writer.print(") -> ", .{});
-    try monotype(&vars, sub_writer, intern, f.return_type);
+    try monotype(&vars, sub_writer, f.return_type);
     try sub_writer.print(" =", .{});
     try block(&vars, sub_writer, intern, f.body, 1);
     const var_count = vars.count();

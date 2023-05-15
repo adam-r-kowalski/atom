@@ -17,8 +17,6 @@ pub const MonoType = union(enum) {
     f32,
     bool,
     module,
-    int_literal: Interned,
-    bool_literal: bool,
     typevar: TypeVar,
     function: []const MonoType,
 };

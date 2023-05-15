@@ -30,7 +30,6 @@ fn monotype(allocator: Allocator, s: Substitution, m: MonoType) !MonoType {
             if (s.get(t)) |mono| return mono;
             return m;
         },
-        else => std.debug.panic("\nUnsupported monotype {}", .{m}),
     }
 }
 
