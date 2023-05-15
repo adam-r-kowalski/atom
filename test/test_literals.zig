@@ -54,3 +54,12 @@ test "type infer int literal as f32" {
     const expected = "f() -> f32 = 42";
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "type infer float literal as f32" {
+    const allocator = std.testing.allocator;
+    const source = "f() -> f32 = 42.3";
+    const actual = try atom.testing.typeInfer(allocator, source, "f");
+    defer allocator.free(actual);
+    const expected = "f() -> f32 = 42.3";
+    try std.testing.expectEqualStrings(expected, actual);
+}

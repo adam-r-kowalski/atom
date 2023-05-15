@@ -173,6 +173,7 @@ fn export_(writer: List(u8).Writer, intern: Intern, e: Export, indent: u64) !voi
 fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, indent: u64) error{OutOfMemory}!void {
     switch (expr) {
         .int => |i| try interned(writer, intern, i.value),
+        .float => |f| try interned(writer, intern, f.value),
         .symbol => |s| try interned(writer, intern, s.value),
         .bool => |b| try writer.writeAll(if (b.value) "true" else "false"),
         .define => |d| try define(writer, intern, d, indent),

@@ -33,6 +33,12 @@ pub const Int = struct {
     type: MonoType,
 };
 
+pub const Float = struct {
+    value: Interned,
+    span: Span,
+    type: MonoType,
+};
+
 pub const Bool = struct {
     value: bool,
     span: Span,
@@ -94,6 +100,7 @@ pub const Call = struct {
 
 pub const Expression = union(enum) {
     int: Int,
+    float: Float,
     symbol: Symbol,
     define: Define,
     function: Function,

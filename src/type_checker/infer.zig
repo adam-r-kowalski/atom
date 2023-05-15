@@ -15,6 +15,7 @@ const Function = types.Function;
 const MonoType = types.MonoType;
 const Symbol = types.Symbol;
 const Int = types.Int;
+const Float = types.Float;
 const Bool = types.Bool;
 const BinaryOp = types.BinaryOp;
 const TypeVar = types.TypeVar;
@@ -104,6 +105,10 @@ fn int(i: parser_types.Int, next_type_var: *TypeVar) Int {
     return Int{ .value = i.value, .span = i.span, .type = freshTypeVar(next_type_var) };
 }
 
+fn float(f: parser_types.Float, next_type_var: *TypeVar) Float {
+    return Float{ .value = f.value, .span = f.span, .type = freshTypeVar(next_type_var) };
+}
+
 fn boolean(b: parser_types.Bool) Bool {
     return Bool{ .value = b.value, .span = b.span, .type = .bool };
 }
@@ -166,6 +171,7 @@ fn expression(allocator: Allocator, builtins: Builtins, constraints: *Constraint
     switch (expr) {
         .symbol => |s| return .{ .symbol = symbol(scopes.*, s) },
         .int => |i| return .{ .int = int(i, next_type_var) },
+        .float => |f| return .{ .float = float(f, next_type_var) },
         .bool => |b| return .{ .bool = boolean(b) },
         .if_ => |i| return .{ .if_ = try if_(allocator, builtins, constraints, scopes, next_type_var, i) },
         .binary_op => |b| return .{ .binary_op = try binaryOp(allocator, builtins, constraints, scopes, next_type_var, b) },
@@ -191,6 +197,7 @@ fn typeOf(expr: Expression) MonoType {
     switch (expr) {
         .symbol => |s| return s.type,
         .int => |i| return i.type,
+        .float => |f| return f.type,
         .bool => |b| return b.type,
         .if_ => |i| return i.type,
         .binary_op => |b| return b.type,

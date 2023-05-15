@@ -9,6 +9,8 @@ const Typed = types.Typed;
 const TopLevel = types.TopLevel;
 const Function = types.Function;
 const Symbol = types.Symbol;
+const Int = types.Int;
+const Float = types.Float;
 const Expression = types.Expression;
 const If = types.If;
 const BinaryOp = types.BinaryOp;
@@ -38,6 +40,22 @@ fn symbol(allocator: Allocator, s: Substitution, sym: Symbol) !Symbol {
         .value = sym.value,
         .span = sym.span,
         .type = try monotype(allocator, s, sym.type),
+    };
+}
+
+fn int(allocator: Allocator, s: Substitution, i: Int) !Int {
+    return Int{
+        .value = i.value,
+        .span = i.span,
+        .type = try monotype(allocator, s, i.type),
+    };
+}
+
+fn float(allocator: Allocator, s: Substitution, f: Float) !Float {
+    return Float{
+        .value = f.value,
+        .span = f.span,
+        .type = try monotype(allocator, s, f.type),
     };
 }
 
@@ -73,7 +91,8 @@ fn define(allocator: Allocator, s: Substitution, d: Define) !Define {
 fn expression(allocator: Allocator, s: Substitution, e: Expression) error{OutOfMemory}!Expression {
     switch (e) {
         .symbol => |sym| return .{ .symbol = try symbol(allocator, s, sym) },
-        .int => |i| return .{ .int = i },
+        .int => |i| return .{ .int = try int(allocator, s, i) },
+        .float => |f| return .{ .float = try float(allocator, s, f) },
         .bool => |b| return .{ .bool = b },
         .if_ => |i| return .{ .if_ = try if_(allocator, s, i) },
         .binary_op => |b| return .{ .binary_op = try binaryOp(allocator, s, b) },

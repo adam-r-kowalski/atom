@@ -15,6 +15,7 @@ const TopLevel = types.TopLevel;
 const BinaryOpKind = types.BinaryOpKind;
 const Parameter = types.Parameter;
 const Int = types.Int;
+const Float = types.Float;
 const Symbol = types.Symbol;
 const Bool = types.Bool;
 const Module = types.Module;
@@ -46,6 +47,11 @@ const Context = struct {
 fn int(context: *Context, i: Int) Expression {
     context.token_index += 1;
     return Expression{ .int = i };
+}
+
+fn float(context: *Context, f: Float) Expression {
+    context.token_index += 1;
+    return Expression{ .float = f };
 }
 
 fn symbol(context: *Context, s: Symbol) !Expression {
@@ -133,6 +139,7 @@ fn prefix(context: *Context) !Expression {
     const token = context.tokens[context.token_index];
     switch (token) {
         .int => |i| return int(context, i),
+        .float => |f| return float(context, f),
         .symbol => |s| return symbol(context, s),
         .bool => |b| return boolean(context, b),
         .left_paren => return try group(context),

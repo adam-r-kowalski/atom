@@ -4,6 +4,7 @@ const Interned = interner.Interned;
 const tokenizer_types = @import("../tokenizer/types.zig");
 pub const Span = tokenizer_types.Span;
 pub const Int = tokenizer_types.Int;
+pub const Float = tokenizer_types.Float;
 pub const Symbol = tokenizer_types.Symbol;
 pub const Bool = tokenizer_types.Bool;
 
@@ -71,6 +72,7 @@ pub const Call = struct {
 
 pub const Expression = union(enum) {
     int: Int,
+    float: Float,
     symbol: Symbol,
     define: Define,
     function: Function,

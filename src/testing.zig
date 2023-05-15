@@ -69,8 +69,8 @@ pub fn typeInferVerbose(allocator: Allocator, source: []const u8, name: []const 
     var list = List(u8).init(allocator);
     const writer = list.writer();
     try type_checker.to_verbose_string.module(writer, intern, module);
-    try type_checker.to_verbose_string.constraints(writer, intern, constraints);
-    try type_checker.to_verbose_string.substitution(writer, intern, substitution);
+    try type_checker.to_verbose_string.constraints(writer, constraints);
+    try type_checker.to_verbose_string.substitution(writer, substitution);
     try type_checker.to_verbose_string.module(writer, intern, typed_module);
     return list.toOwnedSlice();
 }
