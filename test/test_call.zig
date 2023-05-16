@@ -44,3 +44,20 @@ test "parse define then call" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "type infer define then call" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\double(x: i32) -> i32 = x * 2
+        \\
+        \\start() = double(2)
+    ;
+    const actual = try atom.testing.typeInferVerbose(allocator, source, "start");
+    defer allocator.free(actual);
+    const expected =
+        \\(defn double [(x i32)] i32 (* x 2))
+        \\
+        \\(defn start [] (double 2))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

@@ -15,6 +15,7 @@ const Expression = types.Expression;
 const If = types.If;
 const BinaryOp = types.BinaryOp;
 const Define = types.Define;
+const Call = types.Call;
 
 fn monotype(allocator: Allocator, s: Substitution, m: MonoType) !MonoType {
     switch (m) {
@@ -62,8 +63,8 @@ fn float(allocator: Allocator, s: Substitution, f: Float) !Float {
 fn if_(allocator: Allocator, s: Substitution, i: If) !If {
     return If{
         .condition = try expressionAlloc(allocator, s, i.condition.*),
-        .then = try block(allocator, s, i.then),
-        .else_ = try block(allocator, s, i.else_),
+        .then = try expressions(allocator, s, i.then),
+        .else_ = try expressions(allocator, s, i.else_),
         .span = i.span,
         .type = try monotype(allocator, s, i.type),
     };
@@ -82,9 +83,18 @@ fn binaryOp(allocator: Allocator, s: Substitution, b: BinaryOp) !BinaryOp {
 fn define(allocator: Allocator, s: Substitution, d: Define) !Define {
     return Define{
         .name = try symbol(allocator, s, d.name),
-        .body = try block(allocator, s, d.body),
+        .body = try expressions(allocator, s, d.body),
         .span = d.span,
         .type = try monotype(allocator, s, d.type),
+    };
+}
+
+fn call(allocator: Allocator, s: Substitution, c: Call) !Call {
+    return Call{
+        .function = try expressionAlloc(allocator, s, c.function.*),
+        .arguments = try expressions(allocator, s, c.arguments),
+        .span = c.span,
+        .type = try monotype(allocator, s, c.type),
     };
 }
 
@@ -97,6 +107,7 @@ fn expression(allocator: Allocator, s: Substitution, e: Expression) error{OutOfM
         .if_ => |i| return .{ .if_ = try if_(allocator, s, i) },
         .binary_op => |b| return .{ .binary_op = try binaryOp(allocator, s, b) },
         .define => |d| return .{ .define = try define(allocator, s, d) },
+        .call => |c| return .{ .call = try call(allocator, s, c) },
         else => std.debug.panic("\nUnsupported expression {}", .{e}),
     }
 }
@@ -107,10 +118,10 @@ fn expressionAlloc(allocator: Allocator, s: Substitution, e: Expression) !*const
     return expr;
 }
 
-fn block(allocator: Allocator, s: Substitution, exprs: []const Expression) ![]const Expression {
-    const expressions = try allocator.alloc(Expression, exprs.len);
-    for (exprs) |e, i| expressions[i] = try expression(allocator, s, e);
-    return expressions;
+fn expressions(allocator: Allocator, s: Substitution, exprs: []const Expression) ![]const Expression {
+    const result = try allocator.alloc(Expression, exprs.len);
+    for (exprs) |e, i| result[i] = try expression(allocator, s, e);
+    return result;
 }
 
 fn function(allocator: Allocator, s: Substitution, f: Function) !Function {
@@ -120,7 +131,7 @@ fn function(allocator: Allocator, s: Substitution, f: Function) !Function {
         .name = try symbol(allocator, s, f.name),
         .parameters = parameters,
         .return_type = try monotype(allocator, s, f.return_type),
-        .body = try block(allocator, s, f.body),
+        .body = try expressions(allocator, s, f.body),
         .span = f.span,
         .type = try monotype(allocator, s, f.type),
     };

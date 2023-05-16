@@ -19,6 +19,7 @@ const Equal = types.Equal;
 const Substitution = types.Substitution;
 const If = types.If;
 const BinaryOp = types.BinaryOp;
+const Call = types.Call;
 
 const Indent = u64;
 
@@ -78,6 +79,17 @@ fn monotype(writer: List(u8).Writer, m: MonoType) !void {
         .bool => try writer.writeAll("bool"),
         .void => try writer.writeAll("void"),
         .typevar => |t| try writer.print("${}", .{t}),
+        .function => |f| {
+            try writer.writeAll("(");
+            for (f) |a, i| {
+                if (i == f.len - 1) {
+                    try writer.writeAll(") -> ");
+                } else if (i > 0) {
+                    try writer.writeAll(", ");
+                }
+                try monotype(writer, a);
+            }
+        },
         else => std.debug.panic("\nUnhandled monotype type {}", .{m}),
     }
 }
@@ -120,6 +132,24 @@ fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp, i: Indent) !vo
     try monotype(writer, b.type);
 }
 
+fn call(writer: List(u8).Writer, intern: Intern, c: Call, i: Indent) !void {
+    try indent(writer, i);
+    try writer.writeAll("call =");
+    try indent(writer, i + 1);
+    try writer.writeAll("function =");
+    try expression(writer, intern, c.function.*, i + 2);
+    try indent(writer, i + 1);
+    try writer.writeAll("arguments =");
+    for (c.arguments) |a| {
+        try indent(writer, i + 1);
+        try writer.writeAll("argument =");
+        try expression(writer, intern, a, i + 2);
+    }
+    try indent(writer, i + 1);
+    try writer.print("type = ", .{});
+    try monotype(writer, c.type);
+}
+
 fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, in: Indent) error{OutOfMemory}!void {
     switch (expr) {
         .symbol => |s| try symbol(writer, intern, s, in),
@@ -128,6 +158,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, in: Ind
         .bool => |b| try boolean(writer, b, in),
         .if_ => |i| try if_(writer, intern, i, in),
         .binary_op => |b| try binaryOp(writer, intern, b, in),
+        .call => |c| try call(writer, intern, c, in),
         else => std.debug.panic("\nUnhandled expression type {}", .{expr}),
     }
 }
