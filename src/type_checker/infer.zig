@@ -1,7 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const List = std.ArrayList;
-const Map = std.AutoHashMap;
+const Map = std.AutoArrayHashMap;
 
 const Interned = @import("../interner.zig").Interned;
 const parser_types = @import("../parser/types.zig");
@@ -36,7 +36,20 @@ fn nameOf(top_level: parser_types.TopLevel) Interned {
     }
 }
 
-pub fn module(allocator: Allocator, m: parser_types.Module, next_type_var: *TypeVar) !Module {
+fn topLevelType(allocator: Allocator, builtins: Builtins, top_level: parser_types.TopLevel, next_type_var: *TypeVar) !MonoType {
+    switch (top_level) {
+        .function => |f| {
+            const function_type = try allocator.alloc(MonoType, f.parameters.len + 1);
+            for (f.parameters) |p, i|
+                function_type[i] = try parameterType(builtins, next_type_var, p);
+            function_type[f.parameters.len] = returnType(builtins, next_type_var, f);
+            return MonoType{ .function = function_type };
+        },
+        else => return freshTypeVar(next_type_var),
+    }
+}
+
+pub fn module(allocator: Allocator, builtins: Builtins, m: parser_types.Module, next_type_var: *TypeVar) !Module {
     var order = List(Interned).init(allocator);
     var untyped = Untyped.init(allocator);
     var scope = Scope.init(allocator);
@@ -44,7 +57,7 @@ pub fn module(allocator: Allocator, m: parser_types.Module, next_type_var: *Type
         const name = nameOf(top_level);
         try order.append(name);
         try untyped.putNoClobber(name, top_level);
-        const monotype = freshTypeVar(next_type_var);
+        const monotype = try topLevelType(allocator, builtins, top_level, next_type_var);
         try scope.put(name, monotype);
     }
     return Module{
@@ -87,16 +100,13 @@ fn putInScope(scopes: *Scopes, name: Interned, type_: MonoType) !void {
     try scopes.items[scopes.items.len - 1].put(name, type_);
 }
 
-const WorkQueue = Map(Interned, List(MonoType));
+const WorkQueue = List(Interned);
 
-fn findInScope(allocator: Allocator, scopes: Scopes, work_queue: *WorkQueue, name: Interned) !MonoType {
+fn findInScope(scopes: Scopes, work_queue: *WorkQueue, name: Interned) !MonoType {
     var i = scopes.items.len;
     while (i != 0) : (i -= 1) {
         if (scopes.items[i - 1].get(name)) |type_| {
-            if (i != 1) return type_;
-            const result = try work_queue.getOrPut(name);
-            if (result.found_existing) return type_;
-            result.value_ptr.* = List(MonoType).init(allocator);
+            if (i == 1) try work_queue.append(name);
             return type_;
         }
     }
@@ -111,11 +121,11 @@ fn returnType(builtins: Builtins, next_type_var: *TypeVar, f: parser_types.Funct
     return if (f.return_type) |t| expressionToMonoType(t.*, builtins) else freshTypeVar(next_type_var);
 }
 
-fn symbol(allocator: Allocator, scopes: Scopes, work_queue: *WorkQueue, s: parser_types.Symbol) !Symbol {
+fn symbol(scopes: Scopes, work_queue: *WorkQueue, s: parser_types.Symbol) !Symbol {
     return Symbol{
         .value = s.value,
         .span = s.span,
-        .type = try findInScope(allocator, scopes, work_queue, s.value),
+        .type = try findInScope(scopes, work_queue, s.value),
     };
 }
 
@@ -206,7 +216,7 @@ fn call(allocator: Allocator, work_queue: *WorkQueue, builtins: Builtins, constr
 
 fn expression(allocator: Allocator, work_queue: *WorkQueue, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, expr: parser_types.Expression) error{OutOfMemory}!Expression {
     switch (expr) {
-        .symbol => |s| return .{ .symbol = try symbol(allocator, scopes.*, work_queue, s) },
+        .symbol => |s| return .{ .symbol = try symbol(scopes.*, work_queue, s) },
         .int => |i| return .{ .int = int(i, next_type_var) },
         .float => |f| return .{ .float = float(f, next_type_var) },
         .bool => |b| return .{ .bool = boolean(b) },
@@ -294,8 +304,12 @@ fn topLevel(allocator: Allocator, work_queue: *WorkQueue, constraints: *Constrai
 
 pub fn infer(allocator: Allocator, constraints: *Constraints, m: *Module, builtins: Builtins, next_type_var: *TypeVar, name: Interned) !void {
     var work_queue = WorkQueue.init(allocator);
-    if (m.untyped.fetchRemove(name)) |entry| {
-        const top_level = try topLevel(allocator, &work_queue, constraints, m.scope, builtins, next_type_var, entry.value);
-        try m.typed.putNoClobber(name, top_level);
+    try work_queue.append(name);
+    while (work_queue.items.len != 0) {
+        const current = work_queue.pop();
+        if (m.untyped.fetchRemove(current)) |entry| {
+            const top_level = try topLevel(allocator, &work_queue, constraints, m.scope, builtins, next_type_var, entry.value);
+            try m.typed.putNoClobber(current, top_level);
+        }
     }
 }

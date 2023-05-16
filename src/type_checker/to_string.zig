@@ -17,6 +17,7 @@ const Expression = types.Expression;
 const If = types.If;
 const BinaryOp = types.BinaryOp;
 const Define = types.Define;
+const Call = types.Call;
 const TypeVar = types.TypeVar;
 
 const Vars = Map(TypeVar, u32);
@@ -91,6 +92,16 @@ fn define(vars: *Vars, writer: List(u8).Writer, intern: Intern, d: Define, i: In
     try block(vars, writer, intern, d.body, i + 1);
 }
 
+fn call(vars: *Vars, writer: List(u8).Writer, intern: Intern, c: Call, in: Indent) !void {
+    try expression(vars, writer, intern, c.function.*, in);
+    try writer.writeAll("(");
+    for (c.arguments) |a, i| {
+        if (i > 0) try writer.writeAll(", ");
+        try expression(vars, writer, intern, a, in);
+    }
+    try writer.writeAll(")");
+}
+
 fn expression(vars: *Vars, writer: List(u8).Writer, intern: Intern, expr: Expression, in: Indent) error{OutOfMemory}!void {
     switch (expr) {
         .symbol => |s| try symbol(writer, intern, s),
@@ -100,6 +111,7 @@ fn expression(vars: *Vars, writer: List(u8).Writer, intern: Intern, expr: Expres
         .if_ => |i| try if_(vars, writer, intern, i, in),
         .binary_op => |b| try binaryOp(vars, writer, intern, b, in),
         .define => |d| try define(vars, writer, intern, d, in),
+        .call => |c| try call(vars, writer, intern, c, in),
         else => std.debug.panic("\nUnhandled expression type {}", .{expr}),
     }
 }
@@ -157,8 +169,11 @@ fn topLevel(allocator: Allocator, writer: List(u8).Writer, intern: Intern, t: To
 pub fn toString(allocator: Allocator, intern: Intern, module: Module) ![]const u8 {
     var list = List(u8).init(allocator);
     const writer = list.writer();
-    for (module.order) |name| {
-        if (module.typed.get(name)) |t| try topLevel(allocator, writer, intern, t);
+    for (module.order) |name, i| {
+        if (module.typed.get(name)) |t| {
+            if (i > 0) try writer.writeAll("\n\n");
+            try topLevel(allocator, writer, intern, t);
+        }
     }
     return list.toOwnedSlice();
 }

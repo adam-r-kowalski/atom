@@ -115,7 +115,7 @@ fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp, i: Indent) !vo
     try indent(writer, i);
     try writer.writeAll("binary_op =");
     try indent(writer, i + 1);
-    try writer.writeAll("kind =");
+    try writer.writeAll("kind = ");
     switch (b.kind) {
         .add => try writer.writeAll("+"),
         .multiply => try writer.writeAll("*"),
@@ -141,9 +141,9 @@ fn call(writer: List(u8).Writer, intern: Intern, c: Call, i: Indent) !void {
     try indent(writer, i + 1);
     try writer.writeAll("arguments =");
     for (c.arguments) |a| {
-        try indent(writer, i + 1);
+        try indent(writer, i + 2);
         try writer.writeAll("argument =");
-        try expression(writer, intern, a, i + 2);
+        try expression(writer, intern, a, i + 3);
     }
     try indent(writer, i + 1);
     try writer.print("type = ", .{});
@@ -174,8 +174,10 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function, i: Indent) !vo
     try indent(writer, i + 1);
     const name = interner.lookup(intern, f.name.value);
     try writer.print("name = {s}", .{name});
-    try indent(writer, i + 1);
-    try writer.print("parameters =", .{});
+    if (f.parameters.len != 0) {
+        try indent(writer, i + 1);
+        try writer.print("parameters =", .{});
+    }
     for (f.parameters) |p| {
         try indent(writer, i + 2);
         try writer.print("parameter =", .{});
@@ -198,8 +200,11 @@ fn topLevel(writer: List(u8).Writer, intern: Intern, t: TopLevel) !void {
 
 pub fn module(writer: List(u8).Writer, intern: Intern, m: Module) !void {
     try writer.writeAll("\n\n=== Module ===\n");
-    for (m.order) |name| {
-        if (m.typed.get(name)) |t| try topLevel(writer, intern, t);
+    for (m.order) |name, i| {
+        if (m.typed.get(name)) |t| {
+            if (i > 0) try writer.writeAll("\n\n");
+            try topLevel(writer, intern, t);
+        }
     }
 }
 
