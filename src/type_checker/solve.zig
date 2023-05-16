@@ -30,6 +30,17 @@ fn equal(substitution: *Substitution, e: Equal) !void {
         return try set(substitution, e.left.typevar, e.right);
     if (right_tag == .typevar)
         return try set(substitution, e.right.typevar, e.left);
+    if (left_tag == .function and right_tag == .function) {
+        if (e.left.function.len != e.right.function.len)
+            std.debug.panic("\nFunction arity mismatch: {} != {}\n", .{
+                e.left.function.len,
+                e.right.function.len,
+            });
+        for (e.left.function) |left, i| {
+            const right = e.right.function[i];
+            try equal(substitution, Equal{ .left = left, .right = right });
+        }
+    }
     if (left_tag == right_tag)
         return;
     std.debug.panic("\nUnsupported type in equal: {} {}\n", .{ e.left, e.right });

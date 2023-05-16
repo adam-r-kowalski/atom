@@ -1,6 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const List = std.ArrayList;
+const Map = std.AutoArrayHashMap;
 
 const Interned = @import("../interner.zig").Interned;
 const parser_types = @import("../parser/types.zig");
@@ -23,6 +24,7 @@ const Expression = types.Expression;
 const Constraints = types.Constraints;
 const If = types.If;
 const Define = types.Define;
+const Call = types.Call;
 const Builtins = @import("../builtins.zig").Builtins;
 
 fn nameOf(top_level: parser_types.TopLevel) Interned {
@@ -34,19 +36,35 @@ fn nameOf(top_level: parser_types.TopLevel) Interned {
     }
 }
 
-pub fn module(allocator: Allocator, m: parser_types.Module) !Module {
+fn topLevelType(allocator: Allocator, builtins: Builtins, top_level: parser_types.TopLevel, next_type_var: *TypeVar) !MonoType {
+    switch (top_level) {
+        .function => |f| {
+            const function_type = try allocator.alloc(MonoType, f.parameters.len + 1);
+            for (f.parameters) |p, i|
+                function_type[i] = try parameterType(builtins, next_type_var, p);
+            function_type[f.parameters.len] = returnType(builtins, next_type_var, f);
+            return MonoType{ .function = function_type };
+        },
+        else => return freshTypeVar(next_type_var),
+    }
+}
+
+pub fn module(allocator: Allocator, builtins: Builtins, m: parser_types.Module, next_type_var: *TypeVar) !Module {
     var order = List(Interned).init(allocator);
     var untyped = Untyped.init(allocator);
+    var scope = Scope.init(allocator);
     for (m.top_level) |top_level| {
         const name = nameOf(top_level);
         try order.append(name);
         try untyped.putNoClobber(name, top_level);
+        const monotype = try topLevelType(allocator, builtins, top_level, next_type_var);
+        try scope.put(name, monotype);
     }
     return Module{
         .order = order.toOwnedSlice(),
         .untyped = untyped,
         .typed = Typed.init(allocator),
-        .scope = Scope.init(allocator),
+        .scope = scope,
         .span = m.span,
         .type = .module,
     };
@@ -64,9 +82,9 @@ fn expressionToMonoType(e: parser_types.Expression, builtins: Builtins) MonoType
     }
 }
 
-fn freshTypeVar(next_typevar: *TypeVar) MonoType {
-    const typevar = next_typevar.*;
-    next_typevar.* += 1;
+fn freshTypeVar(next_type_var: *TypeVar) MonoType {
+    const typevar = next_type_var.*;
+    next_type_var.* += 1;
     return .{ .typevar = typevar };
 }
 
@@ -82,10 +100,16 @@ fn putInScope(scopes: *Scopes, name: Interned, type_: MonoType) !void {
     try scopes.items[scopes.items.len - 1].put(name, type_);
 }
 
-fn findInScope(scopes: Scopes, name: Interned) MonoType {
+const WorkQueue = List(Interned);
+
+fn findInScope(scopes: Scopes, work_queue: *WorkQueue, name: Interned) !MonoType {
     var i = scopes.items.len;
-    while (i != 0) : (i -= 1)
-        if (scopes.items[i - 1].get(name)) |type_| return type_;
+    while (i != 0) : (i -= 1) {
+        if (scopes.items[i - 1].get(name)) |type_| {
+            if (i == 1) try work_queue.append(name);
+            return type_;
+        }
+    }
     std.debug.panic("\nCould not find {} in scopes", .{name});
 }
 
@@ -97,8 +121,12 @@ fn returnType(builtins: Builtins, next_type_var: *TypeVar, f: parser_types.Funct
     return if (f.return_type) |t| expressionToMonoType(t.*, builtins) else freshTypeVar(next_type_var);
 }
 
-fn symbol(scopes: Scopes, s: parser_types.Symbol) Symbol {
-    return Symbol{ .value = s.value, .span = s.span, .type = findInScope(scopes, s.value) };
+fn symbol(scopes: Scopes, work_queue: *WorkQueue, s: parser_types.Symbol) !Symbol {
+    return Symbol{
+        .value = s.value,
+        .span = s.span,
+        .type = try findInScope(scopes, work_queue, s.value),
+    };
 }
 
 fn int(i: parser_types.Int, next_type_var: *TypeVar) Int {
@@ -113,10 +141,10 @@ fn boolean(b: parser_types.Bool) Bool {
     return Bool{ .value = b.value, .span = b.span, .type = .bool };
 }
 
-fn if_(allocator: Allocator, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, i: parser_types.If) !If {
-    const condition = try expressionAlloc(allocator, builtins, constraints, scopes, next_type_var, i.condition.*);
-    const then = try block(allocator, builtins, constraints, scopes, next_type_var, i.then);
-    const else_ = try block(allocator, builtins, constraints, scopes, next_type_var, i.else_);
+fn if_(allocator: Allocator, work_queue: *WorkQueue, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, i: parser_types.If) !If {
+    const condition = try expressionAlloc(allocator, work_queue, builtins, constraints, scopes, next_type_var, i.condition.*);
+    const then = try block(allocator, work_queue, builtins, constraints, scopes, next_type_var, i.then);
+    const else_ = try block(allocator, work_queue, builtins, constraints, scopes, next_type_var, i.else_);
     const type_ = freshTypeVar(next_type_var);
     try constraints.equal.append(.{ .left = typeOf(condition.*), .right = .bool });
     try constraints.equal.append(.{ .left = typeOf(then[then.len - 1]), .right = type_ });
@@ -130,9 +158,9 @@ fn if_(allocator: Allocator, builtins: Builtins, constraints: *Constraints, scop
     };
 }
 
-fn binaryOp(allocator: Allocator, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, b: parser_types.BinaryOp) !BinaryOp {
-    const left = try expressionAlloc(allocator, builtins, constraints, scopes, next_type_var, b.left.*);
-    const right = try expressionAlloc(allocator, builtins, constraints, scopes, next_type_var, b.right.*);
+fn binaryOp(allocator: Allocator, work_queue: *WorkQueue, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, b: parser_types.BinaryOp) !BinaryOp {
+    const left = try expressionAlloc(allocator, work_queue, builtins, constraints, scopes, next_type_var, b.left.*);
+    const right = try expressionAlloc(allocator, work_queue, builtins, constraints, scopes, next_type_var, b.right.*);
     const type_ = freshTypeVar(next_type_var);
     try constraints.equal.append(.{ .left = typeOf(left.*), .right = type_ });
     try constraints.equal.append(.{ .left = typeOf(right.*), .right = type_ });
@@ -149,8 +177,8 @@ fn explicitTypeOrVar(builtins: Builtins, next_type_var: *TypeVar, e: ?*const par
     return if (e) |t| expressionToMonoType(t.*, builtins) else freshTypeVar(next_type_var);
 }
 
-fn define(allocator: Allocator, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, d: parser_types.Define) !Define {
-    const body = try block(allocator, builtins, constraints, scopes, next_type_var, d.body);
+fn define(allocator: Allocator, work_queue: *WorkQueue, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, d: parser_types.Define) !Define {
+    const body = try block(allocator, work_queue, builtins, constraints, scopes, next_type_var, d.body);
     const type_ = explicitTypeOrVar(builtins, next_type_var, d.type);
     try constraints.equal.append(.{ .left = typeOf(body[body.len - 1]), .right = type_ });
     const name = Symbol{
@@ -167,29 +195,49 @@ fn define(allocator: Allocator, builtins: Builtins, constraints: *Constraints, s
     };
 }
 
-fn expression(allocator: Allocator, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, expr: parser_types.Expression) error{OutOfMemory}!Expression {
+fn call(allocator: Allocator, work_queue: *WorkQueue, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, c: parser_types.Call) !Call {
+    const f = try expressionAlloc(allocator, work_queue, builtins, constraints, scopes, next_type_var, c.function.*);
+    const arguments = try allocator.alloc(Expression, c.arguments.len);
+    const function_type = try allocator.alloc(MonoType, c.arguments.len + 1);
+    for (c.arguments) |arg, i| {
+        arguments[i] = try expression(allocator, work_queue, builtins, constraints, scopes, next_type_var, arg);
+        function_type[i] = typeOf(arguments[i]);
+    }
+    const type_ = freshTypeVar(next_type_var);
+    function_type[c.arguments.len] = type_;
+    try constraints.equal.append(.{ .left = typeOf(f.*), .right = .{ .function = function_type } });
+    return Call{
+        .function = f,
+        .arguments = arguments,
+        .span = c.span,
+        .type = type_,
+    };
+}
+
+fn expression(allocator: Allocator, work_queue: *WorkQueue, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, expr: parser_types.Expression) error{OutOfMemory}!Expression {
     switch (expr) {
-        .symbol => |s| return .{ .symbol = symbol(scopes.*, s) },
+        .symbol => |s| return .{ .symbol = try symbol(scopes.*, work_queue, s) },
         .int => |i| return .{ .int = int(i, next_type_var) },
         .float => |f| return .{ .float = float(f, next_type_var) },
         .bool => |b| return .{ .bool = boolean(b) },
-        .if_ => |i| return .{ .if_ = try if_(allocator, builtins, constraints, scopes, next_type_var, i) },
-        .binary_op => |b| return .{ .binary_op = try binaryOp(allocator, builtins, constraints, scopes, next_type_var, b) },
-        .define => |d| return .{ .define = try define(allocator, builtins, constraints, scopes, next_type_var, d) },
+        .if_ => |i| return .{ .if_ = try if_(allocator, work_queue, builtins, constraints, scopes, next_type_var, i) },
+        .binary_op => |b| return .{ .binary_op = try binaryOp(allocator, work_queue, builtins, constraints, scopes, next_type_var, b) },
+        .define => |d| return .{ .define = try define(allocator, work_queue, builtins, constraints, scopes, next_type_var, d) },
+        .call => |c| return .{ .call = try call(allocator, work_queue, builtins, constraints, scopes, next_type_var, c) },
         else => |e| std.debug.panic("\nUnsupported expression {}", .{e}),
     }
 }
 
-fn expressionAlloc(allocator: Allocator, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, expr: parser_types.Expression) !*const Expression {
+fn expressionAlloc(allocator: Allocator, work_queue: *WorkQueue, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, expr: parser_types.Expression) !*const Expression {
     const result = try allocator.create(Expression);
-    result.* = try expression(allocator, builtins, constraints, scopes, next_type_var, expr);
+    result.* = try expression(allocator, work_queue, builtins, constraints, scopes, next_type_var, expr);
     return result;
 }
 
-fn block(allocator: Allocator, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, exprs: []const parser_types.Expression) ![]const Expression {
+fn block(allocator: Allocator, work_queue: *WorkQueue, builtins: Builtins, constraints: *Constraints, scopes: *Scopes, next_type_var: *TypeVar, exprs: []const parser_types.Expression) ![]const Expression {
     const expressions = try allocator.alloc(Expression, exprs.len);
     for (exprs) |expr, i|
-        expressions[i] = try expression(allocator, builtins, constraints, scopes, next_type_var, expr);
+        expressions[i] = try expression(allocator, work_queue, builtins, constraints, scopes, next_type_var, expr);
     return expressions;
 }
 
@@ -201,11 +249,12 @@ fn typeOf(expr: Expression) MonoType {
         .bool => |b| return b.type,
         .if_ => |i| return i.type,
         .binary_op => |b| return b.type,
+        .call => |c| return c.type,
         else => std.debug.panic("\nUnsupported expression {}", .{expr}),
     }
 }
 
-fn function(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, builtins: Builtins, next_type_var: *TypeVar, f: parser_types.Function) !Function {
+fn function(allocator: Allocator, work_queue: *WorkQueue, constraints: *Constraints, scopes: *Scopes, builtins: Builtins, next_type_var: *TypeVar, f: parser_types.Function) !Function {
     try pushScope(scopes);
     defer popScope(scopes);
     const parameters = try allocator.alloc(Symbol, f.parameters.len);
@@ -221,7 +270,7 @@ fn function(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, bu
         try putInScope(scopes, p.name.value, type_);
     }
     const return_type = returnType(builtins, next_type_var, f);
-    const body = try block(allocator, builtins, constraints, scopes, next_type_var, f.body);
+    const body = try block(allocator, work_queue, builtins, constraints, scopes, next_type_var, f.body);
     try constraints.equal.append(.{
         .left = return_type,
         .right = typeOf(body[body.len - 1]),
@@ -242,20 +291,25 @@ fn function(allocator: Allocator, constraints: *Constraints, scopes: *Scopes, bu
     };
 }
 
-fn topLevel(allocator: Allocator, constraints: *Constraints, scope: Scope, builtins: Builtins, next_type_var: *TypeVar, t: parser_types.TopLevel) !TopLevel {
+fn topLevel(allocator: Allocator, work_queue: *WorkQueue, constraints: *Constraints, scope: Scope, builtins: Builtins, next_type_var: *TypeVar, t: parser_types.TopLevel) !TopLevel {
     switch (t) {
         .function => |f| {
             var scopes = Scopes.init(allocator);
             try scopes.append(scope);
-            return .{ .function = try function(allocator, constraints, &scopes, builtins, next_type_var, f) };
+            return .{ .function = try function(allocator, work_queue, constraints, &scopes, builtins, next_type_var, f) };
         },
         else => |e| std.debug.panic("\nUnsupported top level {}", .{e}),
     }
 }
 
 pub fn infer(allocator: Allocator, constraints: *Constraints, m: *Module, builtins: Builtins, next_type_var: *TypeVar, name: Interned) !void {
-    if (m.untyped.fetchRemove(name)) |entry| {
-        const top_level = try topLevel(allocator, constraints, m.scope, builtins, next_type_var, entry.value);
-        try m.typed.putNoClobber(name, top_level);
+    var work_queue = WorkQueue.init(allocator);
+    try work_queue.append(name);
+    while (work_queue.items.len != 0) {
+        const current = work_queue.pop();
+        if (m.untyped.fetchRemove(current)) |entry| {
+            const top_level = try topLevel(allocator, &work_queue, constraints, m.scope, builtins, next_type_var, entry.value);
+            try m.typed.putNoClobber(current, top_level);
+        }
     }
 }

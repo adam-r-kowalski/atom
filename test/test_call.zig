@@ -44,3 +44,20 @@ test "parse define then call" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "type infer define then call" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\double(x: i32) -> i32 = x * 2
+        \\
+        \\start() = double(2)
+    ;
+    const actual = try atom.testing.typeInfer(allocator, source, "start");
+    defer allocator.free(actual);
+    const expected =
+        \\double(x: i32) -> i32 = x * 2
+        \\
+        \\start() -> i32 = double(2)
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
