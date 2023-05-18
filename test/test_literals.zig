@@ -71,7 +71,7 @@ test "lower int literal as i32" {
     defer allocator.free(actual);
     const expected =
         \\start() -> i32 =
-        \\    i32_const 42
+        \\    i32 42
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

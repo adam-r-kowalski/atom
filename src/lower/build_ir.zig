@@ -13,6 +13,7 @@ const Intern = interner.Intern;
 const type_checker_types = @import("../type_checker/types.zig");
 const Module = type_checker_types.Module;
 const MonoType = type_checker_types.MonoType;
+const Int = type_checker_types.Int;
 
 fn mapType(monotype: MonoType) Type {
     switch (monotype) {
@@ -21,18 +22,20 @@ fn mapType(monotype: MonoType) Type {
     }
 }
 
+fn int(intern: Intern, i: Int) !Expression {
+    switch (i.type) {
+        .i32 => {
+            const value = interner.lookup(intern, i.value);
+            const parsed = try std.fmt.parseInt(i32, value, 10);
+            return .{ .i32 = parsed };
+        },
+        else => std.debug.panic("\nInt type {} not yet supported", .{i.type}),
+    }
+}
+
 fn expression(intern: Intern, e: type_checker_types.Expression) !Expression {
     switch (e) {
-        .int => |int| {
-            switch (int.type) {
-                .i32 => {
-                    const value = interner.lookup(intern, int.value);
-                    const parsed = try std.fmt.parseInt(i32, value, 10);
-                    return .{ .i32_const = parsed };
-                },
-                else => std.debug.panic("\nInt type {} not yet supported", .{int.type}),
-            }
-        },
+        .int => |i| return try int(intern, i),
         else => std.debug.panic("\nExpression {} not yet supported", .{e}),
     }
 }

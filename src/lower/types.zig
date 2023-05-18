@@ -11,7 +11,7 @@ pub const Parameter = struct {
 };
 
 pub const Expression = union(enum) {
-    i32_const: i32,
+    i32: i32,
 };
 
 pub const Function = struct {

@@ -18,7 +18,7 @@ fn typeString(writer: List(u8).Writer, t: Type) !void {
 
 fn expression(writer: List(u8).Writer, e: Expression) !void {
     switch (e) {
-        .i32_const => |i32_const| try writer.print("\n    i32_const {d}", .{i32_const}),
+        .i32 => |i| try writer.print("\n    i32 {d}", .{i}),
     }
 }
 
