@@ -63,3 +63,15 @@ test "type infer float literal as f32" {
     const expected = "f() -> f32 = 42.3";
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "lower int literal as i32" {
+    const allocator = std.testing.allocator;
+    const source = "start() -> i32 = 42";
+    const actual = try atom.testing.lowerIr(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\start() -> i32 =
+        \\    i32_const 42
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

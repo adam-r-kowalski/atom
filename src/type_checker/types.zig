@@ -2,7 +2,6 @@ const std = @import("std");
 const Map = std.AutoHashMap;
 const List = std.ArrayList;
 const interner = @import("../interner.zig");
-const Intern = interner.Intern;
 const Interned = interner.Interned;
 const parser_types = @import("../parser/types.zig");
 const Span = parser_types.Span;
