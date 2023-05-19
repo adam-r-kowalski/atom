@@ -67,6 +67,19 @@ test "type infer function body" {
     const source = "fn id(x: i32) -> i32 = x";
     const actual = try atom.testing.typeInfer(allocator, source, "id");
     defer allocator.free(actual);
-    const expected = "id(x: i32) -> i32 = x";
+    const expected =
+        \\function
+        \\    name = id
+        \\    parameters =
+        \\        parameter =
+        \\            symbol =
+        \\                name = x
+        \\                type = i32
+        \\    return_type = i32
+        \\    body =
+        \\        symbol =
+        \\            name = x
+        \\            type = i32
+    ;
     try std.testing.expectEqualStrings(expected, actual);
 }

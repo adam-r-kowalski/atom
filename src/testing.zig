@@ -47,7 +47,10 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     try type_checker.infer.infer(arena.allocator(), &constraints, &module, builtins, &next_type_var, interned);
     const substitution = try type_checker.solve(arena.allocator(), constraints);
     const typed_module = try type_checker.apply(arena.allocator(), substitution, module);
-    return try type_checker.toString(allocator, intern, typed_module);
+    var list = List(u8).init(allocator);
+    const writer = list.writer();
+    try type_checker.toString(writer, intern, typed_module);
+    return list.toOwnedSlice();
 }
 
 pub fn typeInferVerbose(allocator: Allocator, source: []const u8, name: []const u8) ![]const u8 {
