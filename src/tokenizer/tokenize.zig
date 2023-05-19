@@ -107,6 +107,7 @@ fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !Token {
     const end = cursor.pos;
     const span = Span{ .begin = begin, .end = end };
     const interned = try interner.store(intern, string);
+    if (interned == builtins.fn_) return Token{ .fn_ = .{ .span = span } };
     if (interned == builtins.import) return Token{ .import = .{ .span = span } };
     if (interned == builtins.export_) return Token{ .export_ = .{ .span = span } };
     if (interned == builtins.if_) return Token{ .if_ = .{ .span = span } };

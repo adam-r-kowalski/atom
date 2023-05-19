@@ -9,7 +9,6 @@ const types = @import("types.zig");
 const Expression = types.Expression;
 const Define = types.Define;
 const Function = types.Function;
-const Declaration = types.Declaration;
 const BinaryOp = types.BinaryOp;
 const If = types.If;
 const Parameter = types.Parameter;
@@ -78,15 +77,11 @@ fn define(writer: List(u8).Writer, intern: Intern, d: Define, indent: u64) !void
 }
 
 fn parameter(writer: List(u8).Writer, intern: Intern, p: Parameter) !void {
-    if (p.type) |t| {
-        try writer.writeAll("(");
-        try interned(writer, intern, p.name.value);
-        try writer.writeAll(" ");
-        try type_(writer, intern, t);
-        try writer.writeAll(")");
-    } else {
-        try interned(writer, intern, p.name.value);
-    }
+    try writer.writeAll("(");
+    try interned(writer, intern, p.name.value);
+    try writer.writeAll(" ");
+    try type_(writer, intern, p.type);
+    try writer.writeAll(")");
 }
 
 fn function(writer: List(u8).Writer, intern: Intern, f: Function, indent: u64) !void {
@@ -98,27 +93,9 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function, indent: u64) !
         if (i < f.parameters.len - 1) try writer.writeAll(" ");
     }
     try writer.writeAll("]");
-    if (f.return_type) |t| {
-        try writer.writeAll(" ");
-        try type_(writer, intern, t.*);
-    }
+    try writer.writeAll(" ");
+    try type_(writer, intern, f.return_type.*);
     try block(writer, intern, f.body, indent + 1, false);
-    try writer.writeAll(")");
-}
-
-fn declaration(writer: List(u8).Writer, intern: Intern, d: Declaration) !void {
-    try writer.writeAll("(declare ");
-    try interned(writer, intern, d.name.value);
-    try writer.writeAll(" [");
-    for (d.parameters) |p, i| {
-        try parameter(writer, intern, p);
-        if (i < d.parameters.len - 1) try writer.writeAll(" ");
-    }
-    try writer.writeAll("]");
-    if (d.return_type) |t| {
-        try writer.writeAll(" ");
-        try type_(writer, intern, t.*);
-    }
     try writer.writeAll(")");
 }
 
@@ -159,9 +136,16 @@ fn call(writer: List(u8).Writer, intern: Intern, c: Call, indent: u64) !void {
 }
 
 fn import(writer: List(u8).Writer, intern: Intern, i: Import) !void {
-    try writer.writeAll("(import ");
-    try declaration(writer, intern, i.declaration);
-    try writer.writeAll(")");
+    try writer.writeAll("(import (defn ");
+    try interned(writer, intern, i.name.value);
+    try writer.writeAll(" [");
+    for (i.parameters) |p, j| {
+        try parameter(writer, intern, p);
+        if (j < i.parameters.len - 1) try writer.writeAll(" ");
+    }
+    try writer.writeAll("] ");
+    try type_(writer, intern, i.return_type.*);
+    try writer.writeAll("))");
 }
 
 fn export_(writer: List(u8).Writer, intern: Intern, e: Export, indent: u64) !void {
@@ -178,7 +162,6 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, indent:
         .bool => |b| try writer.writeAll(if (b.value) "true" else "false"),
         .define => |d| try define(writer, intern, d, indent),
         .function => |f| try function(writer, intern, f, indent),
-        .declaration => |d| try declaration(writer, intern, d),
         .binary_op => |b| try binaryOp(writer, intern, b, indent),
         .group => |g| try expression(writer, intern, g.expression.*, indent),
         .if_ => |i| try if_(writer, intern, i, indent),

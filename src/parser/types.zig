@@ -17,21 +17,14 @@ pub const Define = struct {
 
 pub const Parameter = struct {
     name: Symbol,
-    type: ?Expression,
+    type: Expression,
 };
 
 pub const Function = struct {
     name: Symbol,
     parameters: []const Parameter,
-    return_type: ?*const Expression,
+    return_type: *const Expression,
     body: []const Expression,
-    span: Span,
-};
-
-pub const Declaration = struct {
-    name: Symbol,
-    parameters: []const Parameter,
-    return_type: ?*const Expression,
     span: Span,
 };
 
@@ -76,7 +69,6 @@ pub const Expression = union(enum) {
     symbol: Symbol,
     define: Define,
     function: Function,
-    declaration: Declaration,
     binary_op: BinaryOp,
     group: Group,
     if_: If,
@@ -85,7 +77,9 @@ pub const Expression = union(enum) {
 };
 
 pub const Import = struct {
-    declaration: Declaration,
+    name: Symbol,
+    parameters: []const Parameter,
+    return_type: *const Expression,
     span: Span,
 };
 

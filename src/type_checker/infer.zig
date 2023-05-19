@@ -31,7 +31,7 @@ fn nameOf(top_level: parser_types.TopLevel) Interned {
     switch (top_level) {
         .function => |f| return f.name.value,
         .define => |d| return d.name.value,
-        .import => |i| return i.declaration.name.value,
+        .import => |i| return i.name.value,
         .export_ => |e| return e.function.name.value,
     }
 }
@@ -41,8 +41,8 @@ fn topLevelType(allocator: Allocator, builtins: Builtins, top_level: parser_type
         .function => |f| {
             const function_type = try allocator.alloc(MonoType, f.parameters.len + 1);
             for (f.parameters) |p, i|
-                function_type[i] = try parameterType(builtins, next_type_var, p);
-            function_type[f.parameters.len] = returnType(builtins, next_type_var, f);
+                function_type[i] = expressionToMonoType(p.type, builtins);
+            function_type[f.parameters.len] = expressionToMonoType(f.return_type.*, builtins);
             return MonoType{ .function = function_type };
         },
         else => return freshTypeVar(next_type_var),
@@ -111,10 +111,6 @@ fn findInScope(scopes: Scopes, work_queue: *WorkQueue, name: Interned) !MonoType
         }
     }
     std.debug.panic("\nCould not find {} in scopes", .{name});
-}
-
-fn parameterType(builtins: Builtins, next_type_var: *TypeVar, p: parser_types.Parameter) !MonoType {
-    return if (p.type) |t| expressionToMonoType(t, builtins) else freshTypeVar(next_type_var);
 }
 
 fn returnType(builtins: Builtins, next_type_var: *TypeVar, f: parser_types.Function) MonoType {
@@ -260,7 +256,7 @@ fn function(allocator: Allocator, work_queue: *WorkQueue, constraints: *Constrai
     const parameters = try allocator.alloc(Symbol, f.parameters.len);
     const function_type = try allocator.alloc(MonoType, f.parameters.len + 1);
     for (f.parameters) |p, i| {
-        const type_ = try parameterType(builtins, next_type_var, p);
+        const type_ = expressionToMonoType(p.type, builtins);
         parameters[i] = Symbol{
             .value = p.name.value,
             .span = p.name.span,
@@ -269,7 +265,7 @@ fn function(allocator: Allocator, work_queue: *WorkQueue, constraints: *Constrai
         function_type[i] = type_;
         try putInScope(scopes, p.name.value, type_);
     }
-    const return_type = returnType(builtins, next_type_var, f);
+    const return_type = expressionToMonoType(f.return_type.*, builtins);
     const body = try block(allocator, work_queue, builtins, constraints, scopes, next_type_var, f.body);
     try constraints.equal.append(.{
         .left = return_type,
