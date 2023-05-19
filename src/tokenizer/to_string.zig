@@ -62,6 +62,7 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
             .else_ => try writer.writeAll("else"),
             .comma => try writer.writeAll("comma"),
             .arrow => try writer.writeAll("arrow"),
+            .fn_ => try writer.writeAll("fn"),
             .import => try writer.writeAll("import"),
             .export_ => try writer.writeAll("export"),
         }

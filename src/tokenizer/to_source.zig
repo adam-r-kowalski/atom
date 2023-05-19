@@ -78,6 +78,7 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
             .else_ => |e| try write(writer, e.span, &pos, "else"),
             .comma => |c| try write(writer, c.span, &pos, ","),
             .arrow => |a| try write(writer, a.span, &pos, "->"),
+            .fn_ => |f| try write(writer, f.span, &pos, "fn"),
             .import => |i| try write(writer, i.span, &pos, "import"),
             .export_ => |e| try write(writer, e.span, &pos, "export"),
         }

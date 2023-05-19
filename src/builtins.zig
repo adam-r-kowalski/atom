@@ -3,6 +3,7 @@ const Intern = interner.Intern;
 const Interned = interner.Interned;
 
 pub const Builtins = struct {
+    fn_: Interned,
     import: Interned,
     export_: Interned,
     i32: Interned,
@@ -16,6 +17,7 @@ pub const Builtins = struct {
 
     pub fn init(intern: *Intern) !Builtins {
         return Builtins{
+            .fn_ = try interner.store(intern, "fn"),
             .import = try interner.store(intern, "import"),
             .export_ = try interner.store(intern, "export"),
             .i32 = try interner.store(intern, "i32"),

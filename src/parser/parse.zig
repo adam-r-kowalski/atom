@@ -87,10 +87,13 @@ fn consumeIndent(context: *Context) bool {
     }
 }
 
-fn consumeSymbol(context: *Context) !Expression {
+fn consumeSymbol(context: *Context) Symbol {
     const token = context.tokens[context.token_index];
-    switch (token.kind) {
-        .symbol => return try symbol(context, token),
+    switch (token) {
+        .symbol => |s| {
+            context.token_index += 1;
+            return s;
+        },
         else => |kind| std.debug.panic("\nExpected symbol, got {}\n", .{kind}),
     }
 }
@@ -135,6 +138,52 @@ fn if_(context: *Context) !Expression {
     };
 }
 
+fn functionParameters(context: *Context) ![]const Parameter {
+    var parameters = List(Parameter).init(context.allocator);
+    while (context.tokens.len > context.token_index) {
+        switch (context.tokens[context.token_index]) {
+            .right_paren => {
+                context.token_index += 1;
+                return parameters.toOwnedSlice();
+            },
+            else => {
+                const name = consumeSymbol(context);
+                consume(context, .colon);
+                context.precedence = DEFINE + 1;
+                const type_ = try expression(context);
+                _ = tryConsume(context, .comma);
+                try parameters.append(Parameter{ .name = name, .type = type_ });
+            },
+        }
+    }
+    std.debug.panic("\nExpected right paren when reading function parameters", .{});
+}
+
+fn function(context: *Context) !Expression {
+    consume(context, .fn_);
+    const name = consumeSymbol(context);
+    consume(context, .left_paren);
+    const parameters = try functionParameters(context);
+    consume(context, .arrow);
+    context.precedence = DEFINE + 1;
+    const return_type = try expressionAlloc(context);
+    consume(context, .equal);
+    context.precedence = LOWEST;
+    const body = try block(context);
+    return Expression{
+        .function = .{
+            .name = name,
+            .parameters = parameters,
+            .return_type = return_type,
+            .body = body,
+            .span = Span{
+                .begin = name.span.begin,
+                .end = span(body[body.len - 1]).end,
+            },
+        },
+    };
+}
+
 fn prefix(context: *Context) !Expression {
     const token = context.tokens[context.token_index];
     switch (token) {
@@ -144,6 +193,7 @@ fn prefix(context: *Context) !Expression {
         .bool => |b| return boolean(context, b),
         .left_paren => return try group(context),
         .if_ => return try if_(context),
+        .fn_ => return try function(context),
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),
     }
 }
@@ -242,139 +292,32 @@ fn binaryOp(context: *Context, left: Expression, kind: BinaryOpKind) !Expression
     };
 }
 
-const Stage = enum { return_type, body };
-
-fn convertCallToFunction(context: *Context, left: Expression, arguments: []const Expression, stage: Stage) !Expression {
-    const name = left.symbol;
-    context.token_index += 1;
-    const return_type = blk: {
-        if (stage == .return_type) {
-            context.precedence = DEFINE + 1;
-            const expr = try expressionAlloc(context);
-            consume(context, .equal);
-            break :blk expr;
-        } else break :blk null;
-    };
-    const body = try block(context);
-    const parameters = try context.allocator.alloc(Parameter, arguments.len);
-    for (arguments) |argument, i|
-        parameters[i] = Parameter{ .name = argument.symbol, .type = null };
-    return Expression{
-        .function = .{
-            .name = name,
-            .parameters = parameters,
-            .return_type = return_type,
-            .body = body,
-            .span = Span{
-                .begin = name.span.begin,
-                .end = span(body[body.len - 1]).end,
-            },
-        },
-    };
-}
-
-fn functionParameters(context: *Context, parameters: *List(Parameter)) !Span {
-    while (context.tokens.len > context.token_index) {
-        switch (context.tokens[context.token_index]) {
-            .right_paren => |r| {
-                context.token_index += 1;
-                return r.span;
-            },
-            .comma => context.token_index += 1,
-            else => {
-                context.precedence = HIGHEST;
-                const parameter = try expression(context);
-                try parameters.append(Parameter{ .name = parameter.symbol, .type = null });
-                if (context.tokens[context.token_index] == .colon) {
-                    context.token_index += 1;
-                    context.precedence = LOWEST;
-                    parameters.items[parameters.items.len - 1].type = try expression(context);
-                }
-            },
-        }
-    }
-    std.debug.panic("\nExpected right paren when reading function parameters", .{});
-}
-
-fn function(context: *Context, left: Expression, arguments: []const Expression) !Expression {
-    const name = left.symbol;
-    var parameters = try List(Parameter).initCapacity(context.allocator, arguments.len);
-    for (arguments) |argument|
-        try parameters.append(Parameter{ .name = argument.symbol, .type = null });
-    context.token_index += 1;
-    context.precedence = LOWEST;
-    parameters.items[parameters.items.len - 1].type = try expression(context);
-    const right_paren_span = try functionParameters(context, &parameters);
-    const return_type = blk: {
-        if (context.tokens[context.token_index] == .arrow) {
-            context.token_index += 1;
-            context.precedence = DEFINE + 1;
-            const expr = try expressionAlloc(context);
-            break :blk expr;
-        } else break :blk null;
-    };
-    if (!tryConsume(context, .equal)) {
-        const end = if (return_type) |t| span(t.*).end else right_paren_span.end;
-        return Expression{
-            .declaration = .{
-                .name = name,
-                .parameters = parameters.toOwnedSlice(),
-                .return_type = return_type,
-                .span = Span{ .begin = name.span.begin, .end = end },
-            },
-        };
-    }
-    const body = try block(context);
-    return Expression{
-        .function = .{
-            .name = name,
-            .parameters = parameters.toOwnedSlice(),
-            .return_type = return_type,
-            .body = body,
-            .span = Span{
-                .begin = name.span.begin,
-                .end = span(body[body.len - 1]).end,
-            },
-        },
-    };
-}
-
-fn callOrFunction(context: *Context, left: Expression) !Expression {
+fn call(context: *Context, left: Expression) !Expression {
     context.token_index += 1;
     var arguments = List(Expression).init(context.allocator);
     while (context.tokens.len > context.token_index) {
         switch (context.tokens[context.token_index]) {
-            .right_paren => {
+            .right_paren => |r| {
                 context.token_index += 1;
-                break;
+                return Expression{
+                    .call = .{
+                        .function = try alloc(context, left),
+                        .arguments = arguments.toOwnedSlice(),
+                        .span = Span{
+                            .begin = span(left).begin,
+                            .end = r.span.end,
+                        },
+                    },
+                };
             },
             else => {
-                context.precedence = HIGHEST;
                 const argument = try expression(context);
+                _ = tryConsume(context, .comma);
                 try arguments.append(argument);
-                switch (context.tokens[context.token_index]) {
-                    .comma => context.token_index += 1,
-                    .colon => return try function(context, left, arguments.toOwnedSlice()),
-                    else => {},
-                }
             },
         }
     }
-    if (context.tokens.len > context.token_index) {
-        switch (context.tokens[context.token_index]) {
-            .equal => return try convertCallToFunction(context, left, arguments.toOwnedSlice(), .body),
-            .arrow => return try convertCallToFunction(context, left, arguments.toOwnedSlice(), .return_type),
-            else => {},
-        }
-    }
-    const end = span(arguments.items[arguments.items.len - 1]).end;
-    return Expression{
-        .call = .{
-            .function = try alloc(context, left),
-            .arguments = arguments.toOwnedSlice(),
-            .span = Span{ .begin = span(left).begin, .end = end },
-        },
-    };
+    std.debug.panic("\nExpected ')' but found EOF\n", .{});
 }
 
 const Infix = struct {
@@ -383,7 +326,7 @@ const Infix = struct {
     kind: union(enum) {
         define,
         annotate,
-        call_or_function,
+        call,
         binary_op: BinaryOpKind,
     },
 };
@@ -400,7 +343,7 @@ fn infix(context: *Context, left: Expression) ?Infix {
         .greater => return .{ .kind = .{ .binary_op = .greater }, .precedence = GREATER, .associativity = .left },
         .less => return .{ .kind = .{ .binary_op = .less }, .precedence = LESS, .associativity = .left },
         .left_paren => switch (left) {
-            .symbol => return .{ .kind = .call_or_function, .precedence = CALL, .associativity = .left },
+            .symbol => return .{ .kind = .call, .precedence = CALL, .associativity = .left },
             else => return null,
         },
         else => return null,
@@ -411,8 +354,8 @@ fn parseInfix(parser: Infix, context: *Context, left: Expression) !Expression {
     switch (parser.kind) {
         .define => return try define(context, left),
         .annotate => return try annotate(context, left),
+        .call => return try call(context, left),
         .binary_op => |kind| return try binaryOp(context, left, kind),
-        .call_or_function => return try callOrFunction(context, left),
     }
 }
 
@@ -442,17 +385,23 @@ fn expressionAlloc(context: *Context) !*const Expression {
 fn import(context: *Context) !TopLevel {
     const begin = span(context.tokens[context.token_index]).begin;
     context.token_index += 1;
-    context.precedence = LOWEST;
-    switch (try expression(context)) {
-        .declaration => |d| return TopLevel{ .import = .{
-            .declaration = d,
-            .span = .{
+    consume(context, .fn_);
+    const name = consumeSymbol(context);
+    consume(context, .left_paren);
+    const parameters = try functionParameters(context);
+    consume(context, .arrow);
+    const return_type = try expressionAlloc(context);
+    return TopLevel{
+        .import = .{
+            .name = name,
+            .parameters = parameters,
+            .return_type = return_type,
+            .span = Span{
                 .begin = begin,
-                .end = d.span.end,
+                .end = span(parameters[parameters.len - 1].type).end,
             },
-        } },
-        else => std.debug.panic("\nCan only import function", .{}),
-    }
+        },
+    };
 }
 
 fn export_(context: *Context) !TopLevel {
