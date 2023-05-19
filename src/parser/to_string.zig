@@ -25,14 +25,6 @@ fn interned(writer: List(u8).Writer, intern: Intern, s: Interned) !void {
 
 fn type_(writer: List(u8).Writer, intern: Intern, expr: Expression) !void {
     switch (expr) {
-        .binary_op => |b| {
-            std.debug.assert(b.kind == .arrow);
-            try writer.writeAll("(-> ");
-            try type_(writer, intern, b.left.*);
-            try writer.writeAll(" ");
-            try type_(writer, intern, b.right.*);
-            try writer.writeAll(")");
-        },
         .symbol => |s| try interned(writer, intern, s.value),
         else => std.debug.panic("\ncannot convert type to string {}\n", .{expr}),
     }
@@ -108,7 +100,6 @@ fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp, indent: u64) !
         .exponentiate => try writer.writeAll("^"),
         .greater => try writer.writeAll(">"),
         .less => try writer.writeAll("<"),
-        .arrow => try writer.writeAll("->"),
     }
     try writer.writeAll(" ");
     try expression(writer, intern, b.left.*, indent);

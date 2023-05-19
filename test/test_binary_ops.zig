@@ -81,7 +81,7 @@ test "parse grouped greater" {
 
 test "type infer binary op add" {
     const allocator = std.testing.allocator;
-    const source = "fn add(x: i32, y: i32) -> i32 = x + y";
+    const source = "fn add(x: i32, y: i32) i32 = x + y";
     const actual = try atom.testing.typeInfer(allocator, source, "add");
     defer allocator.free(actual);
     const expected =
@@ -103,7 +103,7 @@ test "type infer binary op add" {
 
 test "type infer binary op multiply" {
     const allocator = std.testing.allocator;
-    const source = "fn multiply(x: i32, y: i32) -> i32 = x * y";
+    const source = "fn multiply(x: i32, y: i32) i32 = x * y";
     const actual = try atom.testing.typeInfer(allocator, source, "multiply");
     defer allocator.free(actual);
     const expected =
@@ -125,7 +125,7 @@ test "type infer binary op multiply" {
 
 test "type infer binary op multiply then add" {
     const allocator = std.testing.allocator;
-    const source = "fn f(x: i32, y: i32, z: i32) -> i32 = x * y + z";
+    const source = "fn f(x: i32, y: i32, z: i32) i32 = x * y + z";
     const actual = try atom.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =

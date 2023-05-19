@@ -30,7 +30,7 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function) !void {
         try writer.print("{s}: ", .{parameter_name});
         try typeString(writer, p.type);
     }
-    try writer.writeAll(") -> ");
+    try writer.writeAll(") ");
     try typeString(writer, f.return_type);
     try writer.writeAll(" =");
     for (f.body) |e| try expression(writer, e);

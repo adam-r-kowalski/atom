@@ -35,7 +35,6 @@ pub const BinaryOpKind = enum {
     exponentiate,
     greater,
     less,
-    arrow,
 };
 
 pub const BinaryOp = struct {

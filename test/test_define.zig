@@ -116,7 +116,7 @@ test "parse multi line define with type annotation" {
 test "infer type of define based on body" {
     const allocator = std.testing.allocator;
     const source =
-        \\fn sum_of_squares(x: i32, y: i32) -> i32 =
+        \\fn sum_of_squares(x: i32, y: i32) i32 =
         \\    a = x * x
         \\    b = y * y
         \\    a + b
@@ -161,7 +161,7 @@ test "infer type of define based on body" {
 test "parse nested define" {
     const allocator = std.testing.allocator;
     const source =
-        \\fn f(x: i32, y: i32) -> i32 =
+        \\fn f(x: i32, y: i32) i32 =
         \\    a =
         \\        b = y * y
         \\        b + x
@@ -184,7 +184,7 @@ test "parse nested define" {
 test "type infer nested define" {
     const allocator = std.testing.allocator;
     const source =
-        \\fn f(x: i32, y: i32) -> i32 =
+        \\fn f(x: i32, y: i32) i32 =
         \\    a =
         \\        b = y * y
         \\        b + x

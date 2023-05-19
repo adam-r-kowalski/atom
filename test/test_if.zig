@@ -19,7 +19,7 @@ test "tokenize if then else" {
 
 test "parse if then else" {
     const allocator = std.testing.allocator;
-    const source = "fn f(x: bool, y: i32, z: i32) -> i32 = if x then y else z";
+    const source = "fn f(x: bool, y: i32, z: i32) i32 = if x then y else z";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(defn f [(x bool) (y i32) (z i32)] i32 (if x y z))";
@@ -29,7 +29,7 @@ test "parse if then else" {
 test "parse if then else across multiple lines" {
     const allocator = std.testing.allocator;
     const source =
-        \\fn f(x: bool, y: i32, z: i32) -> i32 =
+        \\fn f(x: bool, y: i32, z: i32) i32 =
         \\    if x then
         \\        y
         \\    else
@@ -44,7 +44,7 @@ test "parse if then else across multiple lines" {
 test "parse if multi line then else" {
     const allocator = std.testing.allocator;
     const source =
-        \\fn f(x: bool, y: i32, z: i32) -> i32 =
+        \\fn f(x: bool, y: i32, z: i32) i32 =
         \\    if x then
         \\        a = y ^ 2
         \\        a * 5
@@ -66,7 +66,7 @@ test "parse if multi line then else" {
 test "parse if then multi line else" {
     const allocator = std.testing.allocator;
     const source =
-        \\fn f(x: bool, y: i32, z: i32) -> i32 =
+        \\fn f(x: bool, y: i32, z: i32) i32 =
         \\    if x then
         \\        y
         \\    else
@@ -107,7 +107,7 @@ test "parse let on result of if then else" {
 test "parse nested if then else" {
     const allocator = std.testing.allocator;
     const source =
-        \\fn f(x: i32, y: i32) -> i32 =
+        \\fn f(x: i32, y: i32) i32 =
         \\    if x > y then 1
         \\    else if x < y then -1
         \\    else 0
@@ -120,7 +120,7 @@ test "parse nested if then else" {
 
 test "type infer if then else" {
     const allocator = std.testing.allocator;
-    const source = "fn f(c: bool, x: i32, y: i32) -> i32 = if c then x else y";
+    const source = "fn f(c: bool, x: i32, y: i32) i32 = if c then x else y";
     const actual = try atom.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =

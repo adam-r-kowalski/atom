@@ -69,8 +69,6 @@ pub const Else = struct { span: Span };
 
 pub const Comma = struct { span: Span };
 
-pub const Arrow = struct { span: Span };
-
 pub const Fn = struct { span: Span };
 
 pub const Import = struct { span: Span };
@@ -98,7 +96,6 @@ pub const Token = union(enum) {
     then: Then,
     else_: Else,
     comma: Comma,
-    arrow: Arrow,
     fn_: Fn,
     import: Import,
     export_: Export,

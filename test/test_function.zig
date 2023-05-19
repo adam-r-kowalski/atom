@@ -3,7 +3,7 @@ const atom = @import("atom");
 
 test "tokenize function definition" {
     const allocator = std.testing.allocator;
-    const source = "fn double(x: i32) -> i32 = x + x";
+    const source = "fn double(x: i32) i32 = x + x";
     const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -14,7 +14,6 @@ test "tokenize function definition" {
         \\colon
         \\symbol i32
         \\right paren
-        \\arrow
         \\symbol i32
         \\equal
         \\symbol x
@@ -26,7 +25,7 @@ test "tokenize function definition" {
 
 test "parse function definition" {
     const allocator = std.testing.allocator;
-    const source = "fn double(x: i32) -> i32 = x + x";
+    const source = "fn double(x: i32) i32 = x + x";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(defn double [(x i32)] i32 (+ x x))";
@@ -35,7 +34,7 @@ test "parse function definition" {
 
 test "parse multiple parameters" {
     const allocator = std.testing.allocator;
-    const source = "fn add(x: i32, y: i32) -> i32 = x + y";
+    const source = "fn add(x: i32, y: i32) i32 = x + y";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(defn add [(x i32) (y i32)] i32 (+ x y))";
@@ -45,7 +44,7 @@ test "parse multiple parameters" {
 test "parse multi line function" {
     const allocator = std.testing.allocator;
     const source =
-        \\fn sum_squares(x: i32, y: i32) -> i32 =
+        \\fn sum_squares(x: i32, y: i32) i32 =
         \\    x_squared = x ^ 2
         \\    y_squared = y ^ 2
         \\    x_squared + y_squared
@@ -64,7 +63,7 @@ test "parse multi line function" {
 
 test "type infer function body" {
     const allocator = std.testing.allocator;
-    const source = "fn id(x: i32) -> i32 = x";
+    const source = "fn id(x: i32) i32 = x";
     const actual = try atom.testing.typeInfer(allocator, source, "id");
     defer allocator.free(actual);
     const expected =

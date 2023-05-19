@@ -164,7 +164,6 @@ fn function(context: *Context) !Expression {
     const name = consumeSymbol(context);
     consume(context, .left_paren);
     const parameters = try functionParameters(context);
-    consume(context, .arrow);
     context.precedence = DEFINE + 1;
     const return_type = try expressionAlloc(context);
     consume(context, .equal);
@@ -389,7 +388,6 @@ fn import(context: *Context) !TopLevel {
     const name = consumeSymbol(context);
     consume(context, .left_paren);
     const parameters = try functionParameters(context);
-    consume(context, .arrow);
     const return_type = try expressionAlloc(context);
     return TopLevel{
         .import = .{

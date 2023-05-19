@@ -60,7 +60,7 @@ fn number(intern: *Intern, cursor: *Cursor) !Token {
     const string = cursor.source[0..i];
     if (string.len == 1) {
         switch (string[0]) {
-            '-' => return choice(cursor, .minus, &.{.{ '>', .arrow }}),
+            '-' => return exact(cursor, .minus),
             '.' => {
                 _ = advance(cursor, i);
                 return Token{ .dot = .{ .span = .{ .begin = begin, .end = cursor.pos } } };

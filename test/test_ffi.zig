@@ -3,7 +3,7 @@ const atom = @import("atom");
 
 test "tokenize import" {
     const allocator = std.testing.allocator;
-    const source = "import fn print(msg: str) -> void";
+    const source = "import fn print(msg: str) void";
     const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -15,7 +15,6 @@ test "tokenize import" {
         \\colon
         \\symbol str
         \\right paren
-        \\arrow
         \\symbol void
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -23,7 +22,7 @@ test "tokenize import" {
 
 test "parse import" {
     const allocator = std.testing.allocator;
-    const source = "import fn print(msg: str) -> void";
+    const source = "import fn print(msg: str) void";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(import (defn print [(msg str)] void))";
@@ -32,7 +31,7 @@ test "parse import" {
 
 test "tokenize export" {
     const allocator = std.testing.allocator;
-    const source = "export fn double(x: i32) -> i32 = x * 2";
+    const source = "export fn double(x: i32) i32 = x * 2";
     const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -44,7 +43,6 @@ test "tokenize export" {
         \\colon
         \\symbol i32
         \\right paren
-        \\arrow
         \\symbol i32
         \\equal
         \\symbol x
@@ -56,7 +54,7 @@ test "tokenize export" {
 
 test "parse export" {
     const allocator = std.testing.allocator;
-    const source = "export fn double(x: i32) -> i32 = x * 2";
+    const source = "export fn double(x: i32) i32 = x * 2";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(export (defn double [(x i32)] i32 (* x 2)))";
