@@ -88,26 +88,14 @@ test "type infer binary op add" {
         \\function
         \\    name = add
         \\    parameters =
-        \\        parameter =
-        \\            symbol =
-        \\                name = x
-        \\                type = i32
-        \\        parameter =
-        \\            symbol =
-        \\                name = y
-        \\                type = i32
+        \\        symbol{ name = x, type = i32 }
+        \\        symbol{ name = y, type = i32 }
         \\    return_type = i32
-        \\    body =
+        \\    body = 
         \\        binary_op =
         \\            kind = +
-        \\            left =
-        \\                symbol =
-        \\                    name = x
-        \\                    type = i32
-        \\            right =
-        \\                symbol =
-        \\                    name = y
-        \\                    type = i32
+        \\            left = symbol{ name = x, type = i32 }
+        \\            right = symbol{ name = y, type = i32 }
         \\            type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -122,26 +110,14 @@ test "type infer binary op multiply" {
         \\function
         \\    name = multiply
         \\    parameters =
-        \\        parameter =
-        \\            symbol =
-        \\                name = x
-        \\                type = i32
-        \\        parameter =
-        \\            symbol =
-        \\                name = y
-        \\                type = i32
+        \\        symbol{ name = x, type = i32 }
+        \\        symbol{ name = y, type = i32 }
         \\    return_type = i32
-        \\    body =
+        \\    body = 
         \\        binary_op =
         \\            kind = *
-        \\            left =
-        \\                symbol =
-        \\                    name = x
-        \\                    type = i32
-        \\            right =
-        \\                symbol =
-        \\                    name = y
-        \\                    type = i32
+        \\            left = symbol{ name = x, type = i32 }
+        \\            right = symbol{ name = y, type = i32 }
         \\            type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -156,38 +132,20 @@ test "type infer binary op multiply then add" {
         \\function
         \\    name = f
         \\    parameters =
-        \\        parameter =
-        \\            symbol =
-        \\                name = x
-        \\                type = i32
-        \\        parameter =
-        \\            symbol =
-        \\                name = y
-        \\                type = i32
-        \\        parameter =
-        \\            symbol =
-        \\                name = z
-        \\                type = i32
+        \\        symbol{ name = x, type = i32 }
+        \\        symbol{ name = y, type = i32 }
+        \\        symbol{ name = z, type = i32 }
         \\    return_type = i32
-        \\    body =
+        \\    body = 
         \\        binary_op =
         \\            kind = +
-        \\            left =
+        \\            left = 
         \\                binary_op =
         \\                    kind = *
-        \\                    left =
-        \\                        symbol =
-        \\                            name = x
-        \\                            type = i32
-        \\                    right =
-        \\                        symbol =
-        \\                            name = y
-        \\                            type = i32
+        \\                    left = symbol{ name = x, type = i32 }
+        \\                    right = symbol{ name = y, type = i32 }
         \\                    type = i32
-        \\            right =
-        \\                symbol =
-        \\                    name = z
-        \\                    type = i32
+        \\            right = symbol{ name = z, type = i32 }
         \\            type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);

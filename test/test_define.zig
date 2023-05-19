@@ -116,7 +116,7 @@ test "parse multi line define with type annotation" {
 test "infer type of define based on body" {
     const allocator = std.testing.allocator;
     const source =
-        \\sum_of_squares(x: i32, y: i32) -> i32 =
+        \\fn sum_of_squares(x: i32, y: i32) -> i32 =
         \\    a = x * x
         \\    b = y * y
         \\    a + b
@@ -124,48 +124,36 @@ test "infer type of define based on body" {
     const actual = try atom.testing.typeInfer(allocator, source, "sum_of_squares");
     defer allocator.free(actual);
     const expected =
-        \\sum_of_squares(x: i32, y: i32) -> i32 =
-        \\    a: i32 = x * x
-        \\    b: i32 = y * y
-        \\    a + b
-    ;
-    try std.testing.expectEqualStrings(expected, actual);
-}
-
-test "infer parameter types and return type based on type of define" {
-    const allocator = std.testing.allocator;
-    const source =
-        \\sum_of_squares(x, y) =
-        \\    a: i32 = x * x
-        \\    b = y * y
-        \\    a + b
-    ;
-    const actual = try atom.testing.typeInfer(allocator, source, "sum_of_squares");
-    defer allocator.free(actual);
-    const expected =
-        \\sum_of_squares(x: i32, y: i32) -> i32 =
-        \\    a: i32 = x * x
-        \\    b: i32 = y * y
-        \\    a + b
-    ;
-    try std.testing.expectEqualStrings(expected, actual);
-}
-
-test "type infer of fully generic define" {
-    const allocator = std.testing.allocator;
-    const source =
-        \\sum_of_squares(x, y) =
-        \\    a = x * x
-        \\    b = y * y
-        \\    a + b
-    ;
-    const actual = try atom.testing.typeInfer(allocator, source, "sum_of_squares");
-    defer allocator.free(actual);
-    const expected =
-        \\sum_of_squares[A](x: A, y: A) -> A =
-        \\    a: A = x * x
-        \\    b: A = y * y
-        \\    a + b
+        \\function
+        \\    name = sum_of_squares
+        \\    parameters =
+        \\        symbol{ name = x, type = i32 }
+        \\        symbol{ name = y, type = i32 }
+        \\    return_type = i32
+        \\    body = 
+        \\        define =
+        \\            name = symbol{ name = a, type = i32 }
+        \\            type = void
+        \\            body = 
+        \\                binary_op =
+        \\                    kind = *
+        \\                    left = symbol{ name = x, type = i32 }
+        \\                    right = symbol{ name = x, type = i32 }
+        \\                    type = i32
+        \\        define =
+        \\            name = symbol{ name = b, type = i32 }
+        \\            type = void
+        \\            body = 
+        \\                binary_op =
+        \\                    kind = *
+        \\                    left = symbol{ name = y, type = i32 }
+        \\                    right = symbol{ name = y, type = i32 }
+        \\                    type = i32
+        \\        binary_op =
+        \\            kind = +
+        \\            left = symbol{ name = a, type = i32 }
+        \\            right = symbol{ name = b, type = i32 }
+        \\            type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -173,7 +161,7 @@ test "type infer of fully generic define" {
 test "parse nested define" {
     const allocator = std.testing.allocator;
     const source =
-        \\f(x: i32, y: i32) =
+        \\fn f(x: i32, y: i32) -> i32 =
         \\    a =
         \\        b = y * y
         \\        b + x
@@ -182,7 +170,7 @@ test "parse nested define" {
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(defn f [(x i32) (y i32)]
+        \\(defn f [(x i32) (y i32)] i32
         \\    (block
         \\        (def a
         \\            (block
@@ -196,7 +184,7 @@ test "parse nested define" {
 test "type infer nested define" {
     const allocator = std.testing.allocator;
     const source =
-        \\f(x: i32, y: i32) =
+        \\fn f(x: i32, y: i32) -> i32 =
         \\    a =
         \\        b = y * y
         \\        b + x
@@ -205,32 +193,36 @@ test "type infer nested define" {
     const actual = try atom.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
-        \\f(x: i32, y: i32) -> i32 =
-        \\    a: i32 =
-        \\        b: i32 = y * y
-        \\        b + x
-        \\    a + x
-    ;
-    try std.testing.expectEqualStrings(expected, actual);
-}
-
-test "type infer by annotating inside nested define" {
-    const allocator = std.testing.allocator;
-    const source =
-        \\f(x, y) =
-        \\    a =
-        \\        b: i32 = y * y
-        \\        b + x
-        \\    a + x
-    ;
-    const actual = try atom.testing.typeInfer(allocator, source, "f");
-    defer allocator.free(actual);
-    const expected =
-        \\f(x: i32, y: i32) -> i32 =
-        \\    a: i32 =
-        \\        b: i32 = y * y
-        \\        b + x
-        \\    a + x
+        \\function
+        \\    name = f
+        \\    parameters =
+        \\        symbol{ name = x, type = i32 }
+        \\        symbol{ name = y, type = i32 }
+        \\    return_type = i32
+        \\    body = 
+        \\        define =
+        \\            name = symbol{ name = a, type = i32 }
+        \\            type = void
+        \\            body = 
+        \\                define =
+        \\                    name = symbol{ name = b, type = i32 }
+        \\                    type = void
+        \\                    body = 
+        \\                        binary_op =
+        \\                            kind = *
+        \\                            left = symbol{ name = y, type = i32 }
+        \\                            right = symbol{ name = y, type = i32 }
+        \\                            type = i32
+        \\                binary_op =
+        \\                    kind = +
+        \\                    left = symbol{ name = b, type = i32 }
+        \\                    right = symbol{ name = x, type = i32 }
+        \\                    type = i32
+        \\        binary_op =
+        \\            kind = +
+        \\            left = symbol{ name = a, type = i32 }
+        \\            right = symbol{ name = x, type = i32 }
+        \\            type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

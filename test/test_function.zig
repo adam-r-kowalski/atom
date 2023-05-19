@@ -71,15 +71,9 @@ test "type infer function body" {
         \\function
         \\    name = id
         \\    parameters =
-        \\        parameter =
-        \\            symbol =
-        \\                name = x
-        \\                type = i32
+        \\        symbol{ name = x, type = i32 }
         \\    return_type = i32
-        \\    body =
-        \\        symbol =
-        \\            name = x
-        \\            type = i32
+        \\    body = symbol{ name = x, type = i32 }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

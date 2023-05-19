@@ -20,6 +20,7 @@ const Substitution = types.Substitution;
 const If = types.If;
 const BinaryOp = types.BinaryOp;
 const Call = types.Call;
+const Define = types.Define;
 
 const Indent = u64;
 
@@ -29,47 +30,31 @@ pub fn indent(writer: List(u8).Writer, n: Indent) !void {
     while (i < n) : (i += 1) try writer.writeAll("    ");
 }
 
-fn symbol(writer: List(u8).Writer, intern: Intern, s: Symbol, i: Indent) !void {
-    try indent(writer, i);
-    try writer.writeAll("symbol =");
-    try indent(writer, i + 1);
+fn symbol(writer: List(u8).Writer, intern: Intern, s: Symbol) !void {
     const name = interner.lookup(intern, s.value);
-    try writer.print("name = {s}", .{name});
-    try indent(writer, i + 1);
-    try writer.print("type = ", .{});
+    try writer.print("symbol{{ name = {s}, type = ", .{name});
     try monotype(writer, s.type);
+    try writer.writeAll(" }");
 }
 
-fn int(writer: List(u8).Writer, intern: Intern, i: Int, in: Indent) !void {
-    try indent(writer, in);
-    try writer.writeAll("int =");
-    try indent(writer, in + 1);
+fn int(writer: List(u8).Writer, intern: Intern, i: Int) !void {
     const value = interner.lookup(intern, i.value);
-    try writer.print("value = {s}", .{value});
-    try indent(writer, in + 1);
-    try writer.print("type = ", .{});
+    try writer.print("int{{ value = {s}, type = ", .{value});
     try monotype(writer, i.type);
+    try writer.writeAll(" }");
 }
 
-fn float(writer: List(u8).Writer, intern: Intern, f: Float, i: Indent) !void {
-    try indent(writer, i);
-    try writer.writeAll("float =");
-    try indent(writer, i + 1);
+fn float(writer: List(u8).Writer, intern: Intern, f: Float) !void {
     const value = interner.lookup(intern, f.value);
-    try writer.print("value = {s}", .{value});
-    try indent(writer, i + 1);
-    try writer.print("type = ", .{});
+    try writer.print("float{{ value = {s}, type = ", .{value});
     try monotype(writer, f.type);
+    try writer.writeAll(" }");
 }
 
-fn boolean(writer: List(u8).Writer, b: Bool, i: Indent) !void {
-    try indent(writer, i);
-    try writer.writeAll("bool =");
-    try indent(writer, i + 1);
-    try writer.print("value = {}", .{b.value});
-    try indent(writer, i + 1);
-    try writer.print("type = ", .{});
+fn boolean(writer: List(u8).Writer, b: Bool) !void {
+    try writer.print("bool{{ value = {}, type = ", .{b.value});
     try monotype(writer, b.type);
+    try writer.writeAll(" }");
 }
 
 pub fn monotype(writer: List(u8).Writer, m: MonoType) !void {
@@ -98,13 +83,13 @@ fn if_(writer: List(u8).Writer, intern: Intern, i: If, in: Indent) !void {
     try indent(writer, in);
     try writer.writeAll("if =");
     try indent(writer, in + 1);
-    try writer.writeAll("condition =");
+    try writer.writeAll("condition = ");
     try expression(writer, intern, i.condition.*, in + 2);
     try indent(writer, in + 1);
-    try writer.writeAll("then =");
+    try writer.writeAll("then = ");
     try block(writer, intern, i.then, in + 2);
     try indent(writer, in + 1);
-    try writer.writeAll("else =");
+    try writer.writeAll("else = ");
     try block(writer, intern, i.else_, in + 2);
     try indent(writer, in + 1);
     try writer.print("type = ", .{});
@@ -122,10 +107,10 @@ fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp, i: Indent) !vo
         else => unreachable,
     }
     try indent(writer, i + 1);
-    try writer.writeAll("left =");
+    try writer.writeAll("left = ");
     try expression(writer, intern, b.left.*, i + 2);
     try indent(writer, i + 1);
-    try writer.writeAll("right =");
+    try writer.writeAll("right = ");
     try expression(writer, intern, b.right.*, i + 2);
     try indent(writer, i + 1);
     try writer.print("type = ", .{});
@@ -136,13 +121,11 @@ fn call(writer: List(u8).Writer, intern: Intern, c: Call, i: Indent) !void {
     try indent(writer, i);
     try writer.writeAll("call =");
     try indent(writer, i + 1);
-    try writer.writeAll("function =");
     try expression(writer, intern, c.function.*, i + 2);
     try indent(writer, i + 1);
     try writer.writeAll("arguments =");
     for (c.arguments) |a| {
         try indent(writer, i + 2);
-        try writer.writeAll("argument =");
         try expression(writer, intern, a, i + 3);
     }
     try indent(writer, i + 1);
@@ -150,22 +133,38 @@ fn call(writer: List(u8).Writer, intern: Intern, c: Call, i: Indent) !void {
     try monotype(writer, c.type);
 }
 
+fn define(writer: List(u8).Writer, intern: Intern, d: Define, i: Indent) !void {
+    try indent(writer, i);
+    try writer.writeAll("define =");
+    try indent(writer, i + 1);
+    try writer.writeAll("name = ");
+    try symbol(writer, intern, d.name);
+    try indent(writer, i + 1);
+    try writer.writeAll("type = ");
+    try monotype(writer, d.type);
+    try indent(writer, i + 1);
+    try writer.writeAll("body = ");
+    try block(writer, intern, d.body, i + 2);
+}
+
 fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, in: Indent) error{OutOfMemory}!void {
     switch (expr) {
-        .symbol => |s| try symbol(writer, intern, s, in),
-        .int => |i| try int(writer, intern, i, in),
-        .float => |f| try float(writer, intern, f, in),
-        .bool => |b| try boolean(writer, b, in),
+        .symbol => |s| try symbol(writer, intern, s),
+        .int => |i| try int(writer, intern, i),
+        .float => |f| try float(writer, intern, f),
+        .bool => |b| try boolean(writer, b),
         .if_ => |i| try if_(writer, intern, i, in),
         .binary_op => |b| try binaryOp(writer, intern, b, in),
         .call => |c| try call(writer, intern, c, in),
+        .define => |d| try define(writer, intern, d, in),
         else => std.debug.panic("\nUnhandled expression type {}", .{expr}),
     }
 }
 
 fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Expression, i: Indent) !void {
-    std.debug.assert(exprs.len == 1);
-    try expression(writer, intern, exprs[0], i);
+    for (exprs) |expr| {
+        try expression(writer, intern, expr, i);
+    }
 }
 
 fn function(writer: List(u8).Writer, intern: Intern, f: Function, i: Indent) !void {
@@ -180,14 +179,13 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function, i: Indent) !vo
     }
     for (f.parameters) |p| {
         try indent(writer, i + 2);
-        try writer.print("parameter =", .{});
-        try symbol(writer, intern, p, i + 3);
+        try symbol(writer, intern, p);
     }
     try indent(writer, i + 1);
     try writer.print("return_type = ", .{});
     try monotype(writer, f.return_type);
     try indent(writer, i + 1);
-    try writer.print("body =", .{});
+    try writer.print("body = ", .{});
     try block(writer, intern, f.body, i + 2);
 }
 

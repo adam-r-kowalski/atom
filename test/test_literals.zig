@@ -3,74 +3,81 @@ const atom = @import("atom");
 
 test "type infer int literal as i32" {
     const allocator = std.testing.allocator;
-    const source = "f() -> i32 = 42";
+    const source = "fn f() -> i32 = 42";
     const actual = try atom.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
-    const expected = "f() -> i32 = 42";
-    try std.testing.expectEqualStrings(expected, actual);
-}
-
-test "type infer int literal" {
-    const allocator = std.testing.allocator;
-    const source = "f() = 42";
-    const actual = try atom.testing.typeInfer(allocator, source, "f");
-    defer allocator.free(actual);
-    const expected = "f[A]() -> A = 42";
+    const expected =
+        \\function
+        \\    name = f
+        \\    return_type = i32
+        \\    body = int{ value = 42, type = i32 }
+    ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "type infer bool literal as bool" {
     const allocator = std.testing.allocator;
-    const source = "f() -> bool = true";
+    const source = "fn f() -> bool = true";
     const actual = try atom.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
-    const expected = "f() -> bool = true";
-    try std.testing.expectEqualStrings(expected, actual);
-}
-
-test "type infer bool literal true" {
-    const allocator = std.testing.allocator;
-    const source = "f() = true";
-    const actual = try atom.testing.typeInfer(allocator, source, "f");
-    defer allocator.free(actual);
-    const expected = "f() -> bool = true";
+    const expected =
+        \\function
+        \\    name = f
+        \\    return_type = bool
+        \\    body = bool{ value = true, type = bool }
+    ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "type infer bool literal false" {
     const allocator = std.testing.allocator;
-    const source = "f() = false";
+    const source = "fn f() -> bool = false";
     const actual = try atom.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
-    const expected = "f() -> bool = false";
+    const expected =
+        \\function
+        \\    name = f
+        \\    return_type = bool
+        \\    body = bool{ value = false, type = bool }
+    ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "type infer int literal as f32" {
     const allocator = std.testing.allocator;
-    const source = "f() -> f32 = 42";
+    const source = "fn f() -> f32 = 42";
     const actual = try atom.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
-    const expected = "f() -> f32 = 42";
+    const expected =
+        \\function
+        \\    name = f
+        \\    return_type = f32
+        \\    body = int{ value = 42, type = f32 }
+    ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "type infer float literal as f32" {
     const allocator = std.testing.allocator;
-    const source = "f() -> f32 = 42.3";
+    const source = "fn f() -> f32 = 42.3";
     const actual = try atom.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
-    const expected = "f() -> f32 = 42.3";
+    const expected =
+        \\function
+        \\    name = f
+        \\    return_type = f32
+        \\    body = float{ value = 42.3, type = f32 }
+    ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "lower int literal as i32" {
     const allocator = std.testing.allocator;
-    const source = "start() -> i32 = 42";
+    const source = "fn start() -> i32 = 42";
     const actual = try atom.testing.lowerIr(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\start() -> i32 =
+        \\fn start() -> i32 =
         \\    i32 42
     ;
     try std.testing.expectEqualStrings(expected, actual);

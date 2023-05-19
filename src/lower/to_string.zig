@@ -24,7 +24,7 @@ fn expression(writer: List(u8).Writer, e: Expression) !void {
 
 fn function(writer: List(u8).Writer, intern: Intern, f: Function) !void {
     const name = interner.lookup(intern, f.name);
-    try writer.print("{s}(", .{name});
+    try writer.print("fn {s}(", .{name});
     for (f.parameters) |p| {
         const parameter_name = interner.lookup(intern, p.name);
         try writer.print("{s}: ", .{parameter_name});

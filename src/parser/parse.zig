@@ -292,6 +292,34 @@ fn binaryOp(context: *Context, left: Expression, kind: BinaryOpKind) !Expression
     };
 }
 
+fn call(context: *Context, left: Expression) !Expression {
+    context.token_index += 1;
+    var arguments = List(Expression).init(context.allocator);
+    while (context.tokens.len > context.token_index) {
+        switch (context.tokens[context.token_index]) {
+            .right_paren => |r| {
+                context.token_index += 1;
+                return Expression{
+                    .call = .{
+                        .function = try alloc(context, left),
+                        .arguments = arguments.toOwnedSlice(),
+                        .span = Span{
+                            .begin = span(left).begin,
+                            .end = r.span.end,
+                        },
+                    },
+                };
+            },
+            else => {
+                const argument = try expression(context);
+                _ = tryConsume(context, .comma);
+                try arguments.append(argument);
+            },
+        }
+    }
+    std.debug.panic("\nExpected ')' but found EOF\n", .{});
+}
+
 const Infix = struct {
     precedence: Precedence,
     associativity: Asscociativity,
@@ -326,7 +354,7 @@ fn parseInfix(parser: Infix, context: *Context, left: Expression) !Expression {
     switch (parser.kind) {
         .define => return try define(context, left),
         .annotate => return try annotate(context, left),
-        .call => std.debug.panic("\nCall not yet implemented", .{}),
+        .call => return try call(context, left),
         .binary_op => |kind| return try binaryOp(context, left, kind),
     }
 }
@@ -356,6 +384,7 @@ fn expressionAlloc(context: *Context) !*const Expression {
 
 fn import(context: *Context) !TopLevel {
     const begin = span(context.tokens[context.token_index]).begin;
+    context.token_index += 1;
     consume(context, .fn_);
     const name = consumeSymbol(context);
     consume(context, .left_paren);
