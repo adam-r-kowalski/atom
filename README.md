@@ -51,10 +51,12 @@ fn sum(xs: i32[]) i32 = fold(xs, 0, +)
 fn sum(xs: i32[]) i32 = xs.fold(0, +)
 
 # a naive version of fold can be written
-fn fold[T, Acc](xs: T[], z: Acc, f: Fn[[Acc, T], Acc]) Acc =
+fn fold[T, Acc](xs: T[], acc: Acc, f: Fn[[Acc, T], Acc]) Acc =
     if xs is
-        [] then 0
-        [x, ...xs] then x + sum(xs)
+        [] then acc
+        [x, ...xs] then
+            acc = f(acc, x)
+            xs.fold(acc, f)
 
 # you can import a function from the host (here namespaced by "atom" "print")
 import fn print(x: str) void
