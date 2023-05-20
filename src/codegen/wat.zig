@@ -8,6 +8,7 @@ const Interned = interner.Interned;
 const types = @import("../lower/types.zig");
 const IR = types.IR;
 const Function = types.Function;
+const Export = types.Export;
 const Type = types.Type;
 const Expression = types.Expression;
 
@@ -38,8 +39,8 @@ fn f32Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
 
 fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression) !void {
     switch (expr) {
-        .i32 => |interned| try i32Const(writer, intern, interned),
-        .f32 => |interned| try f32Const(writer, intern, interned),
+        .i32_const => |interned| try i32Const(writer, intern, interned),
+        .f32_const => |interned| try f32Const(writer, intern, interned),
     }
 }
 
@@ -51,6 +52,7 @@ fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Expression, i: 
 }
 
 fn function(writer: List(u8).Writer, intern: Intern, f: Function) !void {
+    try writer.writeAll("\n");
     try indent(writer, 1);
     const name = interner.lookup(intern, f.name);
     try writer.print("(func ${s}", .{name});
@@ -61,11 +63,24 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function) !void {
     try writer.writeAll(")");
 }
 
+fn export_(writer: List(u8).Writer, intern: Intern, e: Export) !void {
+    try writer.writeAll("\n");
+    try indent(writer, 1);
+    switch (e) {
+        .function => |f| {
+            const alias = interner.lookup(intern, f.alias);
+            const name = interner.lookup(intern, f.name);
+            try writer.print("(export \"{s}\" (func ${s}))", .{ alias, name });
+        },
+    }
+}
+
 pub fn wat(allocator: Allocator, intern: Intern, ir: IR) ![]const u8 {
     var list = List(u8).init(allocator);
     const writer = list.writer();
     try writer.writeAll("(module");
     for (ir.functions) |f| try function(writer, intern, f);
+    for (ir.exports) |e| try export_(writer, intern, e);
     try writer.writeAll(")");
     return list.toOwnedSlice();
 }
