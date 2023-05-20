@@ -8,6 +8,7 @@ const Function = types.Function;
 const Parameter = types.Parameter;
 const Type = types.Type;
 const Expression = types.Expression;
+const Export = type_checker_types.Export;
 const Intern = @import("../interner.zig").Intern;
 const type_checker_types = @import("../type_checker/types.zig");
 const Module = type_checker_types.Module;
@@ -25,15 +26,15 @@ fn mapType(monotype: MonoType) Type {
 
 fn int(i: Int) !Expression {
     switch (i.type) {
-        .i32 => return .{ .i32 = i.value },
-        .f32 => return .{ .f32 = i.value },
+        .i32 => return .{ .i32_const = i.value },
+        .f32 => return .{ .f32_const = i.value },
         else => std.debug.panic("\nInt type {} not yet supported", .{i.type}),
     }
 }
 
 fn float(f: Float) !Expression {
     switch (f.type) {
-        .f32 => return .{ .f32 = f.value },
+        .f32 => return .{ .f32_const = f.value },
         else => std.debug.panic("\nFloat type {} not yet supported", .{f.type}),
     }
 }
@@ -82,5 +83,5 @@ pub fn buildIr(allocator: Allocator, module: Module) !IR {
             std.debug.panic("\nCould not find {} in module\n", .{name});
         }
     }
-    return IR{ .functions = functions.toOwnedSlice() };
+    return IR{ .functions = functions.toOwnedSlice(), .exports = &.{} };
 }

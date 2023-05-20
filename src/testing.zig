@@ -88,13 +88,20 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     const untyped_module = try parser.parse(arena.allocator(), tokens);
     var next_type_var: type_checker.types.TypeVar = 0;
     var module = try type_checker.infer.module(arena.allocator(), builtins, untyped_module, &next_type_var);
-    const interned = try interner.store(&intern, "start");
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.Equal).init(arena.allocator()),
     };
-    try type_checker.infer.infer(arena.allocator(), &constraints, &module, builtins, &next_type_var, interned);
+    const start = try interner.store(&intern, "start");
+    try type_checker.infer.infer(arena.allocator(), &constraints, &module, builtins, &next_type_var, start);
     const substitution = try type_checker.solve(arena.allocator(), constraints);
     const typed_module = try type_checker.apply(arena.allocator(), substitution, module);
-    const ir = try lower.buildIr(arena.allocator(), typed_module);
+    var ir = try lower.buildIr(arena.allocator(), typed_module);
+    const alias = try interner.store(&intern, "_start");
+    const exports = try arena.allocator().alloc(lower.types.Export, ir.exports.len + 1);
+    std.mem.copy(lower.types.Export, exports, ir.exports);
+    exports[ir.exports.len] = lower.types.Export{
+        .function = .{ .name = start, .alias = alias },
+    };
+    ir.exports = exports;
     return try wat(allocator, intern, ir);
 }

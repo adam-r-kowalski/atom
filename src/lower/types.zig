@@ -12,8 +12,8 @@ pub const Parameter = struct {
 };
 
 pub const Expression = union(enum) {
-    i32: Interned,
-    f32: Interned,
+    i32_const: Interned,
+    f32_const: Interned,
 };
 
 pub const Function = struct {
@@ -23,6 +23,16 @@ pub const Function = struct {
     body: []const Expression,
 };
 
+pub const FunctionExport = struct {
+    name: Interned,
+    alias: Interned,
+};
+
+pub const Export = union(enum) {
+    function: FunctionExport,
+};
+
 pub const IR = struct {
     functions: []const Function,
+    exports: []const Export,
 };
