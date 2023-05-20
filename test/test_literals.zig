@@ -71,14 +71,15 @@ test "type infer float literal as f32" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "lower int literal as i32" {
+test "codegen i32" {
     const allocator = std.testing.allocator;
     const source = "fn start() i32 = 42";
-    const actual = try atom.testing.lowerIr(allocator, source);
+    const actual = try atom.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\fn start() i32 =
-        \\    i32 42
+        \\(module
+        \\    (func $start (result i32)
+        \\        (i32.const 42)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

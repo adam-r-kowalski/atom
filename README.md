@@ -44,23 +44,17 @@ fn sum(xs: i32[]) i32 =
         [] then 0
         [x, ...xs] then x + sum(xs)
 
-
-# it would be more optimal to use tail recursion
-fn sum(xs: i32[]) i32 =
-    fn sum_impl(xs: i32[], acc: i32) i32 =
-        if xs is
-            [] then acc
-            [x, ...xs] then sum_impl(xs, acc + x)
-    sum_impl(xs, 0)
-
 # a fold expression can help us implement this in parallel
 fn sum(xs: i32[]) i32 = fold(xs, 0, +)
 
 # dot call notation allows for a "method" like sugar
 fn sum(xs: i32[]) i32 = xs.fold(0, +)
 
-# we can write type annotations here as well
-fn sum[T: Add](xs: T[]) T = xs.fold(0, +)
+# a naive version of fold can be written
+fn fold[T, Acc](xs: T[], z: Acc, f: Fn[[Acc, T], Acc]) Acc =
+    if xs is
+        [] then 0
+        [x, ...xs] then x + sum(xs)
 
 # you can import a function from the host (here namespaced by "atom" "print")
 import fn print(x: str) void
@@ -82,26 +76,21 @@ interface Add[L, R = L]
     fn add(x: L, y: R) O
 
 # for expressions are a generalization of einstein summation notation
-fn matmul[T: Num, m, n, p](a: T[m][n], b: T[n][p]) T[m][p] =
-    for i, j, k in sum(a[i][k] * b[k][j])
+fn double_every[m](a: f32[m]) f32[m] =
+    for i in a * 2
+
+fn transpose[T, m, n](a: T[m][n]) T[n][m] =
+    for i, j in a[j][i]
 
 fn dot[T: Num, n](a: T[n], b: T[n]) T =
     for i in sum(a[i] * b[i])
 
-fn transpose[T, m, n](a: T[m][n]) T[n][m] =
-    for i, j in a[j][i]
+fn matmul[T: Num, m, n, p](a: T[m][n], b: T[n][p]) T[m][p] =
+    for i, j, k in sum(a[i][k] * b[k][j])
 
 # sum can also be implemented using for and accumulation
 fn sum[T: Add](xs: T[]) T =
     mut acc = 0
     for i in acc += xs[i]
     acc
-
-fn double(x: i32) i32 = x + x
-
-# method call syntax can omit the parenthesis if it's a single arg function
-5.double == double(5) == 5.double()
-
-# you can chain together methods
-5.double.double == double(double(5)) == 5.double().double()
 ```

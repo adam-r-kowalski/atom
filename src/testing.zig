@@ -9,6 +9,7 @@ const tokenizer = @import("tokenizer.zig");
 const parser = @import("parser.zig");
 const type_checker = @import("type_checker.zig");
 const lower = @import("lower.zig");
+const wat = @import("codegen.zig").wat;
 
 pub fn tokenize(allocator: Allocator, source: []const u8) ![]const u8 {
     var arena = std.heap.ArenaAllocator.init(allocator);
@@ -78,7 +79,7 @@ pub fn typeInferVerbose(allocator: Allocator, source: []const u8, name: []const 
     return list.toOwnedSlice();
 }
 
-pub fn lowerIr(allocator: Allocator, source: []const u8) ![]const u8 {
+pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
     var intern = Intern.init(arena.allocator());
@@ -95,5 +96,5 @@ pub fn lowerIr(allocator: Allocator, source: []const u8) ![]const u8 {
     const substitution = try type_checker.solve(arena.allocator(), constraints);
     const typed_module = try type_checker.apply(arena.allocator(), substitution, module);
     const ir = try lower.buildIr(arena.allocator(), intern, typed_module);
-    return lower.toString(allocator, intern, ir);
+    return try wat(allocator, intern, ir);
 }
