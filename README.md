@@ -1,6 +1,6 @@
 # Atom
 
-```julia
+```zig
 # this is a comment
 
 # this defines a function which squares x
