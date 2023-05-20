@@ -31,8 +31,6 @@ pub const Kind = union(enum) {
     if_,
     comma,
     fn_,
-    import,
-    export_,
 };
 
 pub const Token = struct {
