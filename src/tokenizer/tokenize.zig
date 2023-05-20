@@ -10,11 +10,7 @@ const types = @import("types.zig");
 const Pos = types.Pos;
 const Token = types.Token;
 const Span = types.Span;
-const Indent = types.Indent;
-const Int = types.Int;
-const Float = types.Float;
-const Bool = types.Bool;
-const Symbol = types.Symbol;
+const Kind = types.Kind;
 
 const Cursor = struct {
     source: []const u8,
@@ -63,7 +59,7 @@ fn number(intern: *Intern, cursor: *Cursor) !Token {
             '-' => return exact(cursor, .minus),
             '.' => {
                 _ = advance(cursor, i);
-                return Token{ .dot = .{ .span = .{ .begin = begin, .end = cursor.pos } } };
+                return Token{ .kind = .dot, .span = .{ .begin = begin, .end = cursor.pos } };
             },
             else => {},
         }
@@ -71,15 +67,14 @@ fn number(intern: *Intern, cursor: *Cursor) !Token {
     _ = advance(cursor, i);
     const span = Span{ .begin = begin, .end = cursor.pos };
     const interned = try interner.store(intern, string);
-    if (decimals == 0) return Token{ .int = Int{ .value = interned, .span = span } };
-    return Token{ .float = Float{ .value = interned, .span = span } };
+    if (decimals == 0) return Token{ .kind = .{ .int = interned }, .span = span };
+    return Token{ .kind = .{ .float = interned }, .span = span };
 }
 
-fn exact(cursor: *Cursor, comptime kind: std.meta.Tag(Token)) Token {
+fn exact(cursor: *Cursor, comptime kind: Kind) Token {
     const begin = cursor.pos;
     _ = advance(cursor, 1);
-    const span = Span{ .begin = begin, .end = cursor.pos };
-    return @unionInit(Token, @tagName(kind), .{ .span = span });
+    return Token{ .kind = kind, .span = .{ .begin = begin, .end = cursor.pos } };
 }
 
 const Choice = Tuple(&.{ u8, std.meta.Tag(Token) });
@@ -107,51 +102,13 @@ fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !Token {
     const end = cursor.pos;
     const span = Span{ .begin = begin, .end = end };
     const interned = try interner.store(intern, string);
-    if (interned == builtins.fn_) return Token{ .fn_ = .{ .span = span } };
-    if (interned == builtins.import) return Token{ .import = .{ .span = span } };
-    if (interned == builtins.export_) return Token{ .export_ = .{ .span = span } };
-    if (interned == builtins.if_) return Token{ .if_ = .{ .span = span } };
-    if (interned == builtins.then) return Token{ .then = .{ .span = span } };
-    if (interned == builtins.else_) return Token{ .else_ = .{ .span = span } };
-    if (interned == builtins.true_) return Token{ .bool = Bool{ .value = true, .span = span } };
-    if (interned == builtins.false_) return Token{ .bool = Bool{ .value = false, .span = span } };
-    return Token{ .symbol = Symbol{ .value = interned, .span = span } };
-}
-
-const Repeat = enum { space, tab };
-
-fn repeated(cursor: *Cursor, begin: Pos, comptime kind: Repeat) ?Token {
-    const c = if (kind == .space) ' ' else '\t';
-    var i: u64 = 0;
-    while (cursor.source.len > i and cursor.source[i] == c) : (i += 1) {}
-    cursor.pos.column += i;
-    cursor.source = cursor.source[i..];
-    if (cursor.source.len == 0) return null;
-    const span = Span{ .begin = begin, .end = cursor.pos };
-    if (kind == .space) return Token{ .indent = .{ .kind = .space, .count = i, .span = span } };
-    return Token{ .indent = .{ .kind = .tab, .count = i, .span = span } };
-}
-
-fn newLine(cursor: *Cursor) ?Token {
-    var begin = cursor.pos;
-    cursor.pos.column = 1;
-    var i: u64 = 0;
-    while (cursor.source.len > i and cursor.source[i] == '\n') : (i += 1) {}
-    cursor.pos.line += i;
-    cursor.source = cursor.source[i..];
-    if (cursor.source.len == 0) return null;
-    i = 0;
-    switch (cursor.source[0]) {
-        ' ' => return repeated(cursor, begin, .space),
-        '\t' => return repeated(cursor, begin, .tab),
-        else => return Token{
-            .indent = .{
-                .kind = .space,
-                .count = 0,
-                .span = .{ .begin = begin, .end = cursor.pos },
-            },
-        },
-    }
+    if (interned == builtins.fn_) return Token{ .kind = .fn_, .span = span };
+    if (interned == builtins.import) return Token{ .kind = .import, .span = span };
+    if (interned == builtins.export_) return Token{ .kind = .export_, .span = span };
+    if (interned == builtins.if_) return Token{ .kind = .if_, .span = span };
+    if (interned == builtins.true_) return Token{ .kind = .{ .bool = true }, .span = span };
+    if (interned == builtins.false_) return Token{ .kind = .{ .bool = false }, .span = span };
+    return Token{ .kind = .{ .symbol = interned }, .span = span };
 }
 
 fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?Token {
@@ -168,8 +125,9 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?Token {
         '<' => exact(cursor, .less),
         '(' => exact(cursor, .left_paren),
         ')' => exact(cursor, .right_paren),
+        '{' => exact(cursor, .left_brace),
+        '}' => exact(cursor, .right_brace),
         ',' => exact(cursor, .comma),
-        '\n' => newLine(cursor),
         else => try symbol(intern, builtins, cursor),
     };
 }

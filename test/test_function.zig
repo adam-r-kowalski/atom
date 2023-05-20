@@ -3,22 +3,24 @@ const atom = @import("atom");
 
 test "tokenize function definition" {
     const allocator = std.testing.allocator;
-    const source = "fn double(x: i32) i32 = x + x";
+    const source = "double = fn(x: i32) i32 { x + x }";
     const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\fn
         \\symbol double
+        \\equal
+        \\fn
         \\left paren
         \\symbol x
         \\colon
         \\symbol i32
         \\right paren
         \\symbol i32
-        \\equal
+        \\left brace
         \\symbol x
         \\plus
         \\symbol x
+        \\right brace
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
