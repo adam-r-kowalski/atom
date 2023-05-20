@@ -6,7 +6,7 @@
 # this defines a function which squares x
 square = fn(x: i32) i32 { x^2 }
 
-# calling f with 3 gives you 9
+# calling square with 3 gives you 9
 square(3)
 
 # conditionals use an if then else syntax
