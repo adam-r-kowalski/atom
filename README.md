@@ -73,7 +73,7 @@ sum = fn(xs: i32[]) i32 {
 }
 
 # a naive version of fold can be written
-fold = fn[T, Acc](xs: T[], acc: Acc, f: Fn[[Acc, T], Acc]) Acc {
+fold = fn[T, Acc](xs: T[], acc: Acc, f: fn(acc: Acc, val: T) Acc) Acc {
     if xs is {
         [] { acc }
         [x, ...xs] {
