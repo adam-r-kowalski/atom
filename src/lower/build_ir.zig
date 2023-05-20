@@ -8,39 +8,45 @@ const Function = types.Function;
 const Parameter = types.Parameter;
 const Type = types.Type;
 const Expression = types.Expression;
-const interner = @import("../interner.zig");
-const Intern = interner.Intern;
+const Intern = @import("../interner.zig").Intern;
 const type_checker_types = @import("../type_checker/types.zig");
 const Module = type_checker_types.Module;
 const MonoType = type_checker_types.MonoType;
 const Int = type_checker_types.Int;
+const Float = type_checker_types.Float;
 
 fn mapType(monotype: MonoType) Type {
     switch (monotype) {
         .i32 => return .i32,
+        .f32 => return .f32,
         else => std.debug.panic("\nMonotype {} not yet supported", .{monotype}),
     }
 }
 
-fn int(intern: Intern, i: Int) !Expression {
+fn int(i: Int) !Expression {
     switch (i.type) {
-        .i32 => {
-            const value = interner.lookup(intern, i.value);
-            const parsed = try std.fmt.parseInt(i32, value, 10);
-            return .{ .i32 = parsed };
-        },
+        .i32 => return .{ .i32 = i.value },
+        .f32 => return .{ .f32 = i.value },
         else => std.debug.panic("\nInt type {} not yet supported", .{i.type}),
     }
 }
 
-fn expression(intern: Intern, e: type_checker_types.Expression) !Expression {
+fn float(f: Float) !Expression {
+    switch (f.type) {
+        .f32 => return .{ .f32 = f.value },
+        else => std.debug.panic("\nFloat type {} not yet supported", .{f.type}),
+    }
+}
+
+fn expression(e: type_checker_types.Expression) !Expression {
     switch (e) {
-        .int => |i| return try int(intern, i),
+        .int => |i| return try int(i),
+        .float => |f| return try float(f),
         else => std.debug.panic("\nExpression {} not yet supported", .{e}),
     }
 }
 
-fn function(allocator: Allocator, intern: Intern, f: type_checker_types.Function) !Function {
+fn function(allocator: Allocator, f: type_checker_types.Function) !Function {
     const parameters = try allocator.alloc(Parameter, f.parameters.len);
     for (f.parameters) |p, i| {
         parameters[i] = Parameter{
@@ -50,7 +56,7 @@ fn function(allocator: Allocator, intern: Intern, f: type_checker_types.Function
     }
     var body = List(Expression).init(allocator);
     for (f.body) |e| {
-        const expr = try expression(intern, e);
+        const expr = try expression(e);
         try body.append(expr);
     }
     return Function{
@@ -61,13 +67,13 @@ fn function(allocator: Allocator, intern: Intern, f: type_checker_types.Function
     };
 }
 
-pub fn buildIr(allocator: Allocator, intern: Intern, module: Module) !IR {
+pub fn buildIr(allocator: Allocator, module: Module) !IR {
     var functions = std.ArrayList(Function).init(allocator);
     for (module.order) |name| {
         if (module.typed.get(name)) |top_level| {
             switch (top_level) {
                 .function => |f| {
-                    const lowered = try function(allocator, intern, f);
+                    const lowered = try function(allocator, f);
                     try functions.append(lowered);
                 },
                 else => |e| std.debug.panic("\nTop level kind {} no yet supported", .{e}),

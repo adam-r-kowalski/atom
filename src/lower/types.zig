@@ -3,6 +3,7 @@ const Interned = interner.Interned;
 
 pub const Type = enum {
     i32,
+    f32,
 };
 
 pub const Parameter = struct {
@@ -11,7 +12,8 @@ pub const Parameter = struct {
 };
 
 pub const Expression = union(enum) {
-    i32: i32,
+    i32: Interned,
+    f32: Interned,
 };
 
 pub const Function = struct {

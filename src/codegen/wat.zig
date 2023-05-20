@@ -4,6 +4,7 @@ const List = std.ArrayList;
 
 const interner = @import("../interner.zig");
 const Intern = interner.Intern;
+const Interned = interner.Interned;
 const types = @import("../lower/types.zig");
 const IR = types.IR;
 const Function = types.Function;
@@ -21,19 +22,31 @@ pub fn indent(writer: List(u8).Writer, n: Indent) !void {
 fn typeString(writer: List(u8).Writer, t: Type) !void {
     switch (t) {
         .i32 => try writer.writeAll("i32"),
+        .f32 => try writer.writeAll("f32"),
     }
 }
 
-fn expression(writer: List(u8).Writer, expr: Expression) !void {
+fn i32Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
+    const value = interner.lookup(intern, interned);
+    try writer.print("(i32.const {s})", .{value});
+}
+
+fn f32Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
+    const value = interner.lookup(intern, interned);
+    try writer.print("(f32.const {s})", .{value});
+}
+
+fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression) !void {
     switch (expr) {
-        .i32 => |int| try writer.print("(i32.const {d})", .{int}),
+        .i32 => |interned| try i32Const(writer, intern, interned),
+        .f32 => |interned| try f32Const(writer, intern, interned),
     }
 }
 
-fn block(writer: List(u8).Writer, exprs: []const Expression, i: Indent) !void {
+fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Expression, i: Indent) !void {
     for (exprs) |expr| {
         try indent(writer, i);
-        try expression(writer, expr);
+        try expression(writer, intern, expr);
     }
 }
 
@@ -44,7 +57,7 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function) !void {
     try writer.writeAll(" (result ");
     try typeString(writer, f.return_type);
     try writer.writeAll(")");
-    try block(writer, f.body, 2);
+    try block(writer, intern, f.body, 2);
     try writer.writeAll(")");
 }
 

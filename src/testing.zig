@@ -95,6 +95,6 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     try type_checker.infer.infer(arena.allocator(), &constraints, &module, builtins, &next_type_var, interned);
     const substitution = try type_checker.solve(arena.allocator(), constraints);
     const typed_module = try type_checker.apply(arena.allocator(), substitution, module);
-    const ir = try lower.buildIr(arena.allocator(), intern, typed_module);
+    const ir = try lower.buildIr(arena.allocator(), typed_module);
     return try wat(allocator, intern, ir);
 }
