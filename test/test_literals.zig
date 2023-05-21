@@ -86,9 +86,9 @@ test "type infer float literal as f32" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "codegen i32 with int literal" {
+test "codegen i32 with int literal woah" {
     const allocator = std.testing.allocator;
-    const source = "fn start() i32 = 42";
+    const source = "start = fn() i32 { 42 }";
     const actual = try atom.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -104,7 +104,7 @@ test "codegen i32 with int literal" {
 
 test "codegen f32 with int literal" {
     const allocator = std.testing.allocator;
-    const source = "fn start() f32 = 42";
+    const source = "start = fn() f32 { 42 }";
     const actual = try atom.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -120,7 +120,7 @@ test "codegen f32 with int literal" {
 
 test "codegen f32 with float literal" {
     const allocator = std.testing.allocator;
-    const source = "fn start() f32 = 42.5";
+    const source = "start = fn() f32 { 42.5 }";
     const actual = try atom.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =

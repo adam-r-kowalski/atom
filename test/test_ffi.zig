@@ -9,7 +9,12 @@ test "tokenize import" {
     const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\import
+        \\symbol foreign_import
+        \\left paren
+        \\string "console"
+        \\comma
+        \\string "log"
+        \\comma
         \\fn
         \\symbol print
         \\left paren
@@ -18,6 +23,7 @@ test "tokenize import" {
         \\symbol str
         \\right paren
         \\symbol void
+        \\right paren
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
