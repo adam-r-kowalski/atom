@@ -14,6 +14,7 @@ pub const Kind = union(enum) {
     symbol: Interned,
     int: Interned,
     float: Interned,
+    string: Interned,
     bool: bool,
     equal,
     dot,

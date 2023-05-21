@@ -53,9 +53,9 @@ fn number(intern: *Intern, cursor: *Cursor) !Token {
         i -= 1;
         decimals -= 1;
     }
-    const string = cursor.source[0..i];
-    if (string.len == 1) {
-        switch (string[0]) {
+    const contents = cursor.source[0..i];
+    if (contents.len == 1) {
+        switch (contents[0]) {
             '-' => return exact(cursor, .minus),
             '.' => {
                 _ = advance(cursor, i);
@@ -66,9 +66,25 @@ fn number(intern: *Intern, cursor: *Cursor) !Token {
     }
     _ = advance(cursor, i);
     const span = Span{ .begin = begin, .end = cursor.pos };
-    const interned = try interner.store(intern, string);
+    const interned = try interner.store(intern, contents);
     if (decimals == 0) return Token{ .kind = .{ .int = interned }, .span = span };
     return Token{ .kind = .{ .float = interned }, .span = span };
+}
+
+fn string(intern: *Intern, cursor: *Cursor) !Token {
+    const begin = cursor.pos;
+    var i: u64 = 1;
+    while (i < cursor.source.len) : (i += 1) {
+        if (cursor.source[i] == '"') {
+            i += 1;
+            break;
+        }
+    }
+    const contents = cursor.source[0..i];
+    _ = advance(cursor, i);
+    const span = Span{ .begin = begin, .end = cursor.pos };
+    const interned = try interner.store(intern, contents);
+    return Token{ .kind = .{ .string = interned }, .span = span };
 }
 
 fn exact(cursor: *Cursor, comptime kind: Kind) Token {
@@ -98,10 +114,10 @@ fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !Token {
     const begin = cursor.pos;
     var i: u64 = 0;
     while (i < cursor.source.len and !reserved(cursor.source[i])) : (i += 1) {}
-    const string = advance(cursor, i);
+    const contents = advance(cursor, i);
     const end = cursor.pos;
     const span = Span{ .begin = begin, .end = end };
-    const interned = try interner.store(intern, string);
+    const interned = try interner.store(intern, contents);
     if (interned == builtins.fn_) return Token{ .kind = .fn_, .span = span };
     if (interned == builtins.if_) return Token{ .kind = .if_, .span = span };
     if (interned == builtins.else_) return Token{ .kind = .else_, .span = span };
@@ -125,6 +141,7 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?Token {
     if (cursor.source.len == 0) return null;
     return switch (cursor.source[0]) {
         '0'...'9', '-', '.' => try number(intern, cursor),
+        '"' => try string(intern, cursor),
         '=' => exact(cursor, .equal),
         ':' => exact(cursor, .colon),
         '+' => exact(cursor, .plus),

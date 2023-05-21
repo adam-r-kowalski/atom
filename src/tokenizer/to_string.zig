@@ -28,6 +28,10 @@ fn float(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
     try writer.print("float {s}", .{interner.lookup(intern, interned)});
 }
 
+fn string(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
+    try writer.print("string {s}", .{interner.lookup(intern, interned)});
+}
+
 pub fn toString(allocator: Allocator, intern: Intern, tokens: []const Token) ![]const u8 {
     var list = List(u8).init(allocator);
     const writer = list.writer();
@@ -37,6 +41,7 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
             .symbol => |s| try symbol(writer, intern, s),
             .int => |s| try int(writer, intern, s),
             .float => |s| try float(writer, intern, s),
+            .string => |s| try string(writer, intern, s),
             .bool => |b| try writer.print("bool {}", .{b}),
             .equal => try writer.writeAll("equal"),
             .dot => try writer.writeAll("dot"),

@@ -43,6 +43,7 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
             .symbol => |s| try writer.writeAll(interner.lookup(intern, s)),
             .int => |i| try writer.writeAll(interner.lookup(intern, i)),
             .float => |f| try writer.writeAll(interner.lookup(intern, f)),
+            .string => |s| try writer.writeAll(interner.lookup(intern, s)),
             .bool => |b| try writer.writeAll(if (b) "true" else "false"),
             .equal => try writer.writeAll("="),
             .dot => try writer.writeAll("."),
