@@ -22,8 +22,7 @@ const Indent = u64;
 
 pub fn indent(writer: List(u8).Writer, n: Indent) !void {
     if (n > 0) try writer.writeAll("\n");
-    var i: u64 = 0;
-    while (i < n) : (i += 1) try writer.writeAll("    ");
+    for (0..n) |_| try writer.writeAll("    ");
 }
 
 fn symbol(writer: List(u8).Writer, intern: Intern, e: Expression) !void {

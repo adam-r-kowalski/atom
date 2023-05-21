@@ -13,18 +13,12 @@ const Token = types.Token;
 
 fn lines(writer: List(u8).Writer, s: Span, pos: Pos) !void {
     const delta = s.end.line - pos.line;
-    var i: usize = 0;
-    while (i < delta) : (i += 1) {
-        try writer.writeAll("\n");
-    }
+    for (0..delta) |_| try writer.writeAll("\n");
 }
 
 fn columns(writer: List(u8).Writer, s: Span, pos: Pos) !void {
     const delta = s.begin.column - pos.column;
-    var i: usize = 0;
-    while (i < delta) : (i += 1) {
-        try writer.writeAll(" ");
-    }
+    for (0..delta) |_| try writer.writeAll(" ");
 }
 
 fn span(writer: List(u8).Writer, s: Span, pos: Pos) !void {
