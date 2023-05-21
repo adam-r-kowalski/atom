@@ -200,3 +200,13 @@ matmul = fn[T: Num, m: u64, n: u64, p: u64](a: T[m][n], b: T[n][p]) T[m][p] {
     for i, j, k { sum(a[i][k] * b[k][j]) }
 }
 ```
+
+## Compiling from source
+
+1. Ensure you have [zig 0.11.0-dev](https://ziglang.org/download/) installed and in your path
+2. Ensure you have [wabt](https://github.com/WebAssembly/wabt) installed and in your path
+3. Clone the repository `git clone git@github.com:adam-r-kowalski/atom.git`
+4. Navigate into the directory `cd atom`
+5. Run the tests with `zig build test` and ensure they are passing
+6. Build the compiler with `zig build`
+7. Add the compiler to your path `./zig-out/bin/`
