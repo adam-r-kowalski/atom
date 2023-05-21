@@ -93,23 +93,6 @@ fn exact(cursor: *Cursor, comptime kind: Kind) Token {
     return Token{ .kind = kind, .span = .{ .begin = begin, .end = cursor.pos } };
 }
 
-const Choice = Tuple(&.{ u8, std.meta.Tag(Token) });
-
-fn choice(cursor: *Cursor, comptime kind: std.meta.Tag(Token), comptime choices: []const Choice) Token {
-    const begin = cursor.pos;
-    if (cursor.source.len > 1) {
-        const t = cursor.source[1];
-        inline for (choices) |c| {
-            if (t == c[0]) {
-                _ = advance(cursor, 2);
-                return @unionInit(Token, @tagName(c[1]), .{ .span = .{ .begin = begin, .end = cursor.pos } });
-            }
-        }
-    }
-    _ = advance(cursor, 1);
-    return @unionInit(Token, @tagName(kind), .{ .span = .{ .begin = begin, .end = cursor.pos } });
-}
-
 fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !Token {
     const begin = cursor.pos;
     var i: u64 = 0;

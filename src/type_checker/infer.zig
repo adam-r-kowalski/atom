@@ -27,10 +27,11 @@ const Builtins = @import("../builtins.zig").Builtins;
 
 fn topLevelType(allocator: Allocator, builtins: Builtins, expr: parser_types.Expression) !MonoType {
     const f = expr.kind.function;
-    const function_type = try allocator.alloc(MonoType, f.parameters.len + 1);
-    for (f.parameters, 0..) |p, i|
-        function_type[i] = expressionToMonoType(p.type.*, builtins);
-    function_type[f.parameters.len] = expressionToMonoType(f.return_type.*, builtins);
+    const len = f.parameters.len;
+    const function_type = try allocator.alloc(MonoType, len + 1);
+    for (f.parameters, function_type[0..len]) |p, *t|
+        t.* = expressionToMonoType(p.type.*, builtins);
+    function_type[len] = expressionToMonoType(f.return_type.*, builtins);
     return MonoType{ .function = function_type };
 }
 
@@ -202,19 +203,23 @@ fn define(context: Context, e: parser_types.Expression) !Expression {
 fn call(context: Context, e: parser_types.Expression) !Expression {
     const c = e.kind.call;
     const f = try expressionAlloc(context, c.function.*);
-    const arguments = try context.allocator.alloc(Expression, c.arguments.len);
-    const function_type = try context.allocator.alloc(MonoType, c.arguments.len + 1);
-    for (c.arguments, 0..) |arg, i| {
-        arguments[i] = try expression(context, arg);
-        function_type[i] = arguments[i].type;
+    const len = c.arguments.len;
+    const arguments = try context.allocator.alloc(Expression, len);
+    const function_type = try context.allocator.alloc(MonoType, len + 1);
+    for (c.arguments, arguments, function_type[0..len]) |untyped_arg, *typed_arg, *t| {
+        typed_arg.* = try expression(context, untyped_arg);
+        t.* = typed_arg.type;
     }
-    const type_ = freshTypeVar(context.next_type_var);
-    function_type[c.arguments.len] = type_;
-    try context.constraints.equal.append(.{ .left = f.type, .right = .{ .function = function_type } });
+    const return_type = freshTypeVar(context.next_type_var);
+    function_type[len] = return_type;
+    try context.constraints.equal.append(.{
+        .left = f.type,
+        .right = .{ .function = function_type },
+    });
     return Expression{
         .kind = .{ .call = .{ .function = f, .arguments = arguments } },
         .span = e.span,
-        .type = type_,
+        .type = return_type,
     };
 }
 
@@ -222,26 +227,28 @@ fn function(context: Context, e: parser_types.Expression) !Expression {
     const f = e.kind.function;
     try pushScope(context.scopes);
     defer popScope(context.scopes);
-    const parameters = try context.allocator.alloc(Expression, f.parameters.len);
-    const function_type = try context.allocator.alloc(MonoType, f.parameters.len + 1);
-    for (f.parameters, 0..) |p, i| {
-        const type_ = expressionToMonoType(p.type.*, context.builtins);
+    const len = f.parameters.len;
+    const parameters = try context.allocator.alloc(Expression, len);
+    const function_type = try context.allocator.alloc(MonoType, len + 1);
+    for (f.parameters, parameters, function_type[0..len]) |untyped_p, *typed_p, *t| {
+        const name_symbol = untyped_p.name.kind.symbol;
+        const p_type = expressionToMonoType(untyped_p.type.*, context.builtins);
         const span = Span{
-            .begin = p.name.span.begin,
-            .end = p.type.span.end,
+            .begin = untyped_p.name.span.begin,
+            .end = untyped_p.type.span.end,
         };
-        parameters[i] = Expression{
-            .kind = .{ .symbol = p.name.kind.symbol },
+        typed_p.* = Expression{
+            .kind = .{ .symbol = name_symbol },
             .span = span,
-            .type = type_,
+            .type = p_type,
         };
-        function_type[i] = type_;
-        try putInScope(context.scopes, p.name.kind.symbol, type_);
+        t.* = p_type;
+        try putInScope(context.scopes, name_symbol, p_type);
     }
     const return_type = expressionToMonoType(f.return_type.*, context.builtins);
     const body = try expressionAlloc(context, f.body.*);
     try context.constraints.equal.append(.{ .left = return_type, .right = body.type });
-    function_type[f.parameters.len] = return_type;
+    function_type[len] = return_type;
     return Expression{
         .kind = .{
             .function = .{
@@ -258,8 +265,8 @@ fn function(context: Context, e: parser_types.Expression) !Expression {
 fn block(context: Context, e: parser_types.Expression) !Expression {
     const b = e.kind.block;
     const expressions = try context.allocator.alloc(Expression, b.len);
-    for (b, 0..) |expr, i|
-        expressions[i] = try expression(context, expr);
+    for (b, expressions) |untyped_e, *typed_e|
+        typed_e.* = try expression(context, untyped_e);
     return Expression{
         .kind = .{ .block = expressions },
         .span = e.span,

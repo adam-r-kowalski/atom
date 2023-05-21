@@ -22,7 +22,7 @@ fn monotype(allocator: Allocator, s: Substitution, m: MonoType) !MonoType {
         .module => return .module,
         .function => |f| {
             const mapped = try allocator.alloc(MonoType, f.len);
-            for (f, 0..) |t, i| mapped[i] = try monotype(allocator, s, t);
+            for (f, mapped) |t, *mapped_t| mapped_t.* = try monotype(allocator, s, t);
             return .{ .function = mapped };
         },
         .typevar => |t| {
@@ -103,7 +103,9 @@ fn define(allocator: Allocator, s: Substitution, e: Expression) !Expression {
 fn call(allocator: Allocator, s: Substitution, e: Expression) !Expression {
     const c = e.kind.call;
     const arguments = try allocator.alloc(Expression, c.arguments.len);
-    for (c.arguments, 0..) |a, i| arguments[i] = try expression(allocator, s, a);
+    for (c.arguments, arguments) |unapplied, *applied| {
+        applied.* = try expression(allocator, s, unapplied);
+    }
     return Expression{
         .kind = .{
             .call = .{
@@ -119,7 +121,9 @@ fn call(allocator: Allocator, s: Substitution, e: Expression) !Expression {
 fn function(allocator: Allocator, s: Substitution, e: Expression) !Expression {
     const f = e.kind.function;
     const parameters = try allocator.alloc(Expression, f.parameters.len);
-    for (f.parameters, 0..) |p, i| parameters[i] = try symbol(allocator, s, p);
+    for (f.parameters, parameters) |unapplied, *applied| {
+        applied.* = try symbol(allocator, s, unapplied);
+    }
     return Expression{
         .kind = .{
             .function = .{
@@ -136,7 +140,9 @@ fn function(allocator: Allocator, s: Substitution, e: Expression) !Expression {
 fn block(allocator: Allocator, s: Substitution, e: Expression) !Expression {
     const b = e.kind.block;
     const expressions = try allocator.alloc(Expression, b.len);
-    for (b, 0..) |expr, i| expressions[i] = try expression(allocator, s, expr);
+    for (b, expressions) |unapplied, *applied| {
+        applied.* = try expression(allocator, s, unapplied);
+    }
     return Expression{
         .kind = .{ .block = expressions },
         .span = e.span,
