@@ -31,16 +31,16 @@ test "parse call" {
 test "parse define then call" {
     const allocator = std.testing.allocator;
     const source =
-        \\fn double(x: i32) i32 = x * 2
+        \\double = fn(x: i32) i32 { x * 2 }
         \\
-        \\fn start() i32 = double(2)
+        \\start = fn() i32 { double(2) }
     ;
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(defn double [(x i32)] i32 (* x 2))
+        \\(def double (fn [(x i32)] i32 (* x 2)))
         \\
-        \\(defn start [] i32 (double 2))
+        \\(def start (fn [] i32 (double 2)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -48,9 +48,9 @@ test "parse define then call" {
 test "type infer define then call" {
     const allocator = std.testing.allocator;
     const source =
-        \\fn double(x: i32) i32 = x * 2
+        \\double = fn(x: i32) i32 { x * 2 }
         \\
-        \\fn start() i32 = double(2)
+        \\start = fn() i32 { double(2) }
     ;
     const actual = try atom.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);

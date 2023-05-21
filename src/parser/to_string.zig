@@ -62,8 +62,7 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function, i: Indent) !vo
     }
     try writer.writeAll("] ");
     try type_(writer, intern, f.return_type.*);
-    try writer.writeAll(" ");
-    try expression(writer, intern, f.body.*, i);
+    try block(writer, intern, f.body.kind.block, i);
     try writer.writeAll(")");
 }
 
@@ -104,6 +103,7 @@ fn call(writer: List(u8).Writer, intern: Intern, c: Call, i: u64) !void {
 
 fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Expression, i: Indent) !void {
     if (exprs.len == 1) {
+        try writer.writeAll(" ");
         return try expression(writer, intern, exprs[0], i);
     }
     try indent(writer, i);

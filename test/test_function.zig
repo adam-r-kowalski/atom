@@ -103,7 +103,7 @@ test "parse multi line function" {
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def sum_squares (fn [(x i32) (y i32)] i32 
+        \\(def sum_squares (fn [(x i32) (y i32)] i32
         \\    (block
         \\        (def x_squared (^ x 2))
         \\        (def y_squared (^ y 2))

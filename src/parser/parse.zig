@@ -350,7 +350,12 @@ pub fn parse(allocator: Allocator, tokens: []const Token) !Expression {
         .precedence = LOWEST,
     };
     var list = List(Expression).init(allocator);
-    while (peekToken(context)) |_| try list.append(try expression(&context));
+    while (peekToken(context)) |token| {
+        switch (token.kind) {
+            .new_line => context.token_index += 1,
+            else => try list.append(try expression(&context)),
+        }
+    }
     const top_level = list.toOwnedSlice();
     return Expression{
         .kind = .{ .module = top_level },
