@@ -13,6 +13,7 @@ const Expression = types.Expression;
 const Kind = types.Kind;
 const BinaryOpKind = types.BinaryOpKind;
 const Parameter = types.Parameter;
+const Module = types.Module;
 
 const Precedence = u32;
 
@@ -342,26 +343,19 @@ fn expression(context: *Context) error{OutOfMemory}!Expression {
     }
 }
 
-pub fn parse(allocator: Allocator, tokens: []const Token) !Expression {
+pub fn parse(allocator: Allocator, tokens: []const Token) !Module {
     var context = Context{
         .allocator = allocator,
         .tokens = tokens,
         .token_index = 0,
         .precedence = LOWEST,
     };
-    var list = List(Expression).init(allocator);
+    var expressions = List(Expression).init(allocator);
     while (peekToken(context)) |token| {
         switch (token.kind) {
             .new_line => context.token_index += 1,
-            else => try list.append(try expression(&context)),
+            else => try expressions.append(try expression(&context)),
         }
     }
-    const top_level = list.toOwnedSlice();
-    return Expression{
-        .kind = .{ .module = top_level },
-        .span = .{
-            .begin = top_level[0].span.begin,
-            .end = top_level[top_level.len - 1].span.end,
-        },
-    };
+    return Module{ .expressions = expressions.toOwnedSlice() };
 }

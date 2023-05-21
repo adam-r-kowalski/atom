@@ -118,9 +118,10 @@ test "type infer function body" {
     const actual = try atom.testing.typeInfer(allocator, source, "id");
     defer allocator.free(actual);
     const expected =
-        \\define
-        \\    name = id
-        \\    value =
+        \\define =
+        \\    name = symbol{ name = id, type = fn(i32) i32 }
+        \\    type = void
+        \\    value = 
         \\        function
         \\            parameters =
         \\                symbol{ name = x, type = i32 }

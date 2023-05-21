@@ -6,7 +6,7 @@ const Interned = interner.Interned;
 const parser_types = @import("../parser/types.zig");
 const Span = parser_types.Span;
 const BinaryOpKind = parser_types.BinaryOpKind;
-const UntypedTopLevel = parser_types.TopLevel;
+const UntypedExpression = parser_types.Expression;
 
 pub const TypeVar = u64;
 
@@ -20,126 +20,62 @@ pub const MonoType = union(enum) {
     function: []const MonoType,
 };
 
-pub const Symbol = struct {
-    value: Interned,
-    span: Span,
-    type: MonoType,
-};
-
-pub const Int = struct {
-    value: Interned,
-    span: Span,
-    type: MonoType,
-};
-
-pub const Float = struct {
-    value: Interned,
-    span: Span,
-    type: MonoType,
-};
-
-pub const Bool = struct {
-    value: bool,
-    span: Span,
-    type: MonoType,
-};
-
 pub const Define = struct {
-    name: Symbol,
-    body: []const Expression,
-    span: Span,
-    type: MonoType,
+    name: *const Expression,
+    value: *const Expression,
 };
 
 pub const Function = struct {
-    name: Symbol,
-    parameters: []const Symbol,
+    parameters: []const Expression,
     return_type: MonoType,
-    body: []const Expression,
-    span: Span,
-    type: MonoType,
-};
-
-pub const Declaration = struct {
-    name: Symbol,
-    parameters: []const Symbol,
-    return_type: MonoType,
-    span: Span,
-    type: MonoType,
+    body: *const Expression,
 };
 
 pub const BinaryOp = struct {
     kind: BinaryOpKind,
     left: *const Expression,
     right: *const Expression,
-    span: Span,
-    type: MonoType,
-};
-
-pub const Group = struct {
-    expression: *const Expression,
-    span: Span,
-    type: MonoType,
 };
 
 pub const If = struct {
     condition: *const Expression,
-    then: []const Expression,
-    else_: []const Expression,
-    span: Span,
-    type: MonoType,
+    then: *const Expression,
+    else_: *const Expression,
 };
 
 pub const Call = struct {
     function: *const Expression,
     arguments: []const Expression,
-    span: Span,
-    type: MonoType,
 };
 
-pub const Expression = union(enum) {
-    int: Int,
-    float: Float,
-    symbol: Symbol,
+pub const Kind = union(enum) {
+    int: Interned,
+    float: Interned,
+    symbol: Interned,
+    bool: bool,
     define: Define,
     function: Function,
-    declaration: Declaration,
     binary_op: BinaryOp,
-    group: Group,
+    group: *const Expression,
+    block: []const Expression,
     if_: If,
     call: Call,
-    bool: Bool,
 };
 
-pub const Import = struct {
-    expression: Expression,
+pub const Expression = struct {
+    kind: Kind,
     span: Span,
     type: MonoType,
 };
 
-pub const Export = struct {
-    expression: Expression,
-    span: Span,
-    type: MonoType,
-};
-
-pub const TopLevel = union(enum) {
-    import: Import,
-    export_: Export,
-    define: Define,
-    function: Function,
-};
-
-pub const Untyped = Map(Interned, UntypedTopLevel);
-pub const Typed = Map(Interned, TopLevel);
+pub const Untyped = Map(Interned, UntypedExpression);
+pub const Typed = Map(Interned, Expression);
 
 pub const Module = struct {
     order: []const Interned,
     untyped: Untyped,
     typed: Typed,
     scope: Scope,
-    span: Span,
-    type: MonoType,
 };
 
 pub const Scope = Map(Interned, MonoType);

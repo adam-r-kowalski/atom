@@ -59,10 +59,13 @@ pub const Kind = union(enum) {
     block: []const Expression,
     if_: If,
     call: Call,
-    module: []const Expression,
 };
 
 pub const Expression = struct {
     kind: Kind,
     span: Span,
+};
+
+pub const Module = struct {
+    expressions: []const Expression,
 };

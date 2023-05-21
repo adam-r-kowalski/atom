@@ -39,12 +39,12 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     const builtins = try Builtins.init(&intern);
     const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
     const untyped_module = try parser.parse(arena.allocator(), tokens);
-    var next_type_var: type_checker.types.TypeVar = 0;
-    var module = try type_checker.infer.module(arena.allocator(), builtins, untyped_module, &next_type_var);
+    var module = try type_checker.infer.module(arena.allocator(), builtins, untyped_module);
     const interned = try interner.store(&intern, name);
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.Equal).init(arena.allocator()),
     };
+    var next_type_var: type_checker.types.TypeVar = 0;
     try type_checker.infer.infer(arena.allocator(), &constraints, &module, builtins, &next_type_var, interned);
     const substitution = try type_checker.solve(arena.allocator(), constraints);
     const typed_module = try type_checker.apply(arena.allocator(), substitution, module);

@@ -14,6 +14,7 @@ const If = types.If;
 const Parameter = types.Parameter;
 const Block = types.Block;
 const Call = types.Call;
+const Module = types.Module;
 
 fn interned(writer: List(u8).Writer, intern: Intern, s: Interned) !void {
     try writer.writeAll(interner.lookup(intern, s));
@@ -115,13 +116,6 @@ fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Expression, i: 
     try writer.writeAll(")");
 }
 
-fn module(writer: List(u8).Writer, intern: Intern, exprs: []const Expression, n: Indent) !void {
-    for (exprs) |e, i| {
-        if (i > 0) try writer.writeAll("\n\n");
-        try expression(writer, intern, e, n);
-    }
-}
-
 fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, n: Indent) error{OutOfMemory}!void {
     switch (expr.kind) {
         .int => |i| try interned(writer, intern, i),
@@ -135,13 +129,15 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, n: Inde
         .block => |b| try block(writer, intern, b, n),
         .if_ => |i| try if_(writer, intern, i, n),
         .call => |c| try call(writer, intern, c, n),
-        .module => |m| try module(writer, intern, m, n),
     }
 }
 
-pub fn toString(allocator: Allocator, intern: Intern, expr: Expression) ![]u8 {
+pub fn toString(allocator: Allocator, intern: Intern, module: Module) ![]u8 {
     var list = List(u8).init(allocator);
     const writer = list.writer();
-    try expression(writer, intern, expr, 0);
+    for (module.expressions) |e, i| {
+        if (i > 0) try writer.writeAll("\n\n");
+        try expression(writer, intern, e, 0);
+    }
     return list.toOwnedSlice();
 }
