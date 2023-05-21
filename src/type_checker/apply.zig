@@ -6,11 +6,7 @@ const Substitution = types.Substitution;
 const Module = types.Module;
 const MonoType = types.MonoType;
 const Typed = types.Typed;
-const TopLevel = types.TopLevel;
 const Function = types.Function;
-const Symbol = types.Symbol;
-const Int = types.Int;
-const Float = types.Float;
 const Expression = types.Expression;
 const If = types.If;
 const BinaryOp = types.BinaryOp;
@@ -36,79 +32,131 @@ fn monotype(allocator: Allocator, s: Substitution, m: MonoType) !MonoType {
     }
 }
 
-fn symbol(allocator: Allocator, s: Substitution, sym: Symbol) !Symbol {
-    return Symbol{
-        .value = sym.value,
-        .span = sym.span,
-        .type = try monotype(allocator, s, sym.type),
+fn symbol(allocator: Allocator, s: Substitution, e: Expression) !Expression {
+    return Expression{
+        .kind = .{ .symbol = e.kind.symbol },
+        .span = e.span,
+        .type = try monotype(allocator, s, e.type),
     };
 }
 
-fn int(allocator: Allocator, s: Substitution, i: Int) !Int {
-    return Int{
-        .value = i.value,
-        .span = i.span,
-        .type = try monotype(allocator, s, i.type),
+fn int(allocator: Allocator, s: Substitution, e: Expression) !Expression {
+    return Expression{
+        .kind = .{ .int = e.kind.int },
+        .span = e.span,
+        .type = try monotype(allocator, s, e.type),
     };
 }
 
-fn float(allocator: Allocator, s: Substitution, f: Float) !Float {
-    return Float{
-        .value = f.value,
-        .span = f.span,
-        .type = try monotype(allocator, s, f.type),
+fn float(allocator: Allocator, s: Substitution, e: Expression) !Expression {
+    return Expression{
+        .kind = .{ .float = e.kind.float },
+        .span = e.span,
+        .type = try monotype(allocator, s, e.type),
     };
 }
 
-fn if_(allocator: Allocator, s: Substitution, i: If) !If {
-    return If{
-        .condition = try expressionAlloc(allocator, s, i.condition.*),
-        .then = try expressions(allocator, s, i.then),
-        .else_ = try expressions(allocator, s, i.else_),
-        .span = i.span,
-        .type = try monotype(allocator, s, i.type),
+fn if_(allocator: Allocator, s: Substitution, e: Expression) !Expression {
+    const i = e.kind.if_;
+    return Expression{
+        .kind = .{
+            .if_ = .{
+                .condition = try expressionAlloc(allocator, s, i.condition.*),
+                .then = try expressionAlloc(allocator, s, i.then.*),
+                .else_ = try expressionAlloc(allocator, s, i.else_.*),
+            },
+        },
+        .span = e.span,
+        .type = try monotype(allocator, s, e.type),
     };
 }
 
-fn binaryOp(allocator: Allocator, s: Substitution, b: BinaryOp) !BinaryOp {
-    return BinaryOp{
-        .kind = b.kind,
-        .left = try expressionAlloc(allocator, s, b.left.*),
-        .right = try expressionAlloc(allocator, s, b.right.*),
-        .span = b.span,
-        .type = try monotype(allocator, s, b.type),
+fn binaryOp(allocator: Allocator, s: Substitution, e: Expression) !Expression {
+    const b = e.kind.binary_op;
+    return Expression{
+        .kind = .{
+            .binary_op = .{
+                .kind = b.kind,
+                .left = try expressionAlloc(allocator, s, b.left.*),
+                .right = try expressionAlloc(allocator, s, b.right.*),
+            },
+        },
+        .span = e.span,
+        .type = try monotype(allocator, s, e.type),
     };
 }
 
-fn define(allocator: Allocator, s: Substitution, d: Define) !Define {
-    return Define{
-        .name = try symbol(allocator, s, d.name),
-        .body = try expressions(allocator, s, d.body),
-        .span = d.span,
-        .type = try monotype(allocator, s, d.type),
+fn define(allocator: Allocator, s: Substitution, e: Expression) !Expression {
+    const d = e.kind.define;
+    return Expression{
+        .kind = .{
+            .define = .{
+                .name = try expressionAlloc(allocator, s, d.name.*),
+                .value = try expressionAlloc(allocator, s, d.value.*),
+            },
+        },
+        .span = e.span,
+        .type = try monotype(allocator, s, e.type),
     };
 }
 
-fn call(allocator: Allocator, s: Substitution, c: Call) !Call {
-    return Call{
-        .function = try expressionAlloc(allocator, s, c.function.*),
-        .arguments = try expressions(allocator, s, c.arguments),
-        .span = c.span,
-        .type = try monotype(allocator, s, c.type),
+fn call(allocator: Allocator, s: Substitution, e: Expression) !Expression {
+    const c = e.kind.call;
+    const arguments = try allocator.alloc(Expression, c.arguments.len);
+    for (c.arguments) |a, i| arguments[i] = try expression(allocator, s, a);
+    return Expression{
+        .kind = .{
+            .call = .{
+                .function = try expressionAlloc(allocator, s, c.function.*),
+                .arguments = arguments,
+            },
+        },
+        .span = e.span,
+        .type = try monotype(allocator, s, e.type),
+    };
+}
+
+fn function(allocator: Allocator, s: Substitution, e: Expression) !Expression {
+    const f = e.kind.function;
+    const parameters = try allocator.alloc(Expression, f.parameters.len);
+    for (f.parameters) |p, i| parameters[i] = try symbol(allocator, s, p);
+    return Expression{
+        .kind = .{
+            .function = .{
+                .parameters = parameters,
+                .return_type = try monotype(allocator, s, f.return_type),
+                .body = try expressionAlloc(allocator, s, f.body.*),
+            },
+        },
+        .span = e.span,
+        .type = try monotype(allocator, s, e.type),
+    };
+}
+
+fn block(allocator: Allocator, s: Substitution, e: Expression) !Expression {
+    const b = e.kind.block;
+    const expressions = try allocator.alloc(Expression, b.len);
+    for (b) |expr, i| expressions[i] = try expression(allocator, s, expr);
+    return Expression{
+        .kind = .{ .block = expressions },
+        .span = e.span,
+        .type = try monotype(allocator, s, e.type),
     };
 }
 
 fn expression(allocator: Allocator, s: Substitution, e: Expression) error{OutOfMemory}!Expression {
-    switch (e) {
-        .symbol => |sym| return .{ .symbol = try symbol(allocator, s, sym) },
-        .int => |i| return .{ .int = try int(allocator, s, i) },
-        .float => |f| return .{ .float = try float(allocator, s, f) },
-        .bool => |b| return .{ .bool = b },
-        .if_ => |i| return .{ .if_ = try if_(allocator, s, i) },
-        .binary_op => |b| return .{ .binary_op = try binaryOp(allocator, s, b) },
-        .define => |d| return .{ .define = try define(allocator, s, d) },
-        .call => |c| return .{ .call = try call(allocator, s, c) },
-        else => std.debug.panic("\nUnsupported expression {}", .{e}),
+    switch (e.kind) {
+        .symbol => return try symbol(allocator, s, e),
+        .int => return try int(allocator, s, e),
+        .float => return try float(allocator, s, e),
+        .bool => return e,
+        .if_ => return try if_(allocator, s, e),
+        .binary_op => return try binaryOp(allocator, s, e),
+        .define => return try define(allocator, s, e),
+        .call => return try call(allocator, s, e),
+        .function => return try function(allocator, s, e),
+        .block => return try block(allocator, s, e),
+        else => |k| std.debug.panic("\nUnsupported expression {}", .{k}),
     }
 }
 
@@ -118,38 +166,12 @@ fn expressionAlloc(allocator: Allocator, s: Substitution, e: Expression) !*const
     return expr;
 }
 
-fn expressions(allocator: Allocator, s: Substitution, exprs: []const Expression) ![]const Expression {
-    const result = try allocator.alloc(Expression, exprs.len);
-    for (exprs) |e, i| result[i] = try expression(allocator, s, e);
-    return result;
-}
-
-fn function(allocator: Allocator, s: Substitution, f: Function) !Function {
-    const parameters = try allocator.alloc(Symbol, f.parameters.len);
-    for (f.parameters) |p, i| parameters[i] = try symbol(allocator, s, p);
-    return Function{
-        .name = try symbol(allocator, s, f.name),
-        .parameters = parameters,
-        .return_type = try monotype(allocator, s, f.return_type),
-        .body = try expressions(allocator, s, f.body),
-        .span = f.span,
-        .type = try monotype(allocator, s, f.type),
-    };
-}
-
-fn topLevel(allocator: Allocator, s: Substitution, t: TopLevel) !TopLevel {
-    switch (t) {
-        .function => |f| return .{ .function = try function(allocator, s, f) },
-        else => std.debug.panic("\nUnsupported top level {}", .{t}),
-    }
-}
-
 pub fn apply(allocator: Allocator, s: Substitution, m: Module) !Module {
     var typed = Typed.init(allocator);
     var iterator = m.typed.iterator();
     while (iterator.next()) |entry| {
         if (m.typed.get(entry.key_ptr.*)) |t| {
-            const value = try topLevel(allocator, s, t);
+            const value = try expression(allocator, s, t);
             try typed.putNoClobber(entry.key_ptr.*, value);
         }
     }
@@ -158,7 +180,5 @@ pub fn apply(allocator: Allocator, s: Substitution, m: Module) !Module {
         .untyped = m.untyped,
         .typed = typed,
         .scope = m.scope,
-        .span = m.span,
-        .type = try monotype(allocator, s, m.type),
     };
 }

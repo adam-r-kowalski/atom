@@ -14,13 +14,14 @@ pub const Parameter = struct {
 pub const Expression = union(enum) {
     i32_const: Interned,
     f32_const: Interned,
+    block: []const Expression,
 };
 
 pub const Function = struct {
     name: Interned,
     parameters: []const Parameter,
     return_type: Type,
-    body: []const Expression,
+    body: *const Expression,
 };
 
 pub const FunctionExport = struct {

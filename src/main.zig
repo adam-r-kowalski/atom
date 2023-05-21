@@ -28,12 +28,12 @@ pub fn main() !void {
     const builtins = try atom.Builtins.init(&intern);
     const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
     const untyped_module = try atom.parser.parse(allocator, tokens);
-    var next_type_var: atom.type_checker.types.TypeVar = 0;
-    var module = try atom.type_checker.infer.module(allocator, builtins, untyped_module, &next_type_var);
+    var module = try atom.type_checker.infer.module(allocator, builtins, untyped_module);
     var constraints = atom.type_checker.types.Constraints{
         .equal = List(atom.type_checker.types.Equal).init(allocator),
     };
     const start = try atom.interner.store(&intern, "start");
+    var next_type_var: atom.type_checker.types.TypeVar = 0;
     try atom.type_checker.infer.infer(allocator, &constraints, &module, builtins, &next_type_var, start);
     const substitution = try atom.type_checker.solve(allocator, constraints);
     const typed_module = try atom.type_checker.apply(allocator, substitution, module);

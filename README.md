@@ -3,13 +3,14 @@
 ```zig
 # this is a comment
 
-# this defines a function which squares x
 square = fn(x: i32) i32 { x^2 }
 
-# calling square with 3 gives you 9
-square(3)
+test "function calls" {
+    assert(square(1) == 1)
+    assert(square(2) == 4)
+    assert(square(3) == 9)
+}
 
-# conditionals use an if then else syntax
 max = fn(x: i32, y: i32) i32 {
     if x > y { x } else { y }
 }
@@ -18,23 +19,56 @@ min = fn(x: i32, y: i32) i32 {
     if x < y { x } else { y }
 }
 
-# you can chain conditionals together
-clamp = fn(x: i32, lb: i32, ub: i32) i32 {
-    if x < lb { lb }
-    else if x > ub { ub }
-    else { x }
+test "conditionals" {
+    assert(max(5, 3) == 5)
+    assert(min(5, 3) == 3)
 }
 
-# there is a multi arm version of if as well
-clamp = fn(x: i32, lb: i32, ub: i32) i32 {
+# if expressions can be nested
+clamp = fn(value: i32, low: i32, high: i32) i32 {
+    if value < low { low }
+    else {
+        if value > high {
+            high
+        } else {
+            value
+        }
+    }
+}
+
+# you can use the multi arm version of if
+clamp = fn(x: i32, low: i32, high: i32) i32 {
     if {
-        x < lb { lb }
-        x > ub { ub }
+        x < low { low }
+        x > high { high }
         else { x }
     }
 }
 
+test "chained conditionals" {
+    assert(clamp(1, 3, 5) == 3)
+    assert(clamp(7, 3, 5) == 5)
+    assert(clamp(4, 3, 5) == 4)
+}
+
+test "named parameters" {
+    assert(clamp(value=1, low=3, high=5) == 3)
+    assert(clamp(value=7, low=3, high=5) == 5)
+    assert(clamp(value=4, low=3, high=5) == 4)
+}
+
+test "method notation named parameters" {
+    assert(1.clamp(low=3, high=5) == 3)
+    assert(7.clamp(low=3, high=5) == 5)
+    assert(4.clamp(low=3, high=5) == 4)
+}
+
 # you can create a generic clamp function which works on any ordered type
+Ord = interface[T] {
+    (<): fn(x: T, y: T) T
+    (>): fn(x: T, y: T) T
+}
+
 clamp = fn[T: Ord](x: T, lb: T, ub: T) T {
     if {
         x < lb { lb }
@@ -53,13 +87,16 @@ clamp = fn(x: i32, lb: i32, ub: i32) i32 {
     x.min(ub).max(lb)
 }
 
-
 # pattern matching is done with if expression is
 sum = fn(xs: i32[]) i32 {
     if xs is {
         [] { 0 }
         [x, ...xs] { x + sum(xs) }
     }
+}
+
+test "sum" {
+    assert(sum([1, 2, 3]) == 6)
 }
 
 # a fold expression can help us implement this in parallel
@@ -97,13 +134,6 @@ start = fn() void {
 }
 
 
-# create a unit test
-test "double makes the number twice as large" {
-    assert(double(2) == 4)
-    assert(double(4) == 8)
-    assert(double(5) == 10)
-}
-
 # interfaces allow you to code against different types in a uniform way
 Shape = interface[T] {
     area: fn(shape: T) f32
@@ -139,20 +169,34 @@ test "area of shapes" {
     assert(area(Square(5, 10)) == 50)
 }
 
-# for expressions are a generalization of einstein summation notation
-double_every = fn[m](a: f32[m]) f32[m] {
+double_every = fn[m: u64](a: f32[m]) f32[m] {
     for i { a * 2 }
 }
 
-transpose = fn[T, m, n](a: T[m][n]) T[n][m] {
+test "for expressions are a generalization of einstein summation notation" {
+    assert(double_every([1, 2, 3]) == [2, 4, 6])
+}
+
+transpose = fn[T, m: u64, n: u64](a: T[m][n]) T[n][m] {
     for i, j { a[j][i] }
 }
 
-dot = fn[T: Num, n](a: T[n], b: T[n]) T {
+test "transpose" {
+    a = [[1, 2, 3],
+         [4, 5, 6],
+         [7, 8, 9]]
+    b = [[1, 4, 7],
+         [2, 5, 8],
+         [3, 6, 9]]
+    assert(transpose(a) == b)
+    assert(a.transpose() == b)
+}
+
+dot = fn[T: Num, n: u64](a: T[n], b: T[n]) T {
     for i { sum(a[i] * b[i]) }
 }
 
-matmul = fn[T: Num, m, n, p](a: T[m][n], b: T[n][p]) T[m][p] {
+matmul = fn[T: Num, m: u64, n: u64, p: u64](a: T[m][n], b: T[n][p]) T[m][p] {
     for i, j, k { sum(a[i][k] * b[k][j]) }
 }
 ```

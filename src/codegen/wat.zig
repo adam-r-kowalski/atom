@@ -37,29 +37,30 @@ fn f32Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
     try writer.print("(f32.const {s})", .{value});
 }
 
-fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression) !void {
-    switch (expr) {
-        .i32_const => |interned| try i32Const(writer, intern, interned),
-        .f32_const => |interned| try f32Const(writer, intern, interned),
-    }
-}
-
 fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Expression, i: Indent) !void {
     for (exprs) |expr| {
         try indent(writer, i);
-        try expression(writer, intern, expr);
+        try expression(writer, intern, expr, i);
     }
 }
 
-fn function(writer: List(u8).Writer, intern: Intern, f: Function) !void {
+fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Indent) error{OutOfMemory}!void {
+    switch (expr) {
+        .i32_const => |interned| try i32Const(writer, intern, interned),
+        .f32_const => |interned| try f32Const(writer, intern, interned),
+        .block => |b| try block(writer, intern, b, i),
+    }
+}
+
+fn function(writer: List(u8).Writer, intern: Intern, f: Function, i: Indent) !void {
     try writer.writeAll("\n");
-    try indent(writer, 1);
+    try indent(writer, i);
     const name = interner.lookup(intern, f.name);
     try writer.print("(func ${s}", .{name});
     try writer.writeAll(" (result ");
     try typeString(writer, f.return_type);
     try writer.writeAll(")");
-    try block(writer, intern, f.body, 2);
+    try expression(writer, intern, f.body.*, i + 1);
     try writer.writeAll(")");
 }
 
@@ -79,7 +80,7 @@ pub fn wat(allocator: Allocator, intern: Intern, ir: IR) ![]const u8 {
     var list = List(u8).init(allocator);
     const writer = list.writer();
     try writer.writeAll("(module");
-    for (ir.functions) |f| try function(writer, intern, f);
+    for (ir.functions) |f| try function(writer, intern, f, 1);
     for (ir.exports) |e| try export_(writer, intern, e);
     try writer.writeAll(")");
     return list.toOwnedSlice();
