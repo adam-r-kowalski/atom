@@ -32,6 +32,7 @@ pub const Kind = union(enum) {
     else_,
     comma,
     fn_,
+    new_line,
 };
 
 pub const Token = struct {

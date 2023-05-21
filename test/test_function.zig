@@ -43,6 +43,54 @@ test "parse multiple parameters" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
+test "tokenize multi line function" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\sum_squares = fn(x: i32, y: i32) i32 {
+        \\    x_squared = x ^ 2
+        \\    y_squared = y ^ 2
+        \\    x_squared + y_squared
+        \\}
+    ;
+    const actual = try atom.testing.tokenize(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\symbol sum_squares
+        \\equal
+        \\fn
+        \\left paren
+        \\symbol x
+        \\colon
+        \\symbol i32
+        \\comma
+        \\symbol y
+        \\colon
+        \\symbol i32
+        \\right paren
+        \\symbol i32
+        \\left brace
+        \\new line
+        \\symbol x_squared
+        \\equal
+        \\symbol x
+        \\caret
+        \\int 2
+        \\new line
+        \\symbol y_squared
+        \\equal
+        \\symbol y
+        \\caret
+        \\int 2
+        \\new line
+        \\symbol x_squared
+        \\plus
+        \\symbol y_squared
+        \\new line
+        \\right brace
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
 test "parse multi line function" {
     const allocator = std.testing.allocator;
     const source =
@@ -55,10 +103,11 @@ test "parse multi line function" {
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def sum_squares (fn [(x i32) (y i32)] i32
-        \\    (def x_squared (^ x 2))
-        \\    (def y_squared (^ y 2))
-        \\    (+ x_squared y_squared)))
+        \\(def sum_squares (fn [(x i32) (y i32)] i32 
+        \\    (block
+        \\        (def x_squared (^ x 2))
+        \\        (def y_squared (^ y 2))
+        \\        (+ x_squared y_squared))))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

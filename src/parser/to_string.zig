@@ -63,7 +63,7 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function, i: Indent) !vo
     try writer.writeAll("] ");
     try type_(writer, intern, f.return_type.*);
     try writer.writeAll(" ");
-    try expression(writer, intern, f.body.*, i + 1);
+    try expression(writer, intern, f.body.*, i);
     try writer.writeAll(")");
 }
 

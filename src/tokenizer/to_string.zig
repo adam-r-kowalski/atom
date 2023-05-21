@@ -52,10 +52,10 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
             .left_brace => try writer.writeAll("left brace"),
             .right_brace => try writer.writeAll("right brace"),
             .if_ => try writer.writeAll("if"),
+            .else_ => try writer.writeAll("else"),
             .comma => try writer.writeAll("comma"),
             .fn_ => try writer.writeAll("fn"),
-            .import => try writer.writeAll("import"),
-            .export_ => try writer.writeAll("export"),
+            .new_line => try writer.writeAll("new line"),
         }
     }
     return list.toOwnedSlice();

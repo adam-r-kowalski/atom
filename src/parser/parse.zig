@@ -104,9 +104,25 @@ fn expressionAlloc(context: *Context) !*const Expression {
     return ptr;
 }
 
-fn blockAlloc(context: *Context) !*const Expression {
+fn block(context: *Context) !*const Expression {
+    const begin = consume(context, .left_brace).span.begin;
+    var exprs = List(Expression).init(context.allocator);
+    while (peekToken(context.*)) |token| {
+        switch (token.kind) {
+            .right_brace => break,
+            .new_line => context.token_index += 1,
+            else => {
+                context.precedence = LOWEST;
+                try exprs.append(try expression(context));
+            },
+        }
+    }
+    const end = consume(context, .right_brace).span.end;
     const ptr = try context.allocator.create(Expression);
-    ptr.* = try block(context);
+    ptr.* = Expression{
+        .kind = .{ .block = exprs.toOwnedSlice() },
+        .span = .{ .begin = begin, .end = end },
+    };
     return ptr;
 }
 
@@ -125,9 +141,9 @@ fn if_(context: *Context) !Expression {
     const begin = consume(context, .if_).span.begin;
     context.precedence = LOWEST;
     const condition = try expressionAlloc(context);
-    const then = try blockAlloc(context);
+    const then = try block(context);
     _ = consume(context, .else_);
-    const else_ = try blockAlloc(context);
+    const else_ = try block(context);
     const end = else_.span.end;
     return Expression{
         .kind = .{ .if_ = .{ .condition = condition, .then = then, .else_ = else_ } },
@@ -162,7 +178,7 @@ fn function(context: *Context) !Expression {
     context.precedence = DEFINE + 1;
     const return_type = try expressionAlloc(context);
     context.precedence = LOWEST;
-    const body = try blockAlloc(context);
+    const body = try block(context);
     const end = body.span.end;
     return Expression{
         .kind = .{
@@ -194,25 +210,6 @@ const Asscociativity = enum {
     left,
     right,
 };
-
-fn block(context: *Context) !Expression {
-    const begin = consume(context, .left_brace).span.begin;
-    var exprs = List(Expression).init(context.allocator);
-    while (peekToken(context.*)) |token| {
-        switch (token.kind) {
-            .right_brace => break,
-            else => {
-                context.precedence = LOWEST;
-                try exprs.append(try expression(context));
-            },
-        }
-    }
-    const end = consume(context, .right_brace).span.end;
-    return Expression{
-        .kind = .{ .block = exprs.toOwnedSlice() },
-        .span = .{ .begin = begin, .end = end },
-    };
-}
 
 fn define(context: *Context, name: Expression) !Expression {
     context.token_index += 1;

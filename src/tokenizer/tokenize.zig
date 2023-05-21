@@ -110,6 +110,16 @@ fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !Token {
     return Token{ .kind = .{ .symbol = interned }, .span = span };
 }
 
+fn newLine(cursor: *Cursor) Token {
+    const begin = cursor.pos;
+    var i: u64 = 0;
+    while (i < cursor.source.len and cursor.source[i] == '\n') : (i += 1) {}
+    cursor.pos.line += i;
+    cursor.pos.column = 1;
+    cursor.source = cursor.source[i..];
+    return Token{ .kind = .new_line, .span = .{ .begin = begin, .end = cursor.pos } };
+}
+
 fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?Token {
     trim(cursor);
     if (cursor.source.len == 0) return null;
@@ -127,6 +137,7 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?Token {
         '{' => exact(cursor, .left_brace),
         '}' => exact(cursor, .right_brace),
         ',' => exact(cursor, .comma),
+        '\n' => newLine(cursor),
         else => try symbol(intern, builtins, cursor),
     };
 }

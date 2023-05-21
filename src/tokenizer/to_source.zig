@@ -11,13 +11,25 @@ const Span = types.Span;
 const Pos = types.Pos;
 const Token = types.Token;
 
-fn span(writer: List(u8).Writer, s: Span, pos: *Pos) !void {
+fn lines(writer: List(u8).Writer, s: Span, pos: Pos) !void {
+    const delta = s.end.line - pos.line;
+    var i: usize = 0;
+    while (i < delta) : (i += 1) {
+        try writer.writeAll("\n");
+    }
+}
+
+fn columns(writer: List(u8).Writer, s: Span, pos: Pos) !void {
     const delta = s.begin.column - pos.column;
     var i: usize = 0;
     while (i < delta) : (i += 1) {
         try writer.writeAll(" ");
     }
-    pos.* = s.end;
+}
+
+fn span(writer: List(u8).Writer, s: Span, pos: Pos) !void {
+    try lines(writer, s, pos);
+    try columns(writer, s, pos);
 }
 
 pub fn toSource(allocator: Allocator, intern: Intern, tokens: []const Token) ![]const u8 {
@@ -25,7 +37,8 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
     const writer = list.writer();
     var pos = Pos{ .line = 1, .column = 1 };
     for (tokens) |token| {
-        try span(writer, token.span, &pos);
+        try span(writer, token.span, pos);
+        pos = token.span.end;
         switch (token.kind) {
             .symbol => |s| try writer.writeAll(interner.lookup(intern, s)),
             .int => |i| try writer.writeAll(interner.lookup(intern, i)),
@@ -45,10 +58,10 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
             .left_brace => try writer.writeAll("{"),
             .right_brace => try writer.writeAll("}"),
             .if_ => try writer.writeAll("if"),
+            .else_ => try writer.writeAll("else"),
             .comma => try writer.writeAll(","),
             .fn_ => try writer.writeAll("fn"),
-            .import => try writer.writeAll("import"),
-            .export_ => try writer.writeAll("export"),
+            .new_line => {},
         }
     }
     return list.toOwnedSlice();
