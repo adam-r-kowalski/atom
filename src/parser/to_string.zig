@@ -87,8 +87,8 @@ fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp, i: Indent) !vo
 fn if_(writer: List(u8).Writer, intern: Intern, i: If, n: Indent) !void {
     try writer.writeAll("(if ");
     try expression(writer, intern, i.condition.*, n);
-    try expression(writer, intern, i.then.*, n + 1);
-    try expression(writer, intern, i.else_.*, n + 1);
+    try expression(writer, intern, i.then.*, n);
+    try expression(writer, intern, i.else_.*, n);
     try writer.writeAll(")");
 }
 
@@ -103,11 +103,10 @@ fn call(writer: List(u8).Writer, intern: Intern, c: Call, i: u64) !void {
 }
 
 fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Expression, i: Indent) !void {
-    if (exprs.len == 1) {
-        try writer.writeAll(" ");
-        return try expression(writer, intern, exprs[0], i);
-    }
     try indent(writer, i);
+    if (exprs.len == 1) {
+        return try expression(writer, intern, exprs[0], i + 1);
+    }
     try writer.writeAll("(block");
     for (exprs) |expr| {
         try indent(writer, i + 1);

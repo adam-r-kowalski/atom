@@ -105,7 +105,7 @@ fn expressionAlloc(context: *Context) !*const Expression {
     return ptr;
 }
 
-fn block(context: *Context) !*const Expression {
+fn block(context: *Context) !Expression {
     const begin = consume(context, .left_brace).span.begin;
     var exprs = List(Expression).init(context.allocator);
     while (peekToken(context.*)) |token| {
@@ -119,11 +119,15 @@ fn block(context: *Context) !*const Expression {
         }
     }
     const end = consume(context, .right_brace).span.end;
-    const ptr = try context.allocator.create(Expression);
-    ptr.* = Expression{
+    return Expression{
         .kind = .{ .block = exprs.toOwnedSlice() },
         .span = .{ .begin = begin, .end = end },
     };
+}
+
+fn blockAlloc(context: *Context) !*const Expression {
+    const ptr = try context.allocator.create(Expression);
+    ptr.* = try block(context);
     return ptr;
 }
 
@@ -142,9 +146,9 @@ fn if_(context: *Context) !Expression {
     const begin = consume(context, .if_).span.begin;
     context.precedence = LOWEST;
     const condition = try expressionAlloc(context);
-    const then = try block(context);
+    const then = try blockAlloc(context);
     _ = consume(context, .else_);
-    const else_ = try block(context);
+    const else_ = try blockAlloc(context);
     const end = else_.span.end;
     return Expression{
         .kind = .{ .if_ = .{ .condition = condition, .then = then, .else_ = else_ } },
@@ -179,7 +183,7 @@ fn function(context: *Context) !Expression {
     context.precedence = DEFINE + 1;
     const return_type = try expressionAlloc(context);
     context.precedence = LOWEST;
-    const body = try block(context);
+    const body = try blockAlloc(context);
     const end = body.span.end;
     return Expression{
         .kind = .{
@@ -203,6 +207,7 @@ fn prefix(context: *Context) !Expression {
         .left_paren => return try group(context),
         .if_ => return try if_(context),
         .fn_ => return try function(context),
+        .left_brace => return try block(context),
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),
     }
 }

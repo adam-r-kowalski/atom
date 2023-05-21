@@ -3,7 +3,9 @@ const atom = @import("atom");
 
 test "tokenize import" {
     const allocator = std.testing.allocator;
-    const source = "import fn print(msg: str) void";
+    const source =
+        \\foreign_import("console", "log", fn print(msg: str) void)
+    ;
     const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -22,7 +24,9 @@ test "tokenize import" {
 
 test "parse import" {
     const allocator = std.testing.allocator;
-    const source = "import fn print(msg: str) void";
+    const source =
+        \\foreign_import("console", "log", fn print(msg: str) void)
+    ;
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(import (defn print [(msg str)] void))";
@@ -31,7 +35,11 @@ test "parse import" {
 
 test "tokenize export" {
     const allocator = std.testing.allocator;
-    const source = "export fn double(x: i32) i32 = x * 2";
+    const source =
+        \\foreign_export("double", fn(x: i32) i32 {
+        \\    x * 2
+        \\})
+    ;
     const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -54,7 +62,26 @@ test "tokenize export" {
 
 test "parse export" {
     const allocator = std.testing.allocator;
-    const source = "export fn double(x: i32) i32 = x * 2";
+    const source =
+        \\foreign_export("double", fn(x: i32) i32 {
+        \\    x * 2
+        \\})
+    ;
+    const actual = try atom.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected = "(export (defn double [(x i32)] i32 (* x 2)))";
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse named export" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\double = fn(x: i32) i32 {
+        \\    x * 2
+        \\}
+        \\
+        \\foreign_export("double", double)
+    ;
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(export (defn double [(x i32)] i32 (* x 2)))";

@@ -30,7 +30,10 @@ test "parse function definition" {
     const source = "double = fn(x: i32) i32 { x + x }";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(def double (fn [(x i32)] i32 (+ x x)))";
+    const expected =
+        \\(def double (fn [(x i32)] i32
+        \\    (+ x x)))
+    ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 
@@ -39,7 +42,10 @@ test "parse multiple parameters" {
     const source = "add = fn(x: i32, y: i32) i32 { x + y }";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(def add (fn [(x i32) (y i32)] i32 (+ x y)))";
+    const expected =
+        \\(def add (fn [(x i32) (y i32)] i32
+        \\    (+ x y)))
+    ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 

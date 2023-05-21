@@ -24,10 +24,25 @@ test "conditionals" {
     assert(min(5, 3) == 3)
 }
 
+# if expressions can be nested
 clamp = fn(value: i32, low: i32, high: i32) i32 {
     if value < low { low }
-    else if value > high { high }
-    else { value }
+    else {
+        if value > high {
+            high
+        } else {
+            value
+        }
+    }
+}
+
+# you can use the multi arm version of if
+clamp = fn(x: i32, low: i32, high: i32) i32 {
+    if {
+        x < low { low }
+        x > high { high }
+        else { x }
+    }
 }
 
 test "chained conditionals" {
@@ -48,16 +63,12 @@ test "method notation named parameters" {
     assert(4.clamp(low=3, high=5) == 4)
 }
 
-# there is a multi arm version of if as well
-clamp = fn(x: i32, lb: i32, ub: i32) i32 {
-    if {
-        x < lb { lb }
-        x > ub { ub }
-        else { x }
-    }
+# you can create a generic clamp function which works on any ordered type
+Ord = interface[T] {
+    (<): fn(x: T, y: T) T
+    (>): fn(x: T, y: T) T
 }
 
-# you can create a generic clamp function which works on any ordered type
 clamp = fn[T: Ord](x: T, lb: T, ub: T) T {
     if {
         x < lb { lb }
@@ -75,7 +86,6 @@ clamp = fn(x: i32, lb: i32, ub: i32) i32 {
 clamp = fn(x: i32, lb: i32, ub: i32) i32 {
     x.min(ub).max(lb)
 }
-
 
 # pattern matching is done with if expression is
 sum = fn(xs: i32[]) i32 {
@@ -159,7 +169,7 @@ test "area of shapes" {
     assert(area(Square(5, 10)) == 50)
 }
 
-double_every = fn[m](a: f32[m]) f32[m] {
+double_every = fn[m: u64](a: f32[m]) f32[m] {
     for i { a * 2 }
 }
 
@@ -167,7 +177,7 @@ test "for expressions are a generalization of einstein summation notation" {
     assert(double_every([1, 2, 3]) == [2, 4, 6])
 }
 
-transpose = fn[T, m, n](a: T[m][n]) T[n][m] {
+transpose = fn[T, m: u64, n: u64](a: T[m][n]) T[n][m] {
     for i, j { a[j][i] }
 }
 
@@ -182,11 +192,11 @@ test "transpose" {
     assert(a.transpose() == b)
 }
 
-dot = fn[T: Num, n](a: T[n], b: T[n]) T {
+dot = fn[T: Num, n: u64](a: T[n], b: T[n]) T {
     for i { sum(a[i] * b[i]) }
 }
 
-matmul = fn[T: Num, m, n, p](a: T[m][n], b: T[n][p]) T[m][p] {
+matmul = fn[T: Num, m: u64, n: u64, p: u64](a: T[m][n], b: T[n][p]) T[m][p] {
     for i, j, k { sum(a[i][k] * b[k][j]) }
 }
 ```

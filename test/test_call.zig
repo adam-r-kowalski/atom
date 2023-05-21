@@ -38,9 +38,11 @@ test "parse define then call" {
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def double (fn [(x i32)] i32 (* x 2)))
+        \\(def double (fn [(x i32)] i32
+        \\    (* x 2)))
         \\
-        \\(def start (fn [] i32 (double 2)))
+        \\(def start (fn [] i32
+        \\    (double 2)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -55,27 +57,33 @@ test "type infer define then call" {
     const actual = try atom.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
-        \\function
-        \\    name = double
-        \\    parameters =
-        \\        symbol{ name = x, type = i32 }
-        \\    return_type = i32
-        \\    body = 
-        \\        binary_op =
-        \\            kind = *
-        \\            left = symbol{ name = x, type = i32 }
-        \\            right = int{ value = 2, type = i32 }
-        \\            type = i32
+        \\define =
+        \\    name = symbol{ name = double, type = fn(i32) i32 }
+        \\    type = void
+        \\    value = 
+        \\        function
+        \\            parameters =
+        \\                symbol{ name = x, type = i32 }
+        \\            return_type = i32
+        \\            body = 
+        \\                binary_op =
+        \\                    kind = *
+        \\                    left = symbol{ name = x, type = i32 }
+        \\                    right = int{ value = 2, type = i32 }
+        \\                    type = i32
         \\
-        \\function
-        \\    name = start
-        \\    return_type = i32
-        \\    body = 
-        \\        call =
-        \\            symbol{ name = double, type = (i32) -> i32 }
-        \\            arguments =
-        \\                int{ value = 2, type = i32 }
-        \\            type = i32
+        \\define =
+        \\    name = symbol{ name = start, type = fn() i32 }
+        \\    type = void
+        \\    value = 
+        \\        function
+        \\            return_type = i32
+        \\            body = 
+        \\                call =
+        \\                    symbol{ name = double, type = fn(i32) i32 }
+        \\                    arguments =
+        \\                        int{ value = 2, type = i32 }
+        \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
