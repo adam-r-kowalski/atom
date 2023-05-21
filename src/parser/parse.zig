@@ -128,7 +128,7 @@ fn block(context: *Context) !Expression {
     }
     const end = consume(context, .right_brace).span.end;
     return Expression{
-        .kind = .{ .block = exprs.toOwnedSlice() },
+        .kind = .{ .block = try exprs.toOwnedSlice() },
         .span = .{ .begin = begin, .end = end },
     };
 }
@@ -150,7 +150,7 @@ fn group(context: *Context) !Expression {
     };
 }
 
-fn if_(context: *Context) !Expression {
+fn conditional(context: *Context) !Expression {
     const begin = consume(context, .if_).span.begin;
     context.precedence = LOWEST;
     const condition = try expressionAlloc(context);
@@ -228,7 +228,7 @@ fn prefix(context: *Context) !Expression {
         .string => return string(context),
         .bool => return boolean(context),
         .left_paren => return try group(context),
-        .if_ => return try if_(context),
+        .if_ => return try conditional(context),
         .fn_ => return try function(context),
         .left_brace => return try block(context),
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),
@@ -306,7 +306,7 @@ fn call(context: *Context, left: Expression) !Expression {
         .kind = .{
             .call = .{
                 .function = try alloc(context, left),
-                .arguments = arguments.toOwnedSlice(),
+                .arguments = try arguments.toOwnedSlice(),
             },
         },
         .span = Span{ .begin = left.span.begin, .end = end },
@@ -385,5 +385,5 @@ pub fn parse(allocator: Allocator, tokens: []const Token) !Module {
             else => try expressions.append(try expression(&context)),
         }
     }
-    return Module{ .expressions = expressions.toOwnedSlice() };
+    return Module{ .expressions = try expressions.toOwnedSlice() };
 }

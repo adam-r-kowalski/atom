@@ -28,7 +28,7 @@ const Builtins = @import("../builtins.zig").Builtins;
 fn topLevelType(allocator: Allocator, builtins: Builtins, expr: parser_types.Expression) !MonoType {
     const f = expr.kind.function;
     const function_type = try allocator.alloc(MonoType, f.parameters.len + 1);
-    for (f.parameters) |p, i|
+    for (f.parameters, 0..) |p, i|
         function_type[i] = expressionToMonoType(p.type.*, builtins);
     function_type[f.parameters.len] = expressionToMonoType(f.return_type.*, builtins);
     return MonoType{ .function = function_type };
@@ -47,7 +47,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: parser_types.Module) 
         try scope.put(name, monotype);
     }
     return Module{
-        .order = order.toOwnedSlice(),
+        .order = try order.toOwnedSlice(),
         .untyped = untyped,
         .typed = Typed.init(allocator),
         .scope = scope,
@@ -143,7 +143,7 @@ const Context = struct {
     next_type_var: *TypeVar,
 };
 
-fn if_(context: Context, e: parser_types.Expression) !Expression {
+fn conditional(context: Context, e: parser_types.Expression) !Expression {
     const i = e.kind.if_;
     const condition = try expressionAlloc(context, i.condition.*);
     const then = try expressionAlloc(context, i.then.*);
@@ -204,7 +204,7 @@ fn call(context: Context, e: parser_types.Expression) !Expression {
     const f = try expressionAlloc(context, c.function.*);
     const arguments = try context.allocator.alloc(Expression, c.arguments.len);
     const function_type = try context.allocator.alloc(MonoType, c.arguments.len + 1);
-    for (c.arguments) |arg, i| {
+    for (c.arguments, 0..) |arg, i| {
         arguments[i] = try expression(context, arg);
         function_type[i] = arguments[i].type;
     }
@@ -224,7 +224,7 @@ fn function(context: Context, e: parser_types.Expression) !Expression {
     defer popScope(context.scopes);
     const parameters = try context.allocator.alloc(Expression, f.parameters.len);
     const function_type = try context.allocator.alloc(MonoType, f.parameters.len + 1);
-    for (f.parameters) |p, i| {
+    for (f.parameters, 0..) |p, i| {
         const type_ = expressionToMonoType(p.type.*, context.builtins);
         const span = Span{
             .begin = p.name.span.begin,
@@ -258,7 +258,7 @@ fn function(context: Context, e: parser_types.Expression) !Expression {
 fn block(context: Context, e: parser_types.Expression) !Expression {
     const b = e.kind.block;
     const expressions = try context.allocator.alloc(Expression, b.len);
-    for (b) |expr, i|
+    for (b, 0..) |expr, i|
         expressions[i] = try expression(context, expr);
     return Expression{
         .kind = .{ .block = expressions },
@@ -277,7 +277,7 @@ fn expression(context: Context, e: parser_types.Expression) error{OutOfMemory}!E
         .function => return try function(context, e),
         .binary_op => return try binaryOp(context, e),
         .block => return try block(context, e),
-        .if_ => return try if_(context, e),
+        .if_ => return try conditional(context, e),
         .call => return try call(context, e),
         else => |k| std.debug.panic("\nUnsupported expression {}", .{k}),
     }

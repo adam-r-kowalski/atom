@@ -44,7 +44,7 @@ fn float(e: type_checker_types.Expression) !Expression {
 fn block(allocator: Allocator, e: type_checker_types.Expression) !Expression {
     const b = e.kind.block;
     const expressions = try allocator.alloc(Expression, b.len);
-    for (b) |expr, i| {
+    for (b, 0..) |expr, i| {
         expressions[i] = try expression(allocator, expr);
     }
     return Expression{ .block = expressions };
@@ -67,7 +67,7 @@ fn expressionAlloc(allocator: Allocator, e: type_checker_types.Expression) !*con
 
 fn function(allocator: Allocator, name: Interned, f: type_checker_types.Function) !Function {
     const parameters = try allocator.alloc(Parameter, f.parameters.len);
-    for (f.parameters) |p, i| {
+    for (f.parameters, 0..) |p, i| {
         parameters[i] = Parameter{
             .name = p.kind.symbol,
             .type = mapType(p.type),
@@ -99,5 +99,8 @@ pub fn buildIr(allocator: Allocator, module: Module) !IR {
             std.debug.panic("\nCould not find {} in module\n", .{name});
         }
     }
-    return IR{ .functions = functions.toOwnedSlice(), .exports = &.{} };
+    return IR{
+        .functions = try functions.toOwnedSlice(),
+        .exports = &.{},
+    };
 }

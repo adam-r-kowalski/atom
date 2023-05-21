@@ -36,7 +36,7 @@ fn equal(substitution: *Substitution, e: Equal) !void {
                 e.left.function.len,
                 e.right.function.len,
             });
-        for (e.left.function) |left, i| {
+        for (e.left.function, 0..) |left, i| {
             const right = e.right.function[i];
             try equal(substitution, Equal{ .left = left, .right = right });
         }

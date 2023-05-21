@@ -64,7 +64,7 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function, i: Indent) !vo
     try writer.writeAll(")");
 }
 
-fn export_(writer: List(u8).Writer, intern: Intern, e: Export) !void {
+fn foreignExport(writer: List(u8).Writer, intern: Intern, e: Export) !void {
     try writer.writeAll("\n");
     try indent(writer, 1);
     switch (e) {
@@ -81,7 +81,7 @@ pub fn wat(allocator: Allocator, intern: Intern, ir: IR) ![]const u8 {
     const writer = list.writer();
     try writer.writeAll("(module");
     for (ir.functions) |f| try function(writer, intern, f, 1);
-    for (ir.exports) |e| try export_(writer, intern, e);
+    for (ir.exports) |e| try foreignExport(writer, intern, e);
     try writer.writeAll(")");
     return list.toOwnedSlice();
 }

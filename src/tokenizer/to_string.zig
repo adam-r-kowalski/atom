@@ -35,7 +35,7 @@ fn string(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
 pub fn toString(allocator: Allocator, intern: Intern, tokens: []const Token) ![]const u8 {
     var list = List(u8).init(allocator);
     const writer = list.writer();
-    for (tokens) |token, i| {
+    for (tokens, 0..) |token, i| {
         if (i != 0) try writer.writeAll("\n");
         switch (token.kind) {
             .symbol => |s| try symbol(writer, intern, s),

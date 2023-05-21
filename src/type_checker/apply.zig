@@ -22,7 +22,7 @@ fn monotype(allocator: Allocator, s: Substitution, m: MonoType) !MonoType {
         .module => return .module,
         .function => |f| {
             const mapped = try allocator.alloc(MonoType, f.len);
-            for (f) |t, i| mapped[i] = try monotype(allocator, s, t);
+            for (f, 0..) |t, i| mapped[i] = try monotype(allocator, s, t);
             return .{ .function = mapped };
         },
         .typevar => |t| {
@@ -56,7 +56,7 @@ fn float(allocator: Allocator, s: Substitution, e: Expression) !Expression {
     };
 }
 
-fn if_(allocator: Allocator, s: Substitution, e: Expression) !Expression {
+fn conditional(allocator: Allocator, s: Substitution, e: Expression) !Expression {
     const i = e.kind.if_;
     return Expression{
         .kind = .{
@@ -103,7 +103,7 @@ fn define(allocator: Allocator, s: Substitution, e: Expression) !Expression {
 fn call(allocator: Allocator, s: Substitution, e: Expression) !Expression {
     const c = e.kind.call;
     const arguments = try allocator.alloc(Expression, c.arguments.len);
-    for (c.arguments) |a, i| arguments[i] = try expression(allocator, s, a);
+    for (c.arguments, 0..) |a, i| arguments[i] = try expression(allocator, s, a);
     return Expression{
         .kind = .{
             .call = .{
@@ -119,7 +119,7 @@ fn call(allocator: Allocator, s: Substitution, e: Expression) !Expression {
 fn function(allocator: Allocator, s: Substitution, e: Expression) !Expression {
     const f = e.kind.function;
     const parameters = try allocator.alloc(Expression, f.parameters.len);
-    for (f.parameters) |p, i| parameters[i] = try symbol(allocator, s, p);
+    for (f.parameters, 0..) |p, i| parameters[i] = try symbol(allocator, s, p);
     return Expression{
         .kind = .{
             .function = .{
@@ -136,7 +136,7 @@ fn function(allocator: Allocator, s: Substitution, e: Expression) !Expression {
 fn block(allocator: Allocator, s: Substitution, e: Expression) !Expression {
     const b = e.kind.block;
     const expressions = try allocator.alloc(Expression, b.len);
-    for (b) |expr, i| expressions[i] = try expression(allocator, s, expr);
+    for (b, 0..) |expr, i| expressions[i] = try expression(allocator, s, expr);
     return Expression{
         .kind = .{ .block = expressions },
         .span = e.span,
@@ -150,7 +150,7 @@ fn expression(allocator: Allocator, s: Substitution, e: Expression) error{OutOfM
         .int => return try int(allocator, s, e),
         .float => return try float(allocator, s, e),
         .bool => return e,
-        .if_ => return try if_(allocator, s, e),
+        .if_ => return try conditional(allocator, s, e),
         .binary_op => return try binaryOp(allocator, s, e),
         .define => return try define(allocator, s, e),
         .call => return try call(allocator, s, e),

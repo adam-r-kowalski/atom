@@ -21,7 +21,7 @@ fn interned(writer: List(u8).Writer, intern: Intern, s: Interned) !void {
     try writer.writeAll(interner.lookup(intern, s));
 }
 
-fn type_(writer: List(u8).Writer, intern: Intern, expr: Expression) !void {
+fn typeString(writer: List(u8).Writer, intern: Intern, expr: Expression) !void {
     try interned(writer, intern, expr.kind.symbol);
 }
 
@@ -29,11 +29,7 @@ const Indent = u64;
 
 fn indent(writer: List(u8).Writer, n: Indent) !void {
     try writer.writeAll("\n");
-    var i: u64 = 0;
-    while (i < n) {
-        try writer.writeAll("    ");
-        i += 1;
-    }
+    for (0..n) |_| try writer.writeAll("    ");
 }
 
 fn define(writer: List(u8).Writer, intern: Intern, d: Define, i: Indent) !void {
@@ -41,7 +37,7 @@ fn define(writer: List(u8).Writer, intern: Intern, d: Define, i: Indent) !void {
     try interned(writer, intern, d.name.kind.symbol);
     if (d.type) |t| {
         try writer.writeAll(" ");
-        try type_(writer, intern, t.*);
+        try typeString(writer, intern, t.*);
     }
     try writer.writeAll(" ");
     try expression(writer, intern, d.value.*, i + 1);
@@ -52,30 +48,30 @@ fn parameter(writer: List(u8).Writer, intern: Intern, p: Parameter) !void {
     try writer.writeAll("(");
     try interned(writer, intern, p.name.kind.symbol);
     try writer.writeAll(" ");
-    try type_(writer, intern, p.type.*);
+    try typeString(writer, intern, p.type.*);
     try writer.writeAll(")");
 }
 
 fn function(writer: List(u8).Writer, intern: Intern, f: Function, i: Indent) !void {
     try writer.writeAll("(fn [");
-    for (f.parameters) |p, j| {
+    for (f.parameters, 0..) |p, j| {
         if (j > 0) try writer.writeAll(" ");
         try parameter(writer, intern, p);
     }
     try writer.writeAll("] ");
-    try type_(writer, intern, f.return_type.*);
+    try typeString(writer, intern, f.return_type.*);
     try block(writer, intern, f.body.kind.block, i);
     try writer.writeAll(")");
 }
 
 fn prototype(writer: List(u8).Writer, intern: Intern, p: Prototype) !void {
     try writer.writeAll("(fn [");
-    for (p.parameters) |param, j| {
+    for (p.parameters, 0..) |param, j| {
         if (j > 0) try writer.writeAll(" ");
         try parameter(writer, intern, param);
     }
     try writer.writeAll("] ");
-    try type_(writer, intern, p.return_type.*);
+    try typeString(writer, intern, p.return_type.*);
     try writer.writeAll(")");
 }
 
@@ -96,7 +92,7 @@ fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp, i: Indent) !vo
     try writer.writeAll(")");
 }
 
-fn if_(writer: List(u8).Writer, intern: Intern, i: If, n: Indent) !void {
+fn conditional(writer: List(u8).Writer, intern: Intern, i: If, n: Indent) !void {
     try writer.writeAll("(if ");
     try expression(writer, intern, i.condition.*, n);
     try expression(writer, intern, i.then.*, n);
@@ -140,7 +136,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, n: Inde
         .binary_op => |b| try binaryOp(writer, intern, b, n),
         .group => |g| try expression(writer, intern, g.*, n),
         .block => |b| try block(writer, intern, b, n),
-        .if_ => |i| try if_(writer, intern, i, n),
+        .if_ => |i| try conditional(writer, intern, i, n),
         .call => |c| try call(writer, intern, c, n),
     }
 }
@@ -148,7 +144,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, n: Inde
 pub fn toString(allocator: Allocator, intern: Intern, module: Module) ![]u8 {
     var list = List(u8).init(allocator);
     const writer = list.writer();
-    for (module.expressions) |e, i| {
+    for (module.expressions, 0..) |e, i| {
         if (i > 0) try writer.writeAll("\n\n");
         try expression(writer, intern, e, 0);
     }

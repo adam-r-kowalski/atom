@@ -66,7 +66,7 @@ pub fn monotype(writer: List(u8).Writer, m: MonoType) !void {
         .typevar => |t| try writer.print("${}", .{t}),
         .function => |f| {
             try writer.writeAll("fn(");
-            for (f) |a, i| {
+            for (f, 0..) |a, i| {
                 if (i == f.len - 1) {
                     try writer.writeAll(") ");
                 } else if (i > 0) {
@@ -79,7 +79,7 @@ pub fn monotype(writer: List(u8).Writer, m: MonoType) !void {
     }
 }
 
-fn if_(writer: List(u8).Writer, intern: Intern, e: Expression, in: Indent) !void {
+fn conditional(writer: List(u8).Writer, intern: Intern, e: Expression, in: Indent) !void {
     const i = e.kind.if_;
     try indent(writer, in);
     try writer.writeAll("if =");
@@ -181,7 +181,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, e: Expression, in: Indent
         .int => try int(writer, intern, e),
         .float => try float(writer, intern, e),
         .bool => try boolean(writer, e),
-        .if_ => try if_(writer, intern, e, in),
+        .if_ => try conditional(writer, intern, e, in),
         .binary_op => try binaryOp(writer, intern, e, in),
         .call => try call(writer, intern, e, in),
         .define => try define(writer, intern, e, in),
@@ -192,7 +192,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, e: Expression, in: Indent
 }
 
 pub fn toString(writer: List(u8).Writer, intern: Intern, m: Module) !void {
-    for (m.order) |name, i| {
+    for (m.order, 0..) |name, i| {
         if (m.typed.get(name)) |e| {
             if (i > 0) try writer.writeAll("\n\n");
             try expression(writer, intern, e, 0);

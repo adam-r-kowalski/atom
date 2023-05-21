@@ -42,7 +42,7 @@ test "tokenize annotated single line define" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "parse single line define" {
+test "parse annotated single line define" {
     const allocator = std.testing.allocator;
     const source = "x: i32 = y + z";
     const actual = try atom.testing.parse(allocator, source);
