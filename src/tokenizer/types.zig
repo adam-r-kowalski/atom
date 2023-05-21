@@ -29,6 +29,7 @@ pub const Kind = union(enum) {
     left_brace,
     right_brace,
     if_,
+    else_,
     comma,
     fn_,
 };

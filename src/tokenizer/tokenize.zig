@@ -103,9 +103,8 @@ fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !Token {
     const span = Span{ .begin = begin, .end = end };
     const interned = try interner.store(intern, string);
     if (interned == builtins.fn_) return Token{ .kind = .fn_, .span = span };
-    if (interned == builtins.import) return Token{ .kind = .import, .span = span };
-    if (interned == builtins.export_) return Token{ .kind = .export_, .span = span };
     if (interned == builtins.if_) return Token{ .kind = .if_, .span = span };
+    if (interned == builtins.else_) return Token{ .kind = .else_, .span = span };
     if (interned == builtins.true_) return Token{ .kind = .{ .bool = true }, .span = span };
     if (interned == builtins.false_) return Token{ .kind = .{ .bool = false }, .span = span };
     return Token{ .kind = .{ .symbol = interned }, .span = span };
