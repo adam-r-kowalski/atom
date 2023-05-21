@@ -73,6 +73,14 @@ fn symbol(context: *Context) Expression {
     };
 }
 
+fn string(context: *Context) Expression {
+    const token = nextToken(context);
+    return Expression{
+        .kind = .{ .string = token.kind.string },
+        .span = token.span,
+    };
+}
+
 fn boolean(context: *Context) Expression {
     const token = nextToken(context);
     return Expression{
@@ -182,15 +190,29 @@ fn function(context: *Context) !Expression {
     const parameters = try functionParameters(context);
     context.precedence = DEFINE + 1;
     const return_type = try expressionAlloc(context);
-    context.precedence = LOWEST;
-    const body = try blockAlloc(context);
-    const end = body.span.end;
+    if (peekToken(context.*)) |token| {
+        if (token.kind == .left_brace) {
+            context.precedence = LOWEST;
+            const body = try blockAlloc(context);
+            const end = body.span.end;
+            return Expression{
+                .kind = .{
+                    .function = .{
+                        .parameters = parameters,
+                        .return_type = return_type,
+                        .body = body,
+                    },
+                },
+                .span = Span{ .begin = begin, .end = end },
+            };
+        }
+    }
+    const end = return_type.span.end;
     return Expression{
         .kind = .{
-            .function = .{
+            .prototype = .{
                 .parameters = parameters,
                 .return_type = return_type,
-                .body = body,
             },
         },
         .span = Span{ .begin = begin, .end = end },
@@ -203,6 +225,7 @@ fn prefix(context: *Context) !Expression {
         .int => return int(context),
         .float => return float(context),
         .symbol => return symbol(context),
+        .string => return string(context),
         .bool => return boolean(context),
         .left_paren => return try group(context),
         .if_ => return try if_(context),

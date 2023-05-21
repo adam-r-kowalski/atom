@@ -9,6 +9,7 @@ const types = @import("types.zig");
 const Expression = types.Expression;
 const Define = types.Define;
 const Function = types.Function;
+const Prototype = types.Prototype;
 const BinaryOp = types.BinaryOp;
 const If = types.If;
 const Parameter = types.Parameter;
@@ -67,6 +68,17 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function, i: Indent) !vo
     try writer.writeAll(")");
 }
 
+fn prototype(writer: List(u8).Writer, intern: Intern, p: Prototype) !void {
+    try writer.writeAll("(fn [");
+    for (p.parameters) |param, j| {
+        if (j > 0) try writer.writeAll(" ");
+        try parameter(writer, intern, param);
+    }
+    try writer.writeAll("] ");
+    try type_(writer, intern, p.return_type.*);
+    try writer.writeAll(")");
+}
+
 fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp, i: Indent) !void {
     try writer.writeAll("(");
     switch (b.kind) {
@@ -97,7 +109,7 @@ fn call(writer: List(u8).Writer, intern: Intern, c: Call, i: u64) !void {
     try expression(writer, intern, c.function.*, i);
     for (c.arguments) |a| {
         try writer.writeAll(" ");
-        try expression(writer, intern, a, i);
+        try expression(writer, intern, a, i + 1);
     }
     try writer.writeAll(")");
 }
@@ -120,9 +132,11 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, n: Inde
         .int => |i| try interned(writer, intern, i),
         .float => |f| try interned(writer, intern, f),
         .symbol => |s| try interned(writer, intern, s),
+        .string => |s| try interned(writer, intern, s),
         .bool => |b| try writer.writeAll(if (b) "true" else "false"),
         .define => |d| try define(writer, intern, d, n),
         .function => |f| try function(writer, intern, f, n),
+        .prototype => |p| try prototype(writer, intern, p),
         .binary_op => |b| try binaryOp(writer, intern, b, n),
         .group => |g| try expression(writer, intern, g.*, n),
         .block => |b| try block(writer, intern, b, n),

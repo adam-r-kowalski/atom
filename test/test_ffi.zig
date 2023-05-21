@@ -4,11 +4,13 @@ const atom = @import("atom");
 test "tokenize import" {
     const allocator = std.testing.allocator;
     const source =
-        \\foreign_import("console", "log", fn print(msg: str) void)
+        \\print = foreign_import("console", "log", fn(msg: str) void)
     ;
     const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
+        \\symbol print
+        \\equal
         \\symbol foreign_import
         \\left paren
         \\string "console"
@@ -16,7 +18,6 @@ test "tokenize import" {
         \\string "log"
         \\comma
         \\fn
-        \\symbol print
         \\left paren
         \\symbol msg
         \\colon
@@ -31,11 +32,13 @@ test "tokenize import" {
 test "parse import" {
     const allocator = std.testing.allocator;
     const source =
-        \\foreign_import("console", "log", fn print(msg: str) void)
+        \\print = foreign_import("console", "log", fn(msg: str) void)
     ;
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(import (defn print [(msg str)] void))";
+    const expected =
+        \\(def print (foreign_import "console" "log" (fn [(msg str)] void)))
+    ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 
@@ -49,19 +52,25 @@ test "tokenize export" {
     const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\export
+        \\symbol foreign_export
+        \\left paren
+        \\string "double"
+        \\comma
         \\fn
-        \\symbol double
         \\left paren
         \\symbol x
         \\colon
         \\symbol i32
         \\right paren
         \\symbol i32
-        \\equal
+        \\left brace
+        \\new line
         \\symbol x
         \\times
         \\int 2
+        \\new line
+        \\right brace
+        \\right paren
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -75,7 +84,10 @@ test "parse export" {
     ;
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(export (defn double [(x i32)] i32 (* x 2)))";
+    const expected =
+        \\(foreign_export "double" (fn [(x i32)] i32
+        \\    (* x 2)))
+    ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 
@@ -90,6 +102,11 @@ test "parse named export" {
     ;
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(export (defn double [(x i32)] i32 (* x 2)))";
+    const expected =
+        \\(def double (fn [(x i32)] i32
+        \\    (* x 2)))
+        \\
+        \\(foreign_export "double" double)
+    ;
     try std.testing.expectEqualStrings(expected, actual);
 }

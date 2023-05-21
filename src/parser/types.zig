@@ -21,6 +21,11 @@ pub const Function = struct {
     body: *const Expression,
 };
 
+pub const Prototype = struct {
+    parameters: []const Parameter,
+    return_type: *const Expression,
+};
+
 pub const BinaryOpKind = enum {
     add,
     subtract,
@@ -51,9 +56,11 @@ pub const Kind = union(enum) {
     int: Interned,
     float: Interned,
     symbol: Interned,
+    string: Interned,
     bool: bool,
     define: Define,
     function: Function,
+    prototype: Prototype,
     binary_op: BinaryOp,
     group: *const Expression,
     block: []const Expression,
