@@ -14,6 +14,7 @@ const Expression = types.Expression;
 const BinaryOp = types.BinaryOp;
 const Call = types.Call;
 const If = types.If;
+const LocalSet = types.LocalSet;
 
 const Indent = u64;
 
@@ -32,6 +33,14 @@ fn typeString(writer: List(u8).Writer, t: Type) !void {
 fn localGet(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
     const value = interner.lookup(intern, interned);
     try writer.print("(local.get ${s})", .{value});
+}
+
+fn localSet(writer: List(u8).Writer, intern: Intern, local_set: LocalSet, i: Indent) !void {
+    const value = interner.lookup(intern, local_set.name);
+    try writer.print("(local.set ${s}", .{value});
+    try indent(writer, i);
+    try expression(writer, intern, local_set.value.*, i);
+    try writer.writeAll(")");
 }
 
 fn i32Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
@@ -89,6 +98,7 @@ fn conditional(writer: List(u8).Writer, intern: Intern, c: If, i: Indent) !void 
 fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Indent) error{OutOfMemory}!void {
     switch (expr) {
         .local_get => |interned| try localGet(writer, intern, interned),
+        .local_set => |local_set| try localSet(writer, intern, local_set, i + 1),
         .i32_const => |interned| try i32Const(writer, intern, interned),
         .i32_add => |b| try binaryOp(writer, intern, "i32.add", b, i + 1),
         .i32_mul => |b| try binaryOp(writer, intern, "i32.mul", b, i + 1),
@@ -115,6 +125,13 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function, i: Indent) !vo
     try writer.writeAll(" (result ");
     try typeString(writer, f.return_type);
     try writer.writeAll(")");
+    for (f.locals) |l| {
+        const name_symbol = interner.lookup(intern, l.name);
+        try indent(writer, i + 1);
+        try writer.print("(local ${s} ", .{name_symbol});
+        try typeString(writer, l.type);
+        try writer.writeAll(")");
+    }
     try expression(writer, intern, f.body.*, i + 1);
     try writer.writeAll(")");
 }
