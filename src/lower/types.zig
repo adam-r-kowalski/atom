@@ -20,6 +20,7 @@ pub const Expression = union(enum) {
     i32_const: Interned,
     f32_const: Interned,
     i32_add: BinaryOp,
+    f32_add: BinaryOp,
     block: []const Expression,
 };
 
