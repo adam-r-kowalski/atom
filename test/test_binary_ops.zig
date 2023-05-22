@@ -195,3 +195,59 @@ test "codegen binary op f32.add" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "codegen binary op i32.mul" {
+    const allocator = std.testing.allocator;
+    const source = "start = fn() i32 { 42 * 29 }";
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $start (result i32)
+        \\        (i32.mul
+        \\            (i32.const 42)
+        \\            (i32.const 29)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen binary op f32.mul" {
+    const allocator = std.testing.allocator;
+    const source = "start = fn() f32 { 42 * 29 }";
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $start (result f32)
+        \\        (f32.mul
+        \\            (f32.const 42)
+        \\            (f32.const 29)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen nested binary op f32.add and f32.mul" {
+    const allocator = std.testing.allocator;
+    const source = "start = fn() f32 { 42 * 29 + 15 }";
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $start (result f32)
+        \\        (f32.add
+        \\            (f32.mul
+        \\                (f32.const 42)
+        \\                (f32.const 29))
+        \\            (f32.const 15)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

@@ -60,10 +60,21 @@ fn add(allocator: Allocator, b: type_checker_types.BinaryOp) !Expression {
     }
 }
 
+fn multiply(allocator: Allocator, b: type_checker_types.BinaryOp) !Expression {
+    const left = try expressionAlloc(allocator, b.left.*);
+    const right = try expressionAlloc(allocator, b.right.*);
+    switch (b.left.type) {
+        .i32 => return Expression{ .i32_mul = .{ .left = left, .right = right } },
+        .f32 => return Expression{ .f32_mul = .{ .left = left, .right = right } },
+        else => |k| std.debug.panic("\nMul type {} not yet supported", .{k}),
+    }
+}
+
 fn binaryOp(allocator: Allocator, e: type_checker_types.Expression) !Expression {
     const b = e.kind.binary_op;
     switch (b.kind) {
         .add => return try add(allocator, b),
+        .multiply => return try multiply(allocator, b),
         else => |k| std.debug.panic("\nBinary op {} not yet supported", .{k}),
     }
 }
