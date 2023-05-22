@@ -12,6 +12,7 @@ const Export = types.Export;
 const Type = types.Type;
 const Expression = types.Expression;
 const BinaryOp = types.BinaryOp;
+const Call = types.Call;
 
 const Indent = u64;
 
@@ -27,6 +28,11 @@ fn typeString(writer: List(u8).Writer, t: Type) !void {
     }
 }
 
+fn localGet(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
+    const value = interner.lookup(intern, interned);
+    try writer.print("(local.get ${s})", .{value});
+}
+
 fn i32Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
     const value = interner.lookup(intern, interned);
     try writer.print("(i32.const {s})", .{value});
@@ -39,10 +45,10 @@ fn f32Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
 
 fn binaryOp(writer: List(u8).Writer, intern: Intern, op: []const u8, b: BinaryOp, i: Indent) !void {
     try writer.print("({s}", .{op});
-    try indent(writer, i + 1);
-    try expression(writer, intern, b.left.*, i + 1);
-    try indent(writer, i + 1);
-    try expression(writer, intern, b.right.*, i + 1);
+    try indent(writer, i);
+    try expression(writer, intern, b.left.*, i);
+    try indent(writer, i);
+    try expression(writer, intern, b.right.*, i);
     try writer.writeAll(")");
 }
 
@@ -53,15 +59,27 @@ fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Expression, i: 
     }
 }
 
+fn call(writer: List(u8).Writer, intern: Intern, c: Call, i: Indent) !void {
+    const name = interner.lookup(intern, c.function);
+    try writer.print("(call ${s}", .{name});
+    for (c.arguments) |arg| {
+        try indent(writer, i);
+        try expression(writer, intern, arg, i);
+    }
+    try writer.writeAll(")");
+}
+
 fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Indent) error{OutOfMemory}!void {
     switch (expr) {
+        .local_get => |interned| try localGet(writer, intern, interned),
         .i32_const => |interned| try i32Const(writer, intern, interned),
+        .i32_add => |b| try binaryOp(writer, intern, "i32.add", b, i + 1),
+        .i32_mul => |b| try binaryOp(writer, intern, "i32.mul", b, i + 1),
         .f32_const => |interned| try f32Const(writer, intern, interned),
-        .i32_add => |b| try binaryOp(writer, intern, "i32.add", b, i),
-        .i32_mul => |b| try binaryOp(writer, intern, "i32.mul", b, i),
-        .f32_add => |b| try binaryOp(writer, intern, "f32.add", b, i),
-        .f32_mul => |b| try binaryOp(writer, intern, "f32.mul", b, i),
+        .f32_add => |b| try binaryOp(writer, intern, "f32.add", b, i + 1),
+        .f32_mul => |b| try binaryOp(writer, intern, "f32.mul", b, i + 1),
         .block => |b| try block(writer, intern, b, i),
+        .call => |c| try call(writer, intern, c, i + 1),
     }
 }
 
@@ -70,6 +88,12 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function, i: Indent) !vo
     try indent(writer, i);
     const name = interner.lookup(intern, f.name);
     try writer.print("(func ${s}", .{name});
+    for (f.parameters) |p| {
+        const name_symbol = interner.lookup(intern, p.name);
+        try writer.print(" (param ${s} ", .{name_symbol});
+        try typeString(writer, p.type);
+        try writer.writeAll(")");
+    }
     try writer.writeAll(" (result ");
     try typeString(writer, f.return_type);
     try writer.writeAll(")");

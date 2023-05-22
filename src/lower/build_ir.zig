@@ -79,12 +79,32 @@ fn binaryOp(allocator: Allocator, e: type_checker_types.Expression) !Expression 
     }
 }
 
+fn symbol(e: type_checker_types.Expression) Expression {
+    return Expression{ .local_get = e.kind.symbol };
+}
+
+fn call(allocator: Allocator, e: type_checker_types.Expression) !Expression {
+    const c = e.kind.call;
+    const arguments = try allocator.alloc(Expression, c.arguments.len);
+    for (c.arguments, arguments) |arg, *ir_arg| {
+        ir_arg.* = try expression(allocator, arg);
+    }
+    return Expression{
+        .call = .{
+            .function = c.function.kind.symbol,
+            .arguments = arguments,
+        },
+    };
+}
+
 fn expression(allocator: Allocator, e: type_checker_types.Expression) error{OutOfMemory}!Expression {
     switch (e.kind) {
         .int => return try int(e),
         .float => return try float(e),
         .block => return try block(allocator, e),
         .binary_op => return try binaryOp(allocator, e),
+        .symbol => return symbol(e),
+        .call => return try call(allocator, e),
         else => |k| std.debug.panic("\nExpression {} not yet supported", .{k}),
     }
 }
