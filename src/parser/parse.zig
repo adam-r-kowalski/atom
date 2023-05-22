@@ -20,7 +20,8 @@ const Precedence = u32;
 const DELTA: Precedence = 10;
 const LOWEST: Precedence = 0;
 const DEFINE: Precedence = LOWEST + DELTA;
-const COMPARE: Precedence = DEFINE + DELTA;
+const AND: Precedence = DEFINE + DELTA;
+const COMPARE: Precedence = AND + DELTA;
 const ADD: Precedence = COMPARE + DELTA;
 const MULTIPLY: Precedence = ADD + DELTA;
 const EXPONENTIATE: Precedence = MULTIPLY + DELTA;
@@ -335,6 +336,7 @@ fn infix(context: *Context, left: Expression) ?Infix {
             .equal_equal => return .{ .kind = .{ .binary_op = .equal }, .precedence = COMPARE, .associativity = .left },
             .greater => return .{ .kind = .{ .binary_op = .greater }, .precedence = COMPARE, .associativity = .left },
             .less => return .{ .kind = .{ .binary_op = .less }, .precedence = COMPARE, .associativity = .left },
+            .or_ => return .{ .kind = .{ .binary_op = .or_ }, .precedence = AND, .associativity = .left },
             .left_paren => switch (left.kind) {
                 .symbol => return .{ .kind = .call, .precedence = CALL, .associativity = .left },
                 else => return null,

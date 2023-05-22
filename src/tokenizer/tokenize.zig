@@ -106,6 +106,7 @@ fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !Token {
     if (interned == builtins.else_) return Token{ .kind = .else_, .span = span };
     if (interned == builtins.true_) return Token{ .kind = .{ .bool = true }, .span = span };
     if (interned == builtins.false_) return Token{ .kind = .{ .bool = false }, .span = span };
+    if (interned == builtins.or_) return Token{ .kind = .or_, .span = span };
     return Token{ .kind = .{ .symbol = interned }, .span = span };
 }
 

@@ -178,6 +178,24 @@ test "codegen binary op i32.add" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
+test "codegen binary op i32.sub" {
+    const allocator = std.testing.allocator;
+    const source = "start = fn() i32 { 42 - 29 }";
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $start (result i32)
+        \\        (i32.sub
+        \\            (i32.const 42)
+        \\            (i32.const 29)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
 test "codegen binary op f32.add" {
     const allocator = std.testing.allocator;
     const source = "start = fn() f32 { 42 + 29 }";
@@ -188,6 +206,24 @@ test "codegen binary op f32.add" {
         \\
         \\    (func $start (result f32)
         \\        (f32.add
+        \\            (f32.const 42)
+        \\            (f32.const 29)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen binary op f32.sub" {
+    const allocator = std.testing.allocator;
+    const source = "start = fn() f32 { 42 - 29 }";
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $start (result f32)
+        \\        (f32.sub
         \\            (f32.const 42)
         \\            (f32.const 29)))
         \\
@@ -302,6 +338,24 @@ test "codegen i32.rem_s" {
         \\                (local.get $x)
         \\                (i32.const 2))
         \\            (i32.const 0)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen i32.or" {
+    const allocator = std.testing.allocator;
+    const source = "start = fn(x: bool, y: bool) bool { x or y }";
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $start (param $x i32) (param $y i32) (result i32)
+        \\        (i32.or
+        \\            (local.get $x)
+        \\            (local.get $y)))
         \\
         \\    (export "_start" (func $start)))
     ;

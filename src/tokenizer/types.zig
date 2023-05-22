@@ -33,6 +33,7 @@ pub const Kind = union(enum) {
     right_brace,
     if_,
     else_,
+    or_,
     comma,
     fn_,
     new_line,

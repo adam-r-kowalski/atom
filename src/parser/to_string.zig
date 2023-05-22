@@ -86,6 +86,7 @@ fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp, i: Indent) !vo
         .equal => try writer.writeAll("=="),
         .greater => try writer.writeAll(">"),
         .less => try writer.writeAll("<"),
+        .or_ => try writer.writeAll("or"),
     }
     try writer.writeAll(" ");
     try expression(writer, intern, b.left.*, i);
