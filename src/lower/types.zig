@@ -21,6 +21,13 @@ pub const Call = struct {
     arguments: []const Expression,
 };
 
+pub const If = struct {
+    result: Type,
+    condition: *const Expression,
+    then: *const Expression,
+    else_: *const Expression,
+};
+
 pub const Expression = union(enum) {
     local_get: Interned,
     i32_const: Interned,
@@ -31,6 +38,7 @@ pub const Expression = union(enum) {
     f32_mul: BinaryOp,
     block: []const Expression,
     call: Call,
+    if_: If,
 };
 
 pub const Function = struct {

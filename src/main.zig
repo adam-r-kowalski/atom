@@ -37,7 +37,7 @@ pub fn main() !void {
     try atom.type_checker.infer.infer(allocator, &constraints, &module, builtins, &next_type_var, start);
     const substitution = try atom.type_checker.solve(allocator, constraints);
     const typed_module = try atom.type_checker.apply(allocator, substitution, module);
-    var ir = try atom.lower.buildIr(allocator, typed_module);
+    var ir = try atom.lower.buildIr(allocator, builtins, typed_module);
 
     const alias = try atom.interner.store(&intern, "_start");
     const exports = try allocator.alloc(atom.lower.types.Export, ir.exports.len + 1);
