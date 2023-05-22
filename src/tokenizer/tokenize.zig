@@ -87,7 +87,7 @@ fn string(intern: *Intern, cursor: *Cursor) !Token {
     return Token{ .kind = .{ .string = interned }, .span = span };
 }
 
-fn exact(cursor: *Cursor, comptime kind: Kind) Token {
+fn exact(cursor: *Cursor, kind: Kind) Token {
     const begin = cursor.pos;
     _ = advance(cursor, 1);
     return Token{ .kind = kind, .span = .{ .begin = begin, .end = cursor.pos } };
@@ -119,13 +119,23 @@ fn newLine(cursor: *Cursor) Token {
     return Token{ .kind = .new_line, .span = .{ .begin = begin, .end = cursor.pos } };
 }
 
+fn either(cursor: *Cursor, kind: Kind, char: u8, other: Kind) Token {
+    const begin = cursor.pos;
+    if (cursor.source.len > 1 and cursor.source[1] == char) {
+        _ = advance(cursor, 2);
+        return Token{ .kind = other, .span = .{ .begin = begin, .end = cursor.pos } };
+    }
+    _ = advance(cursor, 1);
+    return Token{ .kind = kind, .span = .{ .begin = begin, .end = cursor.pos } };
+}
+
 fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?Token {
     trim(cursor);
     if (cursor.source.len == 0) return null;
     return switch (cursor.source[0]) {
         '0'...'9', '-', '.' => try number(intern, cursor),
         '"' => try string(intern, cursor),
-        '=' => exact(cursor, .equal),
+        '=' => either(cursor, .equal, '=', .equal_equal),
         ':' => exact(cursor, .colon),
         '+' => exact(cursor, .plus),
         '*' => exact(cursor, .times),

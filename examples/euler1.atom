@@ -1,0 +1,14 @@
+problem1 = fn(n: i32, sum: i32) i32 {
+    if n == 0 {
+        sum
+    } else {
+        multiple = n % 3 == 0 or n % 5 == 0
+        new_sum = if multiple { sum + n } else { sum }
+        problem1(n - 1, new_sum)
+    }
+}
+
+start = fn() i32 {
+    problem1(10, 0)
+}
+

@@ -40,6 +40,7 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
             .string => |s| try writer.writeAll(interner.lookup(intern, s)),
             .bool => |b| try writer.writeAll(if (b) "true" else "false"),
             .equal => try writer.writeAll("="),
+            .equal_equal => try writer.writeAll("=="),
             .dot => try writer.writeAll("."),
             .colon => try writer.writeAll(":"),
             .plus => try writer.writeAll("+"),
