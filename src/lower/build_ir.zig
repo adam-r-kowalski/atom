@@ -50,14 +50,22 @@ fn block(allocator: Allocator, e: type_checker_types.Expression) !Expression {
     return Expression{ .block = expressions };
 }
 
+fn add(allocator: Allocator, b: type_checker_types.BinaryOp) !Expression {
+    const left = try expressionAlloc(allocator, b.left.*);
+    const right = try expressionAlloc(allocator, b.right.*);
+    switch (b.left.type) {
+        .i32 => return Expression{ .i32_add = .{ .left = left, .right = right } },
+        .f32 => return Expression{ .f32_add = .{ .left = left, .right = right } },
+        else => |k| std.debug.panic("\nAdd type {} not yet supported", .{k}),
+    }
+}
+
 fn binaryOp(allocator: Allocator, e: type_checker_types.Expression) !Expression {
     const b = e.kind.binary_op;
-    return Expression{
-        .i32_add = .{
-            .left = try expressionAlloc(allocator, b.left.*),
-            .right = try expressionAlloc(allocator, b.right.*),
-        },
-    };
+    switch (b.kind) {
+        .add => return try add(allocator, b),
+        else => |k| std.debug.panic("\nBinary op {} not yet supported", .{k}),
+    }
 }
 
 fn expression(allocator: Allocator, e: type_checker_types.Expression) error{OutOfMemory}!Expression {
