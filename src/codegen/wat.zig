@@ -40,9 +40,9 @@ fn f32Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
 fn binaryOp(writer: List(u8).Writer, intern: Intern, op: []const u8, b: BinaryOp, i: Indent) !void {
     try writer.print("({s}", .{op});
     try indent(writer, i + 1);
-    try expression(writer, intern, b.left.*, i);
+    try expression(writer, intern, b.left.*, i + 1);
     try indent(writer, i + 1);
-    try expression(writer, intern, b.right.*, i);
+    try expression(writer, intern, b.right.*, i + 1);
     try writer.writeAll(")");
 }
 
@@ -58,7 +58,9 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Inde
         .i32_const => |interned| try i32Const(writer, intern, interned),
         .f32_const => |interned| try f32Const(writer, intern, interned),
         .i32_add => |b| try binaryOp(writer, intern, "i32.add", b, i),
+        .i32_mul => |b| try binaryOp(writer, intern, "i32.mul", b, i),
         .f32_add => |b| try binaryOp(writer, intern, "f32.add", b, i),
+        .f32_mul => |b| try binaryOp(writer, intern, "f32.mul", b, i),
         .block => |b| try block(writer, intern, b, i),
     }
 }
