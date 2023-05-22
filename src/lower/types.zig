@@ -40,6 +40,7 @@ pub const Expression = union(enum) {
     i32_add: BinaryOp,
     i32_mul: BinaryOp,
     i32_eq: BinaryOp,
+    i32_rem_s: BinaryOp,
     f32_const: Interned,
     f32_add: BinaryOp,
     f32_mul: BinaryOp,

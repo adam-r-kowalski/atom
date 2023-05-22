@@ -269,3 +269,41 @@ test "codegen i32.eq" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "codegen f32.eq" {
+    const allocator = std.testing.allocator;
+    const source = "start = fn(x: f32, y: f32) bool { x == y }";
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $start (param $x f32) (param $y f32) (result i32)
+        \\        (f32.eq
+        \\            (local.get $x)
+        \\            (local.get $y)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen i32.rem_s" {
+    const allocator = std.testing.allocator;
+    const source = "start = fn(x: i32) bool { x % 2 == 0 }";
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $start (param $x i32) (result i32)
+        \\        (i32.eq
+        \\            (i32.rem_s
+        \\                (local.get $x)
+        \\                (i32.const 2))
+        \\            (i32.const 0)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

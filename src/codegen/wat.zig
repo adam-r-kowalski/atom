@@ -103,6 +103,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Inde
         .i32_add => |b| try binaryOp(writer, intern, "i32.add", b, i + 1),
         .i32_mul => |b| try binaryOp(writer, intern, "i32.mul", b, i + 1),
         .i32_eq => |b| try binaryOp(writer, intern, "i32.eq", b, i + 1),
+        .i32_rem_s => |b| try binaryOp(writer, intern, "i32.rem_s", b, i + 1),
         .f32_const => |interned| try f32Const(writer, intern, interned),
         .f32_add => |b| try binaryOp(writer, intern, "f32.add", b, i + 1),
         .f32_mul => |b| try binaryOp(writer, intern, "f32.mul", b, i + 1),
