@@ -11,9 +11,15 @@ pub const Parameter = struct {
     type: Type,
 };
 
+pub const BinaryOp = struct {
+    left: *const Expression,
+    right: *const Expression,
+};
+
 pub const Expression = union(enum) {
     i32_const: Interned,
     f32_const: Interned,
+    i32_add: BinaryOp,
     block: []const Expression,
 };
 

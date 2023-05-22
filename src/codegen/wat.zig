@@ -11,6 +11,7 @@ const Function = types.Function;
 const Export = types.Export;
 const Type = types.Type;
 const Expression = types.Expression;
+const BinaryOp = types.BinaryOp;
 
 const Indent = u64;
 
@@ -36,6 +37,15 @@ fn f32Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
     try writer.print("(f32.const {s})", .{value});
 }
 
+fn i32Add(writer: List(u8).Writer, intern: Intern, b: BinaryOp, i: Indent) !void {
+    try writer.writeAll("(i32.add");
+    try indent(writer, i + 1);
+    try expression(writer, intern, b.left.*, i);
+    try indent(writer, i + 1);
+    try expression(writer, intern, b.right.*, i);
+    try writer.writeAll(")");
+}
+
 fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Expression, i: Indent) !void {
     for (exprs) |expr| {
         try indent(writer, i);
@@ -47,6 +57,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Inde
     switch (expr) {
         .i32_const => |interned| try i32Const(writer, intern, interned),
         .f32_const => |interned| try f32Const(writer, intern, interned),
+        .i32_add => |b| try i32Add(writer, intern, b, i),
         .block => |b| try block(writer, intern, b, i),
     }
 }
