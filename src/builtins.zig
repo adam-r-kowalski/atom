@@ -11,6 +11,7 @@ pub const Builtins = struct {
     else_: Interned,
     true_: Interned,
     false_: Interned,
+    or_: Interned,
     one: Interned,
     zero: Interned,
 
@@ -24,6 +25,7 @@ pub const Builtins = struct {
             .else_ = try interner.store(intern, "else"),
             .true_ = try interner.store(intern, "true"),
             .false_ = try interner.store(intern, "false"),
+            .or_ = try interner.store(intern, "or"),
             .one = try interner.store(intern, "1"),
             .zero = try interner.store(intern, "0"),
         };

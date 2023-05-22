@@ -60,6 +60,7 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
             .right_brace => try writer.writeAll("right brace"),
             .if_ => try writer.writeAll("if"),
             .else_ => try writer.writeAll("else"),
+            .or_ => try writer.writeAll("or"),
             .comma => try writer.writeAll("comma"),
             .fn_ => try writer.writeAll("fn"),
             .new_line => try writer.writeAll("new line"),

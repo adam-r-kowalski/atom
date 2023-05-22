@@ -68,6 +68,16 @@ fn add(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_c
     }
 }
 
+fn subtract(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
+    const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
+    const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
+    switch (b.left.type) {
+        .i32 => return Expression{ .i32_sub = .{ .left = left, .right = right } },
+        .f32 => return Expression{ .f32_sub = .{ .left = left, .right = right } },
+        else => |k| std.debug.panic("\nSubtract type {} not yet supported", .{k}),
+    }
+}
+
 fn multiply(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
@@ -97,13 +107,24 @@ fn equal(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type
     }
 }
 
+fn binaryOr(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
+    const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
+    const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
+    switch (b.left.type) {
+        .bool => return Expression{ .i32_or = .{ .left = left, .right = right } },
+        else => |k| std.debug.panic("\nOr type {} not yet supported", .{k}),
+    }
+}
+
 fn binaryOp(allocator: Allocator, builtins: Builtins, locals: *List(Local), e: type_checker_types.Expression) !Expression {
     const b = e.kind.binary_op;
     switch (b.kind) {
         .add => return try add(allocator, builtins, locals, b),
+        .subtract => return try subtract(allocator, builtins, locals, b),
         .multiply => return try multiply(allocator, builtins, locals, b),
         .modulo => return try modulo(allocator, builtins, locals, b),
         .equal => return try equal(allocator, builtins, locals, b),
+        .or_ => return try binaryOr(allocator, builtins, locals, b),
         else => |k| std.debug.panic("\nBinary op {} not yet supported", .{k}),
     }
 }
