@@ -189,3 +189,28 @@ test "type infer if then else" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "codegen if" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = fn() i32 {
+        \\    if true { 10 } else { 20 }
+        \\}
+    ;
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $start (result i32)
+        \\        (if (result i32)
+        \\            (i32.const 1)
+        \\            (then
+        \\                (i32.const 10))
+        \\            (else
+        \\                (i32.const 20))))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

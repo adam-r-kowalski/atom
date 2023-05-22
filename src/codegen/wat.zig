@@ -13,6 +13,7 @@ const Type = types.Type;
 const Expression = types.Expression;
 const BinaryOp = types.BinaryOp;
 const Call = types.Call;
+const If = types.If;
 
 const Indent = u64;
 
@@ -69,6 +70,22 @@ fn call(writer: List(u8).Writer, intern: Intern, c: Call, i: Indent) !void {
     try writer.writeAll(")");
 }
 
+fn conditional(writer: List(u8).Writer, intern: Intern, c: If, i: Indent) !void {
+    try writer.writeAll("(if (result ");
+    try typeString(writer, c.result);
+    try writer.writeAll(")");
+    try indent(writer, i);
+    try expression(writer, intern, c.condition.*, i);
+    try indent(writer, i);
+    try writer.writeAll("(then");
+    try expression(writer, intern, c.then.*, i + 1);
+    try writer.writeAll(")");
+    try indent(writer, i);
+    try writer.writeAll("(else");
+    try expression(writer, intern, c.else_.*, i + 1);
+    try writer.writeAll("))");
+}
+
 fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Indent) error{OutOfMemory}!void {
     switch (expr) {
         .local_get => |interned| try localGet(writer, intern, interned),
@@ -80,6 +97,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Inde
         .f32_mul => |b| try binaryOp(writer, intern, "f32.mul", b, i + 1),
         .block => |b| try block(writer, intern, b, i),
         .call => |c| try call(writer, intern, c, i + 1),
+        .if_ => |c| try conditional(writer, intern, c, i + 1),
     }
 }
 

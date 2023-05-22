@@ -95,7 +95,7 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     try type_checker.infer.infer(arena.allocator(), &constraints, &module, builtins, &next_type_var, start);
     const substitution = try type_checker.solve(arena.allocator(), constraints);
     const typed_module = try type_checker.apply(arena.allocator(), substitution, module);
-    var ir = try lower.buildIr(arena.allocator(), typed_module);
+    var ir = try lower.buildIr(arena.allocator(), builtins, typed_module);
     const alias = try interner.store(&intern, "_start");
     const exports = try arena.allocator().alloc(lower.types.Export, ir.exports.len + 1);
     std.mem.copy(lower.types.Export, exports, ir.exports);
