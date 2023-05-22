@@ -20,12 +20,8 @@ const Precedence = u32;
 const DELTA: Precedence = 10;
 const LOWEST: Precedence = 0;
 const DEFINE: Precedence = LOWEST + DELTA;
-const ANNOTATE: Precedence = DEFINE;
-const EQUAL: Precedence = ANNOTATE + DELTA;
-const GREATER: Precedence = EQUAL + DELTA;
-const LESS: Precedence = GREATER;
-const ADD: Precedence = GREATER + DELTA;
-const SUBTRACT: Precedence = ADD;
+const COMPARE: Precedence = DEFINE + DELTA;
+const ADD: Precedence = COMPARE + DELTA;
 const MULTIPLY: Precedence = ADD + DELTA;
 const EXPONENTIATE: Precedence = MULTIPLY + DELTA;
 const CALL: Precedence = EXPONENTIATE + DELTA;
@@ -330,14 +326,15 @@ fn infix(context: *Context, left: Expression) ?Infix {
     if (peekToken(context.*)) |token| {
         switch (token.kind) {
             .equal => return .{ .kind = .define, .precedence = DEFINE, .associativity = .right },
-            .colon => return .{ .kind = .annotate, .precedence = ANNOTATE, .associativity = .right },
+            .colon => return .{ .kind = .annotate, .precedence = DEFINE, .associativity = .right },
             .plus => return .{ .kind = .{ .binary_op = .add }, .precedence = ADD, .associativity = .left },
-            .minus => return .{ .kind = .{ .binary_op = .subtract }, .precedence = SUBTRACT, .associativity = .left },
+            .minus => return .{ .kind = .{ .binary_op = .subtract }, .precedence = ADD, .associativity = .left },
             .times => return .{ .kind = .{ .binary_op = .multiply }, .precedence = MULTIPLY, .associativity = .left },
+            .percent => return .{ .kind = .{ .binary_op = .modulo }, .precedence = MULTIPLY, .associativity = .left },
             .caret => return .{ .kind = .{ .binary_op = .exponentiate }, .precedence = EXPONENTIATE, .associativity = .right },
-            .equal_equal => return .{ .kind = .{ .binary_op = .equal }, .precedence = EQUAL, .associativity = .left },
-            .greater => return .{ .kind = .{ .binary_op = .greater }, .precedence = GREATER, .associativity = .left },
-            .less => return .{ .kind = .{ .binary_op = .less }, .precedence = LESS, .associativity = .left },
+            .equal_equal => return .{ .kind = .{ .binary_op = .equal }, .precedence = COMPARE, .associativity = .left },
+            .greater => return .{ .kind = .{ .binary_op = .greater }, .precedence = COMPARE, .associativity = .left },
+            .less => return .{ .kind = .{ .binary_op = .less }, .precedence = COMPARE, .associativity = .left },
             .left_paren => switch (left.kind) {
                 .symbol => return .{ .kind = .call, .precedence = CALL, .associativity = .left },
                 else => return null,

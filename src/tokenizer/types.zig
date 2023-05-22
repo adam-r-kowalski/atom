@@ -26,6 +26,7 @@ pub const Kind = union(enum) {
     caret,
     greater,
     less,
+    percent,
     left_paren,
     right_paren,
     left_brace,

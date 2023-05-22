@@ -142,6 +142,7 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?Token {
         '^' => exact(cursor, .caret),
         '>' => exact(cursor, .greater),
         '<' => exact(cursor, .less),
+        '%' => exact(cursor, .percent),
         '(' => exact(cursor, .left_paren),
         ')' => exact(cursor, .right_paren),
         '{' => exact(cursor, .left_brace),

@@ -46,6 +46,7 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
             .plus => try writer.writeAll("+"),
             .minus => try writer.writeAll("-"),
             .times => try writer.writeAll("*"),
+            .percent => try writer.writeAll("%"),
             .caret => try writer.writeAll("^"),
             .greater => try writer.writeAll(">"),
             .less => try writer.writeAll("<"),

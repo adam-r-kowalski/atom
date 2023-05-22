@@ -78,6 +78,15 @@ fn multiply(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
     }
 }
 
+fn modulo(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
+    const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
+    const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
+    switch (b.left.type) {
+        .i32 => return Expression{ .i32_rem_s = .{ .left = left, .right = right } },
+        else => |k| std.debug.panic("\nModulo type {} not yet supported", .{k}),
+    }
+}
+
 fn equal(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
@@ -93,6 +102,7 @@ fn binaryOp(allocator: Allocator, builtins: Builtins, locals: *List(Local), e: t
     switch (b.kind) {
         .add => return try add(allocator, builtins, locals, b),
         .multiply => return try multiply(allocator, builtins, locals, b),
+        .modulo => return try modulo(allocator, builtins, locals, b),
         .equal => return try equal(allocator, builtins, locals, b),
         else => |k| std.debug.panic("\nBinary op {} not yet supported", .{k}),
     }
