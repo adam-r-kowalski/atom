@@ -16,14 +16,21 @@ pub const BinaryOp = struct {
     right: *const Expression,
 };
 
+pub const Call = struct {
+    function: Interned,
+    arguments: []const Expression,
+};
+
 pub const Expression = union(enum) {
+    local_get: Interned,
     i32_const: Interned,
-    f32_const: Interned,
     i32_add: BinaryOp,
     i32_mul: BinaryOp,
+    f32_const: Interned,
     f32_add: BinaryOp,
     f32_mul: BinaryOp,
     block: []const Expression,
+    call: Call,
 };
 
 pub const Function = struct {

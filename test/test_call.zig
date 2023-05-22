@@ -28,6 +28,15 @@ test "parse call" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
+test "parse call with expression" {
+    const allocator = std.testing.allocator;
+    const source = "f(x + y, z)";
+    const actual = try atom.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected = "(f (+ x y) z)";
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
 test "parse define then call" {
     const allocator = std.testing.allocator;
     const source =
@@ -84,6 +93,32 @@ test "type infer define then call" {
         \\                    arguments =
         \\                        int{ value = 2, type = i32 }
         \\                    type = i32
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen define then call" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\double = fn(x: i32) i32 { x * 2 }
+        \\
+        \\start = fn() i32 { double(2) }
+    ;
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $double (param $x i32) (result i32)
+        \\        (i32.mul
+        \\            (local.get $x)
+        \\            (i32.const 2)))
+        \\
+        \\    (func $start (result i32)
+        \\        (call $double
+        \\            (i32.const 2)))
+        \\
+        \\    (export "_start" (func $start)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

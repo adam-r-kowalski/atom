@@ -296,6 +296,7 @@ fn call(context: *Context, left: Expression) !Expression {
         switch (token.kind) {
             .right_paren => break,
             else => {
+                context.precedence = DEFINE + 1;
                 try arguments.append(try expression(context));
                 maybeConsume(context, .comma);
             },
