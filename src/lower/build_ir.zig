@@ -22,6 +22,7 @@ fn mapType(monotype: MonoType) Type {
     switch (monotype) {
         .i32 => return .i32,
         .f32 => return .f32,
+        .bool => return .i32,
         else => std.debug.panic("\nMonotype {} not yet supported", .{monotype}),
     }
 }
@@ -77,11 +78,22 @@ fn multiply(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
     }
 }
 
+fn equal(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
+    const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
+    const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
+    switch (b.left.type) {
+        .i32 => return Expression{ .i32_eq = .{ .left = left, .right = right } },
+        .f32 => return Expression{ .f32_eq = .{ .left = left, .right = right } },
+        else => |k| std.debug.panic("\nEqual type {} not yet supported", .{k}),
+    }
+}
+
 fn binaryOp(allocator: Allocator, builtins: Builtins, locals: *List(Local), e: type_checker_types.Expression) !Expression {
     const b = e.kind.binary_op;
     switch (b.kind) {
         .add => return try add(allocator, builtins, locals, b),
         .multiply => return try multiply(allocator, builtins, locals, b),
+        .equal => return try equal(allocator, builtins, locals, b),
         else => |k| std.debug.panic("\nBinary op {} not yet supported", .{k}),
     }
 }

@@ -44,6 +44,7 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
             .string => |s| try string(writer, intern, s),
             .bool => |b| try writer.print("bool {}", .{b}),
             .equal => try writer.writeAll("equal"),
+            .equal_equal => try writer.writeAll("equal equal"),
             .dot => try writer.writeAll("dot"),
             .colon => try writer.writeAll("colon"),
             .plus => try writer.writeAll("plus"),

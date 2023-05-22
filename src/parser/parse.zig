@@ -21,7 +21,8 @@ const DELTA: Precedence = 10;
 const LOWEST: Precedence = 0;
 const DEFINE: Precedence = LOWEST + DELTA;
 const ANNOTATE: Precedence = DEFINE;
-const GREATER: Precedence = ANNOTATE + DELTA;
+const EQUAL: Precedence = ANNOTATE + DELTA;
+const GREATER: Precedence = EQUAL + DELTA;
 const LESS: Precedence = GREATER;
 const ADD: Precedence = GREATER + DELTA;
 const SUBTRACT: Precedence = ADD;
@@ -334,6 +335,7 @@ fn infix(context: *Context, left: Expression) ?Infix {
             .minus => return .{ .kind = .{ .binary_op = .subtract }, .precedence = SUBTRACT, .associativity = .left },
             .times => return .{ .kind = .{ .binary_op = .multiply }, .precedence = MULTIPLY, .associativity = .left },
             .caret => return .{ .kind = .{ .binary_op = .exponentiate }, .precedence = EXPONENTIATE, .associativity = .right },
+            .equal_equal => return .{ .kind = .{ .binary_op = .equal }, .precedence = EQUAL, .associativity = .left },
             .greater => return .{ .kind = .{ .binary_op = .greater }, .precedence = GREATER, .associativity = .left },
             .less => return .{ .kind = .{ .binary_op = .less }, .precedence = LESS, .associativity = .left },
             .left_paren => switch (left.kind) {

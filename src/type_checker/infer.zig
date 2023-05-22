@@ -166,15 +166,21 @@ fn binaryOp(context: Context, e: parser_types.Expression) !Expression {
     const b = e.kind.binary_op;
     const left = try expressionAlloc(context, b.left.*);
     const right = try expressionAlloc(context, b.right.*);
-    const type_ = freshTypeVar(context.next_type_var);
-    try context.constraints.equal.appendSlice(&[_]Equal{
-        .{ .left = left.type, .right = type_ },
-        .{ .left = right.type, .right = type_ },
-    });
+    try context.constraints.equal.append(.{ .left = left.type, .right = right.type });
+    const result_type = blk: {
+        switch (b.kind) {
+            .equal => break :blk .bool,
+            else => {
+                const tvar = freshTypeVar(context.next_type_var);
+                try context.constraints.equal.append(.{ .left = left.type, .right = tvar });
+                break :blk tvar;
+            },
+        }
+    };
     return Expression{
         .kind = .{ .binary_op = .{ .kind = b.kind, .left = left, .right = right } },
         .span = e.span,
-        .type = type_,
+        .type = result_type,
     };
 }
 

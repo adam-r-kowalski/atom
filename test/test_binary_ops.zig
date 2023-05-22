@@ -251,3 +251,21 @@ test "codegen nested binary op f32.add and f32.mul" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "codegen i32.eq" {
+    const allocator = std.testing.allocator;
+    const source = "start = fn(x: i32, y: i32) bool { x == y }";
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $start (param $x i32) (param $y i32) (result i32)
+        \\        (i32.eq
+        \\            (local.get $x)
+        \\            (local.get $y)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
