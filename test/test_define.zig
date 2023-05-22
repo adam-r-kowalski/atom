@@ -243,3 +243,37 @@ test "type infer nested define" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "codegen define" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = fn(x: i32, y: i32) i32 {
+        \\    a = x * x
+        \\    b = y * y
+        \\    a + b
+        \\}
+    ;
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $start (param $x i32) (param $y i32) (result i32)
+        \\        (local $a i32)
+        \\        (local $b i32)
+        \\        (local.set $a
+        \\            (i32.mul
+        \\                (local.get $x)
+        \\                (local.get $x)))
+        \\        (local.set $b
+        \\            (i32.mul
+        \\                (local.get $y)
+        \\                (local.get $y)))
+        \\        (i32.add
+        \\            (local.get $a)
+        \\            (local.get $b)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

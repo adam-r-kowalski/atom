@@ -28,8 +28,14 @@ pub const If = struct {
     else_: *const Expression,
 };
 
+pub const LocalSet = struct {
+    name: Interned,
+    value: *const Expression,
+};
+
 pub const Expression = union(enum) {
     local_get: Interned,
+    local_set: LocalSet,
     i32_const: Interned,
     i32_add: BinaryOp,
     i32_mul: BinaryOp,
@@ -41,10 +47,16 @@ pub const Expression = union(enum) {
     if_: If,
 };
 
+pub const Local = struct {
+    name: Interned,
+    type: Type,
+};
+
 pub const Function = struct {
     name: Interned,
     parameters: []const Parameter,
     return_type: Type,
+    locals: []const Local,
     body: *const Expression,
 };
 

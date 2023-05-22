@@ -8,6 +8,7 @@ const Function = types.Function;
 const Parameter = types.Parameter;
 const Type = types.Type;
 const Expression = types.Expression;
+const Local = types.Local;
 const Export = type_checker_types.Export;
 const Builtins = @import("../builtins.zig").Builtins;
 const interner = @import("../interner.zig");
@@ -47,18 +48,18 @@ fn boolean(builtins: Builtins, e: type_checker_types.Expression) !Expression {
     return Expression{ .i32_const = if (b) builtins.one else builtins.zero };
 }
 
-fn block(allocator: Allocator, builtins: Builtins, e: type_checker_types.Expression) !Expression {
+fn block(allocator: Allocator, builtins: Builtins, locals: *List(Local), e: type_checker_types.Expression) !Expression {
     const b = e.kind.block;
     const expressions = try allocator.alloc(Expression, b.len);
     for (b, expressions) |expr, *ir_expr| {
-        ir_expr.* = try expression(allocator, builtins, expr);
+        ir_expr.* = try expression(allocator, builtins, locals, expr);
     }
     return Expression{ .block = expressions };
 }
 
-fn add(allocator: Allocator, builtins: Builtins, b: type_checker_types.BinaryOp) !Expression {
-    const left = try expressionAlloc(allocator, builtins, b.left.*);
-    const right = try expressionAlloc(allocator, builtins, b.right.*);
+fn add(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
+    const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
+    const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.type) {
         .i32 => return Expression{ .i32_add = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_add = .{ .left = left, .right = right } },
@@ -66,9 +67,9 @@ fn add(allocator: Allocator, builtins: Builtins, b: type_checker_types.BinaryOp)
     }
 }
 
-fn multiply(allocator: Allocator, builtins: Builtins, b: type_checker_types.BinaryOp) !Expression {
-    const left = try expressionAlloc(allocator, builtins, b.left.*);
-    const right = try expressionAlloc(allocator, builtins, b.right.*);
+fn multiply(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
+    const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
+    const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.type) {
         .i32 => return Expression{ .i32_mul = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_mul = .{ .left = left, .right = right } },
@@ -76,11 +77,11 @@ fn multiply(allocator: Allocator, builtins: Builtins, b: type_checker_types.Bina
     }
 }
 
-fn binaryOp(allocator: Allocator, builtins: Builtins, e: type_checker_types.Expression) !Expression {
+fn binaryOp(allocator: Allocator, builtins: Builtins, locals: *List(Local), e: type_checker_types.Expression) !Expression {
     const b = e.kind.binary_op;
     switch (b.kind) {
-        .add => return try add(allocator, builtins, b),
-        .multiply => return try multiply(allocator, builtins, b),
+        .add => return try add(allocator, builtins, locals, b),
+        .multiply => return try multiply(allocator, builtins, locals, b),
         else => |k| std.debug.panic("\nBinary op {} not yet supported", .{k}),
     }
 }
@@ -89,11 +90,11 @@ fn symbol(e: type_checker_types.Expression) Expression {
     return Expression{ .local_get = e.kind.symbol };
 }
 
-fn call(allocator: Allocator, builtins: Builtins, e: type_checker_types.Expression) !Expression {
+fn call(allocator: Allocator, builtins: Builtins, locals: *List(Local), e: type_checker_types.Expression) !Expression {
     const c = e.kind.call;
     const arguments = try allocator.alloc(Expression, c.arguments.len);
     for (c.arguments, arguments) |arg, *ir_arg| {
-        ir_arg.* = try expression(allocator, builtins, arg);
+        ir_arg.* = try expression(allocator, builtins, locals, arg);
     }
     return Expression{
         .call = .{
@@ -103,11 +104,11 @@ fn call(allocator: Allocator, builtins: Builtins, e: type_checker_types.Expressi
     };
 }
 
-fn conditional(allocator: Allocator, builtins: Builtins, e: type_checker_types.Expression) !Expression {
+fn conditional(allocator: Allocator, builtins: Builtins, locals: *List(Local), e: type_checker_types.Expression) !Expression {
     const i = e.kind.if_;
-    const condition = try expressionAlloc(allocator, builtins, i.condition.*);
-    const then = try expressionAlloc(allocator, builtins, i.then.*);
-    const else_ = try expressionAlloc(allocator, builtins, i.else_.*);
+    const condition = try expressionAlloc(allocator, builtins, locals, i.condition.*);
+    const then = try expressionAlloc(allocator, builtins, locals, i.then.*);
+    const else_ = try expressionAlloc(allocator, builtins, locals, i.else_.*);
     return Expression{
         .if_ = .{
             .result = mapType(e.type),
@@ -118,23 +119,32 @@ fn conditional(allocator: Allocator, builtins: Builtins, e: type_checker_types.E
     };
 }
 
-fn expression(allocator: Allocator, builtins: Builtins, e: type_checker_types.Expression) error{OutOfMemory}!Expression {
+fn define(allocator: Allocator, builtins: Builtins, locals: *List(Local), e: type_checker_types.Expression) !Expression {
+    const d = e.kind.define;
+    const name = d.name.kind.symbol;
+    const value = try expressionAlloc(allocator, builtins, locals, d.value.*);
+    try locals.append(Local{ .name = name, .type = mapType(d.name.type) });
+    return Expression{ .local_set = .{ .name = name, .value = value } };
+}
+
+fn expression(allocator: Allocator, builtins: Builtins, locals: *List(Local), e: type_checker_types.Expression) error{OutOfMemory}!Expression {
     switch (e.kind) {
         .int => return try int(e),
         .float => return try float(e),
         .bool => return try boolean(builtins, e),
-        .block => return try block(allocator, builtins, e),
-        .binary_op => return try binaryOp(allocator, builtins, e),
+        .block => return try block(allocator, builtins, locals, e),
+        .binary_op => return try binaryOp(allocator, builtins, locals, e),
         .symbol => return symbol(e),
-        .call => return try call(allocator, builtins, e),
-        .if_ => return try conditional(allocator, builtins, e),
+        .call => return try call(allocator, builtins, locals, e),
+        .if_ => return try conditional(allocator, builtins, locals, e),
+        .define => return try define(allocator, builtins, locals, e),
         else => |k| std.debug.panic("\nExpression {} not yet supported", .{k}),
     }
 }
 
-fn expressionAlloc(allocator: Allocator, builtins: Builtins, e: type_checker_types.Expression) !*const Expression {
+fn expressionAlloc(allocator: Allocator, builtins: Builtins, locals: *List(Local), e: type_checker_types.Expression) !*const Expression {
     const ptr = try allocator.create(Expression);
-    ptr.* = try expression(allocator, builtins, e);
+    ptr.* = try expression(allocator, builtins, locals, e);
     return ptr;
 }
 
@@ -146,11 +156,13 @@ fn function(allocator: Allocator, builtins: Builtins, name: Interned, f: type_ch
             .type = mapType(typed_p.type),
         };
     }
-    const body = try expressionAlloc(allocator, builtins, f.body.*);
+    var locals = List(Local).init(allocator);
+    const body = try expressionAlloc(allocator, builtins, &locals, f.body.*);
     return Function{
         .name = name,
         .parameters = parameters,
         .return_type = mapType(f.return_type),
+        .locals = try locals.toOwnedSlice(),
         .body = body,
     };
 }
