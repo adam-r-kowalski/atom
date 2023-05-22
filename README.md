@@ -202,36 +202,36 @@ matmul = fn[T: Num, m: u64, n: u64, p: u64](a: T[m][n], b: T[n][p]) T[m][p] {
 
 # here we implement a simple machine learning model
 Linear = struct {
-	weight: f64
-	bias: f64
+    weight: f64
+    bias: f64
 }
 
 predict = fn[n: u64]({weight, bias}: Linear, x: f64[n]) -> f64[n] {
-	for i { weight * x[i] + bias }
+    for i { weight * x[i] + bias }
 }
 
 mse = fn[n: u64](model: Linear, x: f64[n], y: f64[n]) f64 {
-	y_hat = predict(model, x)
-	sum(for i { (y_hat[i] - y[i]) ^ 2 })
+    y_hat = predict(model, x)
+    sum(for i { (y_hat[i] - y[i]) ^ 2 })
 }
 
 update = fn(model: Linear, gradient: Linear, learning_rate: f64) Linear {
-	Linear(
-		weight=model.weight - gradient.weight * learning_rate,
-		bias=model.bias - gradient.bias * learning_rate,
-	)
+    Linear(
+        weight=model.weight - gradient.weight * learning_rate,
+        bias=model.bias - gradient.bias * learning_rate,
+    )
 }
 
 test "gradient descent" {
-	model = Linear(weight=1.0, bias=0.0)
-	learning_rate = 0.01
-	x = [1.0, 2.0, 3.0, 4.0]
-	y = [2.0, 4.0, 6.0, 8.0]
-	initial_loss = mse(model, x, y)
-	gradient = grad(mse)(model, x, y)
-	model = update(model, gradient, learning_rate)
-	updated_loss = mse(model, x, y)
-	assert updated_loss < initial_loss
+    model = Linear(weight=1.0, bias=0.0)
+    learning_rate = 0.01
+    x = [1.0, 2.0, 3.0, 4.0]
+    y = [2.0, 4.0, 6.0, 8.0]
+    initial_loss = mse(model, x, y)
+    gradient = grad(mse)(model, x, y)
+    model = update(model, gradient, learning_rate)
+    updated_loss = mse(model, x, y)
+    assert updated_loss < initial_loss
 }
 ```
 
