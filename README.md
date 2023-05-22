@@ -26,8 +26,9 @@ test "conditionals" {
 
 # if expressions can be nested
 clamp = fn(value: i32, low: i32, high: i32) i32 {
-    if value < low { low }
-    else {
+    if value < low {
+        low
+    } else {
         if value > high {
             high
         } else {
@@ -37,11 +38,11 @@ clamp = fn(value: i32, low: i32, high: i32) i32 {
 }
 
 # you can use the multi arm version of if
-clamp = fn(x: i32, low: i32, high: i32) i32 {
+clamp = fn(value: i32, low: i32, high: i32) i32 {
     if {
-        x < low { low }
-        x > high { high }
-        else { x }
+        value < low { low }
+        value > high { high }
+        else { value }
     }
 }
 
@@ -69,22 +70,22 @@ Ord = interface[T] {
     (>): fn(x: T, y: T) T
 }
 
-clamp = fn[T: Ord](x: T, lb: T, ub: T) T {
+clamp = fn[T: Ord](value: T, low: T, high: T) T {
     if {
-        x < lb { lb }
-        x > ub { ub }
-        else { x }
+        value < low { low }
+        value > high { high }
+        else { value }
     }
 }
 
 # we can also define clamp in terms of min and max
-clamp = fn(x: i32, lb: i32, ub: i32) i32 {
-    max(min(x, ub), lb)
+clamp = fn(value: i32, low: i32, high: i32) i32 {
+    max(min(value, high), low)
 }
 
 # this can also be written using dot call notation
-clamp = fn(x: i32, lb: i32, ub: i32) i32 {
-    x.min(ub).max(lb)
+clamp = fn(value: i32, low: i32, high: i32) i32 {
+    value.min(high).max(low)
 }
 
 # pattern matching is done with if expression is
@@ -193,7 +194,7 @@ test "transpose" {
 }
 
 dot = fn[T: Num, n: u64](a: T[n], b: T[n]) T {
-    for i { sum(a[i] * b[i]) }
+    sum(for i { a[i] * b[i] })
 }
 
 matmul = fn[T: Num, m: u64, n: u64, p: u64](a: T[m][n], b: T[n][p]) T[m][p] {
@@ -210,7 +211,7 @@ predict = fn[n: u64]({weight, bias}: Linear, x: f64[n]) -> f64[n] {
     for i { weight * x[i] + bias }
 }
 
-mse = fn[n: u64](model: Linear, x: f64[n], y: f64[n]) f64 {
+sse = fn[n: u64](model: Linear, x: f64[n], y: f64[n]) f64 {
     y_hat = predict(model, x)
     sum(for i { (y_hat[i] - y[i]) ^ 2 })
 }
@@ -227,10 +228,10 @@ test "gradient descent" {
     learning_rate = 0.01
     x = [1.0, 2.0, 3.0, 4.0]
     y = [2.0, 4.0, 6.0, 8.0]
-    initial_loss = mse(model, x, y)
-    gradient = grad(mse)(model, x, y)
+    initial_loss = sse(model, x, y)
+    gradient = grad(sse)(model, x, y)
     model = update(model, gradient, learning_rate)
-    updated_loss = mse(model, x, y)
+    updated_loss = sse(model, x, y)
     assert updated_loss < initial_loss
 }
 ```
