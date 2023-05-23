@@ -65,9 +65,13 @@ test "method notation named parameters" {
 }
 
 # you can create a generic clamp function which works on any ordered type
-Ord = interface[T] {
-    (<): fn(x: T, y: T) T
-    (>): fn(x: T, y: T) T
+Eq = interface[T] {
+    (==): fn(x: T, y: T) bool
+}
+
+Ord = interface[T: Eq] {
+    (<): fn(x: T, y: T) bool
+    (>): fn(x: T, y: T) bool
 }
 
 clamp = fn[T: Ord](value: T, low: T, high: T) T {
@@ -158,6 +162,7 @@ Square = struct {
     height: f32
 }
 
+
 # here we leverage destructuring
 implement Shape[Square] {
     area = fn({width, height}: Square) f32 {
@@ -171,7 +176,7 @@ test "area of shapes" {
 }
 
 double_every = fn[m: u64](a: f32[m]) f32[m] {
-    for i { a * 2 }
+    for i { a[i] * 2 }
 }
 
 test "for expressions are a generalization of einstein summation notation" {
@@ -212,7 +217,7 @@ predict = fn[n: u64]({weight, bias}: Linear, x: f64[n]) -> f64[n] {
 }
 
 sse = fn[n: u64](model: Linear, x: f64[n], y: f64[n]) f64 {
-    y_hat = predict(model, x)
+    y_hat = model.predict(x)
     sum(for i { (y_hat[i] - y[i]) ^ 2 })
 }
 
@@ -232,16 +237,17 @@ test "gradient descent" {
     gradient = grad(sse)(model, x, y)
     model = update(model, gradient, learning_rate)
     updated_loss = sse(model, x, y)
-    assert updated_loss < initial_loss
+    assert(updated_loss < initial_loss)
 }
 ```
 
 ## Compiling from source
 
-1. Ensure you have [zig 0.11.0-dev](https://ziglang.org/download/) installed and in your path
-2. Ensure you have [wabt](https://github.com/WebAssembly/wabt) installed and in your path
-3. Clone the repository `git clone git@github.com:adam-r-kowalski/atom.git`
-4. Navigate into the directory `cd atom`
-5. Run the tests with `zig build test` and ensure they are passing
-6. Build the compiler with `zig build`
-7. Add the compiler to your path `./zig-out/bin/`
+- Ensure you have [zig 0.11.0-dev](https://ziglang.org/download/) installed and in your path
+- Ensure you have [wabt](https://github.com/WebAssembly/wabt) installed and in your path
+- Ensure you have [wasmtime](https://github.com/bytecodealliance/wasmtime) installed and in your path
+- Clone the repository `git clone git@github.com:adam-r-kowalski/atom.git`
+- Navigate into the directory `cd atom`
+- Run the tests with `zig build test` and ensure they are passing
+- Build the compiler with `zig build`
+- Add the compiler to your path `./zig-out/bin/`
