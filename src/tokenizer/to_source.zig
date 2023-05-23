@@ -10,6 +10,7 @@ const types = @import("types.zig");
 const Span = types.Span;
 const Pos = types.Pos;
 const Token = types.Token;
+const tokenSpan = @import("span.zig").span;
 
 fn lines(writer: List(u8).Writer, s: Span, pos: Pos) !void {
     const delta = s.end.line - pos.line;
@@ -31,14 +32,15 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
     const writer = list.writer();
     var pos = Pos{ .line = 1, .column = 1 };
     for (tokens) |token| {
-        try span(writer, token.span, pos);
-        pos = token.span.end;
-        switch (token.kind) {
-            .symbol => |s| try writer.writeAll(interner.lookup(intern, s)),
-            .int => |i| try writer.writeAll(interner.lookup(intern, i)),
-            .float => |f| try writer.writeAll(interner.lookup(intern, f)),
-            .string => |s| try writer.writeAll(interner.lookup(intern, s)),
-            .bool => |b| try writer.writeAll(if (b) "true" else "false"),
+        const current_span = tokenSpan(token);
+        try span(writer, current_span, pos);
+        pos = current_span.end;
+        switch (token) {
+            .symbol => |s| try writer.writeAll(interner.lookup(intern, s.value)),
+            .int => |i| try writer.writeAll(interner.lookup(intern, i.value)),
+            .float => |f| try writer.writeAll(interner.lookup(intern, f.value)),
+            .string => |s| try writer.writeAll(interner.lookup(intern, s.value)),
+            .bool => |b| try writer.print("{}", .{b.value}),
             .equal => try writer.writeAll("="),
             .equal_equal => try writer.writeAll("=="),
             .dot => try writer.writeAll("."),
