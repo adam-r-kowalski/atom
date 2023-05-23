@@ -18,7 +18,11 @@ pub fn tokenize(allocator: Allocator, source: []const u8) ![]const u8 {
     const builtins = try Builtins.init(&intern);
     const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
     const reconstructed = try tokenizer.toSource(arena.allocator(), intern, tokens);
-    try std.testing.expectEqualStrings(source, reconstructed);
+    var replaced_source = try arena.allocator().dupe(u8, source);
+    var replaced_reconstructed = try arena.allocator().dupe(u8, reconstructed);
+    std.mem.replaceScalar(u8, replaced_source, '\t', ' ');
+    std.mem.replaceScalar(u8, replaced_reconstructed, '\t', ' ');
+    try std.testing.expectEqualStrings(replaced_source, replaced_reconstructed);
     return try tokenizer.toString(allocator, intern, tokens);
 }
 

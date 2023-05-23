@@ -116,6 +116,16 @@ fn binaryOr(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
     }
 }
 
+fn greater(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
+    const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
+    const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
+    switch (b.left.type) {
+        .i32 => return Expression{ .i32_gt_s = .{ .left = left, .right = right } },
+        .f32 => return Expression{ .f32_gt = .{ .left = left, .right = right } },
+        else => |k| std.debug.panic("\nGreater type {} not yet supported", .{k}),
+    }
+}
+
 fn binaryOp(allocator: Allocator, builtins: Builtins, locals: *List(Local), e: type_checker_types.Expression) !Expression {
     const b = e.kind.binary_op;
     switch (b.kind) {
@@ -125,6 +135,7 @@ fn binaryOp(allocator: Allocator, builtins: Builtins, locals: *List(Local), e: t
         .modulo => return try modulo(allocator, builtins, locals, b),
         .equal => return try equal(allocator, builtins, locals, b),
         .or_ => return try binaryOr(allocator, builtins, locals, b),
+        .greater => return try greater(allocator, builtins, locals, b),
         else => |k| std.debug.panic("\nBinary op {} not yet supported", .{k}),
     }
 }

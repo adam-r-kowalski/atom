@@ -19,7 +19,12 @@ const Cursor = struct {
 
 fn trim(cursor: *Cursor) void {
     var i: u64 = 0;
-    while (i < cursor.source.len and cursor.source[i] == ' ') : (i += 1) {}
+    while (i < cursor.source.len) {
+        switch (cursor.source[i]) {
+            ' ', '\t' => i += 1,
+            else => break,
+        }
+    }
     cursor.pos.column += i;
     cursor.source = cursor.source[i..];
 }

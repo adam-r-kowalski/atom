@@ -169,7 +169,7 @@ fn binaryOp(context: Context, e: parser_types.Expression) !Expression {
     try context.constraints.equal.append(.{ .left = left.type, .right = right.type });
     const result_type = blk: {
         switch (b.kind) {
-            .equal => break :blk .bool,
+            .equal, .greater => break :blk .bool,
             else => {
                 const tvar = freshTypeVar(context.next_type_var);
                 try context.constraints.equal.append(.{ .left = left.type, .right = tvar });

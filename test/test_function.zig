@@ -25,6 +25,36 @@ test "tokenize function definition" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
+test "tokenize function definition with new lines and tabs" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\double = fn(x: i32) i32 {
+        \\	x + x
+        \\}
+    ;
+    const actual = try atom.testing.tokenize(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\symbol double
+        \\equal
+        \\fn
+        \\left paren
+        \\symbol x
+        \\colon
+        \\symbol i32
+        \\right paren
+        \\symbol i32
+        \\left brace
+        \\new line
+        \\symbol x
+        \\plus
+        \\symbol x
+        \\new line
+        \\right brace
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
 test "parse function definition" {
     const allocator = std.testing.allocator;
     const source = "double = fn(x: i32) i32 { x + x }";
