@@ -4,22 +4,49 @@ const atom = @import("atom");
 
 const List = std.ArrayList;
 
-fn compileToWat(allocator: Allocator, file_name: []const u8) ![]const u8 {
+const Timings = struct {
+    read_file: u64,
+    tokenize: u64,
+    parse: u64,
+    build_module: u64,
+    infer: u64,
+    solve: u64,
+    apply: u64,
+    build_ir: u64,
+    codegen: u64,
+    save_wat_to_file: u64,
+    wat2wasm: u64,
+    wasmtime: u64,
+    total: u64,
+};
+
+fn compileToWat(timer: *std.time.Timer, timings: *Timings, allocator: Allocator, file_name: []const u8) ![]const u8 {
+    const t0 = timer.read();
     const source = try std.fs.cwd().readFileAlloc(allocator, file_name, std.math.maxInt(usize));
+    const t1 = timer.read();
     var intern = atom.interner.Intern.init(allocator);
     const builtins = try atom.Builtins.init(&intern);
+    const t2 = timer.read();
     const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const t3 = timer.read();
     const untyped_module = try atom.parser.parse(allocator, tokens);
+    const t4 = timer.read();
     var module = try atom.type_checker.infer.module(allocator, builtins, untyped_module);
+    const t5 = timer.read();
     var constraints = atom.type_checker.types.Constraints{
         .equal = List(atom.type_checker.types.Equal).init(allocator),
     };
     const start = try atom.interner.store(&intern, "start");
     var next_type_var: atom.type_checker.types.TypeVar = 0;
+    const t6 = timer.read();
     try atom.type_checker.infer.infer(allocator, &constraints, &module, builtins, &next_type_var, start);
+    const t7 = timer.read();
     const substitution = try atom.type_checker.solve(allocator, constraints);
+    const t8 = timer.read();
     const typed_module = try atom.type_checker.apply(allocator, substitution, module);
+    const t9 = timer.read();
     var ir = try atom.lower.buildIr(allocator, builtins, typed_module);
+    const t10 = timer.read();
     const alias = try atom.interner.store(&intern, "_start");
     const exports = try allocator.alloc(atom.lower.types.Export, ir.exports.len + 1);
     std.mem.copy(atom.lower.types.Export, exports, ir.exports);
@@ -27,7 +54,19 @@ fn compileToWat(allocator: Allocator, file_name: []const u8) ![]const u8 {
         .function = .{ .name = start, .alias = alias },
     };
     ir.exports = exports;
-    return try atom.codegen.wat(allocator, intern, ir);
+    const t11 = timer.read();
+    const wat = try atom.codegen.wat(allocator, intern, ir);
+    const t12 = timer.read();
+    timings.read_file = t1 - t0;
+    timings.tokenize = t3 - t2;
+    timings.parse = t4 - t3;
+    timings.build_module = t5 - t4;
+    timings.infer = t7 - t6;
+    timings.solve = t8 - t7;
+    timings.apply = t9 - t8;
+    timings.build_ir = t10 - t9;
+    timings.codegen = t12 - t11;
+    return wat;
 }
 
 fn saveWatToFile(file_name: []const u8, wat: []const u8) !void {
@@ -63,7 +102,33 @@ fn wasmtime(allocator: Allocator, writer: std.fs.File.Writer, file_name: []const
     }
 }
 
+fn printTime(writer: std.fs.File.Writer, label: []const u8, time: u64) !void {
+    try writer.print("\n{s}: {d:0.07}s", .{
+        label,
+        @intToFloat(f64, time) / std.time.ns_per_s,
+    });
+}
+
+fn printTimings(writer: std.fs.File.Writer, timings: Timings) !void {
+    try printTime(writer, "read_file", timings.read_file);
+    try printTime(writer, "tokenize", timings.tokenize);
+    try printTime(writer, "parse", timings.parse);
+    try printTime(writer, "build_module", timings.build_module);
+    try printTime(writer, "infer", timings.infer);
+    try printTime(writer, "solve", timings.solve);
+    try printTime(writer, "apply", timings.apply);
+    try printTime(writer, "build_ir", timings.build_ir);
+    try printTime(writer, "codegen", timings.codegen);
+    try printTime(writer, "save_wat_to_file", timings.save_wat_to_file);
+    try printTime(writer, "wat2wasm", timings.wat2wasm);
+    try printTime(writer, "wasmtime", timings.wasmtime);
+    try printTime(writer, "total", timings.total);
+}
+
 pub fn main() !void {
+    var timings: Timings = undefined;
+    var timer = try std.time.Timer.start();
+    const t0 = timer.read();
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
@@ -89,11 +154,14 @@ pub fn main() !void {
     }
 
     const file_name = std.mem.span(std.os.argv[1]);
-    const wat = try compileToWat(allocator, file_name);
+    const wat = try compileToWat(&timer, &timings, allocator, file_name);
     const file_name_no_suffix = file_name[0 .. file_name.len - 5];
     const file_name_wat = try std.fmt.allocPrint(allocator, "{s}.wat", .{file_name_no_suffix});
+    const t1 = timer.read();
     try saveWatToFile(file_name_wat, wat);
+    const t2 = timer.read();
     try wat2wasm(allocator, writer, file_name_wat);
+    const t3 = timer.read();
 
     if (std.os.argv.len == 3) {
         const argument = std.mem.span(std.os.argv[2]);
@@ -102,4 +170,10 @@ pub fn main() !void {
             try wasmtime(allocator, writer, file_name_wasm);
         }
     }
+    const t4 = timer.read();
+    timings.save_wat_to_file = t2 - t1;
+    timings.wat2wasm = t3 - t2;
+    timings.wasmtime = t4 - t3;
+    timings.total = t4 - t0;
+    try printTimings(writer, timings);
 }
