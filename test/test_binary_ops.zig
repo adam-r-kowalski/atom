@@ -16,66 +16,75 @@ test "tokenize add then multiply" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "parse add then multiply" {
+test "parse add" {
     const allocator = std.testing.allocator;
-    const source = "a = x + y * z";
+    const source = "x + y";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(def a (+ x (* y z)))";
+    const expected = "(+ x y)";
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse add then multiply" {
+    const allocator = std.testing.allocator;
+    const source = "x + y * z";
+    const actual = try atom.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected = "(+ x (* y z))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "parse multiply then add" {
     const allocator = std.testing.allocator;
-    const source = "a = x * y + z";
+    const source = "x * y + z";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(def a (+ (* x y) z))";
+    const expected = "(+ (* x y) z)";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "parse multiply then grouped add" {
     const allocator = std.testing.allocator;
-    const source = "a = x * (y + z)";
+    const source = "x * (y + z)";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(def a (* x (+ y z)))";
+    const expected = "(* x (+ y z))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "parse multiply is left associative" {
     const allocator = std.testing.allocator;
-    const source = "a = x * y * z";
+    const source = "x * y * z";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(def a (* (* x y) z))";
+    const expected = "(* (* x y) z)";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "parse exponentiate is right associative" {
     const allocator = std.testing.allocator;
-    const source = "a = x ^ y ^ z";
+    const source = "x ^ y ^ z";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(def a (^ x (^ y z)))";
+    const expected = "(^ x (^ y z))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "parse greater has lower precedence then add" {
     const allocator = std.testing.allocator;
-    const source = "e = a + b > c + d";
+    const source = "a + b > c + d";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(def e (> (+ a b) (+ c d)))";
+    const expected = "(> (+ a b) (+ c d))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "parse grouped greater" {
     const allocator = std.testing.allocator;
-    const source = "e = a + (b > c) + d";
+    const source = "a + (b > c) + d";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(def e (+ a (+ (> b c) d)))";
+    const expected = "(+ a (+ (> b c) d))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 

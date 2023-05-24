@@ -3,27 +3,35 @@ const Intern = interner.Intern;
 const Interned = interner.Interned;
 const tokenizer_types = @import("../tokenizer/types.zig");
 pub const Span = tokenizer_types.Span;
+pub const Int = tokenizer_types.Int;
+pub const Float = tokenizer_types.Float;
+pub const Symbol = tokenizer_types.Symbol;
+pub const String = tokenizer_types.String;
+pub const Bool = tokenizer_types.Bool;
 
 pub const Define = struct {
-    name: *const Expression,
+    name: Symbol,
     type: ?*const Expression,
     value: *const Expression,
+    span: Span,
 };
 
 pub const Parameter = struct {
-    name: *const Expression,
-    type: *const Expression,
+    name: Symbol,
+    type: Expression,
 };
 
 pub const Function = struct {
     parameters: []const Parameter,
     return_type: *const Expression,
-    body: *const Expression,
+    body: Block,
+    span: Span,
 };
 
 pub const Prototype = struct {
     parameters: []const Parameter,
     return_type: *const Expression,
+    span: Span,
 };
 
 pub const BinaryOpKind = enum {
@@ -42,38 +50,46 @@ pub const BinaryOp = struct {
     kind: BinaryOpKind,
     left: *const Expression,
     right: *const Expression,
+    span: Span,
+};
+
+pub const Group = struct {
+    expression: *const Expression,
+    span: Span,
+};
+
+pub const Block = struct {
+    expressions: []const Expression,
+    span: Span,
 };
 
 pub const If = struct {
     condition: *const Expression,
-    then: *const Expression,
-    else_: *const Expression,
+    then: Block,
+    else_: Block,
+    span: Span,
 };
 
 pub const Call = struct {
     function: *const Expression,
     arguments: []const Expression,
+    span: Span,
 };
 
-pub const Kind = union(enum) {
-    int: Interned,
-    float: Interned,
-    symbol: Interned,
-    string: Interned,
-    bool: bool,
+pub const Expression = union(enum) {
+    int: Int,
+    float: Float,
+    symbol: Symbol,
+    string: String,
+    bool: Bool,
     define: Define,
     function: Function,
     prototype: Prototype,
     binary_op: BinaryOp,
-    group: *const Expression,
-    block: []const Expression,
+    group: Group,
+    block: Block,
     if_: If,
     call: Call,
-};
-
-pub const Expression = struct {
-    kind: Kind,
-    span: Span,
 };
 
 pub const Module = struct {
