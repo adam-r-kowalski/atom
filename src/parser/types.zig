@@ -21,6 +21,11 @@ pub const Parameter = struct {
     type: Expression,
 };
 
+pub const Block = struct {
+    expressions: []const Expression,
+    span: Span,
+};
+
 pub const Function = struct {
     parameters: []const Parameter,
     return_type: *const Expression,
@@ -55,11 +60,6 @@ pub const BinaryOp = struct {
 
 pub const Group = struct {
     expression: *const Expression,
-    span: Span,
-};
-
-pub const Block = struct {
-    expressions: []const Expression,
     span: Span,
 };
 

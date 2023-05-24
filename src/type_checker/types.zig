@@ -15,57 +15,96 @@ pub const MonoType = union(enum) {
     i32,
     f32,
     bool,
-    module,
     typevar: TypeVar,
     function: []const MonoType,
 };
 
+pub const Int = struct {
+    value: Interned,
+    span: Span,
+    type: MonoType,
+};
+
+pub const Float = struct {
+    value: Interned,
+    span: Span,
+    type: MonoType,
+};
+
+pub const Symbol = struct {
+    value: Interned,
+    span: Span,
+    type: MonoType,
+};
+
+pub const Bool = struct {
+    value: bool,
+    span: Span,
+    type: MonoType,
+};
+
 pub const Define = struct {
-    name: *const Expression,
+    name: Symbol,
     value: *const Expression,
+    span: Span,
+    type: MonoType,
+};
+
+pub const Block = struct {
+    expressions: []const Expression,
+    span: Span,
+    type: MonoType,
 };
 
 pub const Function = struct {
-    parameters: []const Expression,
+    parameters: []const Symbol,
     return_type: MonoType,
-    body: *const Expression,
+    body: Block,
+    span: Span,
+    type: MonoType,
 };
 
 pub const BinaryOp = struct {
     kind: BinaryOpKind,
     left: *const Expression,
     right: *const Expression,
+    span: Span,
+    type: MonoType,
 };
 
 pub const If = struct {
     condition: *const Expression,
-    then: *const Expression,
-    else_: *const Expression,
+    then: Block,
+    else_: Block,
+    span: Span,
+    type: MonoType,
 };
 
 pub const Call = struct {
     function: *const Expression,
     arguments: []const Expression,
+    span: Span,
+    type: MonoType,
 };
 
-pub const Kind = union(enum) {
-    int: Interned,
-    float: Interned,
-    symbol: Interned,
-    bool: bool,
+pub const Group = struct {
+    expressions: []const Expression,
+    span: Span,
+    type: MonoType,
+};
+
+pub const Expression = union(enum) {
+    int: Int,
+    float: Float,
+    symbol: Symbol,
+    bool: Bool,
     define: Define,
     function: Function,
     binary_op: BinaryOp,
-    group: *const Expression,
-    block: []const Expression,
+    group: Group,
+    block: Block,
     if_: If,
     call: Call,
-};
-
-pub const Expression = struct {
-    kind: Kind,
-    span: Span,
-    type: MonoType,
 };
 
 pub const Untyped = Map(Interned, UntypedExpression);
