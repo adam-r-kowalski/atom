@@ -22,6 +22,7 @@ const BinaryOp = types.BinaryOp;
 const Call = types.Call;
 const Define = types.Define;
 const Block = types.Block;
+const ForeignImport = types.ForeignImport;
 
 const Indent = u64;
 
@@ -61,6 +62,7 @@ pub fn monotype(writer: List(u8).Writer, m: MonoType) !void {
     switch (m) {
         .i32 => try writer.writeAll("i32"),
         .f32 => try writer.writeAll("f32"),
+        .str => try writer.writeAll("str"),
         .bool => try writer.writeAll("bool"),
         .void => try writer.writeAll("void"),
         .typevar => |t| try writer.print("${}", .{t}),
@@ -169,6 +171,20 @@ fn block(writer: List(u8).Writer, intern: Intern, b: Block, i: Indent) !void {
     for (b.expressions) |expr| try expression(writer, intern, expr, i);
 }
 
+fn foreignImport(writer: List(u8).Writer, intern: Intern, f: ForeignImport, i: Indent) !void {
+    try indent(writer, i);
+    try writer.writeAll("foreign_import =");
+    try indent(writer, i + 1);
+    const module = interner.lookup(intern, f.module);
+    try writer.print("module = {s}", .{module});
+    try indent(writer, i + 1);
+    const name = interner.lookup(intern, f.name);
+    try writer.print("name = {s}", .{name});
+    try indent(writer, i + 1);
+    try writer.print("type = ", .{});
+    try monotype(writer, f.type);
+}
+
 fn expression(writer: List(u8).Writer, intern: Intern, e: Expression, in: Indent) error{OutOfMemory}!void {
     switch (e) {
         .symbol => |s| try symbol(writer, intern, s),
@@ -181,6 +197,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, e: Expression, in: Indent
         .define => |d| try define(writer, intern, d, in),
         .function => |f| try function(writer, intern, f, in),
         .block => |b| try block(writer, intern, b, in),
+        .foreign_import => |f| try foreignImport(writer, intern, f, in),
         else => |k| std.debug.panic("\nUnhandled expression type {}", .{k}),
     }
 }

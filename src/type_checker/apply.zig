@@ -22,6 +22,7 @@ fn monotype(allocator: Allocator, s: Substitution, m: MonoType) !MonoType {
     switch (m) {
         .i32 => return .i32,
         .f32 => return .f32,
+        .str => return .str,
         .bool => return .bool,
         .void => return .void,
         .function => |f| {
@@ -140,6 +141,7 @@ fn expression(allocator: Allocator, s: Substitution, e: Expression) error{OutOfM
         .call => |c| return .{ .call = try call(allocator, s, c) },
         .function => |f| return .{ .function = try function(allocator, s, f) },
         .block => |b| return .{ .block = try block(allocator, s, b) },
+        .foreign_import => |f| return .{ .foreign_import = f },
         else => |k| std.debug.panic("\nUnsupported expression {}", .{k}),
     }
 }

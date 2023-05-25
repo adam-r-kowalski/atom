@@ -42,6 +42,26 @@ test "parse import" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
+test "type check import" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\print = foreign_import("console", "log", fn(msg: str) void)
+    ;
+    const actual = try atom.testing.typeInfer(allocator, source, "print");
+    defer allocator.free(actual);
+    const expected =
+        \\define =
+        \\    name = symbol{ name = print, type = fn(str) void }
+        \\    type = void
+        \\    value = 
+        \\        foreign_import =
+        \\            module = "console"
+        \\            name = "log"
+        \\            type = fn(str) void
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
 test "tokenize export" {
     const allocator = std.testing.allocator;
     const source =
