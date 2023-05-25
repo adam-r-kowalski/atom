@@ -114,15 +114,34 @@ fn conditional(context: *Context, if_: IfToken) !If {
     context.precedence = LOWEST;
     const condition = try expressionAlloc(context);
     const then = try block(context, nextToken(context).left_brace);
-    _ = nextToken(context).else_;
-    const else_ = try block(context, nextToken(context).left_brace);
-    const end = else_.span.end;
-    return If{
-        .condition = condition,
-        .then = then,
-        .else_ = else_,
-        .span = .{ .begin = begin, .end = end },
-    };
+    switch (nextToken(context)) {
+        .else_ => {
+            const else_ = try block(context, nextToken(context).left_brace);
+            const end = else_.span.end;
+            return If{
+                .condition = condition,
+                .then = then,
+                .else_ = else_,
+                .span = .{ .begin = begin, .end = end },
+            };
+        },
+        else => {
+            const else_ = Block{
+                .expressions = &.{},
+                .span = .{
+                    .begin = then.span.begin,
+                    .end = then.span.end,
+                },
+            };
+            const end = then.span.end;
+            return If{
+                .condition = condition,
+                .then = then,
+                .else_ = else_,
+                .span = .{ .begin = begin, .end = end },
+            };
+        },
+    }
 }
 
 fn functionParameters(context: *Context) ![]const Parameter {

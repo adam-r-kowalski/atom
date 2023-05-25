@@ -246,13 +246,43 @@ test "codegen if with void result" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "codegen if with empty block" {
+test "codegen if with empty else block" {
     const allocator = std.testing.allocator;
     const source =
         \\print = foreign_import("stdout", "print", fn (x: i32) void)
         \\
         \\start = fn() void {
         \\    if true { print(10) } else { }
+        \\}
+    ;
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (import "stdout" "print" (func $print (param i32)))
+        \\
+        \\    (func $start
+        \\        (if 
+        \\            (i32.const 1)
+        \\            (then
+        \\                (call $print
+        \\                    (i32.const 10)))))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen if with no else block" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\print = foreign_import("stdout", "print", fn (x: i32) void)
+        \\
+        \\start = fn() void {
+        \\    if true {
+        \\        print(10)
+        \\    }
         \\}
     ;
     const actual = try atom.testing.codegen(allocator, source);
