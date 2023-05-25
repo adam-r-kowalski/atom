@@ -22,7 +22,10 @@ fn interned(writer: List(u8).Writer, intern: Intern, s: Interned) !void {
 }
 
 fn typeString(writer: List(u8).Writer, intern: Intern, expr: Expression) !void {
-    try interned(writer, intern, expr.kind.symbol);
+    switch (expr) {
+        .symbol => |symbol| try interned(writer, intern, symbol.value),
+        else => |k| std.debug.panic("\nType string not implemented for {}", .{k}),
+    }
 }
 
 const Indent = u64;
@@ -34,7 +37,7 @@ fn indent(writer: List(u8).Writer, n: Indent) !void {
 
 fn define(writer: List(u8).Writer, intern: Intern, d: Define, i: Indent) !void {
     try writer.writeAll("(def ");
-    try interned(writer, intern, d.name.kind.symbol);
+    try interned(writer, intern, d.name.value);
     if (d.type) |t| {
         try writer.writeAll(" ");
         try typeString(writer, intern, t.*);
@@ -46,9 +49,9 @@ fn define(writer: List(u8).Writer, intern: Intern, d: Define, i: Indent) !void {
 
 fn parameter(writer: List(u8).Writer, intern: Intern, p: Parameter) !void {
     try writer.writeAll("(");
-    try interned(writer, intern, p.name.kind.symbol);
+    try interned(writer, intern, p.name.value);
     try writer.writeAll(" ");
-    try typeString(writer, intern, p.type.*);
+    try typeString(writer, intern, p.type);
     try writer.writeAll(")");
 }
 
@@ -60,7 +63,7 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function, i: Indent) !vo
     }
     try writer.writeAll("] ");
     try typeString(writer, intern, f.return_type.*);
-    try block(writer, intern, f.body.kind.block, i);
+    try block(writer, intern, f.body, i);
     try writer.writeAll(")");
 }
 
@@ -98,8 +101,8 @@ fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp, i: Indent) !vo
 fn conditional(writer: List(u8).Writer, intern: Intern, i: If, n: Indent) !void {
     try writer.writeAll("(if ");
     try expression(writer, intern, i.condition.*, n);
-    try expression(writer, intern, i.then.*, n);
-    try expression(writer, intern, i.else_.*, n);
+    try block(writer, intern, i.then, n);
+    try block(writer, intern, i.else_, n);
     try writer.writeAll(")");
 }
 
@@ -113,13 +116,13 @@ fn call(writer: List(u8).Writer, intern: Intern, c: Call, i: u64) !void {
     try writer.writeAll(")");
 }
 
-fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Expression, i: Indent) !void {
+fn block(writer: List(u8).Writer, intern: Intern, b: Block, i: Indent) !void {
     try indent(writer, i);
-    if (exprs.len == 1) {
-        return try expression(writer, intern, exprs[0], i + 1);
+    if (b.expressions.len == 1) {
+        return try expression(writer, intern, b.expressions[0], i + 1);
     }
     try writer.writeAll("(block");
-    for (exprs) |expr| {
+    for (b.expressions) |expr| {
         try indent(writer, i + 1);
         try expression(writer, intern, expr, i + 1);
     }
@@ -127,17 +130,17 @@ fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Expression, i: 
 }
 
 fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, n: Indent) error{OutOfMemory}!void {
-    switch (expr.kind) {
-        .int => |i| try interned(writer, intern, i),
-        .float => |f| try interned(writer, intern, f),
-        .symbol => |s| try interned(writer, intern, s),
-        .string => |s| try interned(writer, intern, s),
-        .bool => |b| try writer.writeAll(if (b) "true" else "false"),
+    switch (expr) {
+        .int => |i| try interned(writer, intern, i.value),
+        .float => |f| try interned(writer, intern, f.value),
+        .symbol => |s| try interned(writer, intern, s.value),
+        .string => |s| try interned(writer, intern, s.value),
+        .bool => |b| try writer.print("{}", .{b.value}),
         .define => |d| try define(writer, intern, d, n),
         .function => |f| try function(writer, intern, f, n),
         .prototype => |p| try prototype(writer, intern, p),
         .binary_op => |b| try binaryOp(writer, intern, b, n),
-        .group => |g| try expression(writer, intern, g.*, n),
+        .group => |g| try expression(writer, intern, g.expression.*, n),
         .block => |b| try block(writer, intern, b, n),
         .if_ => |i| try conditional(writer, intern, i, n),
         .call => |c| try call(writer, intern, c, n),

@@ -37,12 +37,12 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
     const writer = list.writer();
     for (tokens, 0..) |token, i| {
         if (i != 0) try writer.writeAll("\n");
-        switch (token.kind) {
-            .symbol => |s| try symbol(writer, intern, s),
-            .int => |s| try int(writer, intern, s),
-            .float => |s| try float(writer, intern, s),
-            .string => |s| try string(writer, intern, s),
-            .bool => |b| try writer.print("bool {}", .{b}),
+        switch (token) {
+            .symbol => |s| try symbol(writer, intern, s.value),
+            .int => |s| try int(writer, intern, s.value),
+            .float => |s| try float(writer, intern, s.value),
+            .string => |s| try string(writer, intern, s.value),
+            .bool => |b| try writer.print("bool {}", .{b.value}),
             .equal => try writer.writeAll("equal"),
             .equal_equal => try writer.writeAll("equal equal"),
             .dot => try writer.writeAll("dot"),

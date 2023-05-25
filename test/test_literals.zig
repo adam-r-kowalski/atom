@@ -11,7 +11,7 @@ test "type infer int literal as i32" {
         \\    name = symbol{ name = f, type = fn() i32 }
         \\    type = void
         \\    value = 
-        \\        function
+        \\        function =
         \\            return_type = i32
         \\            body = int{ value = 42, type = i32 }
     ;
@@ -28,7 +28,7 @@ test "type infer bool literal true" {
         \\    name = symbol{ name = f, type = fn() bool }
         \\    type = void
         \\    value = 
-        \\        function
+        \\        function =
         \\            return_type = bool
         \\            body = bool{ value = true, type = bool }
     ;
@@ -45,7 +45,7 @@ test "type infer bool literal false" {
         \\    name = symbol{ name = f, type = fn() bool }
         \\    type = void
         \\    value = 
-        \\        function
+        \\        function =
         \\            return_type = bool
         \\            body = bool{ value = false, type = bool }
     ;
@@ -62,7 +62,7 @@ test "type infer int literal as f32" {
         \\    name = symbol{ name = f, type = fn() f32 }
         \\    type = void
         \\    value = 
-        \\        function
+        \\        function =
         \\            return_type = f32
         \\            body = int{ value = 42, type = f32 }
     ;
@@ -79,7 +79,7 @@ test "type infer float literal as f32" {
         \\    name = symbol{ name = f, type = fn() f32 }
         \\    type = void
         \\    value = 
-        \\        function
+        \\        function =
         \\            return_type = f32
         \\            body = float{ value = 42.3, type = f32 }
     ;

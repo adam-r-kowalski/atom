@@ -158,7 +158,7 @@ test "type infer function body" {
         \\    name = symbol{ name = id, type = fn(i32) i32 }
         \\    type = void
         \\    value = 
-        \\        function
+        \\        function =
         \\            parameters =
         \\                symbol{ name = x, type = i32 }
         \\            return_type = i32

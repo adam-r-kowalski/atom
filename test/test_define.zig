@@ -135,7 +135,7 @@ test "infer type of define based on body" {
         \\    name = symbol{ name = sum_of_squares, type = fn(i32, i32) i32 }
         \\    type = void
         \\    value = 
-        \\        function
+        \\        function =
         \\            parameters =
         \\                symbol{ name = x, type = i32 }
         \\                symbol{ name = y, type = i32 }
@@ -211,7 +211,7 @@ test "type infer nested define" {
         \\    name = symbol{ name = f, type = fn(i32, i32) i32 }
         \\    type = void
         \\    value = 
-        \\        function
+        \\        function =
         \\            parameters =
         \\                symbol{ name = x, type = i32 }
         \\                symbol{ name = y, type = i32 }

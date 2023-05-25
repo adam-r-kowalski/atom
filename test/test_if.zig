@@ -174,7 +174,7 @@ test "type infer if then else" {
         \\    name = symbol{ name = f, type = fn(bool, i32, i32) i32 }
         \\    type = void
         \\    value = 
-        \\        function
+        \\        function =
         \\            parameters =
         \\                symbol{ name = c, type = bool }
         \\                symbol{ name = x, type = i32 }

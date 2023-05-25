@@ -7,6 +7,10 @@ const Interned = @import("../interner.zig").Interned;
 const parser_types = @import("../parser/types.zig");
 const Span = parser_types.Span;
 const types = @import("types.zig");
+const Int = types.Int;
+const Float = types.Float;
+const Bool = types.Bool;
+const Symbol = types.Symbol;
 const Module = types.Module;
 const Untyped = types.Untyped;
 const Typed = types.Typed;
@@ -16,6 +20,7 @@ const TopLevel = types.TopLevel;
 const Function = types.Function;
 const MonoType = types.MonoType;
 const BinaryOp = types.BinaryOp;
+const Block = types.Block;
 const TypeVar = types.TypeVar;
 const Expression = types.Expression;
 const Constraints = types.Constraints;
@@ -24,15 +29,21 @@ const Define = types.Define;
 const Call = types.Call;
 const Equal = types.Equal;
 const Builtins = @import("../builtins.zig").Builtins;
+const parserSpanOf = @import("../parser/span.zig").span;
+const typeOf = @import("type_of.zig").typeOf;
 
 fn topLevelType(allocator: Allocator, builtins: Builtins, expr: parser_types.Expression) !MonoType {
-    const f = expr.kind.function;
-    const len = f.parameters.len;
-    const function_type = try allocator.alloc(MonoType, len + 1);
-    for (f.parameters, function_type[0..len]) |p, *t|
-        t.* = expressionToMonoType(p.type.*, builtins);
-    function_type[len] = expressionToMonoType(f.return_type.*, builtins);
-    return MonoType{ .function = function_type };
+    switch (expr) {
+        .function => |f| {
+            const len = f.parameters.len;
+            const function_type = try allocator.alloc(MonoType, len + 1);
+            for (f.parameters, function_type[0..len]) |p, *t|
+                t.* = expressionToMonoType(p.type, builtins);
+            function_type[len] = expressionToMonoType(f.return_type.*, builtins);
+            return MonoType{ .function = function_type };
+        },
+        else => std.debug.panic("\nInvalid top level type {}", .{expr}),
+    }
 }
 
 pub fn module(allocator: Allocator, builtins: Builtins, m: parser_types.Module) !Module {
@@ -40,12 +51,16 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: parser_types.Module) 
     var untyped = Untyped.init(allocator);
     var scope = Scope.init(allocator);
     for (m.expressions) |top_level| {
-        const d = top_level.kind.define;
-        const name = d.name.kind.symbol;
-        try order.append(name);
-        try untyped.putNoClobber(name, top_level);
-        const monotype = try topLevelType(allocator, builtins, d.value.*);
-        try scope.put(name, monotype);
+        switch (top_level) {
+            .define => |d| {
+                const name = d.name.value;
+                try order.append(name);
+                try untyped.putNoClobber(name, top_level);
+                const monotype = try topLevelType(allocator, builtins, d.value.*);
+                try scope.put(name, monotype);
+            },
+            else => |k| std.debug.panic("\nInvalid top level expression {}", .{k}),
+        }
     }
     return Module{
         .order = try order.toOwnedSlice(),
@@ -56,11 +71,11 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: parser_types.Module) 
 }
 
 fn expressionToMonoType(e: parser_types.Expression, builtins: Builtins) MonoType {
-    switch (e.kind) {
+    switch (e) {
         .symbol => |s| {
-            if (s == builtins.i32) return .i32;
-            if (s == builtins.f32) return .f32;
-            if (s == builtins.bool) return .bool;
+            if (s.value == builtins.i32) return .i32;
+            if (s.value == builtins.f32) return .f32;
+            if (s.value == builtins.bool) return .bool;
             std.debug.panic("\nCannot convert symbol {} to mono type", .{s});
         },
         else => std.debug.panic("\nCannot convert expression {} to mono type", .{e}),
@@ -102,35 +117,34 @@ fn returnType(builtins: Builtins, next_type_var: *TypeVar, f: parser_types.Funct
     return if (f.return_type) |t| expressionToMonoType(t.*, builtins) else freshTypeVar(next_type_var);
 }
 
-fn symbol(scopes: Scopes, work_queue: *WorkQueue, e: parser_types.Expression) !Expression {
-    const s = e.kind.symbol;
-    return Expression{
-        .kind = .{ .symbol = s },
-        .span = e.span,
-        .type = try findInScope(scopes, work_queue, s),
+fn symbol(scopes: Scopes, work_queue: *WorkQueue, s: parser_types.Symbol) !Symbol {
+    return Symbol{
+        .value = s.value,
+        .span = s.span,
+        .type = try findInScope(scopes, work_queue, s.value),
     };
 }
 
-fn int(e: parser_types.Expression, next_type_var: *TypeVar) Expression {
-    return Expression{
-        .kind = .{ .int = e.kind.int },
-        .span = e.span,
+fn int(i: parser_types.Int, next_type_var: *TypeVar) Int {
+    return Int{
+        .value = i.value,
+        .span = i.span,
         .type = freshTypeVar(next_type_var),
     };
 }
 
-fn float(e: parser_types.Expression, next_type_var: *TypeVar) Expression {
-    return Expression{
-        .kind = .{ .float = e.kind.float },
-        .span = e.span,
+fn float(f: parser_types.Float, next_type_var: *TypeVar) Float {
+    return Float{
+        .value = f.value,
+        .span = f.span,
         .type = freshTypeVar(next_type_var),
     };
 }
 
-fn boolean(e: parser_types.Expression) Expression {
-    return Expression{
-        .kind = .{ .bool = e.kind.bool },
-        .span = e.span,
+fn boolean(b: parser_types.Bool) Bool {
+    return Bool{
+        .value = b.value,
+        .span = b.span,
         .type = .bool,
     };
 }
@@ -144,42 +158,45 @@ const Context = struct {
     next_type_var: *TypeVar,
 };
 
-fn conditional(context: Context, e: parser_types.Expression) !Expression {
-    const i = e.kind.if_;
+fn conditional(context: Context, i: parser_types.If) !If {
     const condition = try expressionAlloc(context, i.condition.*);
-    const then = try expressionAlloc(context, i.then.*);
-    const else_ = try expressionAlloc(context, i.else_.*);
+    const then = try block(context, i.then);
+    const else_ = try block(context, i.else_);
     const type_ = freshTypeVar(context.next_type_var);
     try context.constraints.equal.appendSlice(&[_]Equal{
-        .{ .left = condition.type, .right = .bool },
+        .{ .left = typeOf(condition.*), .right = .bool },
         .{ .left = then.type, .right = type_ },
         .{ .left = else_.type, .right = type_ },
     });
-    return Expression{
-        .kind = .{ .if_ = .{ .condition = condition, .then = then, .else_ = else_ } },
+    return If{
+        .condition = condition,
+        .then = then,
+        .else_ = else_,
         .type = type_,
-        .span = e.span,
+        .span = i.span,
     };
 }
 
-fn binaryOp(context: Context, e: parser_types.Expression) !Expression {
-    const b = e.kind.binary_op;
+fn binaryOp(context: Context, b: parser_types.BinaryOp) !BinaryOp {
     const left = try expressionAlloc(context, b.left.*);
     const right = try expressionAlloc(context, b.right.*);
-    try context.constraints.equal.append(.{ .left = left.type, .right = right.type });
+    const left_type = typeOf(left.*);
+    try context.constraints.equal.append(.{ .left = left_type, .right = typeOf(right.*) });
     const result_type = blk: {
         switch (b.kind) {
             .equal, .greater => break :blk .bool,
             else => {
                 const tvar = freshTypeVar(context.next_type_var);
-                try context.constraints.equal.append(.{ .left = left.type, .right = tvar });
+                try context.constraints.equal.append(.{ .left = left_type, .right = tvar });
                 break :blk tvar;
             },
         }
     };
-    return Expression{
-        .kind = .{ .binary_op = .{ .kind = b.kind, .left = left, .right = right } },
-        .span = e.span,
+    return BinaryOp{
+        .kind = b.kind,
+        .left = left,
+        .right = right,
+        .span = b.span,
         .type = result_type,
     };
 }
@@ -188,63 +205,62 @@ fn explicitTypeOrVar(builtins: Builtins, next_type_var: *TypeVar, e: ?*const par
     return if (e) |t| expressionToMonoType(t.*, builtins) else freshTypeVar(next_type_var);
 }
 
-fn define(context: Context, e: parser_types.Expression) !Expression {
-    const d = e.kind.define;
+fn define(context: Context, d: parser_types.Define) !Define {
     const value = try expressionAlloc(context, d.value.*);
     const type_ = explicitTypeOrVar(context.builtins, context.next_type_var, d.type);
-    try context.constraints.equal.append(.{ .left = value.type, .right = type_ });
-    const name = try alloc(context, Expression{
-        .kind = .{ .symbol = d.name.kind.symbol },
-        .span = d.name.span,
+    try context.constraints.equal.append(.{ .left = typeOf(value.*), .right = type_ });
+    const name = Symbol{
+        .value = d.name.value,
+        .span = d.span,
         .type = type_,
-    });
-    try putInScope(context.scopes, d.name.kind.symbol, type_);
-    return Expression{
-        .kind = .{ .define = .{ .name = name, .value = value } },
-        .span = e.span,
+    };
+    try putInScope(context.scopes, d.name.value, type_);
+    return Define{
+        .name = name,
+        .value = value,
+        .span = d.span,
         .type = .void,
     };
 }
 
-fn call(context: Context, e: parser_types.Expression) !Expression {
-    const c = e.kind.call;
+fn call(context: Context, c: parser_types.Call) !Call {
     const f = try expressionAlloc(context, c.function.*);
     const len = c.arguments.len;
     const arguments = try context.allocator.alloc(Expression, len);
     const function_type = try context.allocator.alloc(MonoType, len + 1);
     for (c.arguments, arguments, function_type[0..len]) |untyped_arg, *typed_arg, *t| {
         typed_arg.* = try expression(context, untyped_arg);
-        t.* = typed_arg.type;
+        t.* = typeOf(typed_arg.*);
     }
     const return_type = freshTypeVar(context.next_type_var);
     function_type[len] = return_type;
     try context.constraints.equal.append(.{
-        .left = f.type,
+        .left = typeOf(f.*),
         .right = .{ .function = function_type },
     });
-    return Expression{
-        .kind = .{ .call = .{ .function = f, .arguments = arguments } },
-        .span = e.span,
+    return Call{
+        .function = f,
+        .arguments = arguments,
+        .span = c.span,
         .type = return_type,
     };
 }
 
-fn function(context: Context, e: parser_types.Expression) !Expression {
-    const f = e.kind.function;
+fn function(context: Context, f: parser_types.Function) !Function {
     try pushScope(context.scopes);
     defer popScope(context.scopes);
     const len = f.parameters.len;
-    const parameters = try context.allocator.alloc(Expression, len);
+    const parameters = try context.allocator.alloc(Symbol, len);
     const function_type = try context.allocator.alloc(MonoType, len + 1);
     for (f.parameters, parameters, function_type[0..len]) |untyped_p, *typed_p, *t| {
-        const name_symbol = untyped_p.name.kind.symbol;
-        const p_type = expressionToMonoType(untyped_p.type.*, context.builtins);
+        const name_symbol = untyped_p.name.value;
+        const p_type = expressionToMonoType(untyped_p.type, context.builtins);
         const span = Span{
             .begin = untyped_p.name.span.begin,
-            .end = untyped_p.type.span.end,
+            .end = parserSpanOf(untyped_p.type).end,
         };
-        typed_p.* = Expression{
-            .kind = .{ .symbol = name_symbol },
+        typed_p.* = Symbol{
+            .value = name_symbol,
             .span = span,
             .type = p_type,
         };
@@ -252,46 +268,42 @@ fn function(context: Context, e: parser_types.Expression) !Expression {
         try putInScope(context.scopes, name_symbol, p_type);
     }
     const return_type = expressionToMonoType(f.return_type.*, context.builtins);
-    const body = try expressionAlloc(context, f.body.*);
+    const body = try block(context, f.body);
     try context.constraints.equal.append(.{ .left = return_type, .right = body.type });
     function_type[len] = return_type;
-    return Expression{
-        .kind = .{
-            .function = .{
-                .parameters = parameters,
-                .return_type = return_type,
-                .body = body,
-            },
-        },
-        .span = e.span,
+    return Function{
+        .parameters = parameters,
+        .return_type = return_type,
+        .body = body,
+        .span = f.span,
         .type = .{ .function = function_type },
     };
 }
 
-fn block(context: Context, e: parser_types.Expression) !Expression {
-    const b = e.kind.block;
-    const expressions = try context.allocator.alloc(Expression, b.len);
-    for (b, expressions) |untyped_e, *typed_e|
+fn block(context: Context, b: parser_types.Block) !Block {
+    const len = b.expressions.len;
+    const expressions = try context.allocator.alloc(Expression, len);
+    for (b.expressions, expressions) |untyped_e, *typed_e|
         typed_e.* = try expression(context, untyped_e);
-    return Expression{
-        .kind = .{ .block = expressions },
-        .span = e.span,
-        .type = expressions[b.len - 1].type,
+    return Block{
+        .expressions = expressions,
+        .span = b.span,
+        .type = typeOf(expressions[len - 1]),
     };
 }
 
 fn expression(context: Context, e: parser_types.Expression) error{OutOfMemory}!Expression {
-    switch (e.kind) {
-        .int => return int(e, context.next_type_var),
-        .float => return float(e, context.next_type_var),
-        .symbol => return try symbol(context.scopes.*, context.work_queue, e),
-        .bool => return boolean(e),
-        .define => return try define(context, e),
-        .function => return try function(context, e),
-        .binary_op => return try binaryOp(context, e),
-        .block => return try block(context, e),
-        .if_ => return try conditional(context, e),
-        .call => return try call(context, e),
+    switch (e) {
+        .int => |i| return .{ .int = int(i, context.next_type_var) },
+        .float => |f| return .{ .float = float(f, context.next_type_var) },
+        .symbol => |s| return .{ .symbol = try symbol(context.scopes.*, context.work_queue, s) },
+        .bool => |b| return .{ .bool = boolean(b) },
+        .define => |d| return .{ .define = try define(context, d) },
+        .function => |f| return .{ .function = try function(context, f) },
+        .binary_op => |b| return .{ .binary_op = try binaryOp(context, b) },
+        .block => |b| return .{ .block = try block(context, b) },
+        .if_ => |i| return .{ .if_ = try conditional(context, i) },
+        .call => |c| return .{ .call = try call(context, c) },
         else => |k| std.debug.panic("\nUnsupported expression {}", .{k}),
     }
 }

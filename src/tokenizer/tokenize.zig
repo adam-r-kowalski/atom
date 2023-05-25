@@ -10,7 +10,6 @@ const types = @import("types.zig");
 const Pos = types.Pos;
 const Token = types.Token;
 const Span = types.Span;
-const Kind = types.Kind;
 
 const Cursor = struct {
     source: []const u8,
@@ -64,7 +63,7 @@ fn number(intern: *Intern, cursor: *Cursor) !Token {
             '-' => return exact(cursor, .minus),
             '.' => {
                 _ = advance(cursor, i);
-                return Token{ .kind = .dot, .span = .{ .begin = begin, .end = cursor.pos } };
+                return Token{ .dot = .{ .span = .{ .begin = begin, .end = cursor.pos } } };
             },
             else => {},
         }
@@ -72,8 +71,8 @@ fn number(intern: *Intern, cursor: *Cursor) !Token {
     _ = advance(cursor, i);
     const span = Span{ .begin = begin, .end = cursor.pos };
     const interned = try interner.store(intern, contents);
-    if (decimals == 0) return Token{ .kind = .{ .int = interned }, .span = span };
-    return Token{ .kind = .{ .float = interned }, .span = span };
+    if (decimals == 0) return Token{ .int = .{ .value = interned, .span = span } };
+    return Token{ .float = .{ .value = interned, .span = span } };
 }
 
 fn string(intern: *Intern, cursor: *Cursor) !Token {
@@ -89,13 +88,16 @@ fn string(intern: *Intern, cursor: *Cursor) !Token {
     _ = advance(cursor, i);
     const span = Span{ .begin = begin, .end = cursor.pos };
     const interned = try interner.store(intern, contents);
-    return Token{ .kind = .{ .string = interned }, .span = span };
+    return Token{ .string = .{ .value = interned, .span = span } };
 }
 
-fn exact(cursor: *Cursor, kind: Kind) Token {
+const Tag = std.meta.Tag(Token);
+
+fn exact(cursor: *Cursor, comptime tag: Tag) Token {
     const begin = cursor.pos;
     _ = advance(cursor, 1);
-    return Token{ .kind = kind, .span = .{ .begin = begin, .end = cursor.pos } };
+    const span = Span{ .begin = begin, .end = cursor.pos };
+    return @unionInit(Token, @tagName(tag), .{ .span = span });
 }
 
 fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !Token {
@@ -106,13 +108,13 @@ fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !Token {
     const end = cursor.pos;
     const span = Span{ .begin = begin, .end = end };
     const interned = try interner.store(intern, contents);
-    if (interned == builtins.fn_) return Token{ .kind = .fn_, .span = span };
-    if (interned == builtins.if_) return Token{ .kind = .if_, .span = span };
-    if (interned == builtins.else_) return Token{ .kind = .else_, .span = span };
-    if (interned == builtins.true_) return Token{ .kind = .{ .bool = true }, .span = span };
-    if (interned == builtins.false_) return Token{ .kind = .{ .bool = false }, .span = span };
-    if (interned == builtins.or_) return Token{ .kind = .or_, .span = span };
-    return Token{ .kind = .{ .symbol = interned }, .span = span };
+    if (interned == builtins.fn_) return Token{ .fn_ = .{ .span = span } };
+    if (interned == builtins.if_) return Token{ .if_ = .{ .span = span } };
+    if (interned == builtins.else_) return Token{ .else_ = .{ .span = span } };
+    if (interned == builtins.true_) return Token{ .bool = .{ .value = true, .span = span } };
+    if (interned == builtins.false_) return Token{ .bool = .{ .value = false, .span = span } };
+    if (interned == builtins.or_) return Token{ .or_ = .{ .span = span } };
+    return Token{ .symbol = .{ .value = interned, .span = span } };
 }
 
 fn newLine(cursor: *Cursor) Token {
@@ -122,17 +124,19 @@ fn newLine(cursor: *Cursor) Token {
     cursor.pos.line += i;
     cursor.pos.column = 1;
     cursor.source = cursor.source[i..];
-    return Token{ .kind = .new_line, .span = .{ .begin = begin, .end = cursor.pos } };
+    return Token{ .new_line = .{ .span = .{ .begin = begin, .end = cursor.pos } } };
 }
 
-fn either(cursor: *Cursor, kind: Kind, char: u8, other: Kind) Token {
+fn either(cursor: *Cursor, comptime tag: Tag, comptime char: u8, comptime other: Tag) Token {
     const begin = cursor.pos;
     if (cursor.source.len > 1 and cursor.source[1] == char) {
         _ = advance(cursor, 2);
-        return Token{ .kind = other, .span = .{ .begin = begin, .end = cursor.pos } };
+        const span = Span{ .begin = begin, .end = cursor.pos };
+        return @unionInit(Token, @tagName(other), .{ .span = span });
     }
     _ = advance(cursor, 1);
-    return Token{ .kind = kind, .span = .{ .begin = begin, .end = cursor.pos } };
+    const span = Span{ .begin = begin, .end = cursor.pos };
+    return @unionInit(Token, @tagName(tag), .{ .span = span });
 }
 
 fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?Token {
