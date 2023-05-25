@@ -15,6 +15,7 @@ pub const MonoType = union(enum) {
     i32,
     f32,
     bool,
+    str,
     typevar: TypeVar,
     function: []const MonoType,
 };
@@ -39,6 +40,12 @@ pub const Symbol = struct {
 
 pub const Bool = struct {
     value: bool,
+    span: Span,
+    type: MonoType,
+};
+
+pub const String = struct {
+    value: Interned,
     span: Span,
     type: MonoType,
 };
@@ -93,11 +100,19 @@ pub const Group = struct {
     type: MonoType,
 };
 
+pub const ForeignImport = struct {
+    module: Interned,
+    name: Interned,
+    span: Span,
+    type: MonoType,
+};
+
 pub const Expression = union(enum) {
     int: Int,
     float: Float,
     symbol: Symbol,
     bool: Bool,
+    string: String,
     define: Define,
     function: Function,
     binary_op: BinaryOp,
@@ -105,6 +120,7 @@ pub const Expression = union(enum) {
     block: Block,
     if_: If,
     call: Call,
+    foreign_import: ForeignImport,
 };
 
 pub const Untyped = Map(Interned, UntypedExpression);

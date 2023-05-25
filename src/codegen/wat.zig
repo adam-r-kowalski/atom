@@ -8,6 +8,7 @@ const Interned = interner.Interned;
 const types = @import("../lower/types.zig");
 const IR = types.IR;
 const Function = types.Function;
+const Import = types.Import;
 const Export = types.Export;
 const Type = types.Type;
 const Expression = types.Expression;
@@ -27,6 +28,24 @@ fn typeString(writer: List(u8).Writer, t: Type) !void {
     switch (t) {
         .i32 => try writer.writeAll("i32"),
         .f32 => try writer.writeAll("f32"),
+        .void => try writer.writeAll("void"),
+        .function => |f| {
+            const last = f.len - 1;
+            for (f[0..last], 0..) |arg, i| {
+                if (i > 0) try writer.writeAll(" ");
+                try writer.writeAll("(param ");
+                try typeString(writer, arg);
+                try writer.writeAll(")");
+            }
+            switch (f[last]) {
+                .void => {},
+                else => |k| {
+                    try writer.writeAll(" (result ");
+                    try typeString(writer, k);
+                    try writer.writeAll(")");
+                },
+            }
+        },
     }
 }
 
@@ -130,9 +149,14 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function, i: Indent) !vo
         try typeString(writer, p.type);
         try writer.writeAll(")");
     }
-    try writer.writeAll(" (result ");
-    try typeString(writer, f.return_type);
-    try writer.writeAll(")");
+    switch (f.return_type) {
+        .void => {},
+        else => |k| {
+            try writer.writeAll(" (result ");
+            try typeString(writer, k);
+            try writer.writeAll(")");
+        },
+    }
     for (f.locals) |l| {
         const name_symbol = interner.lookup(intern, l.name);
         try indent(writer, i + 1);
@@ -144,22 +168,31 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function, i: Indent) !vo
     try writer.writeAll(")");
 }
 
+fn foreignImport(writer: List(u8).Writer, intern: Intern, i: Import) !void {
+    try writer.writeAll("\n");
+    try indent(writer, 1);
+    try writer.print("(import {s} {s} (func ${s} ", .{
+        interner.lookup(intern, i.path[0]),
+        interner.lookup(intern, i.path[1]),
+        interner.lookup(intern, i.name),
+    });
+    try typeString(writer, i.type);
+    try writer.writeAll("))");
+}
+
 fn foreignExport(writer: List(u8).Writer, intern: Intern, e: Export) !void {
     try writer.writeAll("\n");
     try indent(writer, 1);
-    switch (e) {
-        .function => |f| {
-            const alias = interner.lookup(intern, f.alias);
-            const name = interner.lookup(intern, f.name);
-            try writer.print("(export \"{s}\" (func ${s}))", .{ alias, name });
-        },
-    }
+    const alias = interner.lookup(intern, e.alias);
+    const name = interner.lookup(intern, e.name);
+    try writer.print("(export \"{s}\" (func ${s}))", .{ alias, name });
 }
 
 pub fn wat(allocator: Allocator, intern: Intern, ir: IR) ![]const u8 {
     var list = List(u8).init(allocator);
     const writer = list.writer();
     try writer.writeAll("(module");
+    for (ir.imports) |i| try foreignImport(writer, intern, i);
     for (ir.functions) |f| try function(writer, intern, f, 1);
     for (ir.exports) |e| try foreignExport(writer, intern, e);
     try writer.writeAll(")");
