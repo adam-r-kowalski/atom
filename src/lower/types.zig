@@ -24,8 +24,8 @@ pub const Call = struct {
 pub const If = struct {
     result: Type,
     condition: *const Expression,
-    then: *const Expression,
-    else_: *const Expression,
+    then: []const Expression,
+    else_: []const Expression,
 };
 
 pub const LocalSet = struct {
@@ -50,9 +50,9 @@ pub const Expression = union(enum) {
     f32_mul: BinaryOp,
     f32_eq: BinaryOp,
     f32_gt: BinaryOp,
-    block: []const Expression,
     call: Call,
     if_: If,
+    block: []const Expression,
 };
 
 pub const Local = struct {
@@ -65,7 +65,7 @@ pub const Function = struct {
     parameters: []const Parameter,
     return_type: Type,
     locals: []const Local,
-    body: *const Expression,
+    body: []const Expression,
 };
 
 pub const FunctionExport = struct {

@@ -21,10 +21,10 @@ test "tokenize call" {
 
 test "parse call" {
     const allocator = std.testing.allocator;
-    const source = "a = f(x, y, z)";
+    const source = "f(x, y, z)";
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(def a (f x y z))";
+    const expected = "(f x y z)";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
@@ -70,7 +70,7 @@ test "type infer define then call" {
         \\    name = symbol{ name = double, type = fn(i32) i32 }
         \\    type = void
         \\    value = 
-        \\        function
+        \\        function =
         \\            parameters =
         \\                symbol{ name = x, type = i32 }
         \\            return_type = i32
@@ -85,7 +85,7 @@ test "type infer define then call" {
         \\    name = symbol{ name = start, type = fn() i32 }
         \\    type = void
         \\    value = 
-        \\        function
+        \\        function =
         \\            return_type = i32
         \\            body = 
         \\                call =

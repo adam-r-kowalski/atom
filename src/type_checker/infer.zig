@@ -30,6 +30,7 @@ const Call = types.Call;
 const Equal = types.Equal;
 const Builtins = @import("../builtins.zig").Builtins;
 const parserSpanOf = @import("../parser/span.zig").span;
+const typeOf = @import("type_of.zig").typeOf;
 
 fn topLevelType(allocator: Allocator, builtins: Builtins, expr: parser_types.Expression) !MonoType {
     switch (expr) {
@@ -202,22 +203,6 @@ fn binaryOp(context: Context, b: parser_types.BinaryOp) !BinaryOp {
 
 fn explicitTypeOrVar(builtins: Builtins, next_type_var: *TypeVar, e: ?*const parser_types.Expression) MonoType {
     return if (e) |t| expressionToMonoType(t.*, builtins) else freshTypeVar(next_type_var);
-}
-
-fn typeOf(e: Expression) MonoType {
-    return switch (e) {
-        .int => |i| i.type,
-        .float => |f| f.type,
-        .symbol => |s| s.type,
-        .bool => |b| b.type,
-        .define => |d| d.type,
-        .function => |f| f.type,
-        .binary_op => |b| b.type,
-        .group => |g| g.type,
-        .block => |b| b.type,
-        .if_ => |i| i.type,
-        .call => |c| c.type,
-    };
 }
 
 fn define(context: Context, d: parser_types.Define) !Define {

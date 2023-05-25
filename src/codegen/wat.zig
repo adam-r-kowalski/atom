@@ -87,11 +87,11 @@ fn conditional(writer: List(u8).Writer, intern: Intern, c: If, i: Indent) !void 
     try expression(writer, intern, c.condition.*, i);
     try indent(writer, i);
     try writer.writeAll("(then");
-    try expression(writer, intern, c.then.*, i + 1);
+    try block(writer, intern, c.then, i + 1);
     try writer.writeAll(")");
     try indent(writer, i);
     try writer.writeAll("(else");
-    try expression(writer, intern, c.else_.*, i + 1);
+    try block(writer, intern, c.else_, i + 1);
     try writer.writeAll("))");
 }
 
@@ -140,7 +140,7 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function, i: Indent) !vo
         try typeString(writer, l.type);
         try writer.writeAll(")");
     }
-    try expression(writer, intern, f.body.*, i + 1);
+    try block(writer, intern, f.body, i + 1);
     try writer.writeAll(")");
 }
 
