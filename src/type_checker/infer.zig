@@ -341,10 +341,11 @@ fn block(context: Context, b: parser_types.Block) !Block {
     const expressions = try context.allocator.alloc(Expression, len);
     for (b.expressions, expressions) |untyped_e, *typed_e|
         typed_e.* = try expression(context, untyped_e);
+    const monotype = if (len == 0) .void else typeOf(expressions[len - 1]);
     return Block{
         .expressions = expressions,
         .span = b.span,
-        .type = typeOf(expressions[len - 1]),
+        .type = monotype,
     };
 }
 

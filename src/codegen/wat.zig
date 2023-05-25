@@ -99,19 +99,28 @@ fn call(writer: List(u8).Writer, intern: Intern, c: Call, i: Indent) !void {
 }
 
 fn conditional(writer: List(u8).Writer, intern: Intern, c: If, i: Indent) !void {
-    try writer.writeAll("(if (result ");
-    try typeString(writer, c.result);
-    try writer.writeAll(")");
+    try writer.writeAll("(if ");
+    switch (c.result) {
+        .void => {},
+        else => |t| {
+            try writer.writeAll("(result ");
+            try typeString(writer, t);
+            try writer.writeAll(")");
+        },
+    }
     try indent(writer, i);
     try expression(writer, intern, c.condition.*, i);
     try indent(writer, i);
     try writer.writeAll("(then");
     try block(writer, intern, c.then, i + 1);
     try writer.writeAll(")");
-    try indent(writer, i);
-    try writer.writeAll("(else");
-    try block(writer, intern, c.else_, i + 1);
-    try writer.writeAll("))");
+    if (c.else_.len > 0) {
+        try indent(writer, i);
+        try writer.writeAll("(else");
+        try block(writer, intern, c.else_, i + 1);
+        try writer.writeAll(")");
+    }
+    try writer.writeAll(")");
 }
 
 fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Indent) error{OutOfMemory}!void {
