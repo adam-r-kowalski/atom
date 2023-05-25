@@ -1,9 +1,11 @@
 const interner = @import("../interner.zig");
 const Interned = interner.Interned;
 
-pub const Type = enum {
+pub const Type = union(enum) {
     i32,
     f32,
+    void,
+    function: []const Type,
 };
 
 pub const Parameter = struct {
@@ -68,16 +70,19 @@ pub const Function = struct {
     body: []const Expression,
 };
 
-pub const FunctionExport = struct {
+pub const Import = struct {
+    name: Interned,
+    path: [2]Interned,
+    type: Type,
+};
+
+pub const Export = struct {
     name: Interned,
     alias: Interned,
 };
 
-pub const Export = union(enum) {
-    function: FunctionExport,
-};
-
 pub const IR = struct {
     functions: []const Function,
+    imports: []const Import,
     exports: []const Export,
 };

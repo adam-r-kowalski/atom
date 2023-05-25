@@ -8,6 +8,7 @@ pub fn typeOf(e: Expression) MonoType {
         .float => |f| f.type,
         .symbol => |s| s.type,
         .bool => |b| b.type,
+        .string => |s| s.type,
         .define => |d| d.type,
         .function => |f| f.type,
         .binary_op => |b| b.type,

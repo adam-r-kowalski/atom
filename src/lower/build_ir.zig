@@ -9,6 +9,7 @@ const Parameter = types.Parameter;
 const Type = types.Type;
 const Expression = types.Expression;
 const Local = types.Local;
+const Import = types.Import;
 const Export = types.Export;
 const Block = types.Block;
 const Builtins = @import("../builtins.zig").Builtins;
@@ -25,6 +26,7 @@ fn mapType(monotype: MonoType) Type {
         .i32 => return .i32,
         .f32 => return .f32,
         .bool => return .i32,
+        .void => return .void,
         else => std.debug.panic("\nMonotype {} not yet supported", .{monotype}),
     }
 }
@@ -222,8 +224,25 @@ fn function(allocator: Allocator, builtins: Builtins, name: Interned, f: type_ch
     };
 }
 
+fn foreignImport(allocator: Allocator, name: Interned, i: type_checker_types.ForeignImport) !Import {
+    switch (i.type) {
+        .function => |f| {
+            const path = [2]Interned{ i.module, i.name };
+            const function_type = try allocator.alloc(Type, f.len);
+            for (f, function_type) |t, *ir_t| ir_t.* = mapType(t);
+            return Import{
+                .name = name,
+                .path = path,
+                .type = .{ .function = function_type },
+            };
+        },
+        else => |k| std.debug.panic("\nForeign import type {} not yet supported", .{k}),
+    }
+}
+
 pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
     var functions = std.ArrayList(Function).init(allocator);
+    var imports = std.ArrayList(Import).init(allocator);
     for (module.order) |name| {
         if (module.typed.get(name)) |top_level| {
             switch (top_level) {
@@ -233,6 +252,10 @@ pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
                         .function => |f| {
                             const lowered = try function(allocator, builtins, name_symbol, f);
                             try functions.append(lowered);
+                        },
+                        .foreign_import => |i| {
+                            const lowered = try foreignImport(allocator, name_symbol, i);
+                            try imports.append(lowered);
                         },
                         else => |e| std.debug.panic("\nTop level kind {} no yet supported", .{e}),
                     }
@@ -245,6 +268,7 @@ pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
     }
     return IR{
         .functions = try functions.toOwnedSlice(),
+        .imports = try imports.toOwnedSlice(),
         .exports = &.{},
     };
 }

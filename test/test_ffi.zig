@@ -46,8 +46,12 @@ test "type check import" {
     const allocator = std.testing.allocator;
     const source =
         \\print = foreign_import("console", "log", fn(msg: str) void)
+        \\
+        \\start = fn() void {
+        \\    print("hello world")
+        \\}
     ;
-    const actual = try atom.testing.typeInfer(allocator, source, "print");
+    const actual = try atom.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -58,6 +62,42 @@ test "type check import" {
         \\            module = "console"
         \\            name = "log"
         \\            type = fn(str) void
+        \\
+        \\define =
+        \\    name = symbol{ name = start, type = fn() void }
+        \\    type = void
+        \\    value = 
+        \\        function =
+        \\            return_type = void
+        \\            body = 
+        \\                call =
+        \\                    symbol{ name = print, type = fn(str) void }
+        \\                    arguments =
+        \\                        string{ value = "hello world", type = str }
+        \\                    type = void
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen import" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\print = foreign_import("console", "log", fn(x: i32) void)
+        \\
+        \\start = fn() void { print(42) }
+    ;
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (import "console" "log" (func $print (param i32)))
+        \\
+        \\    (func $start
+        \\        (call $print
+        \\            (i32.const 42)))
+        \\
+        \\    (export "_start" (func $start)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

@@ -135,6 +135,7 @@ fn expression(allocator: Allocator, s: Substitution, e: Expression) error{OutOfM
         .int => |i| return .{ .int = try int(allocator, s, i) },
         .float => |f| return .{ .float = try float(allocator, s, f) },
         .bool => |b| return .{ .bool = b },
+        .string => |str| return .{ .string = str },
         .if_ => |i| return .{ .if_ = try conditional(allocator, s, i) },
         .binary_op => |b| return .{ .binary_op = try binaryOp(allocator, s, b) },
         .define => |d| return .{ .define = try define(allocator, s, d) },

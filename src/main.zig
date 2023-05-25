@@ -50,9 +50,7 @@ fn compileToWat(timer: *std.time.Timer, timings: *Timings, allocator: Allocator,
     const alias = try atom.interner.store(&intern, "_start");
     const exports = try allocator.alloc(atom.lower.types.Export, ir.exports.len + 1);
     std.mem.copy(atom.lower.types.Export, exports, ir.exports);
-    exports[ir.exports.len] = atom.lower.types.Export{
-        .function = .{ .name = start, .alias = alias },
-    };
+    exports[ir.exports.len] = atom.lower.types.Export{ .name = start, .alias = alias };
     ir.exports = exports;
     const t11 = timer.read();
     const wat = try atom.codegen.wat(allocator, intern, ir);

@@ -10,6 +10,7 @@ const TopLevel = types.TopLevel;
 const Symbol = types.Symbol;
 const Int = types.Int;
 const Float = types.Float;
+const String = types.String;
 const Bool = types.Bool;
 const Function = types.Function;
 const MonoType = types.MonoType;
@@ -49,6 +50,13 @@ fn float(writer: List(u8).Writer, intern: Intern, f: Float) !void {
     const value = interner.lookup(intern, f.value);
     try writer.print("float{{ value = {s}, type = ", .{value});
     try monotype(writer, f.type);
+    try writer.writeAll(" }");
+}
+
+fn string(writer: List(u8).Writer, intern: Intern, s: String) !void {
+    const value = interner.lookup(intern, s.value);
+    try writer.print("string{{ value = {s}, type = ", .{value});
+    try monotype(writer, s.type);
     try writer.writeAll(" }");
 }
 
@@ -190,6 +198,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, e: Expression, in: Indent
         .symbol => |s| try symbol(writer, intern, s),
         .int => |i| try int(writer, intern, i),
         .float => |f| try float(writer, intern, f),
+        .string => |s| try string(writer, intern, s),
         .bool => |b| try boolean(writer, b),
         .if_ => |i| try conditional(writer, intern, i, in),
         .binary_op => |b| try binaryOp(writer, intern, b, in),

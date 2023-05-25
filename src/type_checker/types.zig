@@ -44,6 +44,12 @@ pub const Bool = struct {
     type: MonoType,
 };
 
+pub const String = struct {
+    value: Interned,
+    span: Span,
+    type: MonoType,
+};
+
 pub const Define = struct {
     name: Symbol,
     value: *const Expression,
@@ -106,6 +112,7 @@ pub const Expression = union(enum) {
     float: Float,
     symbol: Symbol,
     bool: Bool,
+    string: String,
     define: Define,
     function: Function,
     binary_op: BinaryOp,
