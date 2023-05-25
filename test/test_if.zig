@@ -214,3 +214,34 @@ test "codegen if" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "codegen if with void result" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\print = foreign_import("stdout", "print", fn (x: i32) void)
+        \\
+        \\start = fn() void {
+        \\    if true { print(10) } else { print(20) }
+        \\}
+    ;
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (import "stdout" "print" (func $print (param i32)))
+        \\
+        \\    (func $start
+        \\        (if 
+        \\            (i32.const 1)
+        \\            (then
+        \\                (call $print
+        \\                    (i32.const 10)))
+        \\            (else
+        \\                (call $print
+        \\                    (i32.const 20)))))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

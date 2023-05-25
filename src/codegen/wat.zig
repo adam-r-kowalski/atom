@@ -99,9 +99,15 @@ fn call(writer: List(u8).Writer, intern: Intern, c: Call, i: Indent) !void {
 }
 
 fn conditional(writer: List(u8).Writer, intern: Intern, c: If, i: Indent) !void {
-    try writer.writeAll("(if (result ");
-    try typeString(writer, c.result);
-    try writer.writeAll(")");
+    try writer.writeAll("(if ");
+    switch (c.result) {
+        .void => {},
+        else => |t| {
+            try writer.writeAll("(result ");
+            try typeString(writer, t);
+            try writer.writeAll(")");
+        },
+    }
     try indent(writer, i);
     try expression(writer, intern, c.condition.*, i);
     try indent(writer, i);
