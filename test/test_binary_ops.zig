@@ -123,7 +123,7 @@ test "type infer binary op multiply" {
         \\    name = symbol{ name = multiply, type = fn(i32, i32) i32 }
         \\    type = void
         \\    value = 
-        \\        function
+        \\        function =
         \\            parameters =
         \\                symbol{ name = x, type = i32 }
         \\                symbol{ name = y, type = i32 }
@@ -148,7 +148,7 @@ test "type infer binary op multiply then add" {
         \\    name = symbol{ name = f, type = fn(i32, i32, i32) i32 }
         \\    type = void
         \\    value = 
-        \\        function
+        \\        function =
         \\            parameters =
         \\                symbol{ name = x, type = i32 }
         \\                symbol{ name = y, type = i32 }
