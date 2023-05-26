@@ -107,6 +107,12 @@ pub const ForeignImport = struct {
     type: MonoType,
 };
 
+pub const Convert = struct {
+    value: *const Expression,
+    span: Span,
+    type: MonoType,
+};
+
 pub const Expression = union(enum) {
     int: Int,
     float: Float,
@@ -121,6 +127,7 @@ pub const Expression = union(enum) {
     if_: If,
     call: Call,
     foreign_import: ForeignImport,
+    convert: Convert,
 };
 
 pub const Untyped = Map(Interned, UntypedExpression);

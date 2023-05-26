@@ -143,6 +143,7 @@ fn expression(allocator: Allocator, s: Substitution, e: Expression) error{OutOfM
         .function => |f| return .{ .function = try function(allocator, s, f) },
         .block => |b| return .{ .block = try block(allocator, s, b) },
         .foreign_import => |f| return .{ .foreign_import = f },
+        .convert => |c| return .{ .convert = c },
         else => |k| std.debug.panic("\nUnsupported expression {}", .{k}),
     }
 }

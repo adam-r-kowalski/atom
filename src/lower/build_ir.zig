@@ -184,6 +184,17 @@ fn define(allocator: Allocator, builtins: Builtins, locals: *List(Local), d: typ
     return Expression{ .local_set = .{ .name = name, .value = value } };
 }
 
+fn convert(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: type_checker_types.Convert) !Expression {
+    const value = try expressionAlloc(allocator, builtins, locals, c.value.*);
+    switch (typeOf(c.value.*)) {
+        .i32 => switch (c.type) {
+            .f32 => return Expression{ .f32_convert_i32_s = value },
+            else => |k| std.debug.panic("\nConvert type i32 to {} not yet supported", .{k}),
+        },
+        else => |k| std.debug.panic("\nConvert type {} not yet supported", .{k}),
+    }
+}
+
 fn expression(allocator: Allocator, builtins: Builtins, locals: *List(Local), e: type_checker_types.Expression) error{OutOfMemory}!Expression {
     switch (e) {
         .int => |i| return try int(i),
@@ -195,6 +206,7 @@ fn expression(allocator: Allocator, builtins: Builtins, locals: *List(Local), e:
         .call => |c| return try call(allocator, builtins, locals, c),
         .if_ => |i| return try conditional(allocator, builtins, locals, i),
         .define => |d| return try define(allocator, builtins, locals, d),
+        .convert => |c| return try convert(allocator, builtins, locals, c),
         else => |k| std.debug.panic("\nExpression {} not yet supported", .{k}),
     }
 }

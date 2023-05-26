@@ -17,6 +17,7 @@ pub const Builtins = struct {
     one: Interned,
     zero: Interned,
     foreign_import: Interned,
+    convert: Interned,
 
     pub fn init(intern: *Intern) !Builtins {
         return Builtins{
@@ -34,6 +35,7 @@ pub const Builtins = struct {
             .one = try interner.store(intern, "1"),
             .zero = try interner.store(intern, "0"),
             .foreign_import = try interner.store(intern, "foreign_import"),
+            .convert = try interner.store(intern, "convert"),
         };
     }
 };

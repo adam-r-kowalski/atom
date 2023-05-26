@@ -52,6 +52,7 @@ pub const Expression = union(enum) {
     f32_mul: BinaryOp,
     f32_eq: BinaryOp,
     f32_gt: BinaryOp,
+    f32_convert_i32_s: *const Expression,
     call: Call,
     if_: If,
     block: []const Expression,

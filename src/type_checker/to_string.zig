@@ -24,6 +24,7 @@ const Call = types.Call;
 const Define = types.Define;
 const Block = types.Block;
 const ForeignImport = types.ForeignImport;
+const Convert = types.Convert;
 
 const Indent = u64;
 
@@ -193,6 +194,17 @@ fn foreignImport(writer: List(u8).Writer, intern: Intern, f: ForeignImport, i: I
     try monotype(writer, f.type);
 }
 
+fn convert(writer: List(u8).Writer, intern: Intern, c: Convert, i: Indent) !void {
+    try indent(writer, i);
+    try writer.writeAll("convert =");
+    try indent(writer, i + 1);
+    try writer.print("value = ", .{});
+    try expression(writer, intern, c.value.*, i + 1);
+    try indent(writer, i + 1);
+    try writer.print("type = ", .{});
+    try monotype(writer, c.type);
+}
+
 fn expression(writer: List(u8).Writer, intern: Intern, e: Expression, in: Indent) error{OutOfMemory}!void {
     switch (e) {
         .symbol => |s| try symbol(writer, intern, s),
@@ -207,6 +219,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, e: Expression, in: Indent
         .function => |f| try function(writer, intern, f, in),
         .block => |b| try block(writer, intern, b, in),
         .foreign_import => |f| try foreignImport(writer, intern, f, in),
+        .convert => |c| try convert(writer, intern, c, in),
         else => |k| std.debug.panic("\nUnhandled expression type {}", .{k}),
     }
 }
