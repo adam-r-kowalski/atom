@@ -15,6 +15,7 @@ pub const MonoType = union(enum) {
     i32,
     i64,
     f32,
+    f64,
     bool,
     str,
     typevar: TypeVar,

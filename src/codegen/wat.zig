@@ -29,6 +29,7 @@ fn typeString(writer: List(u8).Writer, t: Type) !void {
         .i32 => try writer.writeAll("i32"),
         .i64 => try writer.writeAll("i64"),
         .f32 => try writer.writeAll("f32"),
+        .f64 => try writer.writeAll("f64"),
         .void => try writer.writeAll("void"),
         .function => |f| {
             const last = f.len - 1;
@@ -76,6 +77,11 @@ fn i64Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
 fn f32Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
     const value = interner.lookup(intern, interned);
     try writer.print("(f32.const {s})", .{value});
+}
+
+fn f64Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
+    const value = interner.lookup(intern, interned);
+    try writer.print("(f64.const {s})", .{value});
 }
 
 fn binaryOp(writer: List(u8).Writer, intern: Intern, op: []const u8, b: BinaryOp, i: Indent) !void {
@@ -158,6 +164,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Inde
         .i64_eq => |b| try binaryOp(writer, intern, "i64.eq", b, i + 1),
         .i64_rem_s => |b| try binaryOp(writer, intern, "i64.rem_s", b, i + 1),
         .i64_gt_s => |b| try binaryOp(writer, intern, "i64.gt_s", b, i + 1),
+        .i64_trunc_f64_s => |v| try unaryOp(writer, intern, "i64.trunc_f64_s", v.*, i + 1),
         .f32_const => |interned| try f32Const(writer, intern, interned),
         .f32_add => |b| try binaryOp(writer, intern, "f32.add", b, i + 1),
         .f32_sub => |b| try binaryOp(writer, intern, "f32.sub", b, i + 1),
@@ -167,6 +174,15 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Inde
         .f32_gt => |b| try binaryOp(writer, intern, "f32.gt", b, i + 1),
         .f32_sqrt => |v| try unaryOp(writer, intern, "f32.sqrt", v.*, i + 1),
         .f32_convert_i32_s => |v| try unaryOp(writer, intern, "f32.convert_i32_s", v.*, i + 1),
+        .f64_const => |interned| try f64Const(writer, intern, interned),
+        .f64_add => |b| try binaryOp(writer, intern, "f64.add", b, i + 1),
+        .f64_sub => |b| try binaryOp(writer, intern, "f64.sub", b, i + 1),
+        .f64_mul => |b| try binaryOp(writer, intern, "f64.mul", b, i + 1),
+        .f64_div => |b| try binaryOp(writer, intern, "f64.div", b, i + 1),
+        .f64_eq => |b| try binaryOp(writer, intern, "f64.eq", b, i + 1),
+        .f64_gt => |b| try binaryOp(writer, intern, "f64.gt", b, i + 1),
+        .f64_sqrt => |v| try unaryOp(writer, intern, "f64.sqrt", v.*, i + 1),
+        .f64_convert_i64_s => |v| try unaryOp(writer, intern, "f64.convert_i64_s", v.*, i + 1),
         .block => |b| try block(writer, intern, b, i),
         .call => |c| try call(writer, intern, c, i + 1),
         .if_ => |c| try conditional(writer, intern, c, i + 1),

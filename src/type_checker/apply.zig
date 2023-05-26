@@ -24,6 +24,7 @@ fn monotype(allocator: Allocator, s: Substitution, m: MonoType) !MonoType {
         .i32 => return .i32,
         .i64 => return .i64,
         .f32 => return .f32,
+        .f64 => return .f64,
         .str => return .str,
         .bool => return .bool,
         .void => return .void,

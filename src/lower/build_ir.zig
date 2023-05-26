@@ -26,6 +26,7 @@ fn mapType(monotype: MonoType) Type {
         .i32 => return .i32,
         .i64 => return .i64,
         .f32 => return .f32,
+        .f64 => return .f64,
         .bool => return .i32,
         .void => return .void,
         else => std.debug.panic("\nMonotype {} not yet supported", .{monotype}),
@@ -37,6 +38,7 @@ fn int(i: type_checker_types.Int) !Expression {
         .i32 => return .{ .i32_const = i.value },
         .i64 => return .{ .i64_const = i.value },
         .f32 => return .{ .f32_const = i.value },
+        .f64 => return .{ .f64_const = i.value },
         else => |k| std.debug.panic("\nInt type {} not yet supported", .{k}),
     }
 }
@@ -69,6 +71,7 @@ fn add(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_c
         .i32 => return Expression{ .i32_add = .{ .left = left, .right = right } },
         .i64 => return Expression{ .i64_add = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_add = .{ .left = left, .right = right } },
+        .f64 => return Expression{ .f64_add = .{ .left = left, .right = right } },
         else => |k| std.debug.panic("\nAdd type {} not yet supported", .{k}),
     }
 }
@@ -80,6 +83,7 @@ fn subtract(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
         .i32 => return Expression{ .i32_sub = .{ .left = left, .right = right } },
         .i64 => return Expression{ .i64_sub = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_sub = .{ .left = left, .right = right } },
+        .f64 => return Expression{ .f64_sub = .{ .left = left, .right = right } },
         else => |k| std.debug.panic("\nSubtract type {} not yet supported", .{k}),
     }
 }
@@ -91,6 +95,7 @@ fn multiply(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
         .i32 => return Expression{ .i32_mul = .{ .left = left, .right = right } },
         .i64 => return Expression{ .i64_mul = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_mul = .{ .left = left, .right = right } },
+        .f64 => return Expression{ .f64_mul = .{ .left = left, .right = right } },
         else => |k| std.debug.panic("\nMultiply type {} not yet supported", .{k}),
     }
 }
@@ -102,6 +107,7 @@ fn divide(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: typ
         .i32 => return Expression{ .i32_div_s = .{ .left = left, .right = right } },
         .i64 => return Expression{ .i64_div_s = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_div = .{ .left = left, .right = right } },
+        .f64 => return Expression{ .f64_div = .{ .left = left, .right = right } },
         else => |k| std.debug.panic("\nDivide type {} not yet supported", .{k}),
     }
 }
@@ -123,6 +129,7 @@ fn equal(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type
         .i32 => return Expression{ .i32_eq = .{ .left = left, .right = right } },
         .i64 => return Expression{ .i64_eq = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_eq = .{ .left = left, .right = right } },
+        .f64 => return Expression{ .f64_eq = .{ .left = left, .right = right } },
         else => |k| std.debug.panic("\nEqual type {} not yet supported", .{k}),
     }
 }
@@ -143,6 +150,7 @@ fn greater(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: ty
         .i32 => return Expression{ .i32_gt_s = .{ .left = left, .right = right } },
         .i64 => return Expression{ .i64_gt_s = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_gt = .{ .left = left, .right = right } },
+        .f64 => return Expression{ .f64_gt = .{ .left = left, .right = right } },
         else => |k| std.debug.panic("\nGreater type {} not yet supported", .{k}),
     }
 }
@@ -187,6 +195,7 @@ fn intrinsic(allocator: Allocator, builtins: Builtins, locals: *List(Local), i: 
     if (i.function == builtins.sqrt) {
         switch (i.type) {
             .f32 => return Expression{ .f32_sqrt = try expressionAlloc(allocator, builtins, locals, i.arguments[0]) },
+            .f64 => return Expression{ .f64_sqrt = try expressionAlloc(allocator, builtins, locals, i.arguments[0]) },
             else => |k| std.debug.panic("\nSqrt type {} not yet supported", .{k}),
         }
     }
@@ -224,6 +233,14 @@ fn convert(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: ty
         .f32 => switch (c.type) {
             .i32 => return Expression{ .i32_trunc_f32_s = value },
             else => |k| std.debug.panic("\nConvert type f32 to {} not yet supported", .{k}),
+        },
+        .i64 => switch (c.type) {
+            .f64 => return Expression{ .f64_convert_i64_s = value },
+            else => |k| std.debug.panic("\nConvert type i64 to {} not yet supported", .{k}),
+        },
+        .f64 => switch (c.type) {
+            .i64 => return Expression{ .i64_trunc_f64_s = value },
+            else => |k| std.debug.panic("\nConvert type f64 to {} not yet supported", .{k}),
         },
         else => |k| std.debug.panic("\nConvert type {} not yet supported", .{k}),
     }
