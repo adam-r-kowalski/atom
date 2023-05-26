@@ -71,6 +71,7 @@ fn boolean(writer: List(u8).Writer, b: Bool) !void {
 pub fn monotype(writer: List(u8).Writer, m: MonoType) !void {
     switch (m) {
         .i32 => try writer.writeAll("i32"),
+        .i64 => try writer.writeAll("i64"),
         .f32 => try writer.writeAll("f32"),
         .str => try writer.writeAll("str"),
         .bool => try writer.writeAll("bool"),

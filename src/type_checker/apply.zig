@@ -22,6 +22,7 @@ const Block = types.Block;
 fn monotype(allocator: Allocator, s: Substitution, m: MonoType) !MonoType {
     switch (m) {
         .i32 => return .i32,
+        .i64 => return .i64,
         .f32 => return .f32,
         .str => return .str,
         .bool => return .bool,

@@ -3,6 +3,7 @@ const Interned = interner.Interned;
 
 pub const Type = union(enum) {
     i32,
+    i64,
     f32,
     void,
     function: []const Type,
@@ -48,6 +49,14 @@ pub const Expression = union(enum) {
     i32_rem_s: BinaryOp,
     i32_or: BinaryOp,
     i32_trunc_f32_s: *const Expression,
+    i64_const: Interned,
+    i64_add: BinaryOp,
+    i64_sub: BinaryOp,
+    i64_mul: BinaryOp,
+    i64_div_s: BinaryOp,
+    i64_eq: BinaryOp,
+    i64_gt_s: BinaryOp,
+    i64_rem_s: BinaryOp,
     f32_const: Interned,
     f32_add: BinaryOp,
     f32_sub: BinaryOp,

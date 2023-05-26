@@ -5,6 +5,7 @@ const Interned = interner.Interned;
 pub const Builtins = struct {
     fn_: Interned,
     i32: Interned,
+    i64: Interned,
     f32: Interned,
     str: Interned,
     bool: Interned,
@@ -24,6 +25,7 @@ pub const Builtins = struct {
         return Builtins{
             .fn_ = try interner.store(intern, "fn"),
             .i32 = try interner.store(intern, "i32"),
+            .i64 = try interner.store(intern, "i64"),
             .f32 = try interner.store(intern, "f32"),
             .str = try interner.store(intern, "str"),
             .bool = try interner.store(intern, "bool"),

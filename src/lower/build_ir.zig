@@ -24,6 +24,7 @@ const typeOf = @import("../type_checker/type_of.zig").typeOf;
 fn mapType(monotype: MonoType) Type {
     switch (monotype) {
         .i32 => return .i32,
+        .i64 => return .i64,
         .f32 => return .f32,
         .bool => return .i32,
         .void => return .void,
@@ -34,6 +35,7 @@ fn mapType(monotype: MonoType) Type {
 fn int(i: type_checker_types.Int) !Expression {
     switch (i.type) {
         .i32 => return .{ .i32_const = i.value },
+        .i64 => return .{ .i64_const = i.value },
         .f32 => return .{ .f32_const = i.value },
         else => |k| std.debug.panic("\nInt type {} not yet supported", .{k}),
     }
@@ -65,6 +67,7 @@ fn add(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_c
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (typeOf(b.left.*)) {
         .i32 => return Expression{ .i32_add = .{ .left = left, .right = right } },
+        .i64 => return Expression{ .i64_add = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_add = .{ .left = left, .right = right } },
         else => |k| std.debug.panic("\nAdd type {} not yet supported", .{k}),
     }
@@ -75,6 +78,7 @@ fn subtract(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (typeOf(b.left.*)) {
         .i32 => return Expression{ .i32_sub = .{ .left = left, .right = right } },
+        .i64 => return Expression{ .i64_sub = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_sub = .{ .left = left, .right = right } },
         else => |k| std.debug.panic("\nSubtract type {} not yet supported", .{k}),
     }
@@ -85,6 +89,7 @@ fn multiply(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (typeOf(b.left.*)) {
         .i32 => return Expression{ .i32_mul = .{ .left = left, .right = right } },
+        .i64 => return Expression{ .i64_mul = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_mul = .{ .left = left, .right = right } },
         else => |k| std.debug.panic("\nMultiply type {} not yet supported", .{k}),
     }
@@ -95,6 +100,7 @@ fn divide(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: typ
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (typeOf(b.left.*)) {
         .i32 => return Expression{ .i32_div_s = .{ .left = left, .right = right } },
+        .i64 => return Expression{ .i64_div_s = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_div = .{ .left = left, .right = right } },
         else => |k| std.debug.panic("\nDivide type {} not yet supported", .{k}),
     }
@@ -105,6 +111,7 @@ fn modulo(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: typ
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (typeOf(b.left.*)) {
         .i32 => return Expression{ .i32_rem_s = .{ .left = left, .right = right } },
+        .i64 => return Expression{ .i64_rem_s = .{ .left = left, .right = right } },
         else => |k| std.debug.panic("\nModulo type {} not yet supported", .{k}),
     }
 }
@@ -114,6 +121,7 @@ fn equal(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (typeOf(b.left.*)) {
         .i32 => return Expression{ .i32_eq = .{ .left = left, .right = right } },
+        .i64 => return Expression{ .i64_eq = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_eq = .{ .left = left, .right = right } },
         else => |k| std.debug.panic("\nEqual type {} not yet supported", .{k}),
     }
@@ -133,6 +141,7 @@ fn greater(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: ty
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (typeOf(b.left.*)) {
         .i32 => return Expression{ .i32_gt_s = .{ .left = left, .right = right } },
+        .i64 => return Expression{ .i64_gt_s = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_gt = .{ .left = left, .right = right } },
         else => |k| std.debug.panic("\nGreater type {} not yet supported", .{k}),
     }
