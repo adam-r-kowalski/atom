@@ -21,6 +21,7 @@ const Substitution = types.Substitution;
 const If = types.If;
 const BinaryOp = types.BinaryOp;
 const Call = types.Call;
+const Intrinsic = types.Intrinsic;
 const Define = types.Define;
 const Block = types.Block;
 const ForeignImport = types.ForeignImport;
@@ -143,6 +144,22 @@ fn call(writer: List(u8).Writer, intern: Intern, c: Call, i: Indent) !void {
     try monotype(writer, c.type);
 }
 
+fn intrinsic(writer: List(u8).Writer, intern: Intern, i: Intrinsic, in: Indent) !void {
+    try indent(writer, in);
+    try writer.writeAll("intrinsic =");
+    try indent(writer, in + 1);
+    try writer.writeAll(interner.lookup(intern, i.function));
+    try indent(writer, in + 1);
+    try writer.writeAll("arguments =");
+    for (i.arguments) |a| {
+        try indent(writer, in + 2);
+        try expression(writer, intern, a, in + 3);
+    }
+    try indent(writer, in + 1);
+    try writer.print("type = ", .{});
+    try monotype(writer, i.type);
+}
+
 fn define(writer: List(u8).Writer, intern: Intern, d: Define, i: Indent) !void {
     try indent(writer, i);
     try writer.writeAll("define =");
@@ -215,6 +232,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, e: Expression, in: Indent
         .if_ => |i| try conditional(writer, intern, i, in),
         .binary_op => |b| try binaryOp(writer, intern, b, in),
         .call => |c| try call(writer, intern, c, in),
+        .intrinsic => |i| try intrinsic(writer, intern, i, in),
         .define => |d| try define(writer, intern, d, in),
         .function => |f| try function(writer, intern, f, in),
         .block => |b| try block(writer, intern, b, in),

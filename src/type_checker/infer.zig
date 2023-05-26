@@ -285,6 +285,20 @@ fn callConvert(context: Context, c: parser_types.Call) !Expression {
     };
 }
 
+fn callSqrt(context: Context, c: parser_types.Call) !Expression {
+    if (c.arguments.len != 1) std.debug.panic("sqrt takes 1 arguments", .{});
+    const arguments = try context.allocator.alloc(Expression, 1);
+    arguments[0] = try expression(context, c.arguments[0]);
+    return Expression{
+        .intrinsic = .{
+            .function = context.builtins.sqrt,
+            .arguments = arguments,
+            .span = c.span,
+            .type = typeOf(arguments[0]),
+        },
+    };
+}
+
 fn call(context: Context, c: parser_types.Call) !Expression {
     switch (c.function.*) {
         .symbol => |s| {
@@ -292,6 +306,7 @@ fn call(context: Context, c: parser_types.Call) !Expression {
             const function_type = try context.allocator.alloc(MonoType, len + 1);
             if (s.value == context.builtins.foreign_import) return try callForeignImport(context, c);
             if (s.value == context.builtins.convert) return try callConvert(context, c);
+            if (s.value == context.builtins.sqrt) return try callSqrt(context, c);
             const f = try symbol(context.scopes.*, context.work_queue, s);
             const arguments = try context.allocator.alloc(Expression, len);
             for (c.arguments, arguments, function_type[0..len]) |untyped_arg, *typed_arg, *t| {

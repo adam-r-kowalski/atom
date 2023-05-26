@@ -148,6 +148,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Inde
         .f32_mul => |b| try binaryOp(writer, intern, "f32.mul", b, i + 1),
         .f32_eq => |b| try binaryOp(writer, intern, "f32.eq", b, i + 1),
         .f32_gt => |b| try binaryOp(writer, intern, "f32.gt", b, i + 1),
+        .f32_sqrt => |v| try unaryOp(writer, intern, "f32.sqrt", v.*, i + 1),
         .f32_convert_i32_s => |v| try unaryOp(writer, intern, "f32.convert_i32_s", v.*, i + 1),
         .block => |b| try block(writer, intern, b, i),
         .call => |c| try call(writer, intern, c, i + 1),
