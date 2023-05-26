@@ -202,7 +202,7 @@ fn intrinsic(allocator: Allocator, builtins: Builtins, locals: *List(Local), i: 
     std.debug.panic("\nIntrinsic {} not yet supported", .{i.function});
 }
 
-fn conditional(allocator: Allocator, builtins: Builtins, locals: *List(Local), i: type_checker_types.If) !Expression {
+fn ifElse(allocator: Allocator, builtins: Builtins, locals: *List(Local), i: type_checker_types.If) !Expression {
     const condition = try expressionAlloc(allocator, builtins, locals, i.condition.*);
     const then = try block(allocator, builtins, locals, i.then);
     const else_ = try block(allocator, builtins, locals, i.else_);
@@ -256,7 +256,7 @@ fn expression(allocator: Allocator, builtins: Builtins, locals: *List(Local), e:
         .symbol => |s| return symbol(s),
         .call => |c| return try call(allocator, builtins, locals, c),
         .intrinsic => |i| return try intrinsic(allocator, builtins, locals, i),
-        .if_ => |i| return try conditional(allocator, builtins, locals, i),
+        .if_else => |i| return try ifElse(allocator, builtins, locals, i),
         .define => |d| return try define(allocator, builtins, locals, d),
         .convert => |c| return try convert(allocator, builtins, locals, c),
         else => |k| std.debug.panic("\nExpression {} not yet supported", .{k}),

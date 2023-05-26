@@ -12,6 +12,7 @@ const Function = types.Function;
 const Prototype = types.Prototype;
 const BinaryOp = types.BinaryOp;
 const If = types.If;
+const Cond = types.Cond;
 const Parameter = types.Parameter;
 const Block = types.Block;
 const Call = types.Call;
@@ -99,11 +100,24 @@ fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp, i: Indent) !vo
     try writer.writeAll(")");
 }
 
-fn conditional(writer: List(u8).Writer, intern: Intern, i: If, n: Indent) !void {
+fn ifElse(writer: List(u8).Writer, intern: Intern, i: If, n: Indent) !void {
     try writer.writeAll("(if ");
     try expression(writer, intern, i.condition.*, n);
     try block(writer, intern, i.then, n);
     try block(writer, intern, i.else_, n);
+    try writer.writeAll(")");
+}
+
+fn cond(writer: List(u8).Writer, intern: Intern, c: Cond, n: Indent) !void {
+    try writer.writeAll("(cond");
+    for (c.conditions, c.thens) |b, t| {
+        try indent(writer, n);
+        try expression(writer, intern, b, n);
+        try block(writer, intern, t, n + 1);
+    }
+    try indent(writer, n);
+    try writer.writeAll("else");
+    try block(writer, intern, c.else_, n + 1);
     try writer.writeAll(")");
 }
 
@@ -143,7 +157,8 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, n: Inde
         .binary_op => |b| try binaryOp(writer, intern, b, n),
         .group => |g| try expression(writer, intern, g.expression.*, n),
         .block => |b| try block(writer, intern, b, n),
-        .if_ => |i| try conditional(writer, intern, i, n),
+        .if_else => |i| try ifElse(writer, intern, i, n),
+        .cond => |i| try cond(writer, intern, i, n),
         .call => |c| try call(writer, intern, c, n),
     }
 }

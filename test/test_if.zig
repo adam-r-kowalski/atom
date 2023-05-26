@@ -303,3 +303,29 @@ test "codegen if with no else block" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "parse multi arm if" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\clamp = fn(x: i32, lb: i32, ub: i32) i32 {
+        \\    if {
+        \\        x < lb { lb }
+        \\        x > ub { ub }
+        \\        else { x }
+        \\    }
+        \\}
+    ;
+    const actual = try atom.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(def clamp (fn [(x i32) (lb i32) (ub i32)] i32
+        \\    (cond
+        \\        (< x lb)
+        \\            lb
+        \\        (> x ub)
+        \\            ub
+        \\        else
+        \\            x)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

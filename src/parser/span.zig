@@ -15,7 +15,8 @@ pub fn span(expression: Expression) Span {
         .binary_op => |e| e.span,
         .group => |e| e.span,
         .block => |e| e.span,
-        .if_ => |e| e.span,
+        .if_else => |e| e.span,
+        .cond => |e| e.span,
         .call => |e| e.span,
     };
 }

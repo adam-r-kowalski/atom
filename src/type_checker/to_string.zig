@@ -92,7 +92,7 @@ pub fn monotype(writer: List(u8).Writer, m: MonoType) !void {
     }
 }
 
-fn conditional(writer: List(u8).Writer, intern: Intern, i: If, in: Indent) !void {
+fn ifElse(writer: List(u8).Writer, intern: Intern, i: If, in: Indent) !void {
     try indent(writer, in);
     try writer.writeAll("if =");
     try indent(writer, in + 1);
@@ -232,7 +232,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, e: Expression, in: Indent
         .float => |f| try float(writer, intern, f),
         .string => |s| try string(writer, intern, s),
         .bool => |b| try boolean(writer, b),
-        .if_ => |i| try conditional(writer, intern, i, in),
+        .if_else => |i| try ifElse(writer, intern, i, in),
         .binary_op => |b| try binaryOp(writer, intern, b, in),
         .call => |c| try call(writer, intern, c, in),
         .intrinsic => |i| try intrinsic(writer, intern, i, in),

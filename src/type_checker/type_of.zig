@@ -14,7 +14,7 @@ pub fn typeOf(e: Expression) MonoType {
         .binary_op => |b| b.type,
         .group => |g| g.type,
         .block => |b| b.type,
-        .if_ => |i| i.type,
+        .if_else => |i| i.type,
         .call => |c| c.type,
         .intrinsic => |i| i.type,
         .foreign_import => |f| f.type,

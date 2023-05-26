@@ -64,7 +64,7 @@ fn float(allocator: Allocator, s: Substitution, f: Float) !Float {
     };
 }
 
-fn conditional(allocator: Allocator, s: Substitution, i: If) !If {
+fn ifElse(allocator: Allocator, s: Substitution, i: If) !If {
     return If{
         .condition = try expressionAlloc(allocator, s, i.condition.*),
         .then = try block(allocator, s, i.then),
@@ -152,7 +152,7 @@ fn expression(allocator: Allocator, s: Substitution, e: Expression) error{OutOfM
         .float => |f| return .{ .float = try float(allocator, s, f) },
         .bool => |b| return .{ .bool = b },
         .string => |str| return .{ .string = str },
-        .if_ => |i| return .{ .if_ = try conditional(allocator, s, i) },
+        .if_else => |i| return .{ .if_else = try ifElse(allocator, s, i) },
         .binary_op => |b| return .{ .binary_op = try binaryOp(allocator, s, b) },
         .define => |d| return .{ .define = try define(allocator, s, d) },
         .call => |c| return .{ .call = try call(allocator, s, c) },

@@ -110,7 +110,7 @@ fn call(writer: List(u8).Writer, intern: Intern, c: Call, i: Indent) !void {
     try writer.writeAll(")");
 }
 
-fn conditional(writer: List(u8).Writer, intern: Intern, c: If, i: Indent) !void {
+fn ifElse(writer: List(u8).Writer, intern: Intern, c: If, i: Indent) !void {
     try writer.writeAll("(if ");
     switch (c.result) {
         .void => {},
@@ -185,7 +185,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Inde
         .f64_convert_i64_s => |v| try unaryOp(writer, intern, "f64.convert_i64_s", v.*, i + 1),
         .block => |b| try block(writer, intern, b, i),
         .call => |c| try call(writer, intern, c, i + 1),
-        .if_ => |c| try conditional(writer, intern, c, i + 1),
+        .if_ => |c| try ifElse(writer, intern, c, i + 1),
     }
 }
 

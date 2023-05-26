@@ -16,6 +16,7 @@ const types = @import("types.zig");
 const Expression = types.Expression;
 const Group = types.Group;
 const If = types.If;
+const Cond = types.Cond;
 const Block = types.Block;
 const BinaryOpKind = types.BinaryOpKind;
 const Parameter = types.Parameter;
@@ -109,7 +110,50 @@ fn group(context: *Context, left_paren: LeftParen) !Group {
     };
 }
 
-fn conditional(context: *Context, if_: IfToken) !If {
+fn consumeNewLines(context: *Context) void {
+    while (peekToken(context.*)) |token| {
+        switch (token) {
+            .new_line => context.token_index += 1,
+            else => return,
+        }
+    }
+}
+
+fn cond(context: *Context, if_: IfToken) !Cond {
+    const begin = if_.span.begin;
+    context.token_index += 1;
+    context.precedence = LOWEST;
+    var conditions = List(Expression).init(context.allocator);
+    var thens = List(Block).init(context.allocator);
+    while (true) {
+        consumeNewLines(context);
+        if (peekToken(context.*)) |token| {
+            switch (token) {
+                .else_ => {
+                    context.token_index += 1;
+                    break;
+                },
+                else => {
+                    try conditions.append(try expression(context));
+                    try thens.append(try block(context, nextToken(context).left_brace));
+                },
+            }
+        } else {
+            std.debug.panic("\nExpected else in cond", .{});
+        }
+    }
+    const else_ = try block(context, nextToken(context).left_brace);
+    consumeNewLines(context);
+    const end = nextToken(context).right_brace.span.end;
+    return Cond{
+        .conditions = try conditions.toOwnedSlice(),
+        .thens = try thens.toOwnedSlice(),
+        .else_ = else_,
+        .span = .{ .begin = begin, .end = end },
+    };
+}
+
+fn ifElse(context: *Context, if_: IfToken) !If {
     const begin = if_.span.begin;
     context.precedence = LOWEST;
     const condition = try expressionAlloc(context);
@@ -142,6 +186,16 @@ fn conditional(context: *Context, if_: IfToken) !If {
             };
         },
     }
+}
+
+fn ifElseOrCond(context: *Context, if_: IfToken) !Expression {
+    if (peekToken(context.*)) |token| {
+        return switch (token) {
+            .left_brace => .{ .cond = try cond(context, if_) },
+            else => .{ .if_else = try ifElse(context, if_) },
+        };
+    }
+    std.debug.panic("\nExpected left brace or expression after if", .{});
 }
 
 fn functionParameters(context: *Context) ![]const Parameter {
@@ -204,7 +258,7 @@ fn prefix(context: *Context) !Expression {
         .string => |s| return .{ .string = s },
         .bool => |b| return .{ .bool = b },
         .left_paren => |l| return .{ .group = try group(context, l) },
-        .if_ => |i| return .{ .if_ = try conditional(context, i) },
+        .if_ => |i| return try ifElseOrCond(context, i),
         .fn_ => |f| return try function(context, f),
         .left_brace => |l| return .{ .block = try block(context, l) },
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),

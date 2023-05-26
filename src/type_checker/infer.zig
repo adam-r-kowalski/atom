@@ -197,7 +197,7 @@ const Context = struct {
     next_type_var: *TypeVar,
 };
 
-fn conditional(context: Context, i: parser_types.If) !If {
+fn ifElse(context: Context, i: parser_types.If) !If {
     const condition = try expressionAlloc(context, i.condition.*);
     const then = try block(context, i.then);
     const else_ = try block(context, i.else_);
@@ -392,7 +392,7 @@ fn expression(context: Context, e: parser_types.Expression) error{OutOfMemory}!E
         .function => |f| return .{ .function = try function(context, f) },
         .binary_op => |b| return .{ .binary_op = try binaryOp(context, b) },
         .block => |b| return .{ .block = try block(context, b) },
-        .if_ => |i| return .{ .if_ = try conditional(context, i) },
+        .if_else => |i| return .{ .if_else = try ifElse(context, i) },
         .call => |c| return try call(context, c),
         else => |k| std.debug.panic("\nUnsupported expression {}", .{k}),
     }

@@ -133,7 +133,7 @@ pub const Expression = union(enum) {
     binary_op: BinaryOp,
     group: Group,
     block: Block,
-    if_: If,
+    if_else: If,
     call: Call,
     intrinsic: Intrinsic,
     foreign_import: ForeignImport,
