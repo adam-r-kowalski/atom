@@ -50,6 +50,7 @@ pub const BinaryOpKind = enum {
     greater,
     less,
     or_,
+    dot,
 };
 
 pub const BinaryOp = struct {

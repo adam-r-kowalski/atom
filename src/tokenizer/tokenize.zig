@@ -53,7 +53,7 @@ fn number(intern: *Intern, cursor: *Cursor) !Token {
             else => break,
         }
     }
-    if (i > 2 and cursor.source[i - 1] == '.') {
+    if (i >= 2 and cursor.source[i - 1] == '.') {
         i -= 1;
         decimals -= 1;
     }
