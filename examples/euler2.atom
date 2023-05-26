@@ -8,5 +8,5 @@ problem2 = fn(n: i32, sum: i32, prev: i32, curr: i32) i32 {
 }
 
 start = fn() i32 {
-	problem2(4000000, 0, 0, 1)
+    problem2(4000000, 0, 0, 1)
 }
