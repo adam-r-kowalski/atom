@@ -195,6 +195,7 @@ fn intrinsic(allocator: Allocator, builtins: Builtins, locals: *List(Local), i: 
     if (i.function == builtins.sqrt) {
         switch (i.type) {
             .f32 => return Expression{ .f32_sqrt = try expressionAlloc(allocator, builtins, locals, i.arguments[0]) },
+            .f64 => return Expression{ .f64_sqrt = try expressionAlloc(allocator, builtins, locals, i.arguments[0]) },
             else => |k| std.debug.panic("\nSqrt type {} not yet supported", .{k}),
         }
     }
@@ -232,6 +233,14 @@ fn convert(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: ty
         .f32 => switch (c.type) {
             .i32 => return Expression{ .i32_trunc_f32_s = value },
             else => |k| std.debug.panic("\nConvert type f32 to {} not yet supported", .{k}),
+        },
+        .i64 => switch (c.type) {
+            .f64 => return Expression{ .f64_convert_i64_s = value },
+            else => |k| std.debug.panic("\nConvert type i64 to {} not yet supported", .{k}),
+        },
+        .f64 => switch (c.type) {
+            .i64 => return Expression{ .i64_trunc_f64_s = value },
+            else => |k| std.debug.panic("\nConvert type f64 to {} not yet supported", .{k}),
         },
         else => |k| std.debug.panic("\nConvert type {} not yet supported", .{k}),
     }
