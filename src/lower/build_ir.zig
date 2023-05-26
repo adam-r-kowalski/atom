@@ -155,6 +155,18 @@ fn greater(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: ty
     }
 }
 
+fn less(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
+    const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
+    const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
+    switch (typeOf(b.left.*)) {
+        .i32 => return Expression{ .i32_lt_s = .{ .left = left, .right = right } },
+        .i64 => return Expression{ .i64_lt_s = .{ .left = left, .right = right } },
+        .f32 => return Expression{ .f32_lt = .{ .left = left, .right = right } },
+        .f64 => return Expression{ .f64_lt = .{ .left = left, .right = right } },
+        else => |k| std.debug.panic("\nGreater type {} not yet supported", .{k}),
+    }
+}
+
 fn binaryOp(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
     switch (b.kind) {
         .add => return try add(allocator, builtins, locals, b),
@@ -165,6 +177,7 @@ fn binaryOp(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
         .equal => return try equal(allocator, builtins, locals, b),
         .or_ => return try binaryOr(allocator, builtins, locals, b),
         .greater => return try greater(allocator, builtins, locals, b),
+        .less => return try less(allocator, builtins, locals, b),
         else => |k| std.debug.panic("\nBinary op {} not yet supported", .{k}),
     }
 }
@@ -216,6 +229,32 @@ fn ifElse(allocator: Allocator, builtins: Builtins, locals: *List(Local), i: typ
     };
 }
 
+fn cond(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: type_checker_types.Cond) !Expression {
+    const len = c.conditions.len;
+    var result = Expression{
+        .if_ = .{
+            .result = mapType(c.type),
+            .condition = try expressionAlloc(allocator, builtins, locals, c.conditions[len - 1]),
+            .then = try block(allocator, builtins, locals, c.thens[len - 1]),
+            .else_ = try block(allocator, builtins, locals, c.else_),
+        },
+    };
+    var i: usize = len - 1;
+    while (i > 0) : (i -= 1) {
+        const else_ = try allocator.alloc(Expression, 1);
+        else_[0] = result;
+        result = Expression{
+            .if_ = .{
+                .result = mapType(c.type),
+                .condition = try expressionAlloc(allocator, builtins, locals, c.conditions[i - 1]),
+                .then = try block(allocator, builtins, locals, c.thens[i - 1]),
+                .else_ = else_,
+            },
+        };
+    }
+    return result;
+}
+
 fn define(allocator: Allocator, builtins: Builtins, locals: *List(Local), d: type_checker_types.Define) !Expression {
     const name = d.name.value;
     const value = try expressionAlloc(allocator, builtins, locals, d.value.*);
@@ -257,6 +296,7 @@ fn expression(allocator: Allocator, builtins: Builtins, locals: *List(Local), e:
         .call => |c| return try call(allocator, builtins, locals, c),
         .intrinsic => |i| return try intrinsic(allocator, builtins, locals, i),
         .if_else => |i| return try ifElse(allocator, builtins, locals, i),
+        .cond => |c| return try cond(allocator, builtins, locals, c),
         .define => |d| return try define(allocator, builtins, locals, d),
         .convert => |c| return try convert(allocator, builtins, locals, c),
         else => |k| std.debug.panic("\nExpression {} not yet supported", .{k}),

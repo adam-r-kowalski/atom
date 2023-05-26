@@ -375,3 +375,51 @@ test "type infer multi arm if" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "codegen multi arm if" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\clamp = fn(x: i32, lb: i32, ub: i32) i32 {
+        \\    if {
+        \\        x < lb { lb }
+        \\        x > ub { ub }
+        \\        else { x }
+        \\    }
+        \\}
+        \\
+        \\start = fn() i32 {
+        \\    clamp(5, 10, 20)
+        \\}
+    ;
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $clamp (param $x i32) (param $lb i32) (param $ub i32) (result i32)
+        \\        (if (result i32)
+        \\            (i32.lt_s
+        \\                (local.get $x)
+        \\                (local.get $lb))
+        \\            (then
+        \\                (local.get $lb))
+        \\            (else
+        \\                (if (result i32)
+        \\                    (i32.gt_s
+        \\                        (local.get $x)
+        \\                        (local.get $ub))
+        \\                    (then
+        \\                        (local.get $ub))
+        \\                    (else
+        \\                        (local.get $x))))))
+        \\
+        \\    (func $start (result i32)
+        \\        (call $clamp
+        \\            (i32.const 5)
+        \\            (i32.const 10)
+        \\            (i32.const 20)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
