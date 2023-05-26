@@ -93,6 +93,7 @@ fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: parser_type
     switch (e) {
         .symbol => |s| {
             if (s.value == builtins.i32) return .i32;
+            if (s.value == builtins.i64) return .i64;
             if (s.value == builtins.f32) return .f32;
             if (s.value == builtins.bool) return .bool;
             if (s.value == builtins.str) return .str;

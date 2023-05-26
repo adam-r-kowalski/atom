@@ -13,6 +13,7 @@ pub const TypeVar = u64;
 pub const MonoType = union(enum) {
     void,
     i32,
+    i64,
     f32,
     bool,
     str,

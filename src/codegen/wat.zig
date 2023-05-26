@@ -27,6 +27,7 @@ pub fn indent(writer: List(u8).Writer, n: Indent) !void {
 fn typeString(writer: List(u8).Writer, t: Type) !void {
     switch (t) {
         .i32 => try writer.writeAll("i32"),
+        .i64 => try writer.writeAll("i64"),
         .f32 => try writer.writeAll("f32"),
         .void => try writer.writeAll("void"),
         .function => |f| {
@@ -65,6 +66,11 @@ fn localSet(writer: List(u8).Writer, intern: Intern, local_set: LocalSet, i: Ind
 fn i32Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
     const value = interner.lookup(intern, interned);
     try writer.print("(i32.const {s})", .{value});
+}
+
+fn i64Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
+    const value = interner.lookup(intern, interned);
+    try writer.print("(i64.const {s})", .{value});
 }
 
 fn f32Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
@@ -144,6 +150,14 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Inde
         .i32_or => |b| try binaryOp(writer, intern, "i32.or", b, i + 1),
         .i32_gt_s => |b| try binaryOp(writer, intern, "i32.gt_s", b, i + 1),
         .i32_trunc_f32_s => |v| try unaryOp(writer, intern, "i32.trunc_f32_s", v.*, i + 1),
+        .i64_const => |interned| try i64Const(writer, intern, interned),
+        .i64_add => |b| try binaryOp(writer, intern, "i64.add", b, i + 1),
+        .i64_sub => |b| try binaryOp(writer, intern, "i64.sub", b, i + 1),
+        .i64_mul => |b| try binaryOp(writer, intern, "i64.mul", b, i + 1),
+        .i64_div_s => |b| try binaryOp(writer, intern, "i64.div_s", b, i + 1),
+        .i64_eq => |b| try binaryOp(writer, intern, "i64.eq", b, i + 1),
+        .i64_rem_s => |b| try binaryOp(writer, intern, "i64.rem_s", b, i + 1),
+        .i64_gt_s => |b| try binaryOp(writer, intern, "i64.gt_s", b, i + 1),
         .f32_const => |interned| try f32Const(writer, intern, interned),
         .f32_add => |b| try binaryOp(writer, intern, "f32.add", b, i + 1),
         .f32_sub => |b| try binaryOp(writer, intern, "f32.sub", b, i + 1),
