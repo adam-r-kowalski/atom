@@ -86,7 +86,17 @@ fn multiply(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
     switch (typeOf(b.left.*)) {
         .i32 => return Expression{ .i32_mul = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_mul = .{ .left = left, .right = right } },
-        else => |k| std.debug.panic("\nMul type {} not yet supported", .{k}),
+        else => |k| std.debug.panic("\nMultiply type {} not yet supported", .{k}),
+    }
+}
+
+fn divide(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
+    const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
+    const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
+    switch (typeOf(b.left.*)) {
+        .i32 => return Expression{ .i32_div_s = .{ .left = left, .right = right } },
+        .f32 => return Expression{ .f32_div = .{ .left = left, .right = right } },
+        else => |k| std.debug.panic("\nDivide type {} not yet supported", .{k}),
     }
 }
 
@@ -133,6 +143,7 @@ fn binaryOp(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
         .add => return try add(allocator, builtins, locals, b),
         .subtract => return try subtract(allocator, builtins, locals, b),
         .multiply => return try multiply(allocator, builtins, locals, b),
+        .divide => return try divide(allocator, builtins, locals, b),
         .modulo => return try modulo(allocator, builtins, locals, b),
         .equal => return try equal(allocator, builtins, locals, b),
         .or_ => return try binaryOr(allocator, builtins, locals, b),

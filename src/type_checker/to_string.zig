@@ -115,6 +115,7 @@ fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp, i: Indent) !vo
     switch (b.kind) {
         .add => try writer.writeAll("+"),
         .multiply => try writer.writeAll("*"),
+        .divide => try writer.writeAll("/"),
         else => unreachable,
     }
     try indent(writer, i + 1);
