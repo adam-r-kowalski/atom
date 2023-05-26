@@ -71,6 +71,13 @@ pub const If = struct {
     span: Span,
 };
 
+pub const Cond = struct {
+    conditions: []const Expression,
+    thens: []const Block,
+    else_: Block,
+    span: Span,
+};
+
 pub const Call = struct {
     function: *const Expression,
     arguments: []const Expression,
@@ -89,7 +96,8 @@ pub const Expression = union(enum) {
     binary_op: BinaryOp,
     group: Group,
     block: Block,
-    if_: If,
+    if_else: If,
+    cond: Cond,
     call: Call,
 };
 

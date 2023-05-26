@@ -89,6 +89,14 @@ pub const If = struct {
     type: MonoType,
 };
 
+pub const Cond = struct {
+    conditions: []const Expression,
+    thens: []const Block,
+    else_: Block,
+    span: Span,
+    type: MonoType,
+};
+
 pub const Call = struct {
     function: *const Expression,
     arguments: []const Expression,
@@ -133,7 +141,8 @@ pub const Expression = union(enum) {
     binary_op: BinaryOp,
     group: Group,
     block: Block,
-    if_: If,
+    if_else: If,
+    cond: Cond,
     call: Call,
     intrinsic: Intrinsic,
     foreign_import: ForeignImport,

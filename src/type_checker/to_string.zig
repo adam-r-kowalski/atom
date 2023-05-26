@@ -19,6 +19,7 @@ const Constraints = types.Constraints;
 const Equal = types.Equal;
 const Substitution = types.Substitution;
 const If = types.If;
+const Cond = types.Cond;
 const BinaryOp = types.BinaryOp;
 const Call = types.Call;
 const Intrinsic = types.Intrinsic;
@@ -92,7 +93,7 @@ pub fn monotype(writer: List(u8).Writer, m: MonoType) !void {
     }
 }
 
-fn conditional(writer: List(u8).Writer, intern: Intern, i: If, in: Indent) !void {
+fn ifElse(writer: List(u8).Writer, intern: Intern, i: If, in: Indent) !void {
     try indent(writer, in);
     try writer.writeAll("if =");
     try indent(writer, in + 1);
@@ -109,6 +110,25 @@ fn conditional(writer: List(u8).Writer, intern: Intern, i: If, in: Indent) !void
     try monotype(writer, i.type);
 }
 
+fn cond(writer: List(u8).Writer, intern: Intern, c: Cond, in: Indent) !void {
+    try indent(writer, in);
+    try writer.writeAll("cond =");
+    for (c.conditions, c.thens) |co, t| {
+        try indent(writer, in + 1);
+        try writer.writeAll("condition = ");
+        try expression(writer, intern, co, in + 2);
+        try indent(writer, in + 1);
+        try writer.writeAll("then = ");
+        try block(writer, intern, t, in + 2);
+    }
+    try indent(writer, in + 1);
+    try writer.writeAll("else = ");
+    try block(writer, intern, c.else_, in + 2);
+    try indent(writer, in + 1);
+    try writer.print("type = ", .{});
+    try monotype(writer, c.type);
+}
+
 fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp, i: Indent) !void {
     try indent(writer, i);
     try writer.writeAll("binary_op =");
@@ -118,6 +138,8 @@ fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp, i: Indent) !vo
         .add => try writer.writeAll("+"),
         .multiply => try writer.writeAll("*"),
         .divide => try writer.writeAll("/"),
+        .greater => try writer.writeAll(">"),
+        .less => try writer.writeAll("<"),
         else => unreachable,
     }
     try indent(writer, i + 1);
@@ -232,7 +254,8 @@ fn expression(writer: List(u8).Writer, intern: Intern, e: Expression, in: Indent
         .float => |f| try float(writer, intern, f),
         .string => |s| try string(writer, intern, s),
         .bool => |b| try boolean(writer, b),
-        .if_ => |i| try conditional(writer, intern, i, in),
+        .if_else => |i| try ifElse(writer, intern, i, in),
+        .cond => |c| try cond(writer, intern, c, in),
         .binary_op => |b| try binaryOp(writer, intern, b, in),
         .call => |c| try call(writer, intern, c, in),
         .intrinsic => |i| try intrinsic(writer, intern, i, in),

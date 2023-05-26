@@ -27,6 +27,7 @@ const TypeVar = types.TypeVar;
 const Expression = types.Expression;
 const Constraints = types.Constraints;
 const If = types.If;
+const Cond = types.Cond;
 const Define = types.Define;
 const Call = types.Call;
 const Equal = types.Equal;
@@ -197,7 +198,7 @@ const Context = struct {
     next_type_var: *TypeVar,
 };
 
-fn conditional(context: Context, i: parser_types.If) !If {
+fn ifElse(context: Context, i: parser_types.If) !If {
     const condition = try expressionAlloc(context, i.condition.*);
     const then = try block(context, i.then);
     const else_ = try block(context, i.else_);
@@ -216,6 +217,29 @@ fn conditional(context: Context, i: parser_types.If) !If {
     };
 }
 
+fn cond(context: Context, c: parser_types.Cond) !Cond {
+    const conditions = try context.allocator.alloc(Expression, c.conditions.len);
+    const thens = try context.allocator.alloc(Block, c.thens.len);
+    const type_ = freshTypeVar(context.next_type_var);
+    for (conditions, thens, c.conditions, c.thens) |*typed_c, *typed_t, untyped_c, untyped_t| {
+        typed_c.* = try expression(context, untyped_c);
+        typed_t.* = try block(context, untyped_t);
+        try context.constraints.equal.appendSlice(&[_]Equal{
+            .{ .left = typeOf(typed_c.*), .right = .bool },
+            .{ .left = typed_t.type, .right = type_ },
+        });
+    }
+    const else_ = try block(context, c.else_);
+    try context.constraints.equal.append(.{ .left = else_.type, .right = type_ });
+    return Cond{
+        .conditions = conditions,
+        .thens = thens,
+        .else_ = else_,
+        .type = type_,
+        .span = c.span,
+    };
+}
+
 fn binaryOp(context: Context, b: parser_types.BinaryOp) !BinaryOp {
     const left = try expressionAlloc(context, b.left.*);
     const right = try expressionAlloc(context, b.right.*);
@@ -223,7 +247,7 @@ fn binaryOp(context: Context, b: parser_types.BinaryOp) !BinaryOp {
     try context.constraints.equal.append(.{ .left = left_type, .right = typeOf(right.*) });
     const result_type = blk: {
         switch (b.kind) {
-            .equal, .greater => break :blk .bool,
+            .equal, .greater, .less => break :blk .bool,
             else => {
                 const tvar = freshTypeVar(context.next_type_var);
                 try context.constraints.equal.append(.{ .left = left_type, .right = tvar });
@@ -392,7 +416,8 @@ fn expression(context: Context, e: parser_types.Expression) error{OutOfMemory}!E
         .function => |f| return .{ .function = try function(context, f) },
         .binary_op => |b| return .{ .binary_op = try binaryOp(context, b) },
         .block => |b| return .{ .block = try block(context, b) },
-        .if_ => |i| return .{ .if_ = try conditional(context, i) },
+        .if_else => |i| return .{ .if_else = try ifElse(context, i) },
+        .cond => |c| return .{ .cond = try cond(context, c) },
         .call => |c| return try call(context, c),
         else => |k| std.debug.panic("\nUnsupported expression {}", .{k}),
     }
