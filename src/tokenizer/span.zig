@@ -16,6 +16,7 @@ pub fn span(token: Token) Span {
         .plus => |t| t.span,
         .minus => |t| t.span,
         .times => |t| t.span,
+        .slash => |t| t.span,
         .caret => |t| t.span,
         .greater => |t| t.span,
         .less => |t| t.span,

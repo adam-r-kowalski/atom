@@ -84,6 +84,7 @@ fn binaryOp(writer: List(u8).Writer, intern: Intern, b: BinaryOp, i: Indent) !vo
         .add => try writer.writeAll("+"),
         .subtract => try writer.writeAll("-"),
         .multiply => try writer.writeAll("*"),
+        .divide => try writer.writeAll("/"),
         .modulo => try writer.writeAll("%"),
         .exponentiate => try writer.writeAll("^"),
         .equal => try writer.writeAll("=="),

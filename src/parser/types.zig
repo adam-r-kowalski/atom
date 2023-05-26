@@ -43,6 +43,7 @@ pub const BinaryOpKind = enum {
     add,
     subtract,
     multiply,
+    divide,
     modulo,
     exponentiate,
     equal,

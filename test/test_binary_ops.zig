@@ -25,6 +25,15 @@ test "parse add" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
+test "parse divide" {
+    const allocator = std.testing.allocator;
+    const source = "x / y";
+    const actual = try atom.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected = "(/ x y)";
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
 test "parse add then multiply" {
     const allocator = std.testing.allocator;
     const source = "x + y * z";
@@ -88,7 +97,7 @@ test "parse grouped greater" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "type infer binary op add" {
+test "type infer add i32" {
     const allocator = std.testing.allocator;
     const source = "add = fn(x: i32, y: i32) i32 { x + y }";
     const actual = try atom.testing.typeInfer(allocator, source, "add");
@@ -138,6 +147,31 @@ test "type infer binary op multiply" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
+test "type infer divide i32" {
+    const allocator = std.testing.allocator;
+    const source = "div = fn(x: i32, y: i32) i32 { x / y }";
+    const actual = try atom.testing.typeInfer(allocator, source, "div");
+    defer allocator.free(actual);
+    const expected =
+        \\define =
+        \\    name = symbol{ name = div, type = fn(i32, i32) i32 }
+        \\    type = void
+        \\    value = 
+        \\        function =
+        \\            parameters =
+        \\                symbol{ name = x, type = i32 }
+        \\                symbol{ name = y, type = i32 }
+        \\            return_type = i32
+        \\            body = 
+        \\                binary_op =
+        \\                    kind = /
+        \\                    left = symbol{ name = x, type = i32 }
+        \\                    right = symbol{ name = y, type = i32 }
+        \\                    type = i32
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
 test "type infer binary op multiply then add" {
     const allocator = std.testing.allocator;
     const source = "f = fn(x: i32, y: i32, z: i32) i32 { x * y + z }";
@@ -169,7 +203,7 @@ test "type infer binary op multiply then add" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "codegen binary op i32.add" {
+test "codegen i32.add" {
     const allocator = std.testing.allocator;
     const source = "start = fn() i32 { 42 + 29 }";
     const actual = try atom.testing.codegen(allocator, source);
@@ -399,6 +433,24 @@ test "codegen f32.gt" {
         \\
         \\    (func $start (param $x f32) (param $y f32) (result i32)
         \\        (f32.gt
+        \\            (local.get $x)
+        \\            (local.get $y)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen i32.div_s" {
+    const allocator = std.testing.allocator;
+    const source = "start = fn(x: i32, y: i32) i32 { x / y }";
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $start (param $x i32) (param $y i32) (result i32)
+        \\        (i32.div_s
         \\            (local.get $x)
         \\            (local.get $y)))
         \\

@@ -302,6 +302,7 @@ fn infix(context: *Context, left: Expression) ?Infix {
             .plus => return .{ .kind = .{ .binary_op = .add }, .precedence = ADD, .associativity = .left },
             .minus => return .{ .kind = .{ .binary_op = .subtract }, .precedence = ADD, .associativity = .left },
             .times => return .{ .kind = .{ .binary_op = .multiply }, .precedence = MULTIPLY, .associativity = .left },
+            .slash => return .{ .kind = .{ .binary_op = .divide }, .precedence = MULTIPLY, .associativity = .left },
             .percent => return .{ .kind = .{ .binary_op = .modulo }, .precedence = MULTIPLY, .associativity = .left },
             .caret => return .{ .kind = .{ .binary_op = .exponentiate }, .precedence = EXPONENTIATE, .associativity = .right },
             .equal_equal => return .{ .kind = .{ .binary_op = .equal }, .precedence = COMPARE, .associativity = .left },

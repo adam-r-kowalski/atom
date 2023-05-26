@@ -50,6 +50,7 @@ pub fn toString(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
             .plus => try writer.writeAll("plus"),
             .minus => try writer.writeAll("minus"),
             .times => try writer.writeAll("times"),
+            .slash => try writer.writeAll("slash"),
             .percent => try writer.writeAll("percent"),
             .caret => try writer.writeAll("caret"),
             .greater => try writer.writeAll("greater"),

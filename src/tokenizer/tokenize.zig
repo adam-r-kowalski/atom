@@ -149,6 +149,7 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?Token {
         ':' => exact(cursor, .colon),
         '+' => exact(cursor, .plus),
         '*' => exact(cursor, .times),
+        '/' => exact(cursor, .slash),
         '^' => exact(cursor, .caret),
         '>' => exact(cursor, .greater),
         '<' => exact(cursor, .less),

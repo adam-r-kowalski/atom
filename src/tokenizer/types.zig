@@ -14,6 +14,7 @@ pub const Colon = struct { span: Span };
 pub const Plus = struct { span: Span };
 pub const Minus = struct { span: Span };
 pub const Times = struct { span: Span };
+pub const Slash = struct { span: Span };
 pub const Caret = struct { span: Span };
 pub const Greater = struct { span: Span };
 pub const Less = struct { span: Span };
@@ -42,6 +43,7 @@ pub const Token = union(enum) {
     plus: Plus,
     minus: Minus,
     times: Times,
+    slash: Slash,
     caret: Caret,
     greater: Greater,
     less: Less,
