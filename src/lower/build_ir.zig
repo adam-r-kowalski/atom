@@ -300,8 +300,6 @@ pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
                 },
                 else => std.debug.panic("\nTop level kind {} no yet supported", .{top_level}),
             }
-        } else {
-            std.debug.panic("\nCould not find {} in module\n", .{name});
         }
     }
     return IR{
