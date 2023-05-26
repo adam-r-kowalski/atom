@@ -168,7 +168,6 @@ Square = struct {
     height: f32
 }
 
-
 # here we leverage destructuring
 implement Shape[Square] {
     area = fn({width, height}: Square) f32 {

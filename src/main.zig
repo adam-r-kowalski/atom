@@ -1,4 +1,5 @@
 const std = @import("std");
+const wasmer = @cImport(@cInclude("wasmer.h"));
 const Allocator = std.mem.Allocator;
 const atom = @import("atom");
 
@@ -152,14 +153,52 @@ pub fn main() !void {
     }
 
     const file_name = std.mem.span(std.os.argv[1]);
-    const wat = try compileToWat(&timer, &timings, allocator, file_name);
+    const wat_string = try compileToWat(&timer, &timings, allocator, file_name);
+
     const file_name_no_suffix = file_name[0 .. file_name.len - 5];
     const file_name_wat = try std.fmt.allocPrint(allocator, "{s}.wat", .{file_name_no_suffix});
     const t1 = timer.read();
-    try saveWatToFile(file_name_wat, wat);
+    try saveWatToFile(file_name_wat, wat_string);
     const t2 = timer.read();
-    try wat2wasm(allocator, writer, file_name_wat);
+
+    // try wat2wasm(allocator, writer, file_name_wat);
+    var wat: wasmer.wasm_byte_vec_t = undefined;
+    wasmer.wasm_byte_vec_new(&wat, wat_string.len, wat_string.ptr);
+
+    var wasm_bytes: wasmer.wasm_byte_vec_t = undefined;
+    wasmer.wat2wasm(&wat, &wasm_bytes);
+
+    const engine = wasmer.wasm_engine_new();
+    const store = wasmer.wasm_store_new(engine);
+    const module = wasmer.wasm_module_new(store, &wasm_bytes);
+    if (module == null) std.debug.panic("\nError compiling module!\n", .{});
+
     const t3 = timer.read();
+    const imports: wasmer.wasm_extern_vec_t = undefined;
+    const instance = wasmer.wasm_instance_new(store, module, &imports, null);
+    if (instance == null) std.debug.panic("\nError instantiating module!\n", .{});
+
+    var exports: wasmer.wasm_extern_vec_t = undefined;
+    wasmer.wasm_instance_exports(instance, &exports);
+    if (exports.size == 0) std.debug.panic("\nError getting exports!\n", .{});
+
+    const start_func = wasmer.wasm_extern_as_func(exports.data[0]);
+    if (start_func == null) std.debug.panic("\nError getting start!\n", .{});
+
+    var args_val = [0]wasmer.wasm_val_t{};
+    var results_val = [1]wasmer.wasm_val_t{wasmer.wasm_val_t{
+        .kind = wasmer.WASM_I32,
+        .of = .{ .i32 = 5 },
+    }};
+    var args: wasmer.wasm_val_vec_t = undefined;
+    var results: wasmer.wasm_val_vec_t = undefined;
+    wasmer.wasm_val_vec_new(&args, 0, &args_val);
+    wasmer.wasm_val_vec_new(&results, 1, &results_val);
+    if (wasmer.wasm_func_call(start_func, &args, &results)) |_| {
+        std.debug.panic("\nError calling start!\n", .{});
+    }
+
+    try writer.print("\n{}\n", .{results.data[0].of.i32});
 
     if (std.os.argv.len == 3) {
         const argument = std.mem.span(std.os.argv[2]);

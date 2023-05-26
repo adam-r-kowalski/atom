@@ -1,4 +1,27 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
+
+fn linkWasmer(allocator: Allocator, exe: *std.build.Step.Compile) void {
+    const lib_dir_result = std.ChildProcess.exec(.{
+        .allocator = allocator,
+        .argv = &.{ "wasmer", "config", "--libdir" },
+    }) catch |e| {
+        std.debug.panic("\nFailed to execute `wasmer config --libdir`: {}", .{e});
+    };
+    const lib_dir = std.mem.trimRight(u8, lib_dir_result.stdout, "\r\n");
+    const include_dir_result = std.ChildProcess.exec(.{
+        .allocator = allocator,
+        .argv = &.{ "wasmer", "config", "--includedir" },
+    }) catch |e| {
+        std.debug.panic("\nFailed to execute `wasmer config --includedir`: {}", .{e});
+    };
+    const include_dir = std.mem.trimRight(u8, include_dir_result.stdout, "\r\n");
+    exe.addLibraryPath(lib_dir);
+    exe.addRPath(lib_dir);
+    exe.addIncludePath(include_dir);
+    exe.linkSystemLibrary("wasmer");
+    exe.linkLibC();
+}
 
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
@@ -26,6 +49,7 @@ pub fn build(b: *std.build.Builder) void {
         .optimize = optimize,
     });
     exe.addModule("atom", atom);
+    linkWasmer(b.allocator, exe);
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
