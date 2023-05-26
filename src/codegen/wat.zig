@@ -123,6 +123,13 @@ fn conditional(writer: List(u8).Writer, intern: Intern, c: If, i: Indent) !void 
     try writer.writeAll(")");
 }
 
+fn unaryOp(writer: List(u8).Writer, intern: Intern, op: []const u8, e: Expression, i: Indent) !void {
+    try writer.print("({s}", .{op});
+    try indent(writer, i);
+    try expression(writer, intern, e, i);
+    try writer.writeAll(")");
+}
+
 fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Indent) error{OutOfMemory}!void {
     switch (expr) {
         .local_get => |interned| try localGet(writer, intern, interned),
@@ -135,12 +142,15 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Inde
         .i32_rem_s => |b| try binaryOp(writer, intern, "i32.rem_s", b, i + 1),
         .i32_or => |b| try binaryOp(writer, intern, "i32.or", b, i + 1),
         .i32_gt_s => |b| try binaryOp(writer, intern, "i32.gt_s", b, i + 1),
+        .i32_trunc_f32_s => |v| try unaryOp(writer, intern, "i32.trunc_f32_s", v.*, i + 1),
         .f32_const => |interned| try f32Const(writer, intern, interned),
         .f32_add => |b| try binaryOp(writer, intern, "f32.add", b, i + 1),
         .f32_sub => |b| try binaryOp(writer, intern, "f32.sub", b, i + 1),
         .f32_mul => |b| try binaryOp(writer, intern, "f32.mul", b, i + 1),
         .f32_eq => |b| try binaryOp(writer, intern, "f32.eq", b, i + 1),
         .f32_gt => |b| try binaryOp(writer, intern, "f32.gt", b, i + 1),
+        .f32_sqrt => |v| try unaryOp(writer, intern, "f32.sqrt", v.*, i + 1),
+        .f32_convert_i32_s => |v| try unaryOp(writer, intern, "f32.convert_i32_s", v.*, i + 1),
         .block => |b| try block(writer, intern, b, i),
         .call => |c| try call(writer, intern, c, i + 1),
         .if_ => |c| try conditional(writer, intern, c, i + 1),

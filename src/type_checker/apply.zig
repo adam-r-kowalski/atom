@@ -16,6 +16,7 @@ const If = types.If;
 const BinaryOp = types.BinaryOp;
 const Define = types.Define;
 const Call = types.Call;
+const Intrinsic = types.Intrinsic;
 const Block = types.Block;
 
 fn monotype(allocator: Allocator, s: Substitution, m: MonoType) !MonoType {
@@ -103,6 +104,19 @@ fn call(allocator: Allocator, s: Substitution, c: Call) !Call {
     };
 }
 
+fn intrinsic(allocator: Allocator, s: Substitution, i: Intrinsic) !Intrinsic {
+    const arguments = try allocator.alloc(Expression, i.arguments.len);
+    for (i.arguments, arguments) |unapplied, *applied| {
+        applied.* = try expression(allocator, s, unapplied);
+    }
+    return Intrinsic{
+        .function = i.function,
+        .arguments = arguments,
+        .span = i.span,
+        .type = try monotype(allocator, s, i.type),
+    };
+}
+
 fn function(allocator: Allocator, s: Substitution, f: Function) !Function {
     const parameters = try allocator.alloc(Symbol, f.parameters.len);
     for (f.parameters, parameters) |unapplied, *applied| {
@@ -140,9 +154,11 @@ fn expression(allocator: Allocator, s: Substitution, e: Expression) error{OutOfM
         .binary_op => |b| return .{ .binary_op = try binaryOp(allocator, s, b) },
         .define => |d| return .{ .define = try define(allocator, s, d) },
         .call => |c| return .{ .call = try call(allocator, s, c) },
+        .intrinsic => |i| return .{ .intrinsic = try intrinsic(allocator, s, i) },
         .function => |f| return .{ .function = try function(allocator, s, f) },
         .block => |b| return .{ .block = try block(allocator, s, b) },
         .foreign_import => |f| return .{ .foreign_import = f },
+        .convert => |c| return .{ .convert = c },
         else => |k| std.debug.panic("\nUnsupported expression {}", .{k}),
     }
 }

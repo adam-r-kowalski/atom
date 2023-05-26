@@ -94,6 +94,13 @@ pub const Call = struct {
     type: MonoType,
 };
 
+pub const Intrinsic = struct {
+    function: Interned,
+    arguments: []const Expression,
+    span: Span,
+    type: MonoType,
+};
+
 pub const Group = struct {
     expressions: []const Expression,
     span: Span,
@@ -103,6 +110,12 @@ pub const Group = struct {
 pub const ForeignImport = struct {
     module: Interned,
     name: Interned,
+    span: Span,
+    type: MonoType,
+};
+
+pub const Convert = struct {
+    value: *const Expression,
     span: Span,
     type: MonoType,
 };
@@ -120,7 +133,9 @@ pub const Expression = union(enum) {
     block: Block,
     if_: If,
     call: Call,
+    intrinsic: Intrinsic,
     foreign_import: ForeignImport,
+    convert: Convert,
 };
 
 pub const Untyped = Map(Interned, UntypedExpression);

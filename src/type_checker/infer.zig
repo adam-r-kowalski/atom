@@ -260,23 +260,53 @@ fn define(context: Context, d: parser_types.Define) !Define {
     };
 }
 
+fn callForeignImport(context: Context, c: parser_types.Call) !Expression {
+    if (c.arguments.len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
+    const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[2]);
+    return Expression{
+        .foreign_import = .{
+            .module = c.arguments[0].string.value,
+            .name = c.arguments[1].string.value,
+            .span = c.span,
+            .type = monotype,
+        },
+    };
+}
+
+fn callConvert(context: Context, c: parser_types.Call) !Expression {
+    if (c.arguments.len != 2) std.debug.panic("convert takes 2 arguments", .{});
+    const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[1]);
+    return Expression{
+        .convert = .{
+            .value = try expressionAlloc(context, c.arguments[0]),
+            .span = c.span,
+            .type = monotype,
+        },
+    };
+}
+
+fn callSqrt(context: Context, c: parser_types.Call) !Expression {
+    if (c.arguments.len != 1) std.debug.panic("sqrt takes 1 arguments", .{});
+    const arguments = try context.allocator.alloc(Expression, 1);
+    arguments[0] = try expression(context, c.arguments[0]);
+    return Expression{
+        .intrinsic = .{
+            .function = context.builtins.sqrt,
+            .arguments = arguments,
+            .span = c.span,
+            .type = typeOf(arguments[0]),
+        },
+    };
+}
+
 fn call(context: Context, c: parser_types.Call) !Expression {
     switch (c.function.*) {
         .symbol => |s| {
             const len = c.arguments.len;
             const function_type = try context.allocator.alloc(MonoType, len + 1);
-            if (s.value == context.builtins.foreign_import) {
-                if (len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
-                const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[2]);
-                return Expression{
-                    .foreign_import = .{
-                        .module = c.arguments[0].string.value,
-                        .name = c.arguments[1].string.value,
-                        .span = c.span,
-                        .type = monotype,
-                    },
-                };
-            }
+            if (s.value == context.builtins.foreign_import) return try callForeignImport(context, c);
+            if (s.value == context.builtins.convert) return try callConvert(context, c);
+            if (s.value == context.builtins.sqrt) return try callSqrt(context, c);
             const f = try symbol(context.scopes.*, context.work_queue, s);
             const arguments = try context.allocator.alloc(Expression, len);
             for (c.arguments, arguments, function_type[0..len]) |untyped_arg, *typed_arg, *t| {
