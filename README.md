@@ -138,13 +138,12 @@ start = fn() void {
     log("hello world")
 }
 
-# conditionals with a void type don't need an else branch
+# conditionals with a void type can leave off the else branch
 start = fn(n: i32) void {
     if (n > 5) {
         log("hello world")
     }
 }
-
 
 # interfaces allow you to code against different types in a uniform way
 Shape = interface[T] {
