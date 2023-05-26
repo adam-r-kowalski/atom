@@ -13,6 +13,7 @@ const Bool = types.Bool;
 const Function = types.Function;
 const Expression = types.Expression;
 const If = types.If;
+const Cond = types.Cond;
 const BinaryOp = types.BinaryOp;
 const Define = types.Define;
 const Call = types.Call;
@@ -71,6 +72,22 @@ fn ifElse(allocator: Allocator, s: Substitution, i: If) !If {
         .else_ = try block(allocator, s, i.else_),
         .span = i.span,
         .type = try monotype(allocator, s, i.type),
+    };
+}
+
+fn cond(allocator: Allocator, s: Substitution, c: Cond) !Cond {
+    const conditions = try allocator.alloc(Expression, c.conditions.len);
+    const thens = try allocator.alloc(Block, c.thens.len);
+    for (c.conditions, c.thens, conditions, thens) |unapplied_c, unapplied_t, *applied_c, *applied_t| {
+        applied_c.* = try expression(allocator, s, unapplied_c);
+        applied_t.* = try block(allocator, s, unapplied_t);
+    }
+    return Cond{
+        .conditions = conditions,
+        .thens = thens,
+        .else_ = try block(allocator, s, c.else_),
+        .span = c.span,
+        .type = try monotype(allocator, s, c.type),
     };
 }
 
@@ -153,6 +170,7 @@ fn expression(allocator: Allocator, s: Substitution, e: Expression) error{OutOfM
         .bool => |b| return .{ .bool = b },
         .string => |str| return .{ .string = str },
         .if_else => |i| return .{ .if_else = try ifElse(allocator, s, i) },
+        .cond => |c| return .{ .cond = try cond(allocator, s, c) },
         .binary_op => |b| return .{ .binary_op = try binaryOp(allocator, s, b) },
         .define => |d| return .{ .define = try define(allocator, s, d) },
         .call => |c| return .{ .call = try call(allocator, s, c) },

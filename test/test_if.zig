@@ -329,3 +329,49 @@ test "parse multi arm if" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "type infer multi arm if" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\clamp = fn(x: i32, lb: i32, ub: i32) i32 {
+        \\    if {
+        \\        x < lb { lb }
+        \\        x > ub { ub }
+        \\        else { x }
+        \\    }
+        \\}
+    ;
+    const actual = try atom.testing.typeInfer(allocator, source, "clamp");
+    defer allocator.free(actual);
+    const expected =
+        \\define =
+        \\    name = symbol{ name = clamp, type = fn(i32, i32, i32) i32 }
+        \\    type = void
+        \\    value = 
+        \\        function =
+        \\            parameters =
+        \\                symbol{ name = x, type = i32 }
+        \\                symbol{ name = lb, type = i32 }
+        \\                symbol{ name = ub, type = i32 }
+        \\            return_type = i32
+        \\            body = 
+        \\                cond =
+        \\                    condition = 
+        \\                        binary_op =
+        \\                            kind = <
+        \\                            left = symbol{ name = x, type = i32 }
+        \\                            right = symbol{ name = lb, type = i32 }
+        \\                            type = bool
+        \\                    then = symbol{ name = lb, type = i32 }
+        \\                    condition = 
+        \\                        binary_op =
+        \\                            kind = >
+        \\                            left = symbol{ name = x, type = i32 }
+        \\                            right = symbol{ name = ub, type = i32 }
+        \\                            type = bool
+        \\                    then = symbol{ name = ub, type = i32 }
+        \\                    else = symbol{ name = x, type = i32 }
+        \\                    type = i32
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
