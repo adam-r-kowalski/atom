@@ -40,7 +40,8 @@ const ADD: Precedence = COMPARE + DELTA;
 const MULTIPLY: Precedence = ADD + DELTA;
 const EXPONENTIATE: Precedence = MULTIPLY + DELTA;
 const CALL: Precedence = EXPONENTIATE + DELTA;
-const HIGHEST: Precedence = CALL + DELTA;
+const DOT: Precedence = CALL + DELTA;
+const HIGHEST: Precedence = DOT + DELTA;
 
 const Context = struct {
     allocator: Allocator,
@@ -363,6 +364,7 @@ fn infix(context: *Context, left: Expression) ?Infix {
             .greater => return .{ .kind = .{ .binary_op = .greater }, .precedence = COMPARE, .associativity = .left },
             .less => return .{ .kind = .{ .binary_op = .less }, .precedence = COMPARE, .associativity = .left },
             .or_ => return .{ .kind = .{ .binary_op = .or_ }, .precedence = AND, .associativity = .left },
+            .dot => return .{ .kind = .{ .binary_op = .dot }, .precedence = AND, .associativity = .left },
             .left_paren => switch (left) {
                 .symbol => return .{ .kind = .call, .precedence = CALL, .associativity = .left },
                 else => return null,

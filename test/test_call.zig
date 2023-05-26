@@ -37,6 +37,15 @@ test "parse call with expression" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
+test "parse dot call" {
+    const allocator = std.testing.allocator;
+    const source = "x.f(y, z)";
+    const actual = try atom.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected = "(. x (f y z))";
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
 test "parse define then call" {
     const allocator = std.testing.allocator;
     const source =
@@ -157,6 +166,47 @@ test "codegen recursive function" {
         \\            (i32.const 5)))
         \\
         \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer dot call" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\double = fn(x: i32) i32 { x * 2 }
+        \\
+        \\start = fn() i32 { 2.double() }
+    ;
+    const actual = try atom.testing.typeInfer(allocator, source, "start");
+    defer allocator.free(actual);
+    const expected =
+        \\define =
+        \\    name = symbol{ name = double, type = fn(i32) i32 }
+        \\    type = void
+        \\    value = 
+        \\        function =
+        \\            parameters =
+        \\                symbol{ name = x, type = i32 }
+        \\            return_type = i32
+        \\            body = 
+        \\                binary_op =
+        \\                    kind = *
+        \\                    left = symbol{ name = x, type = i32 }
+        \\                    right = int{ value = 2, type = i32 }
+        \\                    type = i32
+        \\
+        \\define =
+        \\    name = symbol{ name = start, type = fn() i32 }
+        \\    type = void
+        \\    value = 
+        \\        function =
+        \\            return_type = i32
+        \\            body = 
+        \\                call =
+        \\                    symbol{ name = double, type = fn(i32) i32 }
+        \\                    arguments =
+        \\                        int{ value = 2, type = i32 }
+        \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

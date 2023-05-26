@@ -240,28 +240,59 @@ fn cond(context: Context, c: parser_types.Cond) !Cond {
     };
 }
 
-fn binaryOp(context: Context, b: parser_types.BinaryOp) !BinaryOp {
-    const left = try expressionAlloc(context, b.left.*);
-    const right = try expressionAlloc(context, b.right.*);
-    const left_type = typeOf(left.*);
-    try context.constraints.equal.append(.{ .left = left_type, .right = typeOf(right.*) });
-    const result_type = blk: {
-        switch (b.kind) {
-            .equal, .greater, .less => break :blk .bool,
-            else => {
-                const tvar = freshTypeVar(context.next_type_var);
-                try context.constraints.equal.append(.{ .left = left_type, .right = tvar });
-                break :blk tvar;
-            },
-        }
-    };
-    return BinaryOp{
-        .kind = b.kind,
-        .left = left,
-        .right = right,
-        .span = b.span,
-        .type = result_type,
-    };
+fn dotCall(context: Context, b: parser_types.BinaryOp) !Expression {
+    switch (b.right.*) {
+        .call => |c| {
+            const arguments = try context.allocator.alloc(parser_types.Expression, c.arguments.len + 1);
+            arguments[0] = b.left.*;
+            @memcpy(arguments[1..], c.arguments);
+            const new_call = parser_types.Call{
+                .function = c.function,
+                .arguments = arguments,
+                .span = b.span,
+            };
+            return try call(context, new_call);
+        },
+        else => |k| std.debug.panic("Expected call after dot, got {}", .{k}),
+    }
+}
+
+fn binaryOp(context: Context, b: parser_types.BinaryOp) !Expression {
+    switch (b.kind) {
+        .dot => return dotCall(context, b),
+        .equal, .greater, .less => {
+            const left = try expressionAlloc(context, b.left.*);
+            const right = try expressionAlloc(context, b.right.*);
+            const left_type = typeOf(left.*);
+            try context.constraints.equal.append(.{ .left = left_type, .right = typeOf(right.*) });
+            return Expression{
+                .binary_op = .{
+                    .kind = b.kind,
+                    .left = left,
+                    .right = right,
+                    .span = b.span,
+                    .type = .bool,
+                },
+            };
+        },
+        else => {
+            const left = try expressionAlloc(context, b.left.*);
+            const right = try expressionAlloc(context, b.right.*);
+            const left_type = typeOf(left.*);
+            try context.constraints.equal.append(.{ .left = left_type, .right = typeOf(right.*) });
+            const tvar = freshTypeVar(context.next_type_var);
+            try context.constraints.equal.append(.{ .left = left_type, .right = tvar });
+            return Expression{
+                .binary_op = .{
+                    .kind = b.kind,
+                    .left = left,
+                    .right = right,
+                    .span = b.span,
+                    .type = tvar,
+                },
+            };
+        },
+    }
 }
 
 fn explicitTypeOrVar(allocator: Allocator, builtins: Builtins, next_type_var: *TypeVar, e: ?*const parser_types.Expression) !MonoType {
@@ -414,7 +445,7 @@ fn expression(context: Context, e: parser_types.Expression) error{OutOfMemory}!E
         .bool => |b| return .{ .bool = boolean(b) },
         .define => |d| return .{ .define = try define(context, d) },
         .function => |f| return .{ .function = try function(context, f) },
-        .binary_op => |b| return .{ .binary_op = try binaryOp(context, b) },
+        .binary_op => |b| return try binaryOp(context, b),
         .block => |b| return .{ .block = try block(context, b) },
         .if_else => |i| return .{ .if_else = try ifElse(context, i) },
         .cond => |c| return .{ .cond = try cond(context, c) },

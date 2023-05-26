@@ -1,6 +1,18 @@
 const std = @import("std");
 const atom = @import("atom");
 
+test "tokenize int literal followed by dot" {
+    const allocator = std.testing.allocator;
+    const source = "2.";
+    const actual = try atom.testing.tokenize(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\int 2
+        \\dot
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
 test "type infer int literal as i32" {
     const allocator = std.testing.allocator;
     const source = "f = fn() i32 { 42 }";
