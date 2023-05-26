@@ -201,6 +201,10 @@ fn convert(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: ty
             .f32 => return Expression{ .f32_convert_i32_s = value },
             else => |k| std.debug.panic("\nConvert type i32 to {} not yet supported", .{k}),
         },
+        .f32 => switch (c.type) {
+            .i32 => return Expression{ .i32_trunc_f32_s = value },
+            else => |k| std.debug.panic("\nConvert type f32 to {} not yet supported", .{k}),
+        },
         else => |k| std.debug.panic("\nConvert type {} not yet supported", .{k}),
     }
 }

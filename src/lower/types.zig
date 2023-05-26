@@ -46,6 +46,7 @@ pub const Expression = union(enum) {
     i32_gt_s: BinaryOp,
     i32_rem_s: BinaryOp,
     i32_or: BinaryOp,
+    i32_trunc_f32_s: *const Expression,
     f32_const: Interned,
     f32_add: BinaryOp,
     f32_sub: BinaryOp,

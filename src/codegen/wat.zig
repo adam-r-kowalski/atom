@@ -142,6 +142,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Inde
         .i32_rem_s => |b| try binaryOp(writer, intern, "i32.rem_s", b, i + 1),
         .i32_or => |b| try binaryOp(writer, intern, "i32.or", b, i + 1),
         .i32_gt_s => |b| try binaryOp(writer, intern, "i32.gt_s", b, i + 1),
+        .i32_trunc_f32_s => |v| try unaryOp(writer, intern, "i32.trunc_f32_s", v.*, i + 1),
         .f32_const => |interned| try f32Const(writer, intern, interned),
         .f32_add => |b| try binaryOp(writer, intern, "f32.add", b, i + 1),
         .f32_sub => |b| try binaryOp(writer, intern, "f32.sub", b, i + 1),

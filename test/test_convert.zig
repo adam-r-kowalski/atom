@@ -47,3 +47,24 @@ test "codegen convert i32 to f32" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "codegen convert f32 to i32" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = fn(x: f32) i32 {
+        \\    convert(x, i32)
+        \\}
+    ;
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $start (param $x f32) (result i32)
+        \\        (i32.trunc_f32_s
+        \\            (local.get $x)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
