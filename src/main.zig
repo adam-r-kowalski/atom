@@ -17,7 +17,7 @@ const Timings = struct {
     codegen: u64,
     save_wat_to_file: u64,
     wat2wasm: u64,
-    wasmtime: u64,
+    wasmer: u64,
     total: u64,
 };
 
@@ -73,34 +73,6 @@ fn saveWatToFile(file_name: []const u8, wat: []const u8) !void {
     try file.writer().writeAll(wat);
 }
 
-fn wat2wasm(allocator: Allocator, writer: std.fs.File.Writer, file_name: []const u8) !void {
-    const result = try std.ChildProcess.exec(.{
-        .allocator = allocator,
-        .argv = &.{ "wat2wasm", file_name },
-    });
-
-    if (result.stdout.len > 0) {
-        try writer.print("\nstdout: {s}\n", .{result.stdout});
-    }
-    if (result.stderr.len > 0) {
-        try writer.print("\nstderr: {s}\n", .{result.stderr});
-    }
-}
-
-fn wasmtime(allocator: Allocator, writer: std.fs.File.Writer, file_name: []const u8) !void {
-    const result = try std.ChildProcess.exec(.{
-        .allocator = allocator,
-        .argv = &.{ "wasmtime", file_name },
-    });
-
-    if (result.stdout.len > 0) {
-        try writer.print("\nstdout: {s}", .{result.stdout});
-    }
-    if (result.stderr.len > 0) {
-        try writer.print("\nstderr: {s}", .{result.stderr});
-    }
-}
-
 fn printTime(writer: std.fs.File.Writer, label: []const u8, time: u64) !void {
     try writer.print("\n{s}: {d:0.07}s", .{
         label,
@@ -120,7 +92,7 @@ fn printTimings(writer: std.fs.File.Writer, timings: Timings) !void {
     try printTime(writer, "codegen", timings.codegen);
     try printTime(writer, "save_wat_to_file", timings.save_wat_to_file);
     try printTime(writer, "wat2wasm", timings.wat2wasm);
-    try printTime(writer, "wasmtime", timings.wasmtime);
+    try printTime(writer, "wasmer", timings.wasmer);
     try printTime(writer, "total", timings.total);
 }
 
@@ -187,8 +159,8 @@ pub fn main() !void {
 
     var args_val = [0]wasmer.wasm_val_t{};
     var results_val = [1]wasmer.wasm_val_t{wasmer.wasm_val_t{
-        .kind = wasmer.WASM_I32,
-        .of = .{ .i32 = 5 },
+        .kind = wasmer.WASM_ANYREF,
+        .of = .{ .ref = null },
     }};
     var args: wasmer.wasm_val_vec_t = undefined;
     var results: wasmer.wasm_val_vec_t = undefined;
@@ -197,20 +169,11 @@ pub fn main() !void {
     if (wasmer.wasm_func_call(start_func, &args, &results)) |_| {
         std.debug.panic("\nError calling start!\n", .{});
     }
-
-    try writer.print("\n{}\n", .{results.data[0].of.i32});
-
-    if (std.os.argv.len == 3) {
-        const argument = std.mem.span(std.os.argv[2]);
-        if (std.mem.eql(u8, argument, "--execute")) {
-            const file_name_wasm = try std.fmt.allocPrint(allocator, "{s}.wasm", .{file_name_no_suffix});
-            try wasmtime(allocator, writer, file_name_wasm);
-        }
-    }
     const t4 = timer.read();
+    try writer.print("\n{}\n", .{results.data[0].of.i32});
     timings.save_wat_to_file = t2 - t1;
     timings.wat2wasm = t3 - t2;
-    timings.wasmtime = t4 - t3;
+    timings.wasmer = t4 - t3;
     timings.total = t4 - t0;
     try printTimings(writer, timings);
 }
