@@ -73,6 +73,7 @@ pub fn monotype(writer: List(u8).Writer, m: MonoType) !void {
         .i32 => try writer.writeAll("i32"),
         .i64 => try writer.writeAll("i64"),
         .f32 => try writer.writeAll("f32"),
+        .f64 => try writer.writeAll("f64"),
         .str => try writer.writeAll("str"),
         .bool => try writer.writeAll("bool"),
         .void => try writer.writeAll("void"),
