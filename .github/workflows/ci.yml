@@ -9,4 +9,5 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: goto-bus-stop/setup-zig@v2
+      - uses: wasmerio/setup-wasmer@v2
       - run: zig build test
