@@ -249,8 +249,7 @@ test "gradient descent" {
 ## Compiling from source
 
 - Ensure you have [zig 0.11.0-dev](https://ziglang.org/download/) installed and in your path
-- Ensure you have [wabt](https://github.com/WebAssembly/wabt) installed and in your path
-- Ensure you have [wasmtime](https://github.com/bytecodealliance/wasmtime) installed and in your path
+- Ensure you have [wasmer](https://github.com/wasmerio/wasmer) installed and in your path
 - Clone the repository `git clone git@github.com:adam-r-kowalski/atom.git`
 - Navigate into the directory `cd atom`
 - Run the tests with `zig build test` and ensure they are passing
