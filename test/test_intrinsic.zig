@@ -1,5 +1,5 @@
 const std = @import("std");
-const atom = @import("atom");
+const neuron = @import("neuron");
 
 test "type infer sqrt f32" {
     const allocator = std.testing.allocator;
@@ -8,7 +8,7 @@ test "type infer sqrt f32" {
         \\    sqrt(x)
         \\}
     ;
-    const actual = try atom.testing.typeInfer(allocator, source, "start");
+    const actual = try neuron.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -36,7 +36,7 @@ test "codegen sqrt f32" {
         \\    sqrt(x)
         \\}
     ;
-    const actual = try atom.testing.codegen(allocator, source);
+    const actual = try neuron.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module

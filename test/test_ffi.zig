@@ -1,12 +1,12 @@
 const std = @import("std");
-const atom = @import("atom");
+const neuron = @import("neuron");
 
 test "tokenize import" {
     const allocator = std.testing.allocator;
     const source =
         \\print = foreign_import("console", "log", fn(msg: str) void)
     ;
-    const actual = try atom.testing.tokenize(allocator, source);
+    const actual = try neuron.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\symbol print
@@ -34,7 +34,7 @@ test "parse import" {
     const source =
         \\print = foreign_import("console", "log", fn(msg: str) void)
     ;
-    const actual = try atom.testing.parse(allocator, source);
+    const actual = try neuron.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def print (foreign_import "console" "log" (fn [(msg str)] void)))
@@ -51,7 +51,7 @@ test "type check import" {
         \\    print("hello world")
         \\}
     ;
-    const actual = try atom.testing.typeInfer(allocator, source, "start");
+    const actual = try neuron.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -86,7 +86,7 @@ test "codegen import" {
         \\
         \\start = fn() void { print(42) }
     ;
-    const actual = try atom.testing.codegen(allocator, source);
+    const actual = try neuron.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -109,7 +109,7 @@ test "tokenize export" {
         \\    x * 2
         \\})
     ;
-    const actual = try atom.testing.tokenize(allocator, source);
+    const actual = try neuron.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\symbol foreign_export
@@ -142,7 +142,7 @@ test "parse export" {
         \\    x * 2
         \\})
     ;
-    const actual = try atom.testing.parse(allocator, source);
+    const actual = try neuron.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(foreign_export "double" (fn [(x i32)] i32
@@ -160,7 +160,7 @@ test "parse named export" {
         \\
         \\foreign_export("double", double)
     ;
-    const actual = try atom.testing.parse(allocator, source);
+    const actual = try neuron.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def double (fn [(x i32)] i32

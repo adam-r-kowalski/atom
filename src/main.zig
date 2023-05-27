@@ -1,7 +1,7 @@
 const std = @import("std");
 const wasmer = @cImport(@cInclude("wasmer.h"));
 const Allocator = std.mem.Allocator;
-const atom = @import("atom");
+const neuron = @import("neuron");
 
 const List = std.ArrayList;
 const Flags = std.StringHashMap(void);
@@ -27,8 +27,8 @@ pub fn main() !void {
             \\
             \\Correct usage:
             \\
-            \\atom <input file>.atom
-            \\this will compile and run the atom program using the wasmer runtime
+            \\neuron <input file>.neuron
+            \\this will compile and run the neuron program using the wasmer runtime
         , .{});
     }
 
@@ -38,31 +38,31 @@ pub fn main() !void {
     const t1 = timer.read();
     const source = try std.fs.cwd().readFileAlloc(allocator, file_name, std.math.maxInt(usize));
     const t2 = timer.read();
-    var intern = atom.interner.Intern.init(allocator);
-    const builtins = try atom.Builtins.init(&intern);
+    var intern = neuron.interner.Intern.init(allocator);
+    const builtins = try neuron.Builtins.init(&intern);
     const t3 = timer.read();
-    const tokens = try atom.tokenizer.tokenize(allocator, &intern, builtins, source);
+    const tokens = try neuron.tokenizer.tokenize(allocator, &intern, builtins, source);
     const t4 = timer.read();
-    const ast = try atom.parser.parse(allocator, tokens);
+    const ast = try neuron.parser.parse(allocator, tokens);
     const t5 = timer.read();
-    var typed_ast = try atom.type_checker.infer.module(allocator, builtins, ast);
-    var constraints = atom.type_checker.types.Constraints{
-        .equal = List(atom.type_checker.types.Equal).init(allocator),
+    var typed_ast = try neuron.type_checker.infer.module(allocator, builtins, ast);
+    var constraints = neuron.type_checker.types.Constraints{
+        .equal = List(neuron.type_checker.types.Equal).init(allocator),
     };
-    const start = try atom.interner.store(&intern, "start");
-    var next_type_var: atom.type_checker.types.TypeVar = 0;
-    try atom.type_checker.infer.infer(allocator, &constraints, &typed_ast, builtins, &next_type_var, start);
-    const substitution = try atom.type_checker.solve(allocator, constraints);
-    typed_ast = try atom.type_checker.apply(allocator, substitution, typed_ast);
+    const start = try neuron.interner.store(&intern, "start");
+    var next_type_var: neuron.type_checker.types.TypeVar = 0;
+    try neuron.type_checker.infer.infer(allocator, &constraints, &typed_ast, builtins, &next_type_var, start);
+    const substitution = try neuron.type_checker.solve(allocator, constraints);
+    typed_ast = try neuron.type_checker.apply(allocator, substitution, typed_ast);
     const t6 = timer.read();
-    var ir = try atom.lower.buildIr(allocator, builtins, typed_ast);
-    const alias = try atom.interner.store(&intern, "_start");
-    const exports = try allocator.alloc(atom.lower.types.Export, ir.exports.len + 1);
-    std.mem.copy(atom.lower.types.Export, exports, ir.exports);
-    exports[ir.exports.len] = atom.lower.types.Export{ .name = start, .alias = alias };
+    var ir = try neuron.lower.buildIr(allocator, builtins, typed_ast);
+    const alias = try neuron.interner.store(&intern, "_start");
+    const exports = try allocator.alloc(neuron.lower.types.Export, ir.exports.len + 1);
+    std.mem.copy(neuron.lower.types.Export, exports, ir.exports);
+    exports[ir.exports.len] = neuron.lower.types.Export{ .name = start, .alias = alias };
     ir.exports = exports;
     const t7 = timer.read();
-    const wat_string = try atom.codegen.wat(allocator, intern, ir);
+    const wat_string = try neuron.codegen.wat(allocator, intern, ir);
     const t8 = timer.read();
     if (flags.contains("--wat")) {
         const file_name_no_suffix = file_name[0 .. file_name.len - 5];
