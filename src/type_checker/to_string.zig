@@ -36,28 +36,28 @@ pub fn indent(writer: List(u8).Writer, n: Indent) !void {
 }
 
 fn symbol(writer: List(u8).Writer, intern: Intern, s: Symbol) !void {
-    const name = interner.lookup(intern, s.value);
+    const name = intern.lookup(s.value);
     try writer.print("symbol{{ name = {s}, type = ", .{name});
     try monotype(writer, s.type);
     try writer.writeAll(" }");
 }
 
 fn int(writer: List(u8).Writer, intern: Intern, i: Int) !void {
-    const value = interner.lookup(intern, i.value);
+    const value = intern.lookup(i.value);
     try writer.print("int{{ value = {s}, type = ", .{value});
     try monotype(writer, i.type);
     try writer.writeAll(" }");
 }
 
 fn float(writer: List(u8).Writer, intern: Intern, f: Float) !void {
-    const value = interner.lookup(intern, f.value);
+    const value = intern.lookup(f.value);
     try writer.print("float{{ value = {s}, type = ", .{value});
     try monotype(writer, f.type);
     try writer.writeAll(" }");
 }
 
 fn string(writer: List(u8).Writer, intern: Intern, s: String) !void {
-    const value = interner.lookup(intern, s.value);
+    const value = intern.lookup(s.value);
     try writer.print("string{{ value = {s}, type = ", .{value});
     try monotype(writer, s.type);
     try writer.writeAll(" }");
@@ -173,7 +173,7 @@ fn intrinsic(writer: List(u8).Writer, intern: Intern, i: Intrinsic, in: Indent) 
     try indent(writer, in);
     try writer.writeAll("intrinsic =");
     try indent(writer, in + 1);
-    try writer.writeAll(interner.lookup(intern, i.function));
+    try writer.writeAll(intern.lookup(i.function));
     try indent(writer, in + 1);
     try writer.writeAll("arguments =");
     for (i.arguments) |a| {
@@ -226,10 +226,10 @@ fn foreignImport(writer: List(u8).Writer, intern: Intern, f: ForeignImport, i: I
     try indent(writer, i);
     try writer.writeAll("foreign_import =");
     try indent(writer, i + 1);
-    const module = interner.lookup(intern, f.module);
+    const module = intern.lookup(f.module);
     try writer.print("module = {s}", .{module});
     try indent(writer, i + 1);
-    const name = interner.lookup(intern, f.name);
+    const name = intern.lookup(f.name);
     try writer.print("name = {s}", .{name});
     try indent(writer, i + 1);
     try writer.print("type = ", .{});

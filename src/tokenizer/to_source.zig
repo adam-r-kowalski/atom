@@ -36,10 +36,10 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
         try span(writer, current_span, pos);
         pos = current_span.end;
         switch (token) {
-            .symbol => |s| try writer.writeAll(interner.lookup(intern, s.value)),
-            .int => |i| try writer.writeAll(interner.lookup(intern, i.value)),
-            .float => |f| try writer.writeAll(interner.lookup(intern, f.value)),
-            .string => |s| try writer.writeAll(interner.lookup(intern, s.value)),
+            .symbol => |s| try writer.writeAll(intern.lookup(s.value)),
+            .int => |i| try writer.writeAll(intern.lookup(i.value)),
+            .float => |f| try writer.writeAll(intern.lookup(f.value)),
+            .string => |s| try writer.writeAll(intern.lookup(s.value)),
             .bool => |b| try writer.print("{}", .{b.value}),
             .equal => try writer.writeAll("="),
             .equal_equal => try writer.writeAll("=="),

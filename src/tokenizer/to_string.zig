@@ -17,19 +17,19 @@ const Int = types.Int;
 const Float = types.Float;
 
 fn symbol(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
-    try writer.print("symbol {s}", .{interner.lookup(intern, interned)});
+    try writer.print("symbol {s}", .{intern.lookup(interned)});
 }
 
 fn int(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
-    try writer.print("int {s}", .{interner.lookup(intern, interned)});
+    try writer.print("int {s}", .{intern.lookup(interned)});
 }
 
 fn float(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
-    try writer.print("float {s}", .{interner.lookup(intern, interned)});
+    try writer.print("float {s}", .{intern.lookup(interned)});
 }
 
 fn string(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
-    try writer.print("string {s}", .{interner.lookup(intern, interned)});
+    try writer.print("string {s}", .{intern.lookup(interned)});
 }
 
 pub fn toString(allocator: Allocator, intern: Intern, tokens: []const Token) ![]const u8 {

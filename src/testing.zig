@@ -44,7 +44,7 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
     const untyped_module = try parser.parse(arena.allocator(), tokens);
     var module = try type_checker.infer.module(arena.allocator(), builtins, untyped_module);
-    const interned = try interner.store(&intern, name);
+    const interned = try intern.store(name);
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.Equal).init(arena.allocator()),
     };
@@ -65,7 +65,7 @@ pub fn typeInferVerbose(allocator: Allocator, source: []const u8, name: []const 
     const builtins = try Builtins.init(&intern);
     const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
     const untyped_module = try parser.parse(arena.allocator(), tokens);
-    const interned = try interner.store(&intern, name);
+    const interned = try intern.store(name);
     var next_type_var: type_checker.types.TypeVar = 0;
     var module = try type_checker.infer.module(arena.allocator(), builtins, untyped_module, &next_type_var);
     var constraints = type_checker.types.Constraints{
@@ -94,13 +94,13 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.Equal).init(arena.allocator()),
     };
-    const start = try interner.store(&intern, "start");
+    const start = try intern.store("start");
     var next_type_var: type_checker.types.TypeVar = 0;
     try type_checker.infer.infer(arena.allocator(), &constraints, &module, builtins, &next_type_var, start);
     const substitution = try type_checker.solve(arena.allocator(), constraints);
     const typed_module = try type_checker.apply(arena.allocator(), substitution, module);
     var ir = try lower.buildIr(arena.allocator(), builtins, typed_module);
-    const alias = try interner.store(&intern, "_start");
+    const alias = try intern.store("_start");
     const exports = try arena.allocator().alloc(lower.types.Export, ir.exports.len + 1);
     std.mem.copy(lower.types.Export, exports, ir.exports);
     exports[ir.exports.len] = lower.types.Export{ .name = start, .alias = alias };

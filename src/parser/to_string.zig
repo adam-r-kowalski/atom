@@ -19,7 +19,7 @@ const Call = types.Call;
 const Module = types.Module;
 
 fn interned(writer: List(u8).Writer, intern: Intern, s: Interned) !void {
-    try writer.writeAll(interner.lookup(intern, s));
+    try writer.writeAll(intern.lookup(s));
 }
 
 fn typeString(writer: List(u8).Writer, intern: Intern, expr: Expression) !void {

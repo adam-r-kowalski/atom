@@ -70,7 +70,7 @@ fn number(intern: *Intern, cursor: *Cursor) !Token {
     }
     _ = advance(cursor, i);
     const span = Span{ .begin = begin, .end = cursor.pos };
-    const interned = try interner.store(intern, contents);
+    const interned = try intern.store(contents);
     if (decimals == 0) return Token{ .int = .{ .value = interned, .span = span } };
     return Token{ .float = .{ .value = interned, .span = span } };
 }
@@ -87,7 +87,7 @@ fn string(intern: *Intern, cursor: *Cursor) !Token {
     const contents = cursor.source[0..i];
     _ = advance(cursor, i);
     const span = Span{ .begin = begin, .end = cursor.pos };
-    const interned = try interner.store(intern, contents);
+    const interned = try intern.store(contents);
     return Token{ .string = .{ .value = interned, .span = span } };
 }
 
@@ -107,7 +107,7 @@ fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !Token {
     const contents = advance(cursor, i);
     const end = cursor.pos;
     const span = Span{ .begin = begin, .end = end };
-    const interned = try interner.store(intern, contents);
+    const interned = try intern.store(contents);
     if (interned == builtins.fn_) return Token{ .fn_ = .{ .span = span } };
     if (interned == builtins.if_) return Token{ .if_ = .{ .span = span } };
     if (interned == builtins.else_) return Token{ .else_ = .{ .span = span } };

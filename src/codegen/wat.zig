@@ -52,12 +52,12 @@ fn typeString(writer: List(u8).Writer, t: Type) !void {
 }
 
 fn localGet(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
-    const value = interner.lookup(intern, interned);
+    const value = intern.lookup(interned);
     try writer.print("(local.get ${s})", .{value});
 }
 
 fn localSet(writer: List(u8).Writer, intern: Intern, local_set: LocalSet, i: Indent) !void {
-    const value = interner.lookup(intern, local_set.name);
+    const value = intern.lookup(local_set.name);
     try writer.print("(local.set ${s}", .{value});
     try indent(writer, i);
     try expression(writer, intern, local_set.value.*, i);
@@ -65,22 +65,22 @@ fn localSet(writer: List(u8).Writer, intern: Intern, local_set: LocalSet, i: Ind
 }
 
 fn i32Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
-    const value = interner.lookup(intern, interned);
+    const value = intern.lookup(interned);
     try writer.print("(i32.const {s})", .{value});
 }
 
 fn i64Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
-    const value = interner.lookup(intern, interned);
+    const value = intern.lookup(interned);
     try writer.print("(i64.const {s})", .{value});
 }
 
 fn f32Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
-    const value = interner.lookup(intern, interned);
+    const value = intern.lookup(interned);
     try writer.print("(f32.const {s})", .{value});
 }
 
 fn f64Const(writer: List(u8).Writer, intern: Intern, interned: Interned) !void {
-    const value = interner.lookup(intern, interned);
+    const value = intern.lookup(interned);
     try writer.print("(f64.const {s})", .{value});
 }
 
@@ -101,7 +101,7 @@ fn block(writer: List(u8).Writer, intern: Intern, exprs: []const Expression, i: 
 }
 
 fn call(writer: List(u8).Writer, intern: Intern, c: Call, i: Indent) !void {
-    const name = interner.lookup(intern, c.function);
+    const name = intern.lookup(c.function);
     try writer.print("(call ${s}", .{name});
     for (c.arguments) |arg| {
         try indent(writer, i);
@@ -196,10 +196,10 @@ fn expression(writer: List(u8).Writer, intern: Intern, expr: Expression, i: Inde
 fn function(writer: List(u8).Writer, intern: Intern, f: Function, i: Indent) !void {
     try writer.writeAll("\n");
     try indent(writer, i);
-    const name = interner.lookup(intern, f.name);
+    const name = intern.lookup(f.name);
     try writer.print("(func ${s}", .{name});
     for (f.parameters) |p| {
-        const name_symbol = interner.lookup(intern, p.name);
+        const name_symbol = intern.lookup(p.name);
         try writer.print(" (param ${s} ", .{name_symbol});
         try typeString(writer, p.type);
         try writer.writeAll(")");
@@ -213,7 +213,7 @@ fn function(writer: List(u8).Writer, intern: Intern, f: Function, i: Indent) !vo
         },
     }
     for (f.locals) |l| {
-        const name_symbol = interner.lookup(intern, l.name);
+        const name_symbol = intern.lookup(l.name);
         try indent(writer, i + 1);
         try writer.print("(local ${s} ", .{name_symbol});
         try typeString(writer, l.type);
@@ -227,9 +227,9 @@ fn foreignImport(writer: List(u8).Writer, intern: Intern, i: Import) !void {
     try writer.writeAll("\n");
     try indent(writer, 1);
     try writer.print("(import {s} {s} (func ${s} ", .{
-        interner.lookup(intern, i.path[0]),
-        interner.lookup(intern, i.path[1]),
-        interner.lookup(intern, i.name),
+        intern.lookup(i.path[0]),
+        intern.lookup(i.path[1]),
+        intern.lookup(i.name),
     });
     try typeString(writer, i.type);
     try writer.writeAll("))");
@@ -238,8 +238,8 @@ fn foreignImport(writer: List(u8).Writer, intern: Intern, i: Import) !void {
 fn foreignExport(writer: List(u8).Writer, intern: Intern, e: Export) !void {
     try writer.writeAll("\n");
     try indent(writer, 1);
-    const alias = interner.lookup(intern, e.alias);
-    const name = interner.lookup(intern, e.name);
+    const alias = intern.lookup(e.alias);
+    const name = intern.lookup(e.name);
     try writer.print("(export \"{s}\" (func ${s}))", .{ alias, name });
 }
 
