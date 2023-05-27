@@ -65,7 +65,7 @@ pub fn main() !void {
     const wat_string = try neuron.codegen.wat(allocator, intern, ir);
     const t8 = timer.read();
     if (flags.contains("--wat")) {
-        const file_name_no_suffix = file_name[0 .. file_name.len - 5];
+        const file_name_no_suffix = file_name[0 .. file_name.len - 7];
         const file_name_wat = try std.fmt.allocPrint(allocator, "{s}.wat", .{file_name_no_suffix});
         const file = try std.fs.cwd().createFile(file_name_wat, .{});
         try file.writer().writeAll(wat_string);
