@@ -4,6 +4,7 @@ const Allocator = std.mem.Allocator;
 const atom = @import("atom");
 
 const List = std.ArrayList;
+const Flags = std.StringHashMap(void);
 
 fn printTime(writer: std.fs.File.Writer, label: []const u8, time: u64) !void {
     try writer.print("\n{s}: {d:0.07}s", .{
@@ -32,6 +33,8 @@ pub fn main() !void {
     }
 
     const file_name = std.mem.span(std.os.argv[1]);
+    var flags = Flags.init(allocator);
+    for (std.os.argv[2..]) |flag| try flags.putNoClobber(std.mem.span(flag), void{});
     const t1 = timer.read();
     const source = try std.fs.cwd().readFileAlloc(allocator, file_name, std.math.maxInt(usize));
     const t2 = timer.read();
@@ -61,10 +64,12 @@ pub fn main() !void {
     const t7 = timer.read();
     const wat_string = try atom.codegen.wat(allocator, intern, ir);
     const t8 = timer.read();
-    const file_name_no_suffix = file_name[0 .. file_name.len - 5];
-    const file_name_wat = try std.fmt.allocPrint(allocator, "{s}.wat", .{file_name_no_suffix});
-    const file = try std.fs.cwd().createFile(file_name_wat, .{});
-    try file.writer().writeAll(wat_string);
+    if (flags.contains("--wat")) {
+        const file_name_no_suffix = file_name[0 .. file_name.len - 5];
+        const file_name_wat = try std.fmt.allocPrint(allocator, "{s}.wat", .{file_name_no_suffix});
+        const file = try std.fs.cwd().createFile(file_name_wat, .{});
+        try file.writer().writeAll(wat_string);
+    }
     const t9 = timer.read();
     var wat: wasmer.wasm_byte_vec_t = undefined;
     wasmer.wasm_byte_vec_new(&wat, wat_string.len, wat_string.ptr);
@@ -85,7 +90,11 @@ pub fn main() !void {
     if (start_func == null) std.debug.panic("\nError getting start!\n", .{});
     var args_val = [0]wasmer.wasm_val_t{};
     var results_val = List(wasmer.wasm_val_t).init(allocator);
-    const return_type = typed_ast.typed.get(exports[0].name).?.define.value.function.return_type;
+    const exported_define = typed_ast.typed.get(exports[0].name).?.define;
+    const exported_function = exported_define.value.function;
+    if (exported_function.parameters.len != 0)
+        std.debug.panic("\nOnly functions with no parameters supported!\n", .{});
+    const return_type = exported_function.return_type;
     if (return_type != .void) {
         try results_val.append(wasmer.wasm_val_t{
             .kind = wasmer.WASM_ANYREF,
@@ -102,20 +111,22 @@ pub fn main() !void {
     }
     const t11 = timer.read();
     switch (return_type) {
-        .i32 => try writer.print("{}\n", .{results.data[0].of.i32}),
-        .i64 => try writer.print("{}\n", .{results.data[0].of.i64}),
-        .f32 => try writer.print("{}\n", .{results.data[0].of.f32}),
-        .f64 => try writer.print("{}\n", .{results.data[0].of.f64}),
+        .i32 => try writer.print("{}", .{results.data[0].of.i32}),
+        .i64 => try writer.print("{}", .{results.data[0].of.i64}),
+        .f32 => try writer.print("{}", .{results.data[0].of.f32}),
+        .f64 => try writer.print("{}", .{results.data[0].of.f64}),
         else => {},
     }
-    try printTime(writer, "total", t11 - t0);
-    try printTime(writer, "read file", t2 - t1);
-    try printTime(writer, "tokenize", t4 - t3);
-    try printTime(writer, "parse", t5 - t4);
-    try printTime(writer, "type infer", t6 - t5);
-    try printTime(writer, "ir", t7 - t6);
-    try printTime(writer, "codegen", t8 - t7);
-    try printTime(writer, "write wat", t9 - t8);
-    try printTime(writer, "init wasmer", t10 - t9);
-    try printTime(writer, "execute", t11 - t10);
+    if (flags.contains("--timings")) {
+        try printTime(writer, "total", t11 - t0);
+        try printTime(writer, "read file", t2 - t1);
+        try printTime(writer, "tokenize", t4 - t3);
+        try printTime(writer, "parse", t5 - t4);
+        try printTime(writer, "type infer", t6 - t5);
+        try printTime(writer, "ir", t7 - t6);
+        try printTime(writer, "codegen", t8 - t7);
+        try printTime(writer, "write wat", t9 - t8);
+        try printTime(writer, "init wasmer", t10 - t9);
+        try printTime(writer, "execute", t11 - t10);
+    }
 }
