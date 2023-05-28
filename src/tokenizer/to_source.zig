@@ -10,7 +10,6 @@ const types = @import("types.zig");
 const Span = types.Span;
 const Pos = types.Pos;
 const Token = types.Token;
-const tokenSpan = @import("span.zig").span;
 
 fn lines(writer: List(u8).Writer, s: Span, pos: Pos) !void {
     const delta = s.end.line - pos.line;
@@ -32,7 +31,7 @@ pub fn toSource(allocator: Allocator, intern: Intern, tokens: []const Token) ![]
     const writer = list.writer();
     var pos = Pos{ .line = 1, .column = 1 };
     for (tokens) |token| {
-        const current_span = tokenSpan(token);
+        const current_span = token.span();
         try span(writer, current_span, pos);
         pos = current_span.end;
         switch (token) {

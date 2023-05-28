@@ -93,7 +93,7 @@ test "parse grouped greater" {
     const source = "a + (b > c) + d";
     const actual = try neuron.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(+ a (+ (> b c) d))";
+    const expected = "(+ (+ a (> b c)) d)";
     try std.testing.expectEqualStrings(expected, actual);
 }
 

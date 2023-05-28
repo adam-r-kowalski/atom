@@ -9,6 +9,7 @@ const Builtins = @import("../builtins.zig").Builtins;
 const types = @import("types.zig");
 const Pos = types.Pos;
 const Token = types.Token;
+const Tokens = types.Tokens;
 const Span = types.Span;
 
 const Cursor = struct {
@@ -164,7 +165,7 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?Token {
     };
 }
 
-pub fn tokenize(allocator: Allocator, intern: *Intern, builtins: Builtins, source: []const u8) ![]const Token {
+pub fn tokenize(allocator: Allocator, intern: *Intern, builtins: Builtins, source: []const u8) !Tokens {
     var cursor = Cursor{
         .source = source,
         .pos = .{ .line = 1, .column = 1 },
@@ -172,5 +173,8 @@ pub fn tokenize(allocator: Allocator, intern: *Intern, builtins: Builtins, sourc
     var tokens = List(Token).init(allocator);
     while (try nextToken(&cursor, intern, builtins)) |token|
         try tokens.append(token);
-    return tokens.toOwnedSlice();
+    return Tokens{
+        .tokens = try tokens.toOwnedSlice(),
+        .index = 0,
+    };
 }

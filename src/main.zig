@@ -41,15 +41,15 @@ pub fn main() !void {
     var intern = neuron.interner.Intern.init(allocator);
     const builtins = try neuron.Builtins.init(&intern);
     const t3 = timer.read();
-    const tokens = try neuron.tokenizer.tokenize(allocator, &intern, builtins, source);
+    var tokens = try neuron.tokenizer.tokenize(allocator, &intern, builtins, source);
     const t4 = timer.read();
-    const ast = try neuron.parser.parse(allocator, tokens);
+    const ast = try neuron.parser.parse(allocator, &tokens);
     const t5 = timer.read();
     var typed_ast = try neuron.type_checker.infer.module(allocator, builtins, ast);
     var constraints = neuron.type_checker.types.Constraints{
         .equal = List(neuron.type_checker.types.Equal).init(allocator),
     };
-    const start = try neuron.interner.store(&intern, "start");
+    const start = try intern.store("start");
     var next_type_var: neuron.type_checker.types.TypeVar = 0;
     try neuron.type_checker.infer.infer(allocator, &constraints, &typed_ast, builtins, &next_type_var, start);
     const substitution = try neuron.type_checker.solve(allocator, constraints);
@@ -86,7 +86,7 @@ pub fn main() !void {
     wasmer.wasm_instance_exports(instance, &wasm_exports);
     if (wasm_exports.size == 0) std.debug.panic("\nError getting exports!\n", .{});
     if (exports.len != 1 or wasm_exports.size != exports.len) std.debug.panic("\nOnly one export supported!\n", .{});
-    const start_func = wasmer.wasm_extern_as_func(wasm_exports.data[0]);
+    const start_func = wasmer.wasm_extern_as_func(start);
     if (start_func == null) std.debug.panic("\nError getting start!\n", .{});
     var args_val = [0]wasmer.wasm_val_t{};
     var results_val = List(wasmer.wasm_val_t).init(allocator);
