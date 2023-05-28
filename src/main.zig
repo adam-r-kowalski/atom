@@ -52,12 +52,12 @@ pub fn main() !void {
     const substitution = try constraints.solve(allocator);
     ast.apply(substitution);
     const t6 = timer.read();
-    var ir = try neuron.lower.types.buildIr(allocator, builtins, ast);
+    var ir = try neuron.lower.buildIr(allocator, builtins, ast);
     const start = try intern.store("start");
     const alias = try intern.store("_start");
-    const exports = try allocator.alloc(neuron.lower.types.Export, ir.exports.len + 1);
-    std.mem.copy(neuron.lower.types.Export, exports, ir.exports);
-    exports[ir.exports.len] = neuron.lower.types.Export{ .name = start, .alias = alias };
+    const exports = try allocator.alloc(neuron.lower.Export, ir.exports.len + 1);
+    std.mem.copy(neuron.lower.Export, exports, ir.exports);
+    exports[ir.exports.len] = neuron.lower.Export{ .name = start, .alias = alias };
     ir.exports = exports;
     const t7 = timer.read();
     const wat_string = try neuron.codegen.wat(allocator, intern, ir);
