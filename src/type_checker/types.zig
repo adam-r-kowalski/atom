@@ -3,10 +3,10 @@ const Map = std.AutoHashMap;
 const List = std.ArrayList;
 const interner = @import("../interner.zig");
 const Interned = interner.Interned;
-const parser_types = @import("../parser/types.zig");
-const Span = parser_types.Span;
-const BinaryOpKind = parser_types.BinaryOpKind;
-const UntypedExpression = parser_types.Expression;
+const parser = @import("../parser.zig");
+const Span = parser.Span;
+const BinaryOpKind = parser.BinaryOpKind;
+const UntypedExpression = parser.Expression;
 
 pub const TypeVar = u64;
 

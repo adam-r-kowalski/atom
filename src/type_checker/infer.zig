@@ -4,8 +4,8 @@ const List = std.ArrayList;
 const Map = std.AutoArrayHashMap;
 
 const Interned = @import("../interner.zig").Interned;
-const parser_types = @import("../parser/types.zig");
-const Span = parser_types.Span;
+const parser = @import("../parser.zig");
+const Span = parser.Span;
 const types = @import("types.zig");
 const Int = types.Int;
 const Float = types.Float;
@@ -34,7 +34,7 @@ const Equal = types.Equal;
 const Builtins = @import("../builtins.zig").Builtins;
 const typeOf = @import("type_of.zig").typeOf;
 
-fn topLevelFunction(allocator: Allocator, builtins: Builtins, f: parser_types.Function) !MonoType {
+fn topLevelFunction(allocator: Allocator, builtins: Builtins, f: parser.Function) !MonoType {
     const len = f.parameters.len;
     const function_type = try allocator.alloc(MonoType, len + 1);
     for (f.parameters, function_type[0..len]) |p, *t|
@@ -43,7 +43,7 @@ fn topLevelFunction(allocator: Allocator, builtins: Builtins, f: parser_types.Fu
     return MonoType{ .function = function_type };
 }
 
-fn topLevelCall(allocator: Allocator, builtins: Builtins, c: parser_types.Call) !MonoType {
+fn topLevelCall(allocator: Allocator, builtins: Builtins, c: parser.Call) !MonoType {
     switch (c.function.*) {
         .symbol => |s| {
             if (s.value == builtins.foreign_import) {
@@ -56,7 +56,7 @@ fn topLevelCall(allocator: Allocator, builtins: Builtins, c: parser_types.Call) 
     std.debug.panic("\nInvalid top level call {}", .{c.function});
 }
 
-pub fn topLevelType(allocator: Allocator, builtins: Builtins, e: parser_types.Expression) !MonoType {
+pub fn topLevelType(allocator: Allocator, builtins: Builtins, e: parser.Expression) !MonoType {
     return switch (e) {
         .function => |f| try topLevelFunction(allocator, builtins, f),
         .call => |c| try topLevelCall(allocator, builtins, c),
@@ -64,7 +64,7 @@ pub fn topLevelType(allocator: Allocator, builtins: Builtins, e: parser_types.Ex
     };
 }
 
-pub fn module(allocator: Allocator, builtins: Builtins, m: parser_types.Ast) !Module {
+pub fn module(allocator: Allocator, builtins: Builtins, m: parser.Ast) !Module {
     var order = List(Interned).init(allocator);
     var untyped = Untyped.init(allocator);
     var typed = Typed.init(allocator);
@@ -89,7 +89,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: parser_types.Ast) !Mo
     };
 }
 
-fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: parser_types.Expression) !MonoType {
+fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: parser.Expression) !MonoType {
     switch (e) {
         .symbol => |s| {
             if (s.value == builtins.i32) return .i32;
@@ -144,11 +144,11 @@ fn findInScope(scopes: Scopes, work_queue: *WorkQueue, name: Interned) !MonoType
     std.debug.panic("\nCould not find {} in scopes", .{name});
 }
 
-fn returnType(builtins: Builtins, next_type_var: *TypeVar, f: parser_types.Function) MonoType {
+fn returnType(builtins: Builtins, next_type_var: *TypeVar, f: parser.Function) MonoType {
     return if (f.return_type) |t| expressionToMonoType(t.*, builtins) else freshTypeVar(next_type_var);
 }
 
-fn symbol(scopes: Scopes, work_queue: *WorkQueue, s: parser_types.Symbol) !Symbol {
+fn symbol(scopes: Scopes, work_queue: *WorkQueue, s: parser.Symbol) !Symbol {
     return Symbol{
         .value = s.value,
         .span = s.span,
@@ -156,7 +156,7 @@ fn symbol(scopes: Scopes, work_queue: *WorkQueue, s: parser_types.Symbol) !Symbo
     };
 }
 
-fn int(i: parser_types.Int, next_type_var: *TypeVar) Int {
+fn int(i: parser.Int, next_type_var: *TypeVar) Int {
     return Int{
         .value = i.value,
         .span = i.span,
@@ -164,7 +164,7 @@ fn int(i: parser_types.Int, next_type_var: *TypeVar) Int {
     };
 }
 
-fn float(f: parser_types.Float, next_type_var: *TypeVar) Float {
+fn float(f: parser.Float, next_type_var: *TypeVar) Float {
     return Float{
         .value = f.value,
         .span = f.span,
@@ -172,7 +172,7 @@ fn float(f: parser_types.Float, next_type_var: *TypeVar) Float {
     };
 }
 
-fn string(s: parser_types.String) String {
+fn string(s: parser.String) String {
     return String{
         .value = s.value,
         .span = s.span,
@@ -180,7 +180,7 @@ fn string(s: parser_types.String) String {
     };
 }
 
-fn boolean(b: parser_types.Bool) Bool {
+fn boolean(b: parser.Bool) Bool {
     return Bool{
         .value = b.value,
         .span = b.span,
@@ -197,7 +197,7 @@ const Context = struct {
     next_type_var: *TypeVar,
 };
 
-fn ifElse(context: Context, i: parser_types.If) !If {
+fn ifElse(context: Context, i: parser.If) !If {
     const condition = try expressionAlloc(context, i.condition.*);
     const then = try block(context, i.then);
     const else_ = try block(context, i.else_);
@@ -216,7 +216,7 @@ fn ifElse(context: Context, i: parser_types.If) !If {
     };
 }
 
-fn cond(context: Context, c: parser_types.Cond) !Cond {
+fn cond(context: Context, c: parser.Cond) !Cond {
     const conditions = try context.allocator.alloc(Expression, c.conditions.len);
     const thens = try context.allocator.alloc(Block, c.thens.len);
     const type_ = freshTypeVar(context.next_type_var);
@@ -239,13 +239,13 @@ fn cond(context: Context, c: parser_types.Cond) !Cond {
     };
 }
 
-fn dotCall(context: Context, b: parser_types.BinaryOp) !Expression {
+fn dotCall(context: Context, b: parser.BinaryOp) !Expression {
     switch (b.right.*) {
         .call => |c| {
-            const arguments = try context.allocator.alloc(parser_types.Expression, c.arguments.len + 1);
+            const arguments = try context.allocator.alloc(parser.Expression, c.arguments.len + 1);
             arguments[0] = b.left.*;
             @memcpy(arguments[1..], c.arguments);
-            const new_call = parser_types.Call{
+            const new_call = parser.Call{
                 .function = c.function,
                 .arguments = arguments,
                 .span = b.span,
@@ -256,7 +256,7 @@ fn dotCall(context: Context, b: parser_types.BinaryOp) !Expression {
     }
 }
 
-fn binaryOp(context: Context, b: parser_types.BinaryOp) !Expression {
+fn binaryOp(context: Context, b: parser.BinaryOp) !Expression {
     switch (b.kind) {
         .dot => return dotCall(context, b),
         .equal, .greater, .less => {
@@ -294,11 +294,11 @@ fn binaryOp(context: Context, b: parser_types.BinaryOp) !Expression {
     }
 }
 
-fn explicitTypeOrVar(allocator: Allocator, builtins: Builtins, next_type_var: *TypeVar, e: ?*const parser_types.Expression) !MonoType {
+fn explicitTypeOrVar(allocator: Allocator, builtins: Builtins, next_type_var: *TypeVar, e: ?*const parser.Expression) !MonoType {
     return if (e) |t| try expressionToMonoType(allocator, builtins, t.*) else freshTypeVar(next_type_var);
 }
 
-fn define(context: Context, d: parser_types.Define) !Define {
+fn define(context: Context, d: parser.Define) !Define {
     const value = try expressionAlloc(context, d.value.*);
     const type_ = try explicitTypeOrVar(context.allocator, context.builtins, context.next_type_var, d.type);
     try context.constraints.equal.append(.{ .left = typeOf(value.*), .right = type_ });
@@ -316,7 +316,7 @@ fn define(context: Context, d: parser_types.Define) !Define {
     };
 }
 
-fn callForeignImport(context: Context, c: parser_types.Call) !Expression {
+fn callForeignImport(context: Context, c: parser.Call) !Expression {
     if (c.arguments.len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
     const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[2]);
     return Expression{
@@ -329,7 +329,7 @@ fn callForeignImport(context: Context, c: parser_types.Call) !Expression {
     };
 }
 
-fn callConvert(context: Context, c: parser_types.Call) !Expression {
+fn callConvert(context: Context, c: parser.Call) !Expression {
     if (c.arguments.len != 2) std.debug.panic("convert takes 2 arguments", .{});
     const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[1]);
     return Expression{
@@ -341,7 +341,7 @@ fn callConvert(context: Context, c: parser_types.Call) !Expression {
     };
 }
 
-fn callSqrt(context: Context, c: parser_types.Call) !Expression {
+fn callSqrt(context: Context, c: parser.Call) !Expression {
     if (c.arguments.len != 1) std.debug.panic("sqrt takes 1 arguments", .{});
     const arguments = try context.allocator.alloc(Expression, 1);
     arguments[0] = try expression(context, c.arguments[0]);
@@ -355,7 +355,7 @@ fn callSqrt(context: Context, c: parser_types.Call) !Expression {
     };
 }
 
-fn call(context: Context, c: parser_types.Call) !Expression {
+fn call(context: Context, c: parser.Call) !Expression {
     switch (c.function.*) {
         .symbol => |s| {
             const len = c.arguments.len;
@@ -388,7 +388,7 @@ fn call(context: Context, c: parser_types.Call) !Expression {
     }
 }
 
-fn function(context: Context, f: parser_types.Function) !Function {
+fn function(context: Context, f: parser.Function) !Function {
     try pushScope(context.scopes);
     defer popScope(context.scopes);
     const len = f.parameters.len;
@@ -422,7 +422,7 @@ fn function(context: Context, f: parser_types.Function) !Function {
     };
 }
 
-fn block(context: Context, b: parser_types.Block) !Block {
+fn block(context: Context, b: parser.Block) !Block {
     const len = b.expressions.len;
     const expressions = try context.allocator.alloc(Expression, len);
     for (b.expressions, expressions) |untyped_e, *typed_e|
@@ -435,7 +435,7 @@ fn block(context: Context, b: parser_types.Block) !Block {
     };
 }
 
-fn expression(context: Context, e: parser_types.Expression) error{OutOfMemory}!Expression {
+fn expression(context: Context, e: parser.Expression) error{OutOfMemory}!Expression {
     switch (e) {
         .int => |i| return .{ .int = int(i, context.next_type_var) },
         .float => |f| return .{ .float = float(f, context.next_type_var) },
@@ -459,7 +459,7 @@ fn alloc(allocator: Allocator, expr: Expression) !*const Expression {
     return result;
 }
 
-fn expressionAlloc(context: Context, expr: parser_types.Expression) !*const Expression {
+fn expressionAlloc(context: Context, expr: parser.Expression) !*const Expression {
     return try alloc(context.allocator, try expression(context, expr));
 }
 
