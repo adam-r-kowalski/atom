@@ -261,6 +261,14 @@ pub const Constraints = struct {
             .equal = List(Equal).init(allocator),
         };
     }
+
+    pub fn solve(self: Constraints, allocator: Allocator) !Substitution {
+        var substitution = Substitution.init(allocator);
+        for (self.equal.items) |e| try equal(&substitution, e);
+        var max_attemps: u64 = 3;
+        while (simplify(&substitution) > 0 and max_attemps != 0) : (max_attemps -= 1) {}
+        return substitution;
+    }
 };
 
 fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: parser.Expression) !MonoType {
@@ -665,4 +673,59 @@ fn alloc(allocator: Allocator, expr: Expression) !*const Expression {
 
 fn expressionAlloc(context: Context, expr: parser.Expression) !*const Expression {
     return try alloc(context.allocator, try expression(context, expr));
+}
+
+fn set(substitution: *Substitution, t: TypeVar, m: MonoType) !void {
+    const result = try substitution.getOrPut(t);
+    if (result.found_existing) {
+        if (std.meta.eql(result.value_ptr.*, m)) return;
+        switch (m) {
+            .typevar => |t1| try set(substitution, t1, result.value_ptr.*),
+            else => switch (result.value_ptr.*) {
+                .typevar => |t1| try set(substitution, t1, m),
+                else => std.debug.panic("\nType mismatch: {} != {}\n", .{ result.value_ptr.*, m }),
+            },
+        }
+    }
+    result.value_ptr.* = m;
+}
+
+fn equal(substitution: *Substitution, e: Equal) !void {
+    const left_tag = std.meta.activeTag(e.left);
+    const right_tag = std.meta.activeTag(e.right);
+    if (left_tag == .typevar)
+        return try set(substitution, e.left.typevar, e.right);
+    if (right_tag == .typevar)
+        return try set(substitution, e.right.typevar, e.left);
+    if (left_tag == .function and right_tag == .function) {
+        if (e.left.function.len != e.right.function.len)
+            std.debug.panic("\nFunction arity mismatch: {} != {}\n", .{
+                e.left.function.len,
+                e.right.function.len,
+            });
+        for (e.left.function, 0..) |left, i| {
+            const right = e.right.function[i];
+            try equal(substitution, Equal{ .left = left, .right = right });
+        }
+    }
+    if (left_tag == right_tag)
+        return;
+    std.debug.panic("\nUnsupported type in equal: {} {}\n", .{ e.left, e.right });
+}
+
+fn simplify(substitution: *Substitution) u64 {
+    var count: u64 = 0;
+    var iterator = substitution.iterator();
+    while (iterator.next()) |entry| {
+        switch (entry.value_ptr.*) {
+            .typevar => |t| {
+                if (substitution.get(t)) |v| {
+                    entry.value_ptr.* = v;
+                    count += 1;
+                }
+            },
+            else => {},
+        }
+    }
+    return count;
 }

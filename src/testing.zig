@@ -47,7 +47,7 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     var next_type_var: type_checker.types.TypeVar = 0;
     var ast = try type_checker.types.Ast.init(arena.allocator(), &constraints, &next_type_var, builtins, untyped_ast);
     try ast.infer(name);
-    const substitution = try type_checker.solve(arena.allocator(), constraints);
+    const substitution = try constraints.solve(arena.allocator());
     const typed_module = try type_checker.apply(arena.allocator(), substitution, ast);
     var list = List(u8).init(allocator);
     const writer = list.writer();
@@ -89,7 +89,7 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     var next_type_var: type_checker.types.TypeVar = 0;
     var ast = try type_checker.types.Ast.init(arena.allocator(), &constraints, &next_type_var, builtins, untyped_ast);
     try ast.infer("start");
-    const substitution = try type_checker.solve(arena.allocator(), constraints);
+    const substitution = try constraints.solve(arena.allocator());
     const typed_module = try type_checker.apply(arena.allocator(), substitution, ast);
     var ir = try lower.buildIr(arena.allocator(), builtins, typed_module);
     const start = try intern.store("start");
