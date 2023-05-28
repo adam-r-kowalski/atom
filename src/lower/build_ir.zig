@@ -19,7 +19,6 @@ const Interned = interner.Interned;
 const type_checker_types = @import("../type_checker/types.zig");
 const Ast = type_checker_types.Ast;
 const MonoType = type_checker_types.MonoType;
-const typeOf = @import("../type_checker/type_of.zig").typeOf;
 
 fn mapType(monotype: MonoType) Type {
     switch (monotype) {
@@ -67,7 +66,7 @@ fn block(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type
 fn add(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
-    switch (typeOf(b.left.*)) {
+    switch (b.left.typeOf()) {
         .i32 => return Expression{ .i32_add = .{ .left = left, .right = right } },
         .i64 => return Expression{ .i64_add = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_add = .{ .left = left, .right = right } },
@@ -79,7 +78,7 @@ fn add(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_c
 fn subtract(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
-    switch (typeOf(b.left.*)) {
+    switch (b.left.typeOf()) {
         .i32 => return Expression{ .i32_sub = .{ .left = left, .right = right } },
         .i64 => return Expression{ .i64_sub = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_sub = .{ .left = left, .right = right } },
@@ -91,7 +90,7 @@ fn subtract(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
 fn multiply(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
-    switch (typeOf(b.left.*)) {
+    switch (b.left.typeOf()) {
         .i32 => return Expression{ .i32_mul = .{ .left = left, .right = right } },
         .i64 => return Expression{ .i64_mul = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_mul = .{ .left = left, .right = right } },
@@ -103,7 +102,7 @@ fn multiply(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
 fn divide(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
-    switch (typeOf(b.left.*)) {
+    switch (b.left.typeOf()) {
         .i32 => return Expression{ .i32_div_s = .{ .left = left, .right = right } },
         .i64 => return Expression{ .i64_div_s = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_div = .{ .left = left, .right = right } },
@@ -115,7 +114,7 @@ fn divide(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: typ
 fn modulo(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
-    switch (typeOf(b.left.*)) {
+    switch (b.left.typeOf()) {
         .i32 => return Expression{ .i32_rem_s = .{ .left = left, .right = right } },
         .i64 => return Expression{ .i64_rem_s = .{ .left = left, .right = right } },
         else => |k| std.debug.panic("\nModulo type {} not yet supported", .{k}),
@@ -125,7 +124,7 @@ fn modulo(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: typ
 fn equal(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
-    switch (typeOf(b.left.*)) {
+    switch (b.left.typeOf()) {
         .i32 => return Expression{ .i32_eq = .{ .left = left, .right = right } },
         .i64 => return Expression{ .i64_eq = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_eq = .{ .left = left, .right = right } },
@@ -137,7 +136,7 @@ fn equal(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type
 fn binaryOr(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
-    switch (typeOf(b.left.*)) {
+    switch (b.left.typeOf()) {
         .bool => return Expression{ .i32_or = .{ .left = left, .right = right } },
         else => |k| std.debug.panic("\nOr type {} not yet supported", .{k}),
     }
@@ -146,7 +145,7 @@ fn binaryOr(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
 fn greater(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
-    switch (typeOf(b.left.*)) {
+    switch (b.left.typeOf()) {
         .i32 => return Expression{ .i32_gt_s = .{ .left = left, .right = right } },
         .i64 => return Expression{ .i64_gt_s = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_gt = .{ .left = left, .right = right } },
@@ -158,7 +157,7 @@ fn greater(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: ty
 fn less(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker_types.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
-    switch (typeOf(b.left.*)) {
+    switch (b.left.typeOf()) {
         .i32 => return Expression{ .i32_lt_s = .{ .left = left, .right = right } },
         .i64 => return Expression{ .i64_lt_s = .{ .left = left, .right = right } },
         .f32 => return Expression{ .f32_lt = .{ .left = left, .right = right } },
@@ -264,7 +263,7 @@ fn define(allocator: Allocator, builtins: Builtins, locals: *List(Local), d: typ
 
 fn convert(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: type_checker_types.Convert) !Expression {
     const value = try expressionAlloc(allocator, builtins, locals, c.value.*);
-    switch (typeOf(c.value.*)) {
+    switch (c.value.typeOf()) {
         .i32 => switch (c.type) {
             .f32 => return Expression{ .f32_convert_i32_s = value },
             else => |k| std.debug.panic("\nConvert type i32 to {} not yet supported", .{k}),
