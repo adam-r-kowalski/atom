@@ -100,6 +100,25 @@ pub const Expression = union(enum) {
     if_else: If,
     cond: Cond,
     call: Call,
+
+    pub fn span(self: Expression) Span {
+        return switch (self) {
+            .int => |e| e.span,
+            .float => |e| e.span,
+            .symbol => |e| e.span,
+            .string => |e| e.span,
+            .bool => |e| e.span,
+            .define => |e| e.span,
+            .function => |e| e.span,
+            .prototype => |e| e.span,
+            .binary_op => |e| e.span,
+            .group => |e| e.span,
+            .block => |e| e.span,
+            .if_else => |e| e.span,
+            .cond => |e| e.span,
+            .call => |e| e.span,
+        };
+    }
 };
 
 pub const Module = struct {

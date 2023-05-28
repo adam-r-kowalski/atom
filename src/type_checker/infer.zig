@@ -32,7 +32,6 @@ const Define = types.Define;
 const Call = types.Call;
 const Equal = types.Equal;
 const Builtins = @import("../builtins.zig").Builtins;
-const parserSpanOf = @import("../parser/span.zig").span;
 const typeOf = @import("type_of.zig").typeOf;
 
 fn topLevelFunction(allocator: Allocator, builtins: Builtins, f: parser_types.Function) !MonoType {
@@ -400,7 +399,7 @@ fn function(context: Context, f: parser_types.Function) !Function {
         const p_type = try expressionToMonoType(context.allocator, context.builtins, untyped_p.type);
         const span = Span{
             .begin = untyped_p.name.span.begin,
-            .end = parserSpanOf(untyped_p.type).end,
+            .end = untyped_p.type.span().end,
         };
         typed_p.* = Symbol{
             .value = name_symbol,

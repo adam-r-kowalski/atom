@@ -29,7 +29,6 @@ const BinaryOp = types.BinaryOp;
 const Symbol = types.Symbol;
 const Call = types.Call;
 const Module = types.Module;
-const expressionSpan = @import("span.zig").span;
 
 const Precedence = u32;
 
@@ -237,7 +236,7 @@ fn function(context: Context, fn_: FnToken) !Expression {
             };
         }
     }
-    const end = expressionSpan(return_type.*).end;
+    const end = return_type.span().end;
     return Expression{
         .prototype = .{
             .parameters = parameters,
@@ -276,7 +275,7 @@ fn define(context: Context, name: Symbol) !Define {
         .value = value,
         .span = Span{
             .begin = name.span.begin,
-            .end = expressionSpan(value.*).end,
+            .end = value.span().end,
         },
     };
 }
@@ -292,7 +291,7 @@ fn annotate(context: Context, name: Symbol) !Define {
         .value = value,
         .span = Span{
             .begin = name.span.begin,
-            .end = expressionSpan(value.*).end,
+            .end = value.span().end,
         },
     };
 }
@@ -305,8 +304,8 @@ fn binaryOp(context: Context, left: Expression, kind: BinaryOpKind) !BinaryOp {
         .left = try alloc(context, left),
         .right = right,
         .span = Span{
-            .begin = expressionSpan(left).begin,
-            .end = expressionSpan(right.*).end,
+            .begin = left.span().begin,
+            .end = right.span().end,
         },
     };
 }
@@ -327,7 +326,7 @@ fn call(context: Context, left: Expression) !Call {
     return Call{
         .function = try alloc(context, left),
         .arguments = try arguments.toOwnedSlice(),
-        .span = Span{ .begin = expressionSpan(left).begin, .end = end },
+        .span = Span{ .begin = left.span().begin, .end = end },
     };
 }
 
