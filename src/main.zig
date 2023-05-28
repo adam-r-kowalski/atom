@@ -56,7 +56,7 @@ pub fn main() !void {
     typed_ast = try neuron.type_checker.apply(allocator, substitution, typed_ast);
     const t6 = timer.read();
     var ir = try neuron.lower.buildIr(allocator, builtins, typed_ast);
-    const alias = try neuron.interner.store(&intern, "_start");
+    const alias = try intern.store("_start");
     const exports = try allocator.alloc(neuron.lower.types.Export, ir.exports.len + 1);
     std.mem.copy(neuron.lower.types.Export, exports, ir.exports);
     exports[ir.exports.len] = neuron.lower.types.Export{ .name = start, .alias = alias };
@@ -86,11 +86,11 @@ pub fn main() !void {
     wasmer.wasm_instance_exports(instance, &wasm_exports);
     if (wasm_exports.size == 0) std.debug.panic("\nError getting exports!\n", .{});
     if (exports.len != 1 or wasm_exports.size != exports.len) std.debug.panic("\nOnly one export supported!\n", .{});
-    const start_func = wasmer.wasm_extern_as_func(start);
+    const start_func = wasmer.wasm_extern_as_func(wasm_exports.data[0]);
     if (start_func == null) std.debug.panic("\nError getting start!\n", .{});
     var args_val = [0]wasmer.wasm_val_t{};
     var results_val = List(wasmer.wasm_val_t).init(allocator);
-    const exported_define = typed_ast.typed.get(exports[0].name).?.define;
+    const exported_define = typed_ast.typed.get(start).?.define;
     const exported_function = exported_define.value.function;
     if (exported_function.parameters.len != 0)
         std.debug.panic("\nOnly functions with no parameters supported!\n", .{});
