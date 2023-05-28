@@ -52,7 +52,7 @@ pub fn main() !void {
     const substitution = try constraints.solve(allocator);
     ast.apply(substitution);
     const t6 = timer.read();
-    var ir = try neuron.lower.buildIr(allocator, builtins, ast);
+    var ir = try neuron.lower.types.buildIr(allocator, builtins, ast);
     const start = try intern.store("start");
     const alias = try intern.store("_start");
     const exports = try allocator.alloc(neuron.lower.types.Export, ir.exports.len + 1);

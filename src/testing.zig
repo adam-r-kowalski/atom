@@ -91,9 +91,9 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     var ir = try lower.buildIr(arena.allocator(), builtins, ast);
     const start = try intern.store("start");
     const alias = try intern.store("_start");
-    const exports = try arena.allocator().alloc(lower.types.Export, ir.exports.len + 1);
-    std.mem.copy(lower.types.Export, exports, ir.exports);
-    exports[ir.exports.len] = lower.types.Export{ .name = start, .alias = alias };
+    const exports = try arena.allocator().alloc(lower.Export, ir.exports.len + 1);
+    std.mem.copy(lower.Export, exports, ir.exports);
+    exports[ir.exports.len] = lower.Export{ .name = start, .alias = alias };
     ir.exports = exports;
     return try wat(allocator, intern, ir);
 }
