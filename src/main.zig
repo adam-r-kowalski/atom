@@ -50,7 +50,7 @@ pub fn main() !void {
     var ast = try neuron.type_checker.types.Ast.init(arena.allocator(), &constraints, &next_type_var, builtins, untyped_ast);
     try ast.infer("start");
     const substitution = try constraints.solve(allocator);
-    ast = try neuron.type_checker.apply(allocator, substitution, ast);
+    ast.apply(substitution);
     const t6 = timer.read();
     var ir = try neuron.lower.buildIr(allocator, builtins, ast);
     const start = try intern.store("start");

@@ -97,7 +97,7 @@ test "parse grouped greater" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "type infer add i32" {
+test "type infer add i32 boo" {
     const allocator = std.testing.allocator;
     const source = "add = fn(x: i32, y: i32) i32 { x + y }";
     const actual = try neuron.testing.typeInfer(allocator, source, "add");

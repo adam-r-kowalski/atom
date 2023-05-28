@@ -23,25 +23,47 @@ pub const MonoType = union(enum) {
     bool,
     str,
     typevar: TypeVar,
-    function: []const MonoType,
+    function: []MonoType,
+
+    fn apply(self: *MonoType, s: Substitution) void {
+        switch (self.*) {
+            .function => |f| for (f) |*t| t.apply(s),
+            .typevar => |t| {
+                if (s.get(t)) |mono| self.* = mono;
+            },
+            else => return,
+        }
+    }
 };
 
 pub const Int = struct {
     value: Interned,
     span: Span,
     type: MonoType,
+
+    fn apply(self: *Int, s: Substitution) void {
+        self.type.apply(s);
+    }
 };
 
 pub const Float = struct {
     value: Interned,
     span: Span,
     type: MonoType,
+
+    fn apply(self: *Float, s: Substitution) void {
+        self.type.apply(s);
+    }
 };
 
 pub const Symbol = struct {
     value: Interned,
     span: Span,
     type: MonoType,
+
+    fn apply(self: *Symbol, s: Substitution) void {
+        self.type.apply(s);
+    }
 };
 
 pub const Bool = struct {
@@ -58,65 +80,116 @@ pub const String = struct {
 
 pub const Define = struct {
     name: Symbol,
-    value: *const Expression,
+    value: *Expression,
     span: Span,
     type: MonoType,
+
+    fn apply(self: *Define, s: Substitution) void {
+        self.name.apply(s);
+        self.value.apply(s);
+        self.type.apply(s);
+    }
 };
 
 pub const Block = struct {
-    expressions: []const Expression,
+    expressions: []Expression,
     span: Span,
     type: MonoType,
+
+    fn apply(self: *Block, s: Substitution) void {
+        for (self.expressions) |*e| e.apply(s);
+        self.type.apply(s);
+    }
 };
 
 pub const Function = struct {
-    parameters: []const Symbol,
+    parameters: []Symbol,
     return_type: MonoType,
     body: Block,
     span: Span,
     type: MonoType,
+
+    fn apply(self: *Function, s: Substitution) void {
+        for (self.parameters) |*p| p.apply(s);
+        self.return_type.apply(s);
+        self.body.apply(s);
+        self.type.apply(s);
+    }
 };
 
 pub const BinaryOp = struct {
     kind: BinaryOpKind,
-    left: *const Expression,
-    right: *const Expression,
+    left: *Expression,
+    right: *Expression,
     span: Span,
     type: MonoType,
+
+    fn apply(self: *BinaryOp, s: Substitution) void {
+        self.left.apply(s);
+        self.right.apply(s);
+        self.type.apply(s);
+    }
 };
 
 pub const If = struct {
-    condition: *const Expression,
+    condition: *Expression,
     then: Block,
     else_: Block,
     span: Span,
     type: MonoType,
+
+    fn apply(self: *If, s: Substitution) void {
+        self.condition.apply(s);
+        self.then.apply(s);
+        self.else_.apply(s);
+        self.type.apply(s);
+    }
 };
 
 pub const Cond = struct {
-    conditions: []const Expression,
-    thens: []const Block,
+    conditions: []Expression,
+    thens: []Block,
     else_: Block,
     span: Span,
     type: MonoType,
+
+    fn apply(self: *Cond, s: Substitution) void {
+        for (self.conditions, self.thens) |*c, *t| {
+            c.apply(s);
+            t.apply(s);
+        }
+        self.else_.apply(s);
+        self.type.apply(s);
+    }
 };
 
 pub const Call = struct {
-    function: *const Expression,
-    arguments: []const Expression,
+    function: *Expression,
+    arguments: []Expression,
     span: Span,
     type: MonoType,
+
+    fn apply(self: *Call, s: Substitution) void {
+        self.function.apply(s);
+        for (self.arguments) |*a| a.apply(s);
+        self.type.apply(s);
+    }
 };
 
 pub const Intrinsic = struct {
     function: Interned,
-    arguments: []const Expression,
+    arguments: []Expression,
     span: Span,
     type: MonoType,
+
+    fn apply(self: *Intrinsic, s: Substitution) void {
+        for (self.arguments) |*a| a.apply(s);
+        self.type.apply(s);
+    }
 };
 
 pub const Group = struct {
-    expressions: []const Expression,
+    expressions: []Expression,
     span: Span,
     type: MonoType,
 };
@@ -129,7 +202,7 @@ pub const ForeignImport = struct {
 };
 
 pub const Convert = struct {
-    value: *const Expression,
+    value: *Expression,
     span: Span,
     type: MonoType,
 };
@@ -171,6 +244,27 @@ pub const Expression = union(enum) {
             .foreign_import => |f| f.type,
             .convert => |c| c.type,
         };
+    }
+
+    fn apply(self: *Expression, s: Substitution) void {
+        switch (self.*) {
+            .symbol => |*sym| sym.apply(s),
+            .int => |*i| i.apply(s),
+            .float => |*f| f.apply(s),
+            .bool => return,
+            .string => return,
+            .if_else => |*i| i.apply(s),
+            .cond => |*c| c.apply(s),
+            .binary_op => |*b| b.apply(s),
+            .define => |*d| d.apply(s),
+            .call => |*c| c.apply(s),
+            .intrinsic => |*i| i.apply(s),
+            .function => |*f| f.apply(s),
+            .block => |*b| b.apply(s),
+            .foreign_import => return,
+            .convert => return,
+            else => |k| std.debug.panic("\nUnsupported expression {}", .{k}),
+        }
     }
 };
 
@@ -239,6 +333,11 @@ pub const Ast = struct {
                 try self.typed.putNoClobber(current, expr);
             }
         }
+    }
+
+    pub fn apply(self: *Ast, s: Substitution) void {
+        var iterator = self.typed.valueIterator();
+        while (iterator.next()) |value_ptr| value_ptr.apply(s);
     }
 };
 
@@ -665,13 +764,13 @@ fn expression(context: Context, e: parser.Expression) error{OutOfMemory}!Express
     }
 }
 
-fn alloc(allocator: Allocator, expr: Expression) !*const Expression {
+fn alloc(allocator: Allocator, expr: Expression) !*Expression {
     const result = try allocator.create(Expression);
     result.* = expr;
     return result;
 }
 
-fn expressionAlloc(context: Context, expr: parser.Expression) !*const Expression {
+fn expressionAlloc(context: Context, expr: parser.Expression) !*Expression {
     return try alloc(context.allocator, try expression(context, expr));
 }
 
