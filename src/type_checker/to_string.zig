@@ -5,7 +5,7 @@ const List = std.ArrayList;
 const interner = @import("../interner.zig");
 const Intern = interner.Intern;
 const types = @import("types.zig");
-const Module = types.Module;
+const Ast = types.Ast;
 const TopLevel = types.TopLevel;
 const Symbol = types.Symbol;
 const Int = types.Int;
@@ -268,7 +268,7 @@ fn expression(writer: List(u8).Writer, intern: Intern, e: Expression, in: Indent
     }
 }
 
-pub fn toString(writer: List(u8).Writer, intern: Intern, m: Module) !void {
+pub fn toString(writer: List(u8).Writer, intern: Intern, m: Ast) !void {
     for (m.order, 0..) |name, i| {
         if (m.typed.get(name)) |e| {
             if (i > 0) try writer.writeAll("\n\n");

@@ -17,7 +17,7 @@ const interner = @import("../interner.zig");
 const Intern = interner.Intern;
 const Interned = interner.Interned;
 const type_checker_types = @import("../type_checker/types.zig");
-const Module = type_checker_types.Module;
+const Ast = type_checker_types.Ast;
 const MonoType = type_checker_types.MonoType;
 const typeOf = @import("../type_checker/type_of.zig").typeOf;
 
@@ -344,7 +344,7 @@ fn foreignImport(allocator: Allocator, name: Interned, i: type_checker_types.For
     }
 }
 
-pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
+pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Ast) !IR {
     var functions = std.ArrayList(Function).init(allocator);
     var imports = std.ArrayList(Import).init(allocator);
     for (module.order) |name| {

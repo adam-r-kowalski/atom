@@ -12,7 +12,7 @@ const Float = types.Float;
 const Bool = types.Bool;
 const String = types.String;
 const Symbol = types.Symbol;
-const Module = types.Module;
+const Ast = types.Ast;
 const Untyped = types.Untyped;
 const Typed = types.Typed;
 const Scope = types.Scope;
@@ -33,61 +33,6 @@ const Call = types.Call;
 const Equal = types.Equal;
 const Builtins = @import("../builtins.zig").Builtins;
 const typeOf = @import("type_of.zig").typeOf;
-
-fn topLevelFunction(allocator: Allocator, builtins: Builtins, f: parser.Function) !MonoType {
-    const len = f.parameters.len;
-    const function_type = try allocator.alloc(MonoType, len + 1);
-    for (f.parameters, function_type[0..len]) |p, *t|
-        t.* = try expressionToMonoType(allocator, builtins, p.type);
-    function_type[len] = try expressionToMonoType(allocator, builtins, f.return_type.*);
-    return MonoType{ .function = function_type };
-}
-
-fn topLevelCall(allocator: Allocator, builtins: Builtins, c: parser.Call) !MonoType {
-    switch (c.function.*) {
-        .symbol => |s| {
-            if (s.value == builtins.foreign_import) {
-                if (c.arguments.len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
-                return try expressionToMonoType(allocator, builtins, c.arguments[2]);
-            }
-        },
-        else => |k| std.debug.panic("\nInvalid top level call function {}", .{k}),
-    }
-    std.debug.panic("\nInvalid top level call {}", .{c.function});
-}
-
-pub fn topLevelType(allocator: Allocator, builtins: Builtins, e: parser.Expression) !MonoType {
-    return switch (e) {
-        .function => |f| try topLevelFunction(allocator, builtins, f),
-        .call => |c| try topLevelCall(allocator, builtins, c),
-        else => |k| std.debug.panic("\nInvalid top level value {}", .{k}),
-    };
-}
-
-pub fn module(allocator: Allocator, builtins: Builtins, m: parser.Ast) !Module {
-    var order = List(Interned).init(allocator);
-    var untyped = Untyped.init(allocator);
-    var typed = Typed.init(allocator);
-    var scope = Scope.init(allocator);
-    for (m.expressions) |top_level| {
-        switch (top_level) {
-            .define => |d| {
-                const name = d.name.value;
-                try order.append(name);
-                try untyped.putNoClobber(name, top_level);
-                const monotype = try topLevelType(allocator, builtins, d.value.*);
-                try scope.put(name, monotype);
-            },
-            else => |k| std.debug.panic("\nInvalid top level expression {}", .{k}),
-        }
-    }
-    return Module{
-        .order = try order.toOwnedSlice(),
-        .untyped = untyped,
-        .typed = typed,
-        .scope = scope,
-    };
-}
 
 fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: parser.Expression) !MonoType {
     switch (e) {
@@ -463,7 +408,7 @@ fn expressionAlloc(context: Context, expr: parser.Expression) !*const Expression
     return try alloc(context.allocator, try expression(context, expr));
 }
 
-pub fn infer(allocator: Allocator, constraints: *Constraints, m: *Module, builtins: Builtins, next_type_var: *TypeVar, name: Interned) !void {
+pub fn infer(allocator: Allocator, constraints: *Constraints, m: *Ast, builtins: Builtins, next_type_var: *TypeVar, name: Interned) !void {
     var work_queue = WorkQueue.init(allocator);
     try work_queue.append(name);
     while (work_queue.items.len != 0) {

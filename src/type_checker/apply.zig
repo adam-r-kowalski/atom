@@ -3,7 +3,7 @@ const Allocator = std.mem.Allocator;
 
 const types = @import("types.zig");
 const Substitution = types.Substitution;
-const Module = types.Module;
+const Ast = types.Ast;
 const MonoType = types.MonoType;
 const Typed = types.Typed;
 const Symbol = types.Symbol;
@@ -189,7 +189,7 @@ fn expressionAlloc(allocator: Allocator, s: Substitution, e: Expression) !*const
     return expr;
 }
 
-pub fn apply(allocator: Allocator, s: Substitution, m: Module) !Module {
+pub fn apply(allocator: Allocator, s: Substitution, m: Ast) !Ast {
     var typed = Typed.init(allocator);
     var iterator = m.typed.iterator();
     while (iterator.next()) |entry| {
@@ -198,7 +198,7 @@ pub fn apply(allocator: Allocator, s: Substitution, m: Module) !Module {
             try typed.putNoClobber(entry.key_ptr.*, value);
         }
     }
-    return Module{
+    return Ast{
         .order = m.order,
         .untyped = m.untyped,
         .typed = typed,

@@ -42,16 +42,16 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     var intern = Intern.init(arena.allocator());
     const builtins = try Builtins.init(&intern);
     var tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
-    const untyped_module = try parser.parse(arena.allocator(), &tokens);
-    var module = try type_checker.infer.module(arena.allocator(), builtins, untyped_module);
+    const untyped_ast = try parser.parse(arena.allocator(), &tokens);
+    var ast = try type_checker.types.Ast.init(arena.allocator(), builtins, untyped_ast);
     const interned = try intern.store(name);
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.Equal).init(arena.allocator()),
     };
     var next_type_var: type_checker.types.TypeVar = 0;
-    try type_checker.infer.infer(arena.allocator(), &constraints, &module, builtins, &next_type_var, interned);
+    try type_checker.infer.infer(arena.allocator(), &constraints, &ast, builtins, &next_type_var, interned);
     const substitution = try type_checker.solve(arena.allocator(), constraints);
-    const typed_module = try type_checker.apply(arena.allocator(), substitution, module);
+    const typed_module = try type_checker.apply(arena.allocator(), substitution, ast);
     var list = List(u8).init(allocator);
     const writer = list.writer();
     try type_checker.toString(writer, intern, typed_module);
@@ -89,16 +89,16 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     var intern = Intern.init(arena.allocator());
     const builtins = try Builtins.init(&intern);
     var tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
-    const untyped_module = try parser.parse(arena.allocator(), &tokens);
-    var module = try type_checker.infer.module(arena.allocator(), builtins, untyped_module);
+    const untyped_ast = try parser.parse(arena.allocator(), &tokens);
+    var ast = try type_checker.types.Ast.init(arena.allocator(), builtins, untyped_ast);
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.Equal).init(arena.allocator()),
     };
     const start = try intern.store("start");
     var next_type_var: type_checker.types.TypeVar = 0;
-    try type_checker.infer.infer(arena.allocator(), &constraints, &module, builtins, &next_type_var, start);
+    try type_checker.infer.infer(arena.allocator(), &constraints, &ast, builtins, &next_type_var, start);
     const substitution = try type_checker.solve(arena.allocator(), constraints);
-    const typed_module = try type_checker.apply(arena.allocator(), substitution, module);
+    const typed_module = try type_checker.apply(arena.allocator(), substitution, ast);
     var ir = try lower.buildIr(arena.allocator(), builtins, typed_module);
     const alias = try intern.store("_start");
     const exports = try arena.allocator().alloc(lower.types.Export, ir.exports.len + 1);
