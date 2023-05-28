@@ -7,20 +7,20 @@ test "tokenize function definition" {
     const actual = try neuron.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\symbol double
-        \\equal
-        \\fn
-        \\left paren
-        \\symbol x
-        \\colon
-        \\symbol i32
-        \\right paren
-        \\symbol i32
-        \\left brace
-        \\symbol x
-        \\plus
-        \\symbol x
-        \\right brace
+        \\(symbol double)
+        \\(operator =)
+        \\(keyword fn)
+        \\(delimiter '(')
+        \\(symbol x)
+        \\(operator :)
+        \\(symbol i32)
+        \\(delimiter ')')
+        \\(symbol i32)
+        \\(delimiter '{')
+        \\(symbol x)
+        \\(operator +)
+        \\(symbol x)
+        \\(delimiter '}')
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -35,22 +35,22 @@ test "tokenize function definition with new lines and tabs" {
     const actual = try neuron.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\symbol double
-        \\equal
-        \\fn
-        \\left paren
-        \\symbol x
-        \\colon
-        \\symbol i32
-        \\right paren
-        \\symbol i32
-        \\left brace
-        \\new line
-        \\symbol x
-        \\plus
-        \\symbol x
-        \\new line
-        \\right brace
+        \\(symbol double)
+        \\(operator =)
+        \\(keyword fn)
+        \\(delimiter '(')
+        \\(symbol x)
+        \\(operator :)
+        \\(symbol i32)
+        \\(delimiter ')')
+        \\(symbol i32)
+        \\(delimiter '{')
+        \\(new_line)
+        \\(symbol x)
+        \\(operator +)
+        \\(symbol x)
+        \\(new_line)
+        \\(delimiter '}')
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -91,38 +91,38 @@ test "tokenize multi line function" {
     const actual = try neuron.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\symbol sum_squares
-        \\equal
-        \\fn
-        \\left paren
-        \\symbol x
-        \\colon
-        \\symbol i32
-        \\comma
-        \\symbol y
-        \\colon
-        \\symbol i32
-        \\right paren
-        \\symbol i32
-        \\left brace
-        \\new line
-        \\symbol x_squared
-        \\equal
-        \\symbol x
-        \\caret
-        \\int 2
-        \\new line
-        \\symbol y_squared
-        \\equal
-        \\symbol y
-        \\caret
-        \\int 2
-        \\new line
-        \\symbol x_squared
-        \\plus
-        \\symbol y_squared
-        \\new line
-        \\right brace
+        \\(symbol sum_squares)
+        \\(operator =)
+        \\(keyword fn)
+        \\(delimiter '(')
+        \\(symbol x)
+        \\(operator :)
+        \\(symbol i32)
+        \\(delimiter ',')
+        \\(symbol y)
+        \\(operator :)
+        \\(symbol i32)
+        \\(delimiter ')')
+        \\(symbol i32)
+        \\(delimiter '{')
+        \\(new_line)
+        \\(symbol x_squared)
+        \\(operator =)
+        \\(symbol x)
+        \\(operator ^)
+        \\(int 2)
+        \\(new_line)
+        \\(symbol y_squared)
+        \\(operator =)
+        \\(symbol y)
+        \\(operator ^)
+        \\(int 2)
+        \\(new_line)
+        \\(symbol x_squared)
+        \\(operator +)
+        \\(symbol y_squared)
+        \\(new_line)
+        \\(delimiter '}')
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

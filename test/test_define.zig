@@ -7,11 +7,11 @@ test "tokenize single line define" {
     const actual = try neuron.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\symbol x
-        \\equal
-        \\symbol y
-        \\plus
-        \\symbol z
+        \\(symbol x)
+        \\(operator =)
+        \\(symbol y)
+        \\(operator +)
+        \\(symbol z)
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -31,13 +31,13 @@ test "tokenize annotated single line define" {
     const actual = try neuron.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\symbol x
-        \\colon
-        \\symbol i32
-        \\equal
-        \\symbol y
-        \\plus
-        \\symbol z
+        \\(symbol x)
+        \\(operator :)
+        \\(symbol i32)
+        \\(operator =)
+        \\(symbol y)
+        \\(operator +)
+        \\(symbol z)
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -62,21 +62,21 @@ test "tokenize define using block" {
     const actual = try neuron.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\symbol x
-        \\equal
-        \\left brace
-        \\new line
-        \\symbol a
-        \\equal
-        \\symbol y
-        \\plus
-        \\symbol z
-        \\new line
-        \\symbol a
-        \\minus
-        \\symbol b
-        \\new line
-        \\right brace
+        \\(symbol x)
+        \\(operator =)
+        \\(delimiter '{')
+        \\(new_line)
+        \\(symbol a)
+        \\(operator =)
+        \\(symbol y)
+        \\(operator +)
+        \\(symbol z)
+        \\(new_line)
+        \\(symbol a)
+        \\(operator -)
+        \\(symbol b)
+        \\(new_line)
+        \\(delimiter '}')
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

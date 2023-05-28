@@ -7,8 +7,8 @@ test "tokenize int literal followed by dot" {
     const actual = try neuron.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\int 2
-        \\dot
+        \\(int 2)
+        \\(operator .)
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

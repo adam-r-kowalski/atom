@@ -729,13 +729,13 @@ pub const Constraints = struct {
 fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: parser.Expression) !MonoType {
     switch (e) {
         .symbol => |s| {
-            if (s.value == builtins.i32) return .i32;
-            if (s.value == builtins.i64) return .i64;
-            if (s.value == builtins.f32) return .f32;
-            if (s.value == builtins.f64) return .f64;
-            if (s.value == builtins.bool) return .bool;
-            if (s.value == builtins.str) return .str;
-            if (s.value == builtins.void) return .void;
+            if (s.value.eql(builtins.i32)) return .i32;
+            if (s.value.eql(builtins.i64)) return .i64;
+            if (s.value.eql(builtins.f32)) return .f32;
+            if (s.value.eql(builtins.f64)) return .f64;
+            if (s.value.eql(builtins.bool)) return .bool;
+            if (s.value.eql(builtins.str)) return .str;
+            if (s.value.eql(builtins.void)) return .void;
             std.debug.panic("\nCannot convert symbol {} to mono type", .{s});
         },
         .prototype => |p| {
@@ -762,7 +762,7 @@ fn topLevelFunction(allocator: Allocator, builtins: Builtins, f: parser.Function
 fn topLevelCall(allocator: Allocator, builtins: Builtins, c: parser.Call) !MonoType {
     switch (c.function.*) {
         .symbol => |s| {
-            if (s.value == builtins.foreign_import) {
+            if (s.value.eql(builtins.foreign_import)) {
                 if (c.arguments.len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
                 return try expressionToMonoType(allocator, builtins, c.arguments[2]);
             }
@@ -1027,9 +1027,9 @@ fn call(context: Context, c: parser.Call) !Expression {
         .symbol => |s| {
             const len = c.arguments.len;
             const function_type = try context.allocator.alloc(MonoType, len + 1);
-            if (s.value == context.builtins.foreign_import) return try callForeignImport(context, c);
-            if (s.value == context.builtins.convert) return try callConvert(context, c);
-            if (s.value == context.builtins.sqrt) return try callSqrt(context, c);
+            if (s.value.eql(context.builtins.foreign_import)) return try callForeignImport(context, c);
+            if (s.value.eql(context.builtins.convert)) return try callConvert(context, c);
+            if (s.value.eql(context.builtins.sqrt)) return try callSqrt(context, c);
             const f = try symbol(context.scopes.*, context.work_queue, s);
             const arguments = try context.allocator.alloc(Expression, len);
             for (c.arguments, arguments, function_type[0..len]) |untyped_arg, *typed_arg, *t| {

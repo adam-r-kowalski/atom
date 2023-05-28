@@ -7,11 +7,11 @@ test "tokenize add then multiply" {
     const actual = try neuron.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\symbol x
-        \\plus
-        \\symbol y
-        \\times
-        \\symbol z
+        \\(symbol x)
+        \\(operator +)
+        \\(symbol y)
+        \\(operator *)
+        \\(symbol z)
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

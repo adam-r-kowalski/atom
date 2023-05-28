@@ -7,15 +7,15 @@ test "tokenize if" {
     const actual = try neuron.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\if
-        \\symbol x
-        \\left brace
-        \\symbol y
-        \\right brace
-        \\else
-        \\left brace
-        \\symbol z
-        \\right brace
+        \\(keyword if)
+        \\(symbol x)
+        \\(delimiter '{')
+        \\(symbol y)
+        \\(delimiter '}')
+        \\(keyword else)
+        \\(delimiter '{')
+        \\(symbol z)
+        \\(delimiter '}')
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

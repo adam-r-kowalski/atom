@@ -308,7 +308,7 @@ fn call(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: type_
 }
 
 fn intrinsic(allocator: Allocator, builtins: Builtins, locals: *List(Local), i: type_checker.Intrinsic) !Expression {
-    if (i.function == builtins.sqrt) {
+    if (i.function.eql(builtins.sqrt)) {
         switch (i.type) {
             .f32 => return Expression{ .f32_sqrt = try expressionAlloc(allocator, builtins, locals, i.arguments[0]) },
             .f64 => return Expression{ .f64_sqrt = try expressionAlloc(allocator, builtins, locals, i.arguments[0]) },

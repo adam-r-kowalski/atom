@@ -1,7 +1,25 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-pub const Interned = u64;
+pub const Interned = struct {
+    value: u64,
+    intern: *const Intern,
+
+    pub fn eql(self: Interned, other: Interned) bool {
+        return self.value == other.value;
+    }
+
+    pub fn format(
+        self: Interned,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = options;
+        _ = fmt;
+        try writer.writeAll(self.intern.lookup(self));
+    }
+};
 
 const Map = std.StringArrayHashMap(Interned);
 
@@ -19,12 +37,15 @@ pub const Intern = struct {
     pub fn store(self: *Intern, str: []const u8) !Interned {
         const result = try self.map.getOrPut(str);
         if (result.found_existing) return result.value_ptr.*;
-        result.value_ptr.* = self.index;
+        result.value_ptr.* = Interned{
+            .value = self.index,
+            .intern = self,
+        };
         self.index += 1;
         return result.value_ptr.*;
     }
 
     pub fn lookup(self: Intern, interned: Interned) []const u8 {
-        return self.map.keys()[interned];
+        return self.map.keys()[interned.value];
     }
 };

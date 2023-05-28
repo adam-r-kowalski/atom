@@ -7,14 +7,14 @@ test "tokenize call" {
     const actual = try neuron.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\symbol f
-        \\left paren
-        \\symbol x
-        \\comma
-        \\symbol y
-        \\comma
-        \\symbol z
-        \\right paren
+        \\(symbol f)
+        \\(delimiter '(')
+        \\(symbol x)
+        \\(delimiter ',')
+        \\(symbol y)
+        \\(delimiter ',')
+        \\(symbol z)
+        \\(delimiter ')')
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
