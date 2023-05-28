@@ -43,19 +43,17 @@ pub fn main() !void {
     const t3 = timer.read();
     var tokens = try neuron.tokenizer.tokenize(allocator, &intern, builtins, source);
     const t4 = timer.read();
-    const ast = try neuron.parser.parse(allocator, &tokens);
+    const untyped_ast = try neuron.parser.parse(allocator, &tokens);
     const t5 = timer.read();
-    var typed_ast = try neuron.type_checker.infer.module(allocator, builtins, ast);
-    var constraints = neuron.type_checker.types.Constraints{
-        .equal = List(neuron.type_checker.types.Equal).init(allocator),
-    };
-    const start = try intern.store("start");
+    var constraints = neuron.type_checker.types.Constraints.init(arena.allocator());
     var next_type_var: neuron.type_checker.types.TypeVar = 0;
-    try neuron.type_checker.infer.infer(allocator, &constraints, &typed_ast, builtins, &next_type_var, start);
+    var ast = try neuron.type_checker.types.Ast.init(arena.allocator(), &constraints, &next_type_var, builtins, untyped_ast);
+    try ast.infer("start");
     const substitution = try neuron.type_checker.solve(allocator, constraints);
-    typed_ast = try neuron.type_checker.apply(allocator, substitution, typed_ast);
+    ast = try neuron.type_checker.apply(allocator, substitution, ast);
     const t6 = timer.read();
-    var ir = try neuron.lower.buildIr(allocator, builtins, typed_ast);
+    var ir = try neuron.lower.buildIr(allocator, builtins, ast);
+    const start = try intern.store("start");
     const alias = try intern.store("_start");
     const exports = try allocator.alloc(neuron.lower.types.Export, ir.exports.len + 1);
     std.mem.copy(neuron.lower.types.Export, exports, ir.exports);
@@ -90,7 +88,7 @@ pub fn main() !void {
     if (start_func == null) std.debug.panic("\nError getting start!\n", .{});
     var args_val = [0]wasmer.wasm_val_t{};
     var results_val = List(wasmer.wasm_val_t).init(allocator);
-    const exported_define = typed_ast.typed.get(start).?.define;
+    const exported_define = ast.typed.get(start).?.define;
     const exported_function = exported_define.value.function;
     if (exported_function.parameters.len != 0)
         std.debug.panic("\nOnly functions with no parameters supported!\n", .{});
