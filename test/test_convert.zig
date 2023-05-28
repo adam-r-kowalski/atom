@@ -12,16 +12,16 @@ test "type infer convert i32 to f32" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ name = start, type = fn(i32) f32 }
+        \\    name = symbol{ value = start, type = fn(i32) f32 }
         \\    type = void
         \\    value = 
         \\        function =
         \\            parameters =
-        \\                symbol{ name = x, type = i32 }
+        \\                symbol{ value = x, type = i32 }
         \\            return_type = f32
         \\            body = 
         \\                convert =
-        \\                    value = symbol{ name = x, type = i32 }
+        \\                    value = symbol{ value = x, type = i32 }
         \\                    type = f32
     ;
     try std.testing.expectEqualStrings(expected, actual);

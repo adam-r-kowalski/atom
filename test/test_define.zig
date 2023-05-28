@@ -132,37 +132,37 @@ test "infer type of define based on body" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ name = sum_of_squares, type = fn(i32, i32) i32 }
+        \\    name = symbol{ value = sum_of_squares, type = fn(i32, i32) i32 }
         \\    type = void
         \\    value = 
         \\        function =
         \\            parameters =
-        \\                symbol{ name = x, type = i32 }
-        \\                symbol{ name = y, type = i32 }
+        \\                symbol{ value = x, type = i32 }
+        \\                symbol{ value = y, type = i32 }
         \\            return_type = i32
         \\            body = 
         \\                define =
-        \\                    name = symbol{ name = a, type = i32 }
+        \\                    name = symbol{ value = a, type = i32 }
         \\                    type = void
         \\                    value = 
         \\                        binary_op =
         \\                            kind = *
-        \\                            left = symbol{ name = x, type = i32 }
-        \\                            right = symbol{ name = x, type = i32 }
+        \\                            left = symbol{ value = x, type = i32 }
+        \\                            right = symbol{ value = x, type = i32 }
         \\                            type = i32
         \\                define =
-        \\                    name = symbol{ name = b, type = i32 }
+        \\                    name = symbol{ value = b, type = i32 }
         \\                    type = void
         \\                    value = 
         \\                        binary_op =
         \\                            kind = *
-        \\                            left = symbol{ name = y, type = i32 }
-        \\                            right = symbol{ name = y, type = i32 }
+        \\                            left = symbol{ value = y, type = i32 }
+        \\                            right = symbol{ value = y, type = i32 }
         \\                            type = i32
         \\                binary_op =
         \\                    kind = +
-        \\                    left = symbol{ name = a, type = i32 }
-        \\                    right = symbol{ name = b, type = i32 }
+        \\                    left = symbol{ value = a, type = i32 }
+        \\                    right = symbol{ value = b, type = i32 }
         \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -208,37 +208,37 @@ test "type infer nested define" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ name = f, type = fn(i32, i32) i32 }
+        \\    name = symbol{ value = f, type = fn(i32, i32) i32 }
         \\    type = void
         \\    value = 
         \\        function =
         \\            parameters =
-        \\                symbol{ name = x, type = i32 }
-        \\                symbol{ name = y, type = i32 }
+        \\                symbol{ value = x, type = i32 }
+        \\                symbol{ value = y, type = i32 }
         \\            return_type = i32
         \\            body = 
         \\                define =
-        \\                    name = symbol{ name = a, type = i32 }
+        \\                    name = symbol{ value = a, type = i32 }
         \\                    type = void
         \\                    value = 
         \\                        define =
-        \\                            name = symbol{ name = b, type = i32 }
+        \\                            name = symbol{ value = b, type = i32 }
         \\                            type = void
         \\                            value = 
         \\                                binary_op =
         \\                                    kind = *
-        \\                                    left = symbol{ name = y, type = i32 }
-        \\                                    right = symbol{ name = y, type = i32 }
+        \\                                    left = symbol{ value = y, type = i32 }
+        \\                                    right = symbol{ value = y, type = i32 }
         \\                                    type = i32
         \\                        binary_op =
         \\                            kind = +
-        \\                            left = symbol{ name = b, type = i32 }
-        \\                            right = symbol{ name = x, type = i32 }
+        \\                            left = symbol{ value = b, type = i32 }
+        \\                            right = symbol{ value = x, type = i32 }
         \\                            type = i32
         \\                binary_op =
         \\                    kind = +
-        \\                    left = symbol{ name = a, type = i32 }
-        \\                    right = symbol{ name = x, type = i32 }
+        \\                    left = symbol{ value = a, type = i32 }
+        \\                    right = symbol{ value = x, type = i32 }
         \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);

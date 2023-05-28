@@ -155,14 +155,14 @@ test "type infer function body" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ name = id, type = fn(i32) i32 }
+        \\    name = symbol{ value = id, type = fn(i32) i32 }
         \\    type = void
         \\    value = 
         \\        function =
         \\            parameters =
-        \\                symbol{ name = x, type = i32 }
+        \\                symbol{ value = x, type = i32 }
         \\            return_type = i32
-        \\            body = symbol{ name = x, type = i32 }
+        \\            body = symbol{ value = x, type = i32 }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

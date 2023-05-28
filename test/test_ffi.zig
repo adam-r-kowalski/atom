@@ -55,7 +55,7 @@ test "type check import" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ name = print, type = fn(str) void }
+        \\    name = symbol{ value = print, type = fn(str) void }
         \\    type = void
         \\    value = 
         \\        foreign_import =
@@ -64,14 +64,14 @@ test "type check import" {
         \\            type = fn(str) void
         \\
         \\define =
-        \\    name = symbol{ name = start, type = fn() void }
+        \\    name = symbol{ value = start, type = fn() void }
         \\    type = void
         \\    value = 
         \\        function =
         \\            return_type = void
         \\            body = 
         \\                call =
-        \\                    symbol{ name = print, type = fn(str) void }
+        \\                    symbol{ value = print, type = fn(str) void }
         \\                    arguments =
         \\                        string{ value = "hello world", type = str }
         \\                    type = void

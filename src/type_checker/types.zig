@@ -4,6 +4,7 @@ const Map = std.AutoHashMap;
 const List = std.ArrayList;
 
 const Builtins = @import("../builtins.zig").Builtins;
+const Indent = @import("../indent.zig").Indent;
 const interner = @import("../interner.zig");
 const Interned = interner.Interned;
 const Intern = interner.Intern;
@@ -34,6 +35,30 @@ pub const MonoType = union(enum) {
             else => return,
         }
     }
+
+    fn toString(self: MonoType, writer: anytype) !void {
+        switch (self) {
+            .i32 => try writer.writeAll("i32"),
+            .i64 => try writer.writeAll("i64"),
+            .f32 => try writer.writeAll("f32"),
+            .f64 => try writer.writeAll("f64"),
+            .str => try writer.writeAll("str"),
+            .bool => try writer.writeAll("bool"),
+            .void => try writer.writeAll("void"),
+            .typevar => |t| try writer.print("${}", .{t}),
+            .function => |f| {
+                try writer.writeAll("fn(");
+                for (f, 0..) |a, i| {
+                    if (i == f.len - 1) {
+                        try writer.writeAll(") ");
+                    } else if (i > 0) {
+                        try writer.writeAll(", ");
+                    }
+                    try a.toString(writer);
+                }
+            },
+        }
+    }
 };
 
 pub const Int = struct {
@@ -43,6 +68,13 @@ pub const Int = struct {
 
     fn apply(self: *Int, s: Substitution) void {
         self.type.apply(s);
+    }
+
+    fn toString(self: Int, writer: anytype, intern: Intern) !void {
+        const value = intern.lookup(self.value);
+        try writer.print("int{{ value = {s}, type = ", .{value});
+        try self.type.toString(writer);
+        try writer.writeAll(" }");
     }
 };
 
@@ -54,6 +86,13 @@ pub const Float = struct {
     fn apply(self: *Float, s: Substitution) void {
         self.type.apply(s);
     }
+
+    fn toString(self: Float, writer: anytype, intern: Intern) !void {
+        const value = intern.lookup(self.value);
+        try writer.print("float{{ value = {s}, type = ", .{value});
+        try self.type.toString(writer);
+        try writer.writeAll(" }");
+    }
 };
 
 pub const Symbol = struct {
@@ -64,18 +103,38 @@ pub const Symbol = struct {
     fn apply(self: *Symbol, s: Substitution) void {
         self.type.apply(s);
     }
+
+    fn toString(self: Symbol, writer: anytype, intern: Intern) !void {
+        const value = intern.lookup(self.value);
+        try writer.print("symbol{{ value = {s}, type = ", .{value});
+        try self.type.toString(writer);
+        try writer.writeAll(" }");
+    }
 };
 
 pub const Bool = struct {
     value: bool,
     span: Span,
     type: MonoType,
+
+    fn toString(self: Bool, writer: anytype) !void {
+        try writer.print("bool{{ value = {}, type = ", .{self.value});
+        try self.type.toString(writer);
+        try writer.writeAll(" }");
+    }
 };
 
 pub const String = struct {
     value: Interned,
     span: Span,
     type: MonoType,
+
+    fn toString(self: String, writer: anytype, intern: Intern) !void {
+        const value = intern.lookup(self.value);
+        try writer.print("string{{ value = {s}, type = ", .{value});
+        try self.type.toString(writer);
+        try writer.writeAll(" }");
+    }
 };
 
 pub const Define = struct {
@@ -89,6 +148,20 @@ pub const Define = struct {
         self.value.apply(s);
         self.type.apply(s);
     }
+
+    fn toString(self: Define, writer: anytype, intern: Intern, indent: Indent) !void {
+        try indent.toString(writer);
+        try writer.writeAll("define =");
+        try indent.increment().toString(writer);
+        try writer.writeAll("name = ");
+        try self.name.toString(writer, intern);
+        try indent.increment().toString(writer);
+        try writer.writeAll("type = ");
+        try self.type.toString(writer);
+        try indent.increment().toString(writer);
+        try writer.writeAll("value = ");
+        try self.value.toString(writer, intern, indent.increment().increment());
+    }
 };
 
 pub const Block = struct {
@@ -99,6 +172,10 @@ pub const Block = struct {
     fn apply(self: *Block, s: Substitution) void {
         for (self.expressions) |*e| e.apply(s);
         self.type.apply(s);
+    }
+
+    fn toString(self: Block, writer: anytype, intern: Intern, indent: Indent) !void {
+        for (self.expressions) |expr| try expr.toString(writer, intern, indent);
     }
 };
 
@@ -115,6 +192,25 @@ pub const Function = struct {
         self.body.apply(s);
         self.type.apply(s);
     }
+
+    fn toString(self: Function, writer: anytype, intern: Intern, indent: Indent) !void {
+        try indent.toString(writer);
+        try writer.writeAll("function =");
+        if (self.parameters.len != 0) {
+            try indent.increment().toString(writer);
+            try writer.print("parameters =", .{});
+        }
+        for (self.parameters) |p| {
+            try indent.increment().increment().toString(writer);
+            try p.toString(writer, intern);
+        }
+        try indent.increment().toString(writer);
+        try writer.print("return_type = ", .{});
+        try self.return_type.toString(writer);
+        try indent.increment().toString(writer);
+        try writer.print("body = ", .{});
+        try self.body.toString(writer, intern, indent.increment().increment());
+    }
 };
 
 pub const BinaryOp = struct {
@@ -128,6 +224,23 @@ pub const BinaryOp = struct {
         self.left.apply(s);
         self.right.apply(s);
         self.type.apply(s);
+    }
+
+    fn toString(self: BinaryOp, writer: anytype, intern: Intern, indent: Indent) !void {
+        try indent.toString(writer);
+        try writer.writeAll("binary_op =");
+        try indent.increment().toString(writer);
+        try writer.writeAll("kind = ");
+        try self.kind.toString(writer);
+        try indent.increment().toString(writer);
+        try writer.writeAll("left = ");
+        try self.left.toString(writer, intern, indent.increment().increment());
+        try indent.increment().toString(writer);
+        try writer.writeAll("right = ");
+        try self.right.toString(writer, intern, indent.increment().increment());
+        try indent.increment().toString(writer);
+        try writer.print("type = ", .{});
+        try self.type.toString(writer);
     }
 };
 
@@ -143,6 +256,23 @@ pub const If = struct {
         self.then.apply(s);
         self.else_.apply(s);
         self.type.apply(s);
+    }
+
+    fn toString(self: If, writer: anytype, intern: Intern, indent: Indent) !void {
+        try indent.toString(writer);
+        try writer.writeAll("if =");
+        try indent.increment().toString(writer);
+        try writer.writeAll("condition = ");
+        try self.condition.toString(writer, intern, indent.increment().increment());
+        try indent.increment().toString(writer);
+        try writer.writeAll("then = ");
+        try self.then.toString(writer, intern, indent.increment().increment());
+        try indent.increment().toString(writer);
+        try writer.writeAll("else = ");
+        try self.else_.toString(writer, intern, indent.increment().increment());
+        try indent.increment().toString(writer);
+        try writer.print("type = ", .{});
+        try self.type.toString(writer);
     }
 };
 
@@ -161,6 +291,25 @@ pub const Cond = struct {
         self.else_.apply(s);
         self.type.apply(s);
     }
+
+    fn toString(self: Cond, writer: anytype, intern: Intern, indent: Indent) !void {
+        try indent.toString(writer);
+        try writer.writeAll("cond =");
+        for (self.conditions, self.thens) |c, t| {
+            try indent.increment().toString(writer);
+            try writer.writeAll("condition = ");
+            try c.toString(writer, intern, indent.increment().increment());
+            try indent.increment().toString(writer);
+            try writer.writeAll("then = ");
+            try t.toString(writer, intern, indent.increment().increment());
+        }
+        try indent.increment().toString(writer);
+        try writer.writeAll("else = ");
+        try self.else_.toString(writer, intern, indent.increment().increment());
+        try indent.increment().toString(writer);
+        try writer.print("type = ", .{});
+        try self.type.toString(writer);
+    }
 };
 
 pub const Call = struct {
@@ -174,6 +323,22 @@ pub const Call = struct {
         for (self.arguments) |*a| a.apply(s);
         self.type.apply(s);
     }
+
+    fn toString(self: Call, writer: anytype, intern: Intern, indent: Indent) !void {
+        try indent.toString(writer);
+        try writer.writeAll("call =");
+        try indent.increment().toString(writer);
+        try self.function.toString(writer, intern, indent.increment().increment());
+        try indent.increment().toString(writer);
+        try writer.writeAll("arguments =");
+        for (self.arguments) |a| {
+            try indent.increment().increment().toString(writer);
+            try a.toString(writer, intern, indent.increment().increment().increment());
+        }
+        try indent.increment().toString(writer);
+        try writer.print("type = ", .{});
+        try self.type.toString(writer);
+    }
 };
 
 pub const Intrinsic = struct {
@@ -186,12 +351,47 @@ pub const Intrinsic = struct {
         for (self.arguments) |*a| a.apply(s);
         self.type.apply(s);
     }
+
+    fn toString(self: Intrinsic, writer: anytype, intern: Intern, indent: Indent) !void {
+        try indent.toString(writer);
+        try writer.writeAll("intrinsic =");
+        try indent.increment().toString(writer);
+        try writer.writeAll(intern.lookup(self.function));
+        try indent.increment().toString(writer);
+        try writer.writeAll("arguments =");
+        for (self.arguments) |a| {
+            try indent.increment().increment().toString(writer);
+            try a.toString(writer, intern, indent.increment().increment().increment());
+        }
+        try indent.increment().toString(writer);
+        try writer.print("type = ", .{});
+        try self.type.toString(writer);
+    }
 };
 
 pub const Group = struct {
     expressions: []Expression,
     span: Span,
     type: MonoType,
+
+    fn apply(self: *Group, s: Substitution) void {
+        for (self.expressions) |*e| e.apply(s);
+        self.type.apply(s);
+    }
+
+    fn toString(self: Group, writer: anytype, intern: Intern, indent: Indent) !void {
+        try indent.toString(writer);
+        try writer.writeAll("group =");
+        try indent.increment().toString(writer);
+        try writer.writeAll("expressions =");
+        for (self.expressions) |expr| {
+            try indent.increment().increment().toString(writer);
+            try expr.toString(writer, intern, indent.increment().increment());
+        }
+        try indent.increment().toString(writer);
+        try writer.print("type = ", .{});
+        try self.type.toString(writer);
+    }
 };
 
 pub const ForeignImport = struct {
@@ -199,12 +399,37 @@ pub const ForeignImport = struct {
     name: Interned,
     span: Span,
     type: MonoType,
+
+    fn toString(self: ForeignImport, writer: anytype, intern: Intern, indent: Indent) !void {
+        try indent.toString(writer);
+        try writer.writeAll("foreign_import =");
+        try indent.increment().toString(writer);
+        const module = intern.lookup(self.module);
+        try writer.print("module = {s}", .{module});
+        try indent.increment().toString(writer);
+        const name = intern.lookup(self.name);
+        try writer.print("name = {s}", .{name});
+        try indent.increment().toString(writer);
+        try writer.print("type = ", .{});
+        try self.type.toString(writer);
+    }
 };
 
 pub const Convert = struct {
     value: *Expression,
     span: Span,
     type: MonoType,
+
+    fn toString(self: Convert, writer: anytype, intern: Intern, indent: Indent) !void {
+        try indent.toString(writer);
+        try writer.writeAll("convert =");
+        try indent.increment().toString(writer);
+        try writer.print("value = ", .{});
+        try self.value.toString(writer, intern, indent.increment());
+        try indent.increment().toString(writer);
+        try writer.print("type = ", .{});
+        try self.type.toString(writer);
+    }
 };
 
 pub const Expression = union(enum) {
@@ -261,9 +486,30 @@ pub const Expression = union(enum) {
             .intrinsic => |*i| i.apply(s),
             .function => |*f| f.apply(s),
             .block => |*b| b.apply(s),
+            .group => |*g| g.apply(s),
             .foreign_import => return,
             .convert => return,
-            else => |k| std.debug.panic("\nUnsupported expression {}", .{k}),
+        }
+    }
+
+    fn toString(self: Expression, writer: anytype, intern: Intern, indent: Indent) error{NoSpaceLeft}!void {
+        switch (self) {
+            .symbol => |s| try s.toString(writer, intern),
+            .int => |i| try i.toString(writer, intern),
+            .float => |f| try f.toString(writer, intern),
+            .string => |s| try s.toString(writer, intern),
+            .bool => |b| try b.toString(writer),
+            .if_else => |i| try i.toString(writer, intern, indent),
+            .cond => |c| try c.toString(writer, intern, indent),
+            .binary_op => |b| try b.toString(writer, intern, indent),
+            .call => |c| try c.toString(writer, intern, indent),
+            .intrinsic => |i| try i.toString(writer, intern, indent),
+            .define => |d| try d.toString(writer, intern, indent),
+            .function => |f| try f.toString(writer, intern, indent),
+            .block => |b| try b.toString(writer, intern, indent),
+            .group => |g| try g.toString(writer, intern, indent),
+            .foreign_import => |f| try f.toString(writer, intern, indent),
+            .convert => |c| try c.toString(writer, intern, indent),
         }
     }
 };
@@ -339,17 +585,119 @@ pub const Ast = struct {
         var iterator = self.typed.valueIterator();
         while (iterator.next()) |value_ptr| value_ptr.apply(s);
     }
+
+    pub fn format(
+        self: Ast,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = options;
+        _ = fmt;
+        for (self.order, 0..) |name, i| {
+            if (self.typed.get(name)) |e| {
+                if (i > 0) try writer.writeAll("\n\n");
+                e.toString(writer, self.intern.*, Indent{ .value = 0 }) catch unreachable;
+            }
+        }
+    }
 };
 
 pub const Scope = Map(Interned, MonoType);
 
 pub const Scopes = List(Scope);
 
-pub const Substitution = Map(TypeVar, MonoType);
+pub const Substitution = struct {
+    map: Map(TypeVar, MonoType),
+
+    fn init(allocator: Allocator) Substitution {
+        return Substitution{
+            .map = Map(TypeVar, MonoType).init(allocator),
+        };
+    }
+
+    fn set(self: *Substitution, t: TypeVar, m: MonoType) !void {
+        const result = try self.map.getOrPut(t);
+        if (result.found_existing) {
+            if (std.meta.eql(result.value_ptr.*, m)) return;
+            switch (m) {
+                .typevar => |t1| try self.set(t1, result.value_ptr.*),
+                else => switch (result.value_ptr.*) {
+                    .typevar => |t1| try self.set(t1, m),
+                    else => std.debug.panic("\nType mismatch: {} != {}\n", .{ result.value_ptr.*, m }),
+                },
+            }
+        }
+        result.value_ptr.* = m;
+    }
+
+    fn get(self: Substitution, t: TypeVar) ?MonoType {
+        return self.map.get(t);
+    }
+
+    fn equal(self: *Substitution, e: Equal) !void {
+        const left_tag = std.meta.activeTag(e.left);
+        const right_tag = std.meta.activeTag(e.right);
+        if (left_tag == .typevar)
+            return try self.set(e.left.typevar, e.right);
+        if (right_tag == .typevar)
+            return try self.set(e.right.typevar, e.left);
+        if (left_tag == .function and right_tag == .function) {
+            if (e.left.function.len != e.right.function.len)
+                std.debug.panic("\nFunction arity mismatch: {} != {}\n", .{
+                    e.left.function.len,
+                    e.right.function.len,
+                });
+            for (e.left.function, 0..) |left, i| {
+                const right = e.right.function[i];
+                try self.equal(Equal{ .left = left, .right = right });
+            }
+        }
+        if (left_tag == right_tag)
+            return;
+        std.debug.panic("\nUnsupported type in equal: {} {}\n", .{ e.left, e.right });
+    }
+
+    fn simplify(self: *Substitution) u64 {
+        var count: u64 = 0;
+        var iterator = self.map.iterator();
+        while (iterator.next()) |entry| {
+            switch (entry.value_ptr.*) {
+                .typevar => |t| {
+                    if (self.map.get(t)) |v| {
+                        entry.value_ptr.* = v;
+                        count += 1;
+                    }
+                },
+                else => {},
+            }
+        }
+        return count;
+    }
+
+    fn toString(self: Substitution, writer: anytype) !void {
+        try writer.writeAll("\n\n=== Substitution ===");
+        var iterator = self.map.iterator();
+        while (iterator.next()) |t| {
+            try writer.print("\n${} = ", .{t.key_ptr.*});
+            try t.value_ptr.toString(writer);
+        }
+    }
+};
 
 pub const Equal = struct {
     left: MonoType,
     right: MonoType,
+
+    fn toString(self: Equal, writer: anytype) !void {
+        try writer.print("equal = ", .{});
+        try (Indent{ .value = 1 }).toString(writer);
+        try writer.print("left = ", .{});
+        try self.left.toString(writer);
+        try (Indent{ .value = 1 }).toString(writer);
+        try writer.print("right = ", .{});
+        try self.right.toString(writer);
+    }
 };
 
 pub const Constraints = struct {
@@ -363,10 +711,18 @@ pub const Constraints = struct {
 
     pub fn solve(self: Constraints, allocator: Allocator) !Substitution {
         var substitution = Substitution.init(allocator);
-        for (self.equal.items) |e| try equal(&substitution, e);
+        for (self.equal.items) |e| try substitution.equal(e);
         var max_attemps: u64 = 3;
-        while (simplify(&substitution) > 0 and max_attemps != 0) : (max_attemps -= 1) {}
+        while (substitution.simplify() > 0 and max_attemps != 0) : (max_attemps -= 1) {}
         return substitution;
+    }
+
+    fn toString(self: Constraints, writer: anytype) !void {
+        try writer.writeAll("\n\n=== Constraints ===");
+        for (self.equal.items) |e| {
+            try writer.writeAll("\n");
+            try e.toString(writer);
+        }
     }
 };
 
@@ -772,59 +1128,4 @@ fn alloc(allocator: Allocator, expr: Expression) !*Expression {
 
 fn expressionAlloc(context: Context, expr: parser.Expression) !*Expression {
     return try alloc(context.allocator, try expression(context, expr));
-}
-
-fn set(substitution: *Substitution, t: TypeVar, m: MonoType) !void {
-    const result = try substitution.getOrPut(t);
-    if (result.found_existing) {
-        if (std.meta.eql(result.value_ptr.*, m)) return;
-        switch (m) {
-            .typevar => |t1| try set(substitution, t1, result.value_ptr.*),
-            else => switch (result.value_ptr.*) {
-                .typevar => |t1| try set(substitution, t1, m),
-                else => std.debug.panic("\nType mismatch: {} != {}\n", .{ result.value_ptr.*, m }),
-            },
-        }
-    }
-    result.value_ptr.* = m;
-}
-
-fn equal(substitution: *Substitution, e: Equal) !void {
-    const left_tag = std.meta.activeTag(e.left);
-    const right_tag = std.meta.activeTag(e.right);
-    if (left_tag == .typevar)
-        return try set(substitution, e.left.typevar, e.right);
-    if (right_tag == .typevar)
-        return try set(substitution, e.right.typevar, e.left);
-    if (left_tag == .function and right_tag == .function) {
-        if (e.left.function.len != e.right.function.len)
-            std.debug.panic("\nFunction arity mismatch: {} != {}\n", .{
-                e.left.function.len,
-                e.right.function.len,
-            });
-        for (e.left.function, 0..) |left, i| {
-            const right = e.right.function[i];
-            try equal(substitution, Equal{ .left = left, .right = right });
-        }
-    }
-    if (left_tag == right_tag)
-        return;
-    std.debug.panic("\nUnsupported type in equal: {} {}\n", .{ e.left, e.right });
-}
-
-fn simplify(substitution: *Substitution) u64 {
-    var count: u64 = 0;
-    var iterator = substitution.iterator();
-    while (iterator.next()) |entry| {
-        switch (entry.value_ptr.*) {
-            .typevar => |t| {
-                if (substitution.get(t)) |v| {
-                    entry.value_ptr.* = v;
-                    count += 1;
-                }
-            },
-            else => {},
-        }
-    }
-    return count;
 }

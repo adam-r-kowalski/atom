@@ -5,6 +5,7 @@ const List = std.ArrayList;
 const interner = @import("interner.zig");
 const Intern = interner.Intern;
 const Interned = interner.Interned;
+const Indent = @import("indent.zig").Indent;
 const tokenizer = @import("tokenizer.zig");
 const Pos = tokenizer.Pos;
 const LeftParen = tokenizer.LeftParen;
@@ -18,19 +19,6 @@ pub const Float = tokenizer.Float;
 pub const Symbol = tokenizer.Symbol;
 pub const String = tokenizer.String;
 pub const Bool = tokenizer.Bool;
-
-const Indent = struct {
-    value: u64,
-
-    fn increment(self: Indent) Indent {
-        return Indent{ .value = self.value + 1 };
-    }
-
-    fn toString(self: Indent, writer: anytype) !void {
-        try writer.writeAll("\n");
-        for (0..self.value) |_| try writer.writeAll("    ");
-    }
-};
 
 pub const Define = struct {
     name: Symbol,
@@ -131,7 +119,7 @@ pub const BinaryOpKind = enum {
     or_,
     dot,
 
-    fn toString(self: BinaryOpKind, writer: anytype) !void {
+    pub fn toString(self: BinaryOpKind, writer: anytype) !void {
         switch (self) {
             .add => try writer.writeAll("+"),
             .subtract => try writer.writeAll("-"),

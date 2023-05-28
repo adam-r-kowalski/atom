@@ -49,10 +49,7 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     try ast.infer(name);
     const substitution = try constraints.solve(arena.allocator());
     ast.apply(substitution);
-    var list = List(u8).init(allocator);
-    const writer = list.writer();
-    try type_checker.toString(writer, intern, ast);
-    return list.toOwnedSlice();
+    return try std.fmt.allocPrint(allocator, "{}", .{ast});
 }
 
 pub fn typeInferVerbose(allocator: Allocator, source: []const u8, name: []const u8) ![]const u8 {
