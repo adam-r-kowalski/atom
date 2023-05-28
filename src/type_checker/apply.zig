@@ -199,9 +199,14 @@ pub fn apply(allocator: Allocator, s: Substitution, m: Ast) !Ast {
         }
     }
     return Ast{
+        .allocator = m.allocator,
+        .constraints = m.constraints,
+        .next_type_var = m.next_type_var,
+        .builtins = m.builtins,
         .order = m.order,
         .untyped = m.untyped,
         .typed = typed,
         .scope = m.scope,
+        .intern = m.intern,
     };
 }

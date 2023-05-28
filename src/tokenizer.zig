@@ -102,7 +102,7 @@ pub const Token = union(enum) {
 pub const Tokens = struct {
     tokens: []Token,
     index: usize,
-    intern: Intern,
+    intern: *Intern,
 
     pub fn peek(self: Tokens) ?Token {
         if (self.index >= self.tokens.len) return null;
@@ -371,6 +371,6 @@ pub fn tokenize(allocator: Allocator, intern: *Intern, builtins: Builtins, sourc
     return Tokens{
         .tokens = try tokens.toOwnedSlice(),
         .index = 0,
-        .intern = intern.*,
+        .intern = intern,
     };
 }

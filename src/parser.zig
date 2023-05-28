@@ -282,7 +282,7 @@ pub const Expression = union(enum) {
 
 pub const Ast = struct {
     expressions: []const Expression,
-    intern: Intern,
+    intern: *Intern,
 
     pub fn format(
         self: Ast,
@@ -294,7 +294,7 @@ pub const Ast = struct {
         _ = fmt;
         for (self.expressions, 0..) |e, i| {
             if (i > 0) try writer.writeAll("\n\n");
-            e.toString(writer, self.intern, Indent{ .value = 0 }) catch unreachable;
+            e.toString(writer, self.intern.*, Indent{ .value = 0 }) catch unreachable;
         }
     }
 };

@@ -6,6 +6,7 @@ const List = std.ArrayList;
 const Builtins = @import("../builtins.zig").Builtins;
 const interner = @import("../interner.zig");
 const Interned = interner.Interned;
+const Intern = interner.Intern;
 const parser = @import("../parser.zig");
 const Span = parser.Span;
 const BinaryOpKind = parser.BinaryOpKind;
@@ -177,12 +178,17 @@ pub const Untyped = Map(Interned, UntypedExpression);
 pub const Typed = Map(Interned, Expression);
 
 pub const Ast = struct {
+    allocator: Allocator,
+    constraints: *Constraints,
+    next_type_var: *TypeVar,
+    builtins: Builtins,
     order: []const Interned,
     untyped: Untyped,
     typed: Typed,
     scope: Scope,
+    intern: *Intern,
 
-    pub fn init(allocator: Allocator, builtins: Builtins, ast: parser.Ast) !Ast {
+    pub fn init(allocator: Allocator, constraints: *Constraints, next_type_var: *TypeVar, builtins: Builtins, ast: parser.Ast) !Ast {
         var order = List(Interned).init(allocator);
         var untyped = Untyped.init(allocator);
         var typed = Typed.init(allocator);
@@ -200,11 +206,39 @@ pub const Ast = struct {
             }
         }
         return Ast{
+            .allocator = allocator,
+            .constraints = constraints,
+            .next_type_var = next_type_var,
+            .builtins = builtins,
             .order = try order.toOwnedSlice(),
             .untyped = untyped,
             .typed = typed,
             .scope = scope,
+            .intern = ast.intern,
         };
+    }
+
+    pub fn infer(self: *Ast, name: []const u8) !void {
+        const interned = try self.intern.store(name);
+        var work_queue = WorkQueue.init(self.allocator);
+        try work_queue.append(interned);
+        while (work_queue.items.len != 0) {
+            const current = work_queue.pop();
+            if (self.untyped.fetchRemove(current)) |entry| {
+                var scopes = Scopes.init(self.allocator);
+                try scopes.append(self.scope);
+                const context = Context{
+                    .allocator = self.allocator,
+                    .work_queue = &work_queue,
+                    .builtins = self.builtins,
+                    .constraints = self.constraints,
+                    .scopes = &scopes,
+                    .next_type_var = self.next_type_var,
+                };
+                const expr = try expression(context, entry.value);
+                try self.typed.putNoClobber(current, expr);
+            }
+        }
     }
 };
 
@@ -221,6 +255,12 @@ pub const Equal = struct {
 
 pub const Constraints = struct {
     equal: List(Equal),
+
+    pub fn init(allocator: Allocator) Constraints {
+        return Constraints{
+            .equal = List(Equal).init(allocator),
+        };
+    }
 };
 
 fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: parser.Expression) !MonoType {
@@ -625,26 +665,4 @@ fn alloc(allocator: Allocator, expr: Expression) !*const Expression {
 
 fn expressionAlloc(context: Context, expr: parser.Expression) !*const Expression {
     return try alloc(context.allocator, try expression(context, expr));
-}
-
-pub fn infer(allocator: Allocator, constraints: *Constraints, m: *Ast, builtins: Builtins, next_type_var: *TypeVar, name: Interned) !void {
-    var work_queue = WorkQueue.init(allocator);
-    try work_queue.append(name);
-    while (work_queue.items.len != 0) {
-        const current = work_queue.pop();
-        if (m.untyped.fetchRemove(current)) |entry| {
-            var scopes = Scopes.init(allocator);
-            try scopes.append(m.scope);
-            const context = Context{
-                .allocator = allocator,
-                .work_queue = &work_queue,
-                .builtins = builtins,
-                .constraints = constraints,
-                .scopes = &scopes,
-                .next_type_var = next_type_var,
-            };
-            const expr = try expression(context, entry.value);
-            try m.typed.putNoClobber(current, expr);
-        }
-    }
 }
