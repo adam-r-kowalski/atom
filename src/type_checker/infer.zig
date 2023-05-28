@@ -64,7 +64,7 @@ pub fn topLevelType(allocator: Allocator, builtins: Builtins, e: parser_types.Ex
     };
 }
 
-pub fn module(allocator: Allocator, builtins: Builtins, m: parser_types.Module) !Module {
+pub fn module(allocator: Allocator, builtins: Builtins, m: parser_types.Ast) !Module {
     var order = List(Interned).init(allocator);
     var untyped = Untyped.init(allocator);
     var typed = Typed.init(allocator);

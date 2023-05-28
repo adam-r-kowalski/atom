@@ -28,7 +28,7 @@ const Define = types.Define;
 const BinaryOp = types.BinaryOp;
 const Symbol = types.Symbol;
 const Call = types.Call;
-const Module = types.Module;
+const Ast = types.Ast;
 
 const Precedence = u32;
 
@@ -390,7 +390,7 @@ fn expression(context: Context) error{OutOfMemory}!Expression {
     }
 }
 
-pub fn parse(allocator: Allocator, tokens: *Tokens) !Module {
+pub fn parse(allocator: Allocator, tokens: *Tokens) !Ast {
     const context = Context{
         .allocator = allocator,
         .tokens = tokens,
@@ -403,5 +403,8 @@ pub fn parse(allocator: Allocator, tokens: *Tokens) !Module {
             else => try expressions.append(try expression(context)),
         }
     }
-    return Module{ .expressions = try expressions.toOwnedSlice() };
+    return Ast{
+        .expressions = try expressions.toOwnedSlice(),
+        .intern = tokens.intern,
+    };
 }

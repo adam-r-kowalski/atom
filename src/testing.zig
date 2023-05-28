@@ -23,7 +23,7 @@ pub fn tokenize(allocator: Allocator, source: []const u8) ![]const u8 {
     std.mem.replaceScalar(u8, replaced_source, '\t', ' ');
     std.mem.replaceScalar(u8, replaced_reconstructed, '\t', ' ');
     try std.testing.expectEqualStrings(replaced_source, replaced_reconstructed);
-    return std.fmt.allocPrint(allocator, "{}", .{tokens});
+    return try std.fmt.allocPrint(allocator, "{}", .{tokens});
 }
 
 pub fn parse(allocator: Allocator, source: []const u8) ![]const u8 {
@@ -32,8 +32,8 @@ pub fn parse(allocator: Allocator, source: []const u8) ![]const u8 {
     var intern = Intern.init(arena.allocator());
     const builtins = try Builtins.init(&intern);
     var tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
-    const module = try parser.parse(arena.allocator(), &tokens);
-    return try parser.toString(allocator, intern, module);
+    const ast = try parser.parse(arena.allocator(), &tokens);
+    return try std.fmt.allocPrint(allocator, "{}", .{ast});
 }
 
 pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]const u8 {
