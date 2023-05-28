@@ -23,7 +23,7 @@ pub fn tokenize(allocator: Allocator, source: []const u8) ![]const u8 {
     // std.mem.replaceScalar(u8, replaced_source, '\t', ' ');
     // std.mem.replaceScalar(u8, replaced_reconstructed, '\t', ' ');
     // try std.testing.expectEqualStrings(replaced_source, replaced_reconstructed);
-    return try tokenizer.toString(allocator, intern, tokens.tokens);
+    return std.fmt.allocPrint(allocator, "{}", .{tokens});
 }
 
 pub fn parse(allocator: Allocator, source: []const u8) ![]const u8 {

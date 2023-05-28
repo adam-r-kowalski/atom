@@ -1,5 +1,7 @@
 const std = @import("std");
-const Interned = @import("../interner.zig").Interned;
+const interner = @import("../interner.zig");
+const Interned = interner.Interned;
+const Intern = interner.Intern;
 
 pub const Pos = struct { line: u64, column: u64 };
 pub const Span = struct { begin: Pos, end: Pos };
@@ -96,6 +98,7 @@ pub const Token = union(enum) {
 pub const Tokens = struct {
     tokens: []Token,
     index: usize,
+    intern: Intern,
 
     pub fn peek(self: Tokens) ?Token {
         if (self.index >= self.tokens.len) return null;
@@ -119,10 +122,39 @@ pub const Tokens = struct {
         options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        _ = self;
-        _ = fmt;
         _ = options;
-
-        try writer.writeAll(")");
+        _ = fmt;
+        for (self.tokens, 0..) |token, i| {
+            if (i != 0) try writer.writeAll("\n");
+            switch (token) {
+                .symbol => |s| try writer.print("symbol {s}", .{self.intern.lookup(s.value)}),
+                .int => |s| try writer.print("int {s}", .{self.intern.lookup(s.value)}),
+                .float => |s| try writer.print("float {s}", .{self.intern.lookup(s.value)}),
+                .string => |s| try writer.print("string {s}", .{self.intern.lookup(s.value)}),
+                .bool => |b| try writer.print("bool {}", .{b.value}),
+                .equal => try writer.writeAll("equal"),
+                .equal_equal => try writer.writeAll("equal equal"),
+                .dot => try writer.writeAll("dot"),
+                .colon => try writer.writeAll("colon"),
+                .plus => try writer.writeAll("plus"),
+                .minus => try writer.writeAll("minus"),
+                .times => try writer.writeAll("times"),
+                .slash => try writer.writeAll("slash"),
+                .percent => try writer.writeAll("percent"),
+                .caret => try writer.writeAll("caret"),
+                .greater => try writer.writeAll("greater"),
+                .less => try writer.writeAll("less"),
+                .left_paren => try writer.writeAll("left paren"),
+                .right_paren => try writer.writeAll("right paren"),
+                .left_brace => try writer.writeAll("left brace"),
+                .right_brace => try writer.writeAll("right brace"),
+                .if_ => try writer.writeAll("if"),
+                .else_ => try writer.writeAll("else"),
+                .or_ => try writer.writeAll("or"),
+                .comma => try writer.writeAll("comma"),
+                .fn_ => try writer.writeAll("fn"),
+                .new_line => try writer.writeAll("new line"),
+            }
+        }
     }
 };

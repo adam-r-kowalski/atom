@@ -176,5 +176,6 @@ pub fn tokenize(allocator: Allocator, intern: *Intern, builtins: Builtins, sourc
     return Tokens{
         .tokens = try tokens.toOwnedSlice(),
         .index = 0,
+        .intern = intern.*,
     };
 }
