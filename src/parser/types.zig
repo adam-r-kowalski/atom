@@ -1,13 +1,13 @@
 const interner = @import("../interner.zig");
 const Intern = interner.Intern;
 const Interned = interner.Interned;
-const tokenizer_types = @import("../tokenizer/types.zig");
-pub const Span = tokenizer_types.Span;
-pub const Int = tokenizer_types.Int;
-pub const Float = tokenizer_types.Float;
-pub const Symbol = tokenizer_types.Symbol;
-pub const String = tokenizer_types.String;
-pub const Bool = tokenizer_types.Bool;
+const tokenizer = @import("../tokenizer.zig");
+pub const Span = tokenizer.Span;
+pub const Int = tokenizer.Int;
+pub const Float = tokenizer.Float;
+pub const Symbol = tokenizer.Symbol;
+pub const String = tokenizer.String;
+pub const Bool = tokenizer.Bool;
 
 pub const Define = struct {
     name: Symbol,
