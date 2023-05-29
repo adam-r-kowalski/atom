@@ -6,11 +6,11 @@ const interner = @import("interner.zig");
 const Interned = interner.Interned;
 const Intern = interner.Intern;
 const Builtins = @import("builtins.zig").Builtins;
-const types = @import("types.zig");
-const Pos = types.tokens.Pos;
-const Span = types.tokens.Span;
-const Token = types.tokens.Token;
-const Tokens = types.tokens.Tokens;
+const token = @import("token.zig");
+const Pos = token.Pos;
+const Span = token.Span;
+const Token = token.Token;
+const Tokens = token.Tokens;
 
 const Cursor = struct {
     source: []const u8,
@@ -171,8 +171,7 @@ pub fn tokenize(allocator: Allocator, intern: *Intern, builtins: Builtins, sourc
         .pos = .{ .line = 1, .column = 1 },
     };
     var tokens = List(Token).init(allocator);
-    while (try nextToken(&cursor, intern, builtins)) |token|
-        try tokens.append(token);
+    while (try nextToken(&cursor, intern, builtins)) |t| try tokens.append(t);
     return Tokens{
         .tokens = try tokens.toOwnedSlice(),
         .index = 0,

@@ -2,7 +2,6 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const List = std.ArrayList;
 
-const types = @import("types.zig");
 const Interned = @import("interner.zig").Interned;
 const Builtins = @import("builtins.zig").Builtins;
 const constraints = @import("constraints.zig");

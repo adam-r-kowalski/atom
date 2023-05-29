@@ -2,14 +2,14 @@ const std = @import("std");
 
 const Intern = @import("interner.zig").Intern;
 const Indent = @import("indent.zig").Indent;
-const tokens = @import("types/tokens.zig");
+const token = @import("token.zig");
 
-pub const Span = tokens.Span;
-pub const Int = tokens.Int;
-pub const Float = tokens.Float;
-pub const Symbol = tokens.Symbol;
-pub const String = tokens.String;
-pub const Bool = tokens.Bool;
+pub const Span = token.Span;
+pub const Int = token.Int;
+pub const Float = token.Float;
+pub const Symbol = token.Symbol;
+pub const String = token.String;
+pub const Bool = token.Bool;
 
 pub const Define = struct {
     name: Symbol,

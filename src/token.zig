@@ -2,7 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const List = std.ArrayList;
 
-const interner = @import("../interner.zig");
+const interner = @import("interner.zig");
 const Interned = interner.Interned;
 const Intern = interner.Intern;
 

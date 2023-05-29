@@ -6,13 +6,13 @@ const interner = @import("interner.zig");
 const Intern = interner.Intern;
 const Interned = interner.Interned;
 const Indent = @import("indent.zig").Indent;
-const types = @import("types.zig");
-const Pos = types.tokens.Pos;
-const LeftParen = types.tokens.LeftParen;
-const IfToken = types.tokens.If;
-const FnToken = types.tokens.Fn;
-const Token = types.tokens.Token;
-const Tokens = types.tokens.Tokens;
+const token = @import("token.zig");
+const Pos = token.Pos;
+const LeftParen = token.LeftParen;
+const IfToken = token.If;
+const FnToken = token.Fn;
+const Token = token.Token;
+const Tokens = token.Tokens;
 const ast = @import("ast.zig");
 const Expression = ast.Expression;
 const Block = ast.Block;
@@ -57,22 +57,22 @@ fn withPrecedence(context: Context, precedence: Precedence) Context {
 }
 
 fn consume(tokens: *Tokens, tag: std.meta.Tag(Token)) Token {
-    const token = tokens.next().?;
-    if (std.meta.activeTag(token) != tag)
-        std.debug.panic("\nExpected token {} found {}", .{ tag, token });
-    return token;
+    const t = tokens.next().?;
+    if (std.meta.activeTag(t) != tag)
+        std.debug.panic("\nExpected token {} found {}", .{ tag, t });
+    return t;
 }
 
 fn maybeConsume(tokens: *Tokens, tag: std.meta.Tag(Token)) void {
-    if (tokens.peek()) |token| {
-        if (std.meta.activeTag(token) == tag)
+    if (tokens.peek()) |t| {
+        if (std.meta.activeTag(t) == tag)
             tokens.advance();
     }
 }
 
 fn consumeNewLines(context: Context) void {
-    while (context.tokens.peek()) |token| {
-        switch (token) {
+    while (context.tokens.peek()) |t| {
+        switch (t) {
             .new_line => context.tokens.advance(),
             else => return,
         }
@@ -93,8 +93,8 @@ fn expressionAlloc(context: Context) !*const Expression {
 
 fn block(context: Context, begin: Pos) !Block {
     var exprs = List(Expression).init(context.allocator);
-    while (context.tokens.peek()) |token| {
-        switch (token) {
+    while (context.tokens.peek()) |t| {
+        switch (t) {
             .right_brace => break,
             .new_line => context.tokens.advance(),
             else => try exprs.append(try expression(withPrecedence(context, LOWEST))),
@@ -125,8 +125,8 @@ fn cond(context: Context, if_: IfToken) !Cond {
     const lowest = withPrecedence(context, LOWEST);
     while (true) {
         consumeNewLines(context);
-        if (context.tokens.peek()) |token| {
-            switch (token) {
+        if (context.tokens.peek()) |t| {
+            switch (t) {
                 .else_ => {
                     context.tokens.advance();
                     break;
@@ -187,8 +187,8 @@ fn ifElse(context: Context, if_: IfToken) !If {
 }
 
 fn ifElseOrCond(context: Context, if_: IfToken) !Expression {
-    if (context.tokens.peek()) |token| {
-        return switch (token) {
+    if (context.tokens.peek()) |t| {
+        return switch (t) {
             .left_brace => .{ .cond = try cond(context, if_) },
             else => .{ .if_else = try ifElse(context, if_) },
         };
@@ -198,8 +198,8 @@ fn ifElseOrCond(context: Context, if_: IfToken) !Expression {
 
 fn functionParameters(context: Context) ![]const Parameter {
     var parameters = List(Parameter).init(context.allocator);
-    while (context.tokens.peek()) |token| {
-        switch (token) {
+    while (context.tokens.peek()) |t| {
+        switch (t) {
             .right_paren => break,
             .symbol => |name| {
                 context.tokens.advance();
@@ -220,8 +220,8 @@ fn function(context: Context, fn_: FnToken) !Expression {
     _ = consume(context.tokens, .left_paren);
     const parameters = try functionParameters(context);
     const return_type = try expressionAlloc(withPrecedence(context, DEFINE + 1));
-    if (context.tokens.peek()) |token| {
-        if (token == .left_brace) {
+    if (context.tokens.peek()) |t| {
+        if (t == .left_brace) {
             const body = try block(withPrecedence(context, LOWEST), consume(context.tokens, .left_brace).span().begin);
             const end = body.span.end;
             return Expression{
@@ -311,8 +311,8 @@ fn binaryOp(context: Context, left: Expression, kind: BinaryOpKind) !BinaryOp {
 fn call(context: Context, left: Expression) !Call {
     context.tokens.advance();
     var arguments = List(Expression).init(context.allocator);
-    while (context.tokens.peek()) |token| {
-        switch (token) {
+    while (context.tokens.peek()) |t| {
+        switch (t) {
             .right_paren => break,
             else => {
                 try arguments.append(try expression(withPrecedence(context, DEFINE + 1)));
@@ -340,8 +340,8 @@ const Infix = struct {
 };
 
 fn infix(context: Context, left: Expression) ?Infix {
-    if (context.tokens.peek()) |token| {
-        switch (token) {
+    if (context.tokens.peek()) |t| {
+        switch (t) {
             .equal => return .{ .kind = .define, .precedence = DEFINE, .associativity = .right },
             .colon => return .{ .kind = .annotate, .precedence = DEFINE, .associativity = .right },
             .plus => return .{ .kind = .{ .binary_op = .add }, .precedence = ADD, .associativity = .left },
@@ -395,8 +395,8 @@ pub fn parse(allocator: Allocator, tokens: *Tokens) !Module {
         .precedence = LOWEST,
     };
     var expressions = List(Expression).init(allocator);
-    while (tokens.peek()) |token| {
-        switch (token) {
+    while (tokens.peek()) |t| {
+        switch (t) {
             .new_line => context.tokens.advance(),
             else => try expressions.append(try expression(context)),
         }
