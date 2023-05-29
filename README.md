@@ -192,7 +192,7 @@ In the above code, `sum` is a function that takes a list of integers and returns
 
 ### Interfaces and Implementations
 
-Interfaces in Neuron define a contract for classes (in the form of function signatures), and any class implementing an interface must fulfil this contract by defining those functions.
+Interfaces in Neuron define a contract for structs (in the form of function signatures), and any struct implementing an interface must fulfil this contract by defining those functions.
 
 For example, let's consider an interface `Shape` with a function `area`, and two struct types, `Circle` and `Square`, implementing this interface:
 
