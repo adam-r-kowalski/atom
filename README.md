@@ -198,8 +198,8 @@ For example, let's consider an interface `Shape` with a function `area`, and two
 
 ```zig
 # interfaces allow you to code against different types in a uniform way
-Shape = interface[T] {
-    area: fn(shape: T) f32
+Shape = interface {
+    area: fn(shape: Self) f32
 }
 
 Circle = struct {
@@ -209,7 +209,7 @@ Circle = struct {
 # you can import functions from other neuron modules
 math = import("math.neuron")
 
-implement Shape[Circle] {
+implement Shape for Circle {
     area = fn(c: Circle) f32 {
         math.pi * c.radius ^ 2
     }
@@ -221,7 +221,7 @@ Square = struct {
 }
 
 # here we leverage destructuring
-implement Shape[Square] {
+implement Shape for Square {
     area = fn({width, height}: Square) f32 {
         width * height
     }
@@ -247,7 +247,7 @@ Square = struct {
     height: f32
 }
 
-implement Shape[Square] {
+implement Shape for Square {
     area = fn({width, height}: Square) f32 {
         width * height
     }
