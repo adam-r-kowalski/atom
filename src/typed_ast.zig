@@ -3,20 +3,20 @@ const Allocator = std.mem.Allocator;
 const Map = std.AutoHashMap;
 const List = std.ArrayList;
 
-const Builtins = @import("../builtins.zig").Builtins;
-const Indent = @import("../indent.zig").Indent;
-const interner = @import("../interner.zig");
+const Builtins = @import("builtins.zig").Builtins;
+const Indent = @import("indent.zig").Indent;
+const interner = @import("interner.zig");
 const Interned = interner.Interned;
 const Intern = interner.Intern;
-const untyped_ast = @import("../ast.zig");
+const untyped_ast = @import("ast.zig");
 pub const Span = untyped_ast.Span;
 const BinaryOpKind = untyped_ast.BinaryOpKind;
 const UntypedExpression = untyped_ast.Expression;
-const substitution = @import("../substitution.zig");
+const substitution = @import("substitution.zig");
 const MonoType = substitution.MonoType;
 const Substitution = substitution.Substitution;
 const TypeVar = substitution.TypeVar;
-const Constraints = @import("../constraints.zig").Constraints;
+const Constraints = @import("constraints.zig").Constraints;
 
 pub const Scope = Map(Interned, MonoType);
 

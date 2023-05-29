@@ -11,7 +11,7 @@ const type_checker = @import("type_checker.zig");
 const lower = @import("lower.zig");
 const Constraints = @import("constraints.zig").Constraints;
 const TypeVar = @import("substitution.zig").TypeVar;
-const Module = @import("types/typed_ast.zig").Module;
+const Module = @import("typed_ast.zig").Module;
 const wat = @import("codegen.zig").wat;
 
 pub fn tokenize(allocator: Allocator, source: []const u8) ![]const u8 {
