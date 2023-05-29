@@ -7,8 +7,8 @@ test "tokenize int literal followed by dot" {
     const actual = try neuron.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\int 2
-        \\dot
+        \\(int 2)
+        \\(operator .)
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -20,7 +20,7 @@ test "type infer int literal as i32" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ name = f, type = fn() i32 }
+        \\    name = symbol{ value = f, type = fn() i32 }
         \\    type = void
         \\    value = 
         \\        function =
@@ -37,7 +37,7 @@ test "type infer bool literal true" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ name = f, type = fn() bool }
+        \\    name = symbol{ value = f, type = fn() bool }
         \\    type = void
         \\    value = 
         \\        function =
@@ -54,7 +54,7 @@ test "type infer bool literal false" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ name = f, type = fn() bool }
+        \\    name = symbol{ value = f, type = fn() bool }
         \\    type = void
         \\    value = 
         \\        function =
@@ -71,7 +71,7 @@ test "type infer int literal as f32" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ name = f, type = fn() f32 }
+        \\    name = symbol{ value = f, type = fn() f32 }
         \\    type = void
         \\    value = 
         \\        function =
@@ -88,7 +88,7 @@ test "type infer float literal as f32" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ name = f, type = fn() f32 }
+        \\    name = symbol{ value = f, type = fn() f32 }
         \\    type = void
         \\    value = 
         \\        function =

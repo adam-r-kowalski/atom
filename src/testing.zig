@@ -9,7 +9,9 @@ const tokenizer = @import("tokenizer.zig");
 const parser = @import("parser.zig");
 const type_checker = @import("type_checker.zig");
 const lower = @import("lower.zig");
-const wat = @import("codegen.zig").wat;
+const Constraints = @import("constraints.zig").Constraints;
+const TypeVar = @import("substitution.zig").TypeVar;
+const Module = @import("typed_ast.zig").Module;
 
 pub fn tokenize(allocator: Allocator, source: []const u8) ![]const u8 {
     var arena = std.heap.ArenaAllocator.init(allocator);
@@ -17,13 +19,13 @@ pub fn tokenize(allocator: Allocator, source: []const u8) ![]const u8 {
     var intern = Intern.init(arena.allocator());
     const builtins = try Builtins.init(&intern);
     const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
-    const reconstructed = try tokenizer.toSource(arena.allocator(), intern, tokens);
+    const reconstructed = try tokens.toSource(arena.allocator());
     var replaced_source = try arena.allocator().dupe(u8, source);
     var replaced_reconstructed = try arena.allocator().dupe(u8, reconstructed);
     std.mem.replaceScalar(u8, replaced_source, '\t', ' ');
     std.mem.replaceScalar(u8, replaced_reconstructed, '\t', ' ');
     try std.testing.expectEqualStrings(replaced_source, replaced_reconstructed);
-    return try tokenizer.toString(allocator, intern, tokens);
+    return try std.fmt.allocPrint(allocator, "{}", .{tokens});
 }
 
 pub fn parse(allocator: Allocator, source: []const u8) ![]const u8 {
@@ -31,9 +33,9 @@ pub fn parse(allocator: Allocator, source: []const u8) ![]const u8 {
     defer arena.deinit();
     var intern = Intern.init(arena.allocator());
     const builtins = try Builtins.init(&intern);
-    const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
-    const module = try parser.parse(arena.allocator(), tokens);
-    return try parser.toString(allocator, intern, module);
+    var tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
+    const ast = try parser.parse(arena.allocator(), &tokens);
+    return try std.fmt.allocPrint(allocator, "{indent 3}", .{ast});
 }
 
 pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]const u8 {
@@ -41,21 +43,15 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     defer arena.deinit();
     var intern = Intern.init(arena.allocator());
     const builtins = try Builtins.init(&intern);
-    const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
-    const untyped_module = try parser.parse(arena.allocator(), tokens);
-    var module = try type_checker.infer.module(arena.allocator(), builtins, untyped_module);
-    const interned = try interner.store(&intern, name);
-    var constraints = type_checker.types.Constraints{
-        .equal = List(type_checker.types.Equal).init(arena.allocator()),
-    };
-    var next_type_var: type_checker.types.TypeVar = 0;
-    try type_checker.infer.infer(arena.allocator(), &constraints, &module, builtins, &next_type_var, interned);
-    const substitution = try type_checker.solve(arena.allocator(), constraints);
-    const typed_module = try type_checker.apply(arena.allocator(), substitution, module);
-    var list = List(u8).init(allocator);
-    const writer = list.writer();
-    try type_checker.toString(writer, intern, typed_module);
-    return list.toOwnedSlice();
+    var tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
+    const untyped_ast = try parser.parse(arena.allocator(), &tokens);
+    var constraints = Constraints.init(arena.allocator());
+    var next_type_var: TypeVar = 0;
+    var ast = try Module.init(arena.allocator(), &constraints, &next_type_var, builtins, untyped_ast);
+    try type_checker.infer(&ast, try intern.store(name));
+    const substitution = try constraints.solve(arena.allocator());
+    ast.apply(substitution);
+    return try std.fmt.allocPrint(allocator, "{}", .{ast});
 }
 
 pub fn typeInferVerbose(allocator: Allocator, source: []const u8, name: []const u8) ![]const u8 {
@@ -63,14 +59,12 @@ pub fn typeInferVerbose(allocator: Allocator, source: []const u8, name: []const 
     defer arena.deinit();
     var intern = Intern.init(arena.allocator());
     const builtins = try Builtins.init(&intern);
-    const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
-    const untyped_module = try parser.parse(arena.allocator(), tokens);
-    const interned = try interner.store(&intern, name);
-    var next_type_var: type_checker.types.TypeVar = 0;
+    var tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
+    const untyped_module = try parser.parse(arena.allocator(), &tokens);
+    const interned = try intern.store(name);
+    var next_type_var: TypeVar = 0;
     var module = try type_checker.infer.module(arena.allocator(), builtins, untyped_module, &next_type_var);
-    var constraints = type_checker.types.Constraints{
-        .equal = List(type_checker.types.Equal).init(arena.allocator()),
-    };
+    var constraints = Constraints.init(arena.allocator());
     try type_checker.infer.infer(arena.allocator(), &constraints, &module, builtins, &next_type_var, interned);
     const substitution = try type_checker.solve(arena.allocator(), constraints);
     const typed_module = try type_checker.apply(arena.allocator(), substitution, module);
@@ -88,22 +82,17 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     defer arena.deinit();
     var intern = Intern.init(arena.allocator());
     const builtins = try Builtins.init(&intern);
-    const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
-    const untyped_module = try parser.parse(arena.allocator(), tokens);
-    var module = try type_checker.infer.module(arena.allocator(), builtins, untyped_module);
-    var constraints = type_checker.types.Constraints{
-        .equal = List(type_checker.types.Equal).init(arena.allocator()),
-    };
-    const start = try interner.store(&intern, "start");
-    var next_type_var: type_checker.types.TypeVar = 0;
-    try type_checker.infer.infer(arena.allocator(), &constraints, &module, builtins, &next_type_var, start);
-    const substitution = try type_checker.solve(arena.allocator(), constraints);
-    const typed_module = try type_checker.apply(arena.allocator(), substitution, module);
-    var ir = try lower.buildIr(arena.allocator(), builtins, typed_module);
-    const alias = try interner.store(&intern, "_start");
-    const exports = try arena.allocator().alloc(lower.types.Export, ir.exports.len + 1);
-    std.mem.copy(lower.types.Export, exports, ir.exports);
-    exports[ir.exports.len] = lower.types.Export{ .name = start, .alias = alias };
-    ir.exports = exports;
-    return try wat(allocator, intern, ir);
+    var tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
+    const untyped_ast = try parser.parse(arena.allocator(), &tokens);
+    var constraints = Constraints.init(arena.allocator());
+    var next_type_var: TypeVar = 0;
+    var ast = try Module.init(arena.allocator(), &constraints, &next_type_var, builtins, untyped_ast);
+    const start = try intern.store("start");
+    try type_checker.infer(&ast, start);
+    const substitution = try constraints.solve(arena.allocator());
+    ast.apply(substitution);
+    var ir = try lower.buildIr(arena.allocator(), builtins, ast);
+    const alias = try intern.store("_start");
+    ir.exports = &.{.{ .name = start, .alias = alias }};
+    return try std.fmt.allocPrint(allocator, "{}", .{ir});
 }

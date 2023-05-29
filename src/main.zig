@@ -38,31 +38,29 @@ pub fn main() !void {
     const t1 = timer.read();
     const source = try std.fs.cwd().readFileAlloc(allocator, file_name, std.math.maxInt(usize));
     const t2 = timer.read();
-    var intern = neuron.interner.Intern.init(allocator);
+    var intern = neuron.Intern.init(allocator);
     const builtins = try neuron.Builtins.init(&intern);
     const t3 = timer.read();
-    const tokens = try neuron.tokenizer.tokenize(allocator, &intern, builtins, source);
+    var tokens = try neuron.tokenize(allocator, &intern, builtins, source);
     const t4 = timer.read();
-    const ast = try neuron.parser.parse(allocator, tokens);
+    const untyped_ast = try neuron.parse(allocator, &tokens);
     const t5 = timer.read();
-    var typed_ast = try neuron.type_checker.infer.module(allocator, builtins, ast);
-    var constraints = neuron.type_checker.types.Constraints{
-        .equal = List(neuron.type_checker.types.Equal).init(allocator),
-    };
-    const start = try neuron.interner.store(&intern, "start");
-    var next_type_var: neuron.type_checker.types.TypeVar = 0;
-    try neuron.type_checker.infer.infer(allocator, &constraints, &typed_ast, builtins, &next_type_var, start);
-    const substitution = try neuron.type_checker.solve(allocator, constraints);
-    typed_ast = try neuron.type_checker.apply(allocator, substitution, typed_ast);
+    var constraints = neuron.Constraints.init(arena.allocator());
+    var next_type_var: neuron.TypeVar = 0;
+    var ast = try neuron.Module.init(arena.allocator(), &constraints, &next_type_var, builtins, untyped_ast);
+    const start = try intern.store("start");
+    try neuron.type_checker.infer(&ast, start);
+    const substitution = try constraints.solve(allocator);
+    ast.apply(substitution);
     const t6 = timer.read();
-    var ir = try neuron.lower.buildIr(allocator, builtins, typed_ast);
-    const alias = try neuron.interner.store(&intern, "_start");
-    const exports = try allocator.alloc(neuron.lower.types.Export, ir.exports.len + 1);
-    std.mem.copy(neuron.lower.types.Export, exports, ir.exports);
-    exports[ir.exports.len] = neuron.lower.types.Export{ .name = start, .alias = alias };
+    var ir = try neuron.lower.buildIr(allocator, builtins, ast);
+    const alias = try intern.store("_start");
+    const exports = try allocator.alloc(neuron.lower.Export, ir.exports.len + 1);
+    std.mem.copy(neuron.lower.Export, exports, ir.exports);
+    exports[ir.exports.len] = neuron.lower.Export{ .name = start, .alias = alias };
     ir.exports = exports;
     const t7 = timer.read();
-    const wat_string = try neuron.codegen.wat(allocator, intern, ir);
+    const wat_string = try neuron.codegen.wat(allocator, ir);
     const t8 = timer.read();
     if (flags.contains("--wat")) {
         const file_name_no_suffix = file_name[0 .. file_name.len - 7];
@@ -90,7 +88,7 @@ pub fn main() !void {
     if (start_func == null) std.debug.panic("\nError getting start!\n", .{});
     var args_val = [0]wasmer.wasm_val_t{};
     var results_val = List(wasmer.wasm_val_t).init(allocator);
-    const exported_define = typed_ast.typed.get(exports[0].name).?.define;
+    const exported_define = ast.typed.get(start).?.define;
     const exported_function = exported_define.value.function;
     if (exported_function.parameters.len != 0)
         std.debug.panic("\nOnly functions with no parameters supported!\n", .{});

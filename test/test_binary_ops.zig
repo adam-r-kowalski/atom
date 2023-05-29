@@ -7,16 +7,16 @@ test "tokenize add then multiply" {
     const actual = try neuron.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\symbol x
-        \\plus
-        \\symbol y
-        \\times
-        \\symbol z
+        \\(symbol x)
+        \\(operator +)
+        \\(symbol y)
+        \\(operator *)
+        \\(symbol z)
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "parse add" {
+test "parse add asdfas" {
     const allocator = std.testing.allocator;
     const source = "x + y";
     const actual = try neuron.testing.parse(allocator, source);
@@ -93,30 +93,30 @@ test "parse grouped greater" {
     const source = "a + (b > c) + d";
     const actual = try neuron.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(+ a (+ (> b c) d))";
+    const expected = "(+ (+ a (> b c)) d)";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "type infer add i32" {
+test "type infer add i32 boo" {
     const allocator = std.testing.allocator;
     const source = "add = fn(x: i32, y: i32) i32 { x + y }";
     const actual = try neuron.testing.typeInfer(allocator, source, "add");
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ name = add, type = fn(i32, i32) i32 }
+        \\    name = symbol{ value = add, type = fn(i32, i32) i32 }
         \\    type = void
         \\    value = 
         \\        function =
         \\            parameters =
-        \\                symbol{ name = x, type = i32 }
-        \\                symbol{ name = y, type = i32 }
+        \\                symbol{ value = x, type = i32 }
+        \\                symbol{ value = y, type = i32 }
         \\            return_type = i32
         \\            body = 
         \\                binary_op =
         \\                    kind = +
-        \\                    left = symbol{ name = x, type = i32 }
-        \\                    right = symbol{ name = y, type = i32 }
+        \\                    left = symbol{ value = x, type = i32 }
+        \\                    right = symbol{ value = y, type = i32 }
         \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -129,19 +129,19 @@ test "type infer binary op multiply" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ name = multiply, type = fn(i32, i32) i32 }
+        \\    name = symbol{ value = multiply, type = fn(i32, i32) i32 }
         \\    type = void
         \\    value = 
         \\        function =
         \\            parameters =
-        \\                symbol{ name = x, type = i32 }
-        \\                symbol{ name = y, type = i32 }
+        \\                symbol{ value = x, type = i32 }
+        \\                symbol{ value = y, type = i32 }
         \\            return_type = i32
         \\            body = 
         \\                binary_op =
         \\                    kind = *
-        \\                    left = symbol{ name = x, type = i32 }
-        \\                    right = symbol{ name = y, type = i32 }
+        \\                    left = symbol{ value = x, type = i32 }
+        \\                    right = symbol{ value = y, type = i32 }
         \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -154,19 +154,19 @@ test "type infer divide i32" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ name = div, type = fn(i32, i32) i32 }
+        \\    name = symbol{ value = div, type = fn(i32, i32) i32 }
         \\    type = void
         \\    value = 
         \\        function =
         \\            parameters =
-        \\                symbol{ name = x, type = i32 }
-        \\                symbol{ name = y, type = i32 }
+        \\                symbol{ value = x, type = i32 }
+        \\                symbol{ value = y, type = i32 }
         \\            return_type = i32
         \\            body = 
         \\                binary_op =
         \\                    kind = /
-        \\                    left = symbol{ name = x, type = i32 }
-        \\                    right = symbol{ name = y, type = i32 }
+        \\                    left = symbol{ value = x, type = i32 }
+        \\                    right = symbol{ value = y, type = i32 }
         \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -179,14 +179,14 @@ test "type infer binary op multiply then add" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ name = f, type = fn(i32, i32, i32) i32 }
+        \\    name = symbol{ value = f, type = fn(i32, i32, i32) i32 }
         \\    type = void
         \\    value = 
         \\        function =
         \\            parameters =
-        \\                symbol{ name = x, type = i32 }
-        \\                symbol{ name = y, type = i32 }
-        \\                symbol{ name = z, type = i32 }
+        \\                symbol{ value = x, type = i32 }
+        \\                symbol{ value = y, type = i32 }
+        \\                symbol{ value = z, type = i32 }
         \\            return_type = i32
         \\            body = 
         \\                binary_op =
@@ -194,10 +194,10 @@ test "type infer binary op multiply then add" {
         \\                    left = 
         \\                        binary_op =
         \\                            kind = *
-        \\                            left = symbol{ name = x, type = i32 }
-        \\                            right = symbol{ name = y, type = i32 }
+        \\                            left = symbol{ value = x, type = i32 }
+        \\                            right = symbol{ value = y, type = i32 }
         \\                            type = i32
-        \\                    right = symbol{ name = z, type = i32 }
+        \\                    right = symbol{ value = z, type = i32 }
         \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);

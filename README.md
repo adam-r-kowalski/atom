@@ -124,15 +124,13 @@ This is a function `max` that takes two parameters, `x` and `y`, and returns the
 
 ### Control Structures
 
-Neuron supports conditional logic with `if` and `else` expressions. You can use the multi-arm version of `if` for chained conditionals.
+Neuron supports conditional logic with `if`, `else if` and `else` expressions.
 
 ```zig
 clamp = fn(value: i32, low: i32, high: i32) i32 {
-    if {
-        value < low { low }
-        value > high { high }
-        else { value }
-    }
+    if value < low { low }
+    else if value > high { high }
+    else { value }
 }
 
 test "multi arm if" {
@@ -177,9 +175,9 @@ In this example, we are calling the `clamp` function using the dot syntax on an 
 Neuron supports pattern matching, which is a way of checking a given sequence of tokens for the presence of the constituents of some pattern. It's a powerful tool for working with complex data structures.
 
 ```zig
-# pattern matching is done with if expression is
+# pattern matching is done with `match expression`
 sum = fn(xs: i32[]) i32 {
-    if xs is {
+    match xs {
         [] { 0 }
         [x, ...xs] { x + sum(xs) }
     }
@@ -190,11 +188,11 @@ test "sum" {
 }
 ```
 
-In the above code, `sum` is a function that takes a list of integers and returns the sum of all elements in the list. The `if xs is` construct is used for pattern matching. If the list is empty (`[]`), the function returns `0`. If the list has at least one element (`[x, ...xs]`), the function returns the sum of the first element and the result of the recursive call to `sum` on the rest of the list.
+In the above code, `sum` is a function that takes a list of integers and returns the sum of all elements in the list. The `match xs` construct is used for pattern matching. If the list is empty (`[]`), the function returns `0`. If the list has at least one element (`[x, ...xs]`), the function returns the sum of the first element and the result of the recursive call to `sum` on the rest of the list.
 
 ### Interfaces and Implementations
 
-Interfaces in Neuron define a contract for classes (in the form of function signatures), and any class implementing an interface must fulfil this contract by defining those functions.
+Interfaces in Neuron define a contract for structs (in the form of function signatures), and any struct implementing an interface must fulfil this contract by defining those functions.
 
 For example, let's consider an interface `Shape` with a function `area`, and two struct types, `Circle` and `Square`, implementing this interface:
 
@@ -263,7 +261,7 @@ Another example of destructuring can be found in array pattern matching:
 ```zig
 # pattern matching with destructuring
 sum = fn(xs: i32[]) i32 {
-    if xs is {
+    match xs {
         [] { 0 }
         [x, ...rest] { x + sum(rest) }
     }
@@ -335,32 +333,34 @@ Neuron provides powerful constructs for high-performance computing, like paralle
 ```zig
 # Compute the dot product of two vectors
 dot = fn[T: Num, n: u64](a: T[n], b: T[n]) T {
-    sum(for i { a[i] \* b[i] })
+    sum(for i { a[i] * b[i] })
 }
 
 # Perform matrix multiplication
 matmul = fn[T: Num, m: u64, n: u64, p: u64](a: T[m][n], b: T[n][p]) T[m][p] {
-    for i, j, k { sum(a[i][k] \* b[k][j]) }
+    for i, j, k { sum(a[i][k] * b[k][j]) }
 }
 ```
 
 ### Machine Learning
 
-Neuron is designed with machine learning in mind. Here is a simple linear model implemented in Neuron:
+Neuron is designed with machine learning in mind. For expressions allow you to express how models work across a single example rather than dealing with batches. Here is a simple linear model implemented in Neuron:
 
 ```zig
 Linear = struct {
-    weight: f64
-    bias: f64
+    m: f64
+    b: f64
 }
 
-predict = fn[n: u64]({weight, bias}: Linear, x: f64[n]) -> f64[n] {
-    for i { weight * x[i] + bias }
+predict = fn({m, b}: Linear, x: f64) -> f64 {
+    m * x + b
 }
 
 sse = fn[n: u64](model: Linear, x: f64[n], y: f64[n]) f64 {
-    y_hat = model.predict(x)
-    sum(for i { (y_hat[i] - y[i]) ^ 2 })
+    sum(for i {
+        y_hat = model.predict(x[i])
+        (y_hat - y[i]) ^ 2
+    })
 }
 
 update = fn(model: Linear, gradient: Linear, learning_rate: f64) Linear {
@@ -370,15 +370,19 @@ update = fn(model: Linear, gradient: Linear, learning_rate: f64) Linear {
     )
 }
 
+step = fn[n: u64](model: Linear, learning_rate: f64, x: f64[n], y: f64[n]) Linear {
+    gradient = grad(sse)(model, x, y)
+    model.update(gradient, learning_rate)
+}
+
 test "gradient descent" {
     model = Linear(weight=1.0, bias=0.0)
     learning_rate = 0.01
     x = [1.0, 2.0, 3.0, 4.0]
     y = [2.0, 4.0, 6.0, 8.0]
-    initial_loss = sse(model, x, y)
-    gradient = grad(sse)(model, x, y)
-    model = update(model, gradient, learning_rate)
-    updated_loss = sse(model, x, y)
+    initial_loss = model.sse(x, y)
+    model = model.step(learning_rate, x, y)
+    updated_loss = model.sse(x, y)
     assert(updated_loss < initial_loss)
 }
 ```

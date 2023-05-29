@@ -12,18 +12,18 @@ test "type infer sqrt f32" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ name = start, type = fn(f32) f32 }
+        \\    name = symbol{ value = start, type = fn(f32) f32 }
         \\    type = void
         \\    value = 
         \\        function =
         \\            parameters =
-        \\                symbol{ name = x, type = f32 }
+        \\                symbol{ value = x, type = f32 }
         \\            return_type = f32
         \\            body = 
         \\                intrinsic =
         \\                    sqrt
         \\                    arguments =
-        \\                        symbol{ name = x, type = f32 }
+        \\                        symbol{ value = x, type = f32 }
         \\                    type = f32
     ;
     try std.testing.expectEqualStrings(expected, actual);

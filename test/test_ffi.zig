@@ -9,22 +9,22 @@ test "tokenize import" {
     const actual = try neuron.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\symbol print
-        \\equal
-        \\symbol foreign_import
-        \\left paren
-        \\string "console"
-        \\comma
-        \\string "log"
-        \\comma
-        \\fn
-        \\left paren
-        \\symbol msg
-        \\colon
-        \\symbol str
-        \\right paren
-        \\symbol void
-        \\right paren
+        \\(symbol print)
+        \\(operator =)
+        \\(symbol foreign_import)
+        \\(delimiter '(')
+        \\(string "console")
+        \\(delimiter ',')
+        \\(string "log")
+        \\(delimiter ',')
+        \\(keyword fn)
+        \\(delimiter '(')
+        \\(symbol msg)
+        \\(operator :)
+        \\(symbol str)
+        \\(delimiter ')')
+        \\(symbol void)
+        \\(delimiter ')')
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -55,7 +55,7 @@ test "type check import" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ name = print, type = fn(str) void }
+        \\    name = symbol{ value = print, type = fn(str) void }
         \\    type = void
         \\    value = 
         \\        foreign_import =
@@ -64,14 +64,14 @@ test "type check import" {
         \\            type = fn(str) void
         \\
         \\define =
-        \\    name = symbol{ name = start, type = fn() void }
+        \\    name = symbol{ value = start, type = fn() void }
         \\    type = void
         \\    value = 
         \\        function =
         \\            return_type = void
         \\            body = 
         \\                call =
-        \\                    symbol{ name = print, type = fn(str) void }
+        \\                    symbol{ value = print, type = fn(str) void }
         \\                    arguments =
         \\                        string{ value = "hello world", type = str }
         \\                    type = void
@@ -112,25 +112,25 @@ test "tokenize export" {
     const actual = try neuron.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\symbol foreign_export
-        \\left paren
-        \\string "double"
-        \\comma
-        \\fn
-        \\left paren
-        \\symbol x
-        \\colon
-        \\symbol i32
-        \\right paren
-        \\symbol i32
-        \\left brace
-        \\new line
-        \\symbol x
-        \\times
-        \\int 2
-        \\new line
-        \\right brace
-        \\right paren
+        \\(symbol foreign_export)
+        \\(delimiter '(')
+        \\(string "double")
+        \\(delimiter ',')
+        \\(keyword fn)
+        \\(delimiter '(')
+        \\(symbol x)
+        \\(operator :)
+        \\(symbol i32)
+        \\(delimiter ')')
+        \\(symbol i32)
+        \\(delimiter '{')
+        \\(new_line)
+        \\(symbol x)
+        \\(operator *)
+        \\(int 2)
+        \\(new_line)
+        \\(delimiter '}')
+        \\(delimiter ')')
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
