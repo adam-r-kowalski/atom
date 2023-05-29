@@ -4,9 +4,9 @@ const List = std.ArrayList;
 const interner = @import("interner.zig");
 const Intern = interner.Intern;
 const Interned = interner.Interned;
-const type_checker = @import("type_checker.zig");
-const Ast = type_checker.Ast;
-const MonoType = type_checker.MonoType;
+const types = @import("types.zig");
+const Ast = types.typed_ast.Ast;
+const MonoType = @import("substitution.zig").MonoType;
 const Builtins = @import("builtins.zig").Builtins;
 
 pub const Type = union(enum) {
@@ -136,7 +136,7 @@ fn mapType(monotype: MonoType) Type {
     }
 }
 
-fn int(i: type_checker.Int) !Expression {
+fn int(i: types.typed_ast.Int) !Expression {
     switch (i.type) {
         .i32 => return .{ .i32_const = i.value },
         .i64 => return .{ .i64_const = i.value },
@@ -146,20 +146,20 @@ fn int(i: type_checker.Int) !Expression {
     }
 }
 
-fn float(f: type_checker.Float) !Expression {
+fn float(f: types.typed_ast.Float) !Expression {
     switch (f.type) {
         .f32 => return .{ .f32_const = f.value },
         else => |k| std.debug.panic("\nFloat type {} not yet supported", .{k}),
     }
 }
 
-fn boolean(builtins: Builtins, b: type_checker.Bool) !Expression {
+fn boolean(builtins: Builtins, b: types.typed_ast.Bool) !Expression {
     return Expression{
         .i32_const = if (b.value) builtins.one else builtins.zero,
     };
 }
 
-fn block(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker.Block) ![]const Expression {
+fn block(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: types.typed_ast.Block) ![]const Expression {
     const expressions = try allocator.alloc(Expression, b.expressions.len);
     for (b.expressions, expressions) |expr, *ir_expr| {
         ir_expr.* = try expression(allocator, builtins, locals, expr);
@@ -167,7 +167,7 @@ fn block(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type
     return expressions;
 }
 
-fn add(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker.BinaryOp) !Expression {
+fn add(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: types.typed_ast.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
@@ -179,7 +179,7 @@ fn add(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_c
     }
 }
 
-fn subtract(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker.BinaryOp) !Expression {
+fn subtract(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: types.typed_ast.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
@@ -191,7 +191,7 @@ fn subtract(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
     }
 }
 
-fn multiply(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker.BinaryOp) !Expression {
+fn multiply(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: types.typed_ast.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
@@ -203,7 +203,7 @@ fn multiply(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
     }
 }
 
-fn divide(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker.BinaryOp) !Expression {
+fn divide(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: types.typed_ast.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
@@ -215,7 +215,7 @@ fn divide(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: typ
     }
 }
 
-fn modulo(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker.BinaryOp) !Expression {
+fn modulo(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: types.typed_ast.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
@@ -225,7 +225,7 @@ fn modulo(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: typ
     }
 }
 
-fn equal(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker.BinaryOp) !Expression {
+fn equal(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: types.typed_ast.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
@@ -237,7 +237,7 @@ fn equal(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type
     }
 }
 
-fn binaryOr(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker.BinaryOp) !Expression {
+fn binaryOr(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: types.typed_ast.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
@@ -246,7 +246,7 @@ fn binaryOr(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
     }
 }
 
-fn greater(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker.BinaryOp) !Expression {
+fn greater(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: types.typed_ast.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
@@ -258,7 +258,7 @@ fn greater(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: ty
     }
 }
 
-fn less(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker.BinaryOp) !Expression {
+fn less(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: types.typed_ast.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
@@ -270,7 +270,7 @@ fn less(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_
     }
 }
 
-fn binaryOp(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type_checker.BinaryOp) !Expression {
+fn binaryOp(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: types.typed_ast.BinaryOp) !Expression {
     switch (b.kind) {
         .add => return try add(allocator, builtins, locals, b),
         .subtract => return try subtract(allocator, builtins, locals, b),
@@ -285,11 +285,11 @@ fn binaryOp(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
     }
 }
 
-fn symbol(s: type_checker.Symbol) Expression {
+fn symbol(s: types.typed_ast.Symbol) Expression {
     return Expression{ .local_get = s.value };
 }
 
-fn call(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: type_checker.Call) !Expression {
+fn call(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: types.typed_ast.Call) !Expression {
     switch (c.function.*) {
         .symbol => |s| {
             const arguments = try allocator.alloc(Expression, c.arguments.len);
@@ -307,7 +307,7 @@ fn call(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: type_
     }
 }
 
-fn intrinsic(allocator: Allocator, builtins: Builtins, locals: *List(Local), i: type_checker.Intrinsic) !Expression {
+fn intrinsic(allocator: Allocator, builtins: Builtins, locals: *List(Local), i: types.typed_ast.Intrinsic) !Expression {
     if (i.function.eql(builtins.sqrt)) {
         switch (i.type) {
             .f32 => return Expression{ .f32_sqrt = try expressionAlloc(allocator, builtins, locals, i.arguments[0]) },
@@ -318,7 +318,7 @@ fn intrinsic(allocator: Allocator, builtins: Builtins, locals: *List(Local), i: 
     std.debug.panic("\nIntrinsic {} not yet supported", .{i.function});
 }
 
-fn ifElse(allocator: Allocator, builtins: Builtins, locals: *List(Local), i: type_checker.If) !Expression {
+fn ifElse(allocator: Allocator, builtins: Builtins, locals: *List(Local), i: types.typed_ast.If) !Expression {
     const condition = try expressionAlloc(allocator, builtins, locals, i.condition.*);
     const then = try block(allocator, builtins, locals, i.then);
     const else_ = try block(allocator, builtins, locals, i.else_);
@@ -332,7 +332,7 @@ fn ifElse(allocator: Allocator, builtins: Builtins, locals: *List(Local), i: typ
     };
 }
 
-fn cond(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: type_checker.Cond) !Expression {
+fn cond(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: types.typed_ast.Cond) !Expression {
     const len = c.conditions.len;
     var result = Expression{
         .if_ = .{
@@ -358,14 +358,14 @@ fn cond(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: type_
     return result;
 }
 
-fn define(allocator: Allocator, builtins: Builtins, locals: *List(Local), d: type_checker.Define) !Expression {
+fn define(allocator: Allocator, builtins: Builtins, locals: *List(Local), d: types.typed_ast.Define) !Expression {
     const name = d.name.value;
     const value = try expressionAlloc(allocator, builtins, locals, d.value.*);
     try locals.append(Local{ .name = name, .type = mapType(d.name.type) });
     return Expression{ .local_set = .{ .name = name, .value = value } };
 }
 
-fn convert(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: type_checker.Convert) !Expression {
+fn convert(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: types.typed_ast.Convert) !Expression {
     const value = try expressionAlloc(allocator, builtins, locals, c.value.*);
     switch (c.value.typeOf()) {
         .i32 => switch (c.type) {
@@ -388,7 +388,7 @@ fn convert(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: ty
     }
 }
 
-fn expression(allocator: Allocator, builtins: Builtins, locals: *List(Local), e: type_checker.Expression) error{OutOfMemory}!Expression {
+fn expression(allocator: Allocator, builtins: Builtins, locals: *List(Local), e: types.typed_ast.Expression) error{OutOfMemory}!Expression {
     switch (e) {
         .int => |i| return try int(i),
         .float => |f| return try float(f),
@@ -406,13 +406,13 @@ fn expression(allocator: Allocator, builtins: Builtins, locals: *List(Local), e:
     }
 }
 
-fn expressionAlloc(allocator: Allocator, builtins: Builtins, locals: *List(Local), e: type_checker.Expression) !*const Expression {
+fn expressionAlloc(allocator: Allocator, builtins: Builtins, locals: *List(Local), e: types.typed_ast.Expression) !*const Expression {
     const ptr = try allocator.create(Expression);
     ptr.* = try expression(allocator, builtins, locals, e);
     return ptr;
 }
 
-fn function(allocator: Allocator, builtins: Builtins, name: Interned, f: type_checker.Function) !Function {
+fn function(allocator: Allocator, builtins: Builtins, name: Interned, f: types.typed_ast.Function) !Function {
     const parameters = try allocator.alloc(Parameter, f.parameters.len);
     for (f.parameters, parameters) |typed_p, *ir_p| {
         ir_p.* = Parameter{
@@ -431,7 +431,7 @@ fn function(allocator: Allocator, builtins: Builtins, name: Interned, f: type_ch
     };
 }
 
-fn foreignImport(allocator: Allocator, name: Interned, i: type_checker.ForeignImport) !Import {
+fn foreignImport(allocator: Allocator, name: Interned, i: types.typed_ast.ForeignImport) !Import {
     switch (i.type) {
         .function => |f| {
             const path = [2]Interned{ i.module, i.name };
