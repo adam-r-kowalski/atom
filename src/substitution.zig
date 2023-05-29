@@ -25,7 +25,9 @@ pub const MonoType = union(enum) {
         }
     }
 
-    pub fn toString(self: MonoType, writer: anytype) !void {
+    pub fn format(self: MonoType, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
         switch (self) {
             .i32 => try writer.writeAll("i32"),
             .i64 => try writer.writeAll("i64"),
@@ -43,7 +45,7 @@ pub const MonoType = union(enum) {
                     } else if (i > 0) {
                         try writer.writeAll(", ");
                     }
-                    try a.toString(writer);
+                    try writer.print("{}", .{a});
                 }
             },
         }
@@ -95,7 +97,9 @@ pub const Substitution = struct {
         return count;
     }
 
-    fn toString(self: Substitution, writer: anytype) !void {
+    pub fn format(self: Substitution, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
         try writer.writeAll("\n\n=== Substitution ===");
         var iterator = self.map.iterator();
         while (iterator.next()) |t| {

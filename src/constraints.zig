@@ -34,7 +34,9 @@ pub const Equal = struct {
         std.debug.panic("\nUnsupported type in equal: {} {}\n", .{ self.left, self.right });
     }
 
-    fn toString(self: Equal, writer: anytype) !void {
+    pub fn format(self: Equal, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
         try writer.print("equal = ", .{});
         try (Indent{ .value = 1 }).toString(writer);
         try writer.print("left = ", .{});
@@ -62,11 +64,10 @@ pub const Constraints = struct {
         return s;
     }
 
-    fn toString(self: Constraints, writer: anytype) !void {
+    pub fn format(self: Constraints, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
         try writer.writeAll("\n\n=== Constraints ===");
-        for (self.equal.items) |e| {
-            try writer.writeAll("\n");
-            try e.toString(writer);
-        }
+        for (self.equal.items) |e| try writer.print("\n{}", .{e});
     }
 };

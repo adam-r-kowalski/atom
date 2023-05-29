@@ -24,33 +24,6 @@ pub fn indent(writer: List(u8).Writer, n: Indent) !void {
     for (0..n) |_| try writer.writeAll("    ");
 }
 
-fn typeString(writer: List(u8).Writer, t: Type) !void {
-    switch (t) {
-        .i32 => try writer.writeAll("i32"),
-        .i64 => try writer.writeAll("i64"),
-        .f32 => try writer.writeAll("f32"),
-        .f64 => try writer.writeAll("f64"),
-        .void => try writer.writeAll("void"),
-        .function => |f| {
-            const last = f.len - 1;
-            for (f[0..last], 0..) |arg, i| {
-                if (i > 0) try writer.writeAll(" ");
-                try writer.writeAll("(param ");
-                try typeString(writer, arg);
-                try writer.writeAll(")");
-            }
-            switch (f[last]) {
-                .void => {},
-                else => |k| {
-                    try writer.writeAll(" (result ");
-                    try typeString(writer, k);
-                    try writer.writeAll(")");
-                },
-            }
-        },
-    }
-}
-
 fn localGet(writer: List(u8).Writer, interned: Interned) !void {
     try writer.print("(local.get ${})", .{interned});
 }
@@ -107,11 +80,7 @@ fn ifElse(writer: List(u8).Writer, c: If, i: Indent) !void {
     try writer.writeAll("(if ");
     switch (c.result) {
         .void => {},
-        else => |t| {
-            try writer.writeAll("(result ");
-            try typeString(writer, t);
-            try writer.writeAll(")");
-        },
+        else => |t| try writer.print("(result {})", .{t}),
     }
     try indent(writer, i);
     try expression(writer, c.condition.*, i);
@@ -191,23 +160,15 @@ fn function(writer: List(u8).Writer, f: Function, i: Indent) !void {
     try indent(writer, i);
     try writer.print("(func ${}", .{f.name});
     for (f.parameters) |p| {
-        try writer.print(" (param ${} ", .{p.name});
-        try typeString(writer, p.type);
-        try writer.writeAll(")");
+        try writer.print(" (param ${} {})", .{ p.name, p.type });
     }
     switch (f.return_type) {
         .void => {},
-        else => |k| {
-            try writer.writeAll(" (result ");
-            try typeString(writer, k);
-            try writer.writeAll(")");
-        },
+        else => try writer.print(" (result {})", .{f.return_type}),
     }
     for (f.locals) |l| {
         try indent(writer, i + 1);
-        try writer.print("(local ${} ", .{l.name});
-        try typeString(writer, l.type);
-        try writer.writeAll(")");
+        try writer.print("(local ${} {})", .{ l.name, l.type });
     }
     try block(writer, f.body, i + 1);
     try writer.writeAll(")");
@@ -216,9 +177,7 @@ fn function(writer: List(u8).Writer, f: Function, i: Indent) !void {
 fn foreignImport(writer: List(u8).Writer, i: Import) !void {
     try writer.writeAll("\n");
     try indent(writer, 1);
-    try writer.print("(import {} {} (func ${} ", .{ i.path[0], i.path[1], i.name });
-    try typeString(writer, i.type);
-    try writer.writeAll("))");
+    try writer.print("(import {} {} (func ${} {}))", .{ i.path[0], i.path[1], i.name, i.type });
 }
 
 fn foreignExport(writer: List(u8).Writer, e: Export) !void {

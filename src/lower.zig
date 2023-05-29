@@ -16,6 +16,29 @@ pub const Type = union(enum) {
     f64,
     void,
     function: []const Type,
+
+    pub fn format(self: Type, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        switch (self) {
+            .i32 => try writer.writeAll("i32"),
+            .i64 => try writer.writeAll("i64"),
+            .f32 => try writer.writeAll("f32"),
+            .f64 => try writer.writeAll("f64"),
+            .void => try writer.writeAll("void"),
+            .function => |f| {
+                const last = f.len - 1;
+                for (f[0..last], 0..) |arg, i| {
+                    if (i > 0) try writer.writeAll(" ");
+                    try writer.print("(param {})", .{arg});
+                }
+                switch (f[last]) {
+                    .void => {},
+                    else => |k| try writer.print(" (result {})", .{k}),
+                }
+            },
+        }
+    }
 };
 
 pub const Parameter = struct {
