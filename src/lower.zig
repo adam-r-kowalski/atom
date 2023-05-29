@@ -8,144 +8,19 @@ const typed_ast = @import("typed_ast.zig");
 const Module = typed_ast.Module;
 const MonoType = @import("substitution.zig").MonoType;
 const Builtins = @import("builtins.zig").Builtins;
-
-pub const Type = union(enum) {
-    i32,
-    i64,
-    f32,
-    f64,
-    void,
-    function: []const Type,
-
-    pub fn format(self: Type, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = options;
-        _ = fmt;
-        switch (self) {
-            .i32 => try writer.writeAll("i32"),
-            .i64 => try writer.writeAll("i64"),
-            .f32 => try writer.writeAll("f32"),
-            .f64 => try writer.writeAll("f64"),
-            .void => try writer.writeAll("void"),
-            .function => |f| {
-                const last = f.len - 1;
-                for (f[0..last], 0..) |arg, i| {
-                    if (i > 0) try writer.writeAll(" ");
-                    try writer.print("(param {})", .{arg});
-                }
-                switch (f[last]) {
-                    .void => {},
-                    else => |k| try writer.print(" (result {})", .{k}),
-                }
-            },
-        }
-    }
-};
-
-pub const Parameter = struct {
-    name: Interned,
-    type: Type,
-};
-
-pub const BinaryOp = struct {
-    left: *const Expression,
-    right: *const Expression,
-};
-
-pub const Call = struct {
-    function: Interned,
-    arguments: []const Expression,
-};
-
-pub const If = struct {
-    result: Type,
-    condition: *const Expression,
-    then: []const Expression,
-    else_: []const Expression,
-};
-
-pub const LocalSet = struct {
-    name: Interned,
-    value: *const Expression,
-};
-
-pub const Expression = union(enum) {
-    local_get: Interned,
-    local_set: LocalSet,
-    i32_const: Interned,
-    i32_add: BinaryOp,
-    i32_sub: BinaryOp,
-    i32_mul: BinaryOp,
-    i32_div_s: BinaryOp,
-    i32_eq: BinaryOp,
-    i32_gt_s: BinaryOp,
-    i32_lt_s: BinaryOp,
-    i32_rem_s: BinaryOp,
-    i32_or: BinaryOp,
-    i32_trunc_f32_s: *const Expression,
-    i64_const: Interned,
-    i64_add: BinaryOp,
-    i64_sub: BinaryOp,
-    i64_mul: BinaryOp,
-    i64_div_s: BinaryOp,
-    i64_eq: BinaryOp,
-    i64_gt_s: BinaryOp,
-    i64_lt_s: BinaryOp,
-    i64_rem_s: BinaryOp,
-    i64_trunc_f64_s: *const Expression,
-    f32_const: Interned,
-    f32_add: BinaryOp,
-    f32_sub: BinaryOp,
-    f32_mul: BinaryOp,
-    f32_div: BinaryOp,
-    f32_eq: BinaryOp,
-    f32_gt: BinaryOp,
-    f32_lt: BinaryOp,
-    f32_sqrt: *const Expression,
-    f32_convert_i32_s: *const Expression,
-    f64_const: Interned,
-    f64_add: BinaryOp,
-    f64_sub: BinaryOp,
-    f64_mul: BinaryOp,
-    f64_div: BinaryOp,
-    f64_eq: BinaryOp,
-    f64_gt: BinaryOp,
-    f64_lt: BinaryOp,
-    f64_sqrt: *const Expression,
-    f64_convert_i64_s: *const Expression,
-    call: Call,
-    if_: If,
-    block: []const Expression,
-};
-
-pub const Local = struct {
-    name: Interned,
-    type: Type,
-};
-
-pub const Function = struct {
-    name: Interned,
-    parameters: []const Parameter,
-    return_type: Type,
-    locals: []const Local,
-    body: []const Expression,
-};
-
-pub const Import = struct {
-    name: Interned,
-    path: [2]Interned,
-    type: Type,
-};
-
-pub const Export = struct {
-    name: Interned,
-    alias: Interned,
-};
-
-pub const IR = struct {
-    functions: []const Function,
-    imports: []const Import,
-    exports: []const Export,
-};
+const ir = @import("ir.zig");
+const Type = ir.Type;
+const Expression = ir.Expression;
+const Local = ir.Local;
+const Function = ir.Function;
+const Import = ir.Import;
+const Parameter = ir.Parameter;
+const IR = ir.IR;
+const I32Const = ir.I32Const;
+const I64Const = ir.I64Const;
+const F32Const = ir.F32Const;
+const F64Const = ir.F64Const;
+const Block = ir.Block;
 
 fn mapType(monotype: MonoType) Type {
     switch (monotype) {
@@ -161,43 +36,44 @@ fn mapType(monotype: MonoType) Type {
 
 fn int(i: typed_ast.Int) !Expression {
     switch (i.type) {
-        .i32 => return .{ .i32_const = i.value },
-        .i64 => return .{ .i64_const = i.value },
-        .f32 => return .{ .f32_const = i.value },
-        .f64 => return .{ .f64_const = i.value },
+        .i32 => return .{ .i32_const = I32Const{ .value = i.value } },
+        .i64 => return .{ .i64_const = I64Const{ .value = i.value } },
+        .f32 => return .{ .f32_const = F32Const{ .value = i.value } },
+        .f64 => return .{ .f64_const = F64Const{ .value = i.value } },
         else => |k| std.debug.panic("\nInt type {} not yet supported", .{k}),
     }
 }
 
 fn float(f: typed_ast.Float) !Expression {
     switch (f.type) {
-        .f32 => return .{ .f32_const = f.value },
+        .f32 => return .{ .f32_const = F32Const{ .value = f.value } },
+        .f64 => return .{ .f64_const = F64Const{ .value = f.value } },
         else => |k| std.debug.panic("\nFloat type {} not yet supported", .{k}),
     }
 }
 
 fn boolean(builtins: Builtins, b: typed_ast.Bool) !Expression {
     return Expression{
-        .i32_const = if (b.value) builtins.one else builtins.zero,
+        .i32_const = I32Const{ .value = if (b.value) builtins.one else builtins.zero },
     };
 }
 
-fn block(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: typed_ast.Block) ![]const Expression {
+fn block(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: typed_ast.Block) !Block {
     const expressions = try allocator.alloc(Expression, b.expressions.len);
     for (b.expressions, expressions) |expr, *ir_expr| {
         ir_expr.* = try expression(allocator, builtins, locals, expr);
     }
-    return expressions;
+    return Block{ .expressions = expressions };
 }
 
 fn add(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: typed_ast.BinaryOp) !Expression {
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
-        .i32 => return Expression{ .i32_add = .{ .left = left, .right = right } },
-        .i64 => return Expression{ .i64_add = .{ .left = left, .right = right } },
-        .f32 => return Expression{ .f32_add = .{ .left = left, .right = right } },
-        .f64 => return Expression{ .f64_add = .{ .left = left, .right = right } },
+        .i32 => return Expression{ .binary_op = .{ .kind = .i32_add, .left = left, .right = right } },
+        .i64 => return Expression{ .binary_op = .{ .kind = .i64_add, .left = left, .right = right } },
+        .f32 => return Expression{ .binary_op = .{ .kind = .f32_add, .left = left, .right = right } },
+        .f64 => return Expression{ .binary_op = .{ .kind = .f64_add, .left = left, .right = right } },
         else => |k| std.debug.panic("\nAdd type {} not yet supported", .{k}),
     }
 }
@@ -206,10 +82,10 @@ fn subtract(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
-        .i32 => return Expression{ .i32_sub = .{ .left = left, .right = right } },
-        .i64 => return Expression{ .i64_sub = .{ .left = left, .right = right } },
-        .f32 => return Expression{ .f32_sub = .{ .left = left, .right = right } },
-        .f64 => return Expression{ .f64_sub = .{ .left = left, .right = right } },
+        .i32 => return Expression{ .binary_op = .{ .kind = .i32_sub, .left = left, .right = right } },
+        .i64 => return Expression{ .binary_op = .{ .kind = .i64_sub, .left = left, .right = right } },
+        .f32 => return Expression{ .binary_op = .{ .kind = .f32_sub, .left = left, .right = right } },
+        .f64 => return Expression{ .binary_op = .{ .kind = .f64_sub, .left = left, .right = right } },
         else => |k| std.debug.panic("\nSubtract type {} not yet supported", .{k}),
     }
 }
@@ -218,10 +94,10 @@ fn multiply(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
-        .i32 => return Expression{ .i32_mul = .{ .left = left, .right = right } },
-        .i64 => return Expression{ .i64_mul = .{ .left = left, .right = right } },
-        .f32 => return Expression{ .f32_mul = .{ .left = left, .right = right } },
-        .f64 => return Expression{ .f64_mul = .{ .left = left, .right = right } },
+        .i32 => return Expression{ .binary_op = .{ .kind = .i32_mul, .left = left, .right = right } },
+        .i64 => return Expression{ .binary_op = .{ .kind = .i64_mul, .left = left, .right = right } },
+        .f32 => return Expression{ .binary_op = .{ .kind = .f32_mul, .left = left, .right = right } },
+        .f64 => return Expression{ .binary_op = .{ .kind = .f64_mul, .left = left, .right = right } },
         else => |k| std.debug.panic("\nMultiply type {} not yet supported", .{k}),
     }
 }
@@ -230,10 +106,10 @@ fn divide(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: typ
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
-        .i32 => return Expression{ .i32_div_s = .{ .left = left, .right = right } },
-        .i64 => return Expression{ .i64_div_s = .{ .left = left, .right = right } },
-        .f32 => return Expression{ .f32_div = .{ .left = left, .right = right } },
-        .f64 => return Expression{ .f64_div = .{ .left = left, .right = right } },
+        .i32 => return Expression{ .binary_op = .{ .kind = .i32_div_s, .left = left, .right = right } },
+        .i64 => return Expression{ .binary_op = .{ .kind = .i64_div_s, .left = left, .right = right } },
+        .f32 => return Expression{ .binary_op = .{ .kind = .f32_div, .left = left, .right = right } },
+        .f64 => return Expression{ .binary_op = .{ .kind = .f64_div, .left = left, .right = right } },
         else => |k| std.debug.panic("\nDivide type {} not yet supported", .{k}),
     }
 }
@@ -242,8 +118,8 @@ fn modulo(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: typ
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
-        .i32 => return Expression{ .i32_rem_s = .{ .left = left, .right = right } },
-        .i64 => return Expression{ .i64_rem_s = .{ .left = left, .right = right } },
+        .i32 => return Expression{ .binary_op = .{ .kind = .i32_rem_s, .left = left, .right = right } },
+        .i64 => return Expression{ .binary_op = .{ .kind = .i64_rem_s, .left = left, .right = right } },
         else => |k| std.debug.panic("\nModulo type {} not yet supported", .{k}),
     }
 }
@@ -252,10 +128,10 @@ fn equal(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: type
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
-        .i32 => return Expression{ .i32_eq = .{ .left = left, .right = right } },
-        .i64 => return Expression{ .i64_eq = .{ .left = left, .right = right } },
-        .f32 => return Expression{ .f32_eq = .{ .left = left, .right = right } },
-        .f64 => return Expression{ .f64_eq = .{ .left = left, .right = right } },
+        .i32 => return Expression{ .binary_op = .{ .kind = .i32_eq, .left = left, .right = right } },
+        .i64 => return Expression{ .binary_op = .{ .kind = .i64_eq, .left = left, .right = right } },
+        .f32 => return Expression{ .binary_op = .{ .kind = .f32_eq, .left = left, .right = right } },
+        .f64 => return Expression{ .binary_op = .{ .kind = .f64_eq, .left = left, .right = right } },
         else => |k| std.debug.panic("\nEqual type {} not yet supported", .{k}),
     }
 }
@@ -264,7 +140,7 @@ fn binaryOr(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
-        .bool => return Expression{ .i32_or = .{ .left = left, .right = right } },
+        .bool => return Expression{ .binary_op = .{ .kind = .i32_or, .left = left, .right = right } },
         else => |k| std.debug.panic("\nOr type {} not yet supported", .{k}),
     }
 }
@@ -273,10 +149,10 @@ fn greater(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: ty
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
-        .i32 => return Expression{ .i32_gt_s = .{ .left = left, .right = right } },
-        .i64 => return Expression{ .i64_gt_s = .{ .left = left, .right = right } },
-        .f32 => return Expression{ .f32_gt = .{ .left = left, .right = right } },
-        .f64 => return Expression{ .f64_gt = .{ .left = left, .right = right } },
+        .i32 => return Expression{ .binary_op = .{ .kind = .i32_gt_s, .left = left, .right = right } },
+        .i64 => return Expression{ .binary_op = .{ .kind = .i64_gt_s, .left = left, .right = right } },
+        .f32 => return Expression{ .binary_op = .{ .kind = .f32_gt, .left = left, .right = right } },
+        .f64 => return Expression{ .binary_op = .{ .kind = .f64_gt, .left = left, .right = right } },
         else => |k| std.debug.panic("\nGreater type {} not yet supported", .{k}),
     }
 }
@@ -285,10 +161,10 @@ fn less(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: typed
     const left = try expressionAlloc(allocator, builtins, locals, b.left.*);
     const right = try expressionAlloc(allocator, builtins, locals, b.right.*);
     switch (b.left.typeOf()) {
-        .i32 => return Expression{ .i32_lt_s = .{ .left = left, .right = right } },
-        .i64 => return Expression{ .i64_lt_s = .{ .left = left, .right = right } },
-        .f32 => return Expression{ .f32_lt = .{ .left = left, .right = right } },
-        .f64 => return Expression{ .f64_lt = .{ .left = left, .right = right } },
+        .i32 => return Expression{ .binary_op = .{ .kind = .i32_lt_s, .left = left, .right = right } },
+        .i64 => return Expression{ .binary_op = .{ .kind = .i64_lt_s, .left = left, .right = right } },
+        .f32 => return Expression{ .binary_op = .{ .kind = .f32_lt, .left = left, .right = right } },
+        .f64 => return Expression{ .binary_op = .{ .kind = .f64_lt, .left = left, .right = right } },
         else => |k| std.debug.panic("\nGreater type {} not yet supported", .{k}),
     }
 }
@@ -309,7 +185,7 @@ fn binaryOp(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: t
 }
 
 fn symbol(s: typed_ast.Symbol) Expression {
-    return Expression{ .local_get = s.value };
+    return Expression{ .local_get = .{ .name = s.value } };
 }
 
 fn call(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: typed_ast.Call) !Expression {
@@ -332,9 +208,10 @@ fn call(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: typed
 
 fn intrinsic(allocator: Allocator, builtins: Builtins, locals: *List(Local), i: typed_ast.Intrinsic) !Expression {
     if (i.function.eql(builtins.sqrt)) {
+        const expr = try expressionAlloc(allocator, builtins, locals, i.arguments[0]);
         switch (i.type) {
-            .f32 => return Expression{ .f32_sqrt = try expressionAlloc(allocator, builtins, locals, i.arguments[0]) },
-            .f64 => return Expression{ .f64_sqrt = try expressionAlloc(allocator, builtins, locals, i.arguments[0]) },
+            .f32 => return Expression{ .unary_op = .{ .kind = .f32_sqrt, .expression = expr } },
+            .f64 => return Expression{ .unary_op = .{ .kind = .f64_sqrt, .expression = expr } },
             else => |k| std.debug.panic("\nSqrt type {} not yet supported", .{k}),
         }
     }
@@ -374,7 +251,7 @@ fn cond(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: typed
                 .result = mapType(c.type),
                 .condition = try expressionAlloc(allocator, builtins, locals, c.conditions[i - 1]),
                 .then = try block(allocator, builtins, locals, c.thens[i - 1]),
-                .else_ = else_,
+                .else_ = Block{ .expressions = else_ },
             },
         };
     }
@@ -392,19 +269,19 @@ fn convert(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: ty
     const value = try expressionAlloc(allocator, builtins, locals, c.value.*);
     switch (c.value.typeOf()) {
         .i32 => switch (c.type) {
-            .f32 => return Expression{ .f32_convert_i32_s = value },
+            .f32 => return Expression{ .unary_op = .{ .kind = .f32_convert_i32_s, .expression = value } },
             else => |k| std.debug.panic("\nConvert type i32 to {} not yet supported", .{k}),
         },
         .f32 => switch (c.type) {
-            .i32 => return Expression{ .i32_trunc_f32_s = value },
+            .i32 => return Expression{ .unary_op = .{ .kind = .i32_trunc_f32_s, .expression = value } },
             else => |k| std.debug.panic("\nConvert type f32 to {} not yet supported", .{k}),
         },
         .i64 => switch (c.type) {
-            .f64 => return Expression{ .f64_convert_i64_s = value },
+            .f64 => return Expression{ .unary_op = .{ .kind = .f64_convert_i64_s, .expression = value } },
             else => |k| std.debug.panic("\nConvert type i64 to {} not yet supported", .{k}),
         },
         .f64 => switch (c.type) {
-            .i64 => return Expression{ .i64_trunc_f64_s = value },
+            .i64 => return Expression{ .unary_op = .{ .kind = .i64_trunc_f64_s, .expression = value } },
             else => |k| std.debug.panic("\nConvert type f64 to {} not yet supported", .{k}),
         },
         else => |k| std.debug.panic("\nConvert type {} not yet supported", .{k}),

@@ -12,7 +12,6 @@ const lower = @import("lower.zig");
 const Constraints = @import("constraints.zig").Constraints;
 const TypeVar = @import("substitution.zig").TypeVar;
 const Module = @import("typed_ast.zig").Module;
-const wat = @import("codegen.zig").wat;
 
 pub fn tokenize(allocator: Allocator, source: []const u8) ![]const u8 {
     var arena = std.heap.ArenaAllocator.init(allocator);
@@ -94,9 +93,6 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     ast.apply(substitution);
     var ir = try lower.buildIr(arena.allocator(), builtins, ast);
     const alias = try intern.store("_start");
-    const exports = try arena.allocator().alloc(lower.Export, ir.exports.len + 1);
-    std.mem.copy(lower.Export, exports, ir.exports);
-    exports[ir.exports.len] = lower.Export{ .name = start, .alias = alias };
-    ir.exports = exports;
-    return try wat(allocator, ir);
+    ir.exports = &.{.{ .name = start, .alias = alias }};
+    return try std.fmt.allocPrint(allocator, "{}", .{ir});
 }
