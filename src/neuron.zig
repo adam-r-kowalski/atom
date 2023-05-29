@@ -1,5 +1,7 @@
 pub const Builtins = @import("builtins.zig").Builtins;
-pub const Intern = @import("interner.zig").Intern;
+const interner = @import("interner.zig");
+pub const Intern = interner.Intern;
+pub const Interned = interner.Interned;
 pub const tokenize = @import("tokenizer.zig").tokenize;
 pub const parse = @import("parser.zig").parse;
 pub const type_checker = @import("type_checker.zig");
