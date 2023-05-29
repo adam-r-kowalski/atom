@@ -132,9 +132,9 @@ pub const BinaryOp = struct {
 
     fn toString(self: BinaryOp, writer: anytype, i: Indent) !void {
         try writer.print("({}{}", .{ self.kind, i.add(1) });
-        self.left.toString(writer, i.add(1)) catch unreachable;
+        try self.left.toString(writer, i.add(1));
         try writer.print("{}", .{i.add(1)});
-        self.right.toString(writer, i.add(1)) catch unreachable;
+        try self.right.toString(writer, i.add(1));
         try writer.writeAll(")");
     }
 
@@ -173,7 +173,7 @@ pub const UnaryOp = struct {
 
     fn toString(self: UnaryOp, writer: anytype, i: Indent) !void {
         try writer.print("({}{}", .{ self.kind, i });
-        self.expression.toString(writer, i) catch unreachable;
+        try self.expression.toString(writer, i);
         try writer.writeAll(")");
     }
 
@@ -211,7 +211,7 @@ pub const If = struct {
             else => |t| try writer.print("(result {})", .{t}),
         }
         try writer.print("{}", .{indent.add(1)});
-        self.condition.toString(writer, indent.add(1)) catch unreachable;
+        try self.condition.toString(writer, indent.add(1));
         try writer.print("{}(then", .{indent.add(1)});
         try self.then.toString(writer, indent.add(2));
         try writer.writeAll(")");
@@ -280,7 +280,7 @@ pub const LocalSet = struct {
 
     pub fn toString(self: LocalSet, writer: anytype, indent: Indent) !void {
         try writer.print("(local.set ${}{}", .{ self.name, indent.add(1) });
-        self.value.toString(writer, indent.add(1)) catch unreachable;
+        try self.value.toString(writer, indent.add(1));
         try writer.writeAll(")");
     }
 

@@ -24,16 +24,18 @@ pub const Scope = Map(Interned, MonoType);
 
 pub const Scopes = struct {
     allocator: Allocator,
+    base: Scope,
     scopes: List(Scope),
     work_queue: *WorkQueue,
 
     pub fn init(allocator: Allocator, work_queue: *WorkQueue, scope: Scope) !Scopes {
         var scopes = List(Scope).init(allocator);
-        try scopes.append(scope);
+        try scopes.append(Scope.init(allocator));
         return .{
             .allocator = allocator,
             .work_queue = work_queue,
             .scopes = scopes,
+            .base = scope,
         };
     }
 
@@ -50,12 +52,13 @@ pub const Scopes = struct {
     }
 
     pub fn find(self: Scopes, name: Interned) !MonoType {
-        var i = self.scopes.items.len;
-        while (i != 0) : (i -= 1) {
-            if (self.scopes.items[i - 1].get(name)) |type_| {
-                if (i == 1) try self.work_queue.append(name);
-                return type_;
-            }
+        var iterator = std.mem.reverseIterator(self.scopes.items);
+        while (iterator.next()) |scope| {
+            if (scope.get(name)) |monotype| return monotype;
+        }
+        if (self.base.get(name)) |monotype| {
+            try self.work_queue.append(name);
+            return monotype;
         }
         std.debug.panic("\nCould not find {} in scopes", .{name});
     }

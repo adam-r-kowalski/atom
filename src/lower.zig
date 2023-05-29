@@ -230,11 +230,10 @@ fn branch(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: typ
             .else_ = try block(allocator, builtins, locals, b.else_),
         },
     };
-    var i: usize = len - 1;
-    while (i > 0) : (i -= 1) {
+    var iterator = std.mem.reverseIterator(b.arms[0 .. len - 1]);
+    while (iterator.next()) |arm| {
         const else_ = try allocator.alloc(Expression, 1);
         else_[0] = result;
-        const arm = b.arms[i - 1];
         result = Expression{
             .if_ = .{
                 .result = result_type,
