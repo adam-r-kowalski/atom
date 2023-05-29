@@ -17,14 +17,14 @@ pub const Define = struct {
     value: *const Expression,
     span: Span,
 
-    fn toString(self: Define, writer: anytype, intern: Intern, indent: Indent) !void {
+    fn toString(self: Define, writer: anytype, indent: Indent) !void {
         try writer.print("(def {}", .{self.name.value});
         if (self.type) |t| {
             try writer.writeAll(" ");
-            try t.toString(writer, intern, Indent{ .value = 0 });
+            try t.toString(writer, Indent{ .value = 0 });
         }
         try writer.writeAll(" ");
-        try self.value.toString(writer, intern, indent.add(1));
+        try self.value.toString(writer, indent.add(1));
         try writer.writeAll(")");
     }
 };
@@ -33,9 +33,9 @@ pub const Parameter = struct {
     name: Symbol,
     type: Expression,
 
-    fn toString(self: Parameter, writer: anytype, intern: Intern) !void {
+    fn toString(self: Parameter, writer: anytype) !void {
         try writer.print("({} ", .{self.name.value});
-        try self.type.toString(writer, intern, Indent{ .value = 0 });
+        try self.type.toString(writer, Indent{ .value = 0 });
         try writer.writeAll(")");
     }
 };
@@ -44,15 +44,15 @@ pub const Block = struct {
     expressions: []const Expression,
     span: Span,
 
-    fn toString(self: Block, writer: anytype, intern: Intern, indent: Indent) !void {
+    fn toString(self: Block, writer: anytype, indent: Indent) !void {
         try indent.toString(writer);
         if (self.expressions.len == 1) {
-            return try self.expressions[0].toString(writer, intern, indent.add(1));
+            return try self.expressions[0].toString(writer, indent.add(1));
         }
         try writer.writeAll("(block");
         for (self.expressions) |expr| {
             try indent.add(1).toString(writer);
-            try expr.toString(writer, intern, indent.add(1));
+            try expr.toString(writer, indent.add(1));
         }
         try writer.writeAll(")");
     }
@@ -64,15 +64,15 @@ pub const Function = struct {
     body: Block,
     span: Span,
 
-    fn toString(self: Function, writer: anytype, intern: Intern, indent: Indent) !void {
+    fn toString(self: Function, writer: anytype, indent: Indent) !void {
         try writer.writeAll("(fn [");
         for (self.parameters, 0..) |p, j| {
             if (j > 0) try writer.writeAll(" ");
-            try p.toString(writer, intern);
+            try p.toString(writer);
         }
         try writer.writeAll("] ");
-        try self.return_type.toString(writer, intern, indent);
-        try self.body.toString(writer, intern, indent);
+        try self.return_type.toString(writer, indent);
+        try self.body.toString(writer, indent);
         try writer.writeAll(")");
     }
 };
@@ -82,14 +82,14 @@ pub const Prototype = struct {
     return_type: *const Expression,
     span: Span,
 
-    fn toString(self: Prototype, writer: anytype, intern: Intern) !void {
+    fn toString(self: Prototype, writer: anytype) !void {
         try writer.writeAll("(fn [");
         for (self.parameters, 0..) |p, j| {
             if (j > 0) try writer.writeAll(" ");
-            try p.toString(writer, intern);
+            try p.toString(writer);
         }
         try writer.writeAll("] ");
-        try self.return_type.toString(writer, intern, Indent{ .value = 0 });
+        try self.return_type.toString(writer, Indent{ .value = 0 });
         try writer.writeAll(")");
     }
 };
@@ -130,13 +130,13 @@ pub const BinaryOp = struct {
     right: *const Expression,
     span: Span,
 
-    fn toString(self: BinaryOp, writer: anytype, intern: Intern, indent: Indent) !void {
+    fn toString(self: BinaryOp, writer: anytype, indent: Indent) !void {
         try writer.writeAll("(");
         try self.kind.toString(writer);
         try writer.writeAll(" ");
-        try self.left.toString(writer, intern, indent);
+        try self.left.toString(writer, indent);
         try writer.writeAll(" ");
-        try self.right.toString(writer, intern, indent);
+        try self.right.toString(writer, indent);
         try writer.writeAll(")");
     }
 };
@@ -145,8 +145,8 @@ pub const Group = struct {
     expression: *const Expression,
     span: Span,
 
-    fn toString(self: Group, writer: anytype, intern: Intern, indent: Indent) !void {
-        try self.expression.toString(writer, intern, indent);
+    fn toString(self: Group, writer: anytype, indent: Indent) !void {
+        try self.expression.toString(writer, indent);
     }
 };
 
@@ -156,11 +156,11 @@ pub const If = struct {
     else_: Block,
     span: Span,
 
-    fn toString(self: If, writer: anytype, intern: Intern, indent: Indent) !void {
+    fn toString(self: If, writer: anytype, indent: Indent) !void {
         try writer.writeAll("(if ");
-        try self.condition.toString(writer, intern, indent);
-        try self.then.toString(writer, intern, indent);
-        try self.else_.toString(writer, intern, indent);
+        try self.condition.toString(writer, indent);
+        try self.then.toString(writer, indent);
+        try self.else_.toString(writer, indent);
         try writer.writeAll(")");
     }
 };
@@ -171,16 +171,16 @@ pub const Cond = struct {
     else_: Block,
     span: Span,
 
-    fn toString(self: Cond, writer: anytype, intern: Intern, indent: Indent) !void {
+    fn toString(self: Cond, writer: anytype, indent: Indent) !void {
         try writer.writeAll("(cond");
         for (self.conditions, self.thens) |b, t| {
             try indent.toString(writer);
-            try b.toString(writer, intern, indent);
-            try t.toString(writer, intern, indent.add(1));
+            try b.toString(writer, indent);
+            try t.toString(writer, indent.add(1));
         }
         try indent.toString(writer);
         try writer.writeAll("else");
-        try self.else_.toString(writer, intern, indent.add(1));
+        try self.else_.toString(writer, indent.add(1));
         try writer.writeAll(")");
     }
 };
@@ -190,12 +190,12 @@ pub const Call = struct {
     arguments: []const Expression,
     span: Span,
 
-    fn toString(self: Call, writer: anytype, intern: Intern, indent: Indent) !void {
+    fn toString(self: Call, writer: anytype, indent: Indent) !void {
         try writer.writeAll("(");
-        try self.function.toString(writer, intern, indent);
+        try self.function.toString(writer, indent);
         for (self.arguments) |a| {
             try writer.writeAll(" ");
-            try a.toString(writer, intern, indent.add(1));
+            try a.toString(writer, indent.add(1));
         }
         try writer.writeAll(")");
     }
@@ -236,29 +236,28 @@ pub const Expression = union(enum) {
         };
     }
 
-    fn toString(self: Expression, writer: anytype, intern: Intern, indent: Indent) error{NoSpaceLeft}!void {
+    fn toString(self: Expression, writer: anytype, indent: Indent) error{NoSpaceLeft}!void {
         switch (self) {
             .int => |i| try writer.print("{}", .{i.value}),
             .float => |f| try writer.print("{}", .{f.value}),
             .symbol => |s| try writer.print("{}", .{s.value}),
             .string => |s| try writer.print("{}", .{s.value}),
             .bool => |b| try writer.print("{}", .{b.value}),
-            .define => |d| try d.toString(writer, intern, indent),
-            .function => |f| try f.toString(writer, intern, indent),
-            .prototype => |p| try p.toString(writer, intern),
-            .binary_op => |b| try b.toString(writer, intern, indent),
-            .group => |g| try g.toString(writer, intern, indent),
-            .block => |b| try b.toString(writer, intern, indent),
-            .if_else => |i| try i.toString(writer, intern, indent),
-            .cond => |c| try c.toString(writer, intern, indent),
-            .call => |c| try c.toString(writer, intern, indent),
+            .define => |d| try d.toString(writer, indent),
+            .function => |f| try f.toString(writer, indent),
+            .prototype => |p| try p.toString(writer),
+            .binary_op => |b| try b.toString(writer, indent),
+            .group => |g| try g.toString(writer, indent),
+            .block => |b| try b.toString(writer, indent),
+            .if_else => |i| try i.toString(writer, indent),
+            .cond => |c| try c.toString(writer, indent),
+            .call => |c| try c.toString(writer, indent),
         }
     }
 };
 
 pub const Module = struct {
     expressions: []const Expression,
-    intern: *Intern,
 
     pub fn format(
         self: Module,
@@ -270,7 +269,7 @@ pub const Module = struct {
         _ = options;
         for (self.expressions, 0..) |e, i| {
             if (i > 0) try writer.writeAll("\n\n");
-            e.toString(writer, self.intern.*, Indent{ .value = 0 }) catch unreachable;
+            e.toString(writer, Indent{ .value = 0 }) catch unreachable;
         }
     }
 };

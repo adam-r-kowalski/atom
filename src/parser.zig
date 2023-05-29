@@ -403,6 +403,5 @@ pub fn parse(allocator: Allocator, tokens: *Tokens) !Module {
     }
     return Module{
         .expressions = try expressions.toOwnedSlice(),
-        .intern = tokens.intern,
     };
 }

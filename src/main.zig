@@ -47,13 +47,13 @@ pub fn main() !void {
     const t5 = timer.read();
     var constraints = neuron.Constraints.init(arena.allocator());
     var next_type_var: neuron.TypeVar = 0;
-    var ast = try neuron.Ast.init(arena.allocator(), &constraints, &next_type_var, builtins, untyped_ast);
-    try neuron.type_checker.infer(&ast, "start");
+    var ast = try neuron.Module.init(arena.allocator(), &constraints, &next_type_var, builtins, untyped_ast);
+    const start = try intern.store("start");
+    try neuron.type_checker.infer(&ast, start);
     const substitution = try constraints.solve(allocator);
     ast.apply(substitution);
     const t6 = timer.read();
     var ir = try neuron.lower.buildIr(allocator, builtins, ast);
-    const start = try intern.store("start");
     const alias = try intern.store("_start");
     const exports = try allocator.alloc(neuron.lower.Export, ir.exports.len + 1);
     std.mem.copy(neuron.lower.Export, exports, ir.exports);

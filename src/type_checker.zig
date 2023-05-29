@@ -378,10 +378,9 @@ fn expressionAlloc(context: Context, expr: ast.Expression) !*Expression {
     return try alloc(context.allocator, try expression(context, expr));
 }
 
-pub fn infer(module: *Module, name: []const u8) !void {
-    const interned = try module.intern.store(name);
+pub fn infer(module: *Module, name: Interned) !void {
     var work_queue = WorkQueue.init(module.allocator);
-    try work_queue.append(interned);
+    try work_queue.append(name);
     while (work_queue.items.len != 0) {
         const current = work_queue.pop();
         if (module.untyped.fetchRemove(current)) |entry| {

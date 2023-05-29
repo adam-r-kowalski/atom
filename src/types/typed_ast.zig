@@ -481,7 +481,6 @@ pub const Module = struct {
     untyped: Untyped,
     typed: Typed,
     scope: Scope,
-    intern: *Intern,
 
     pub fn init(allocator: Allocator, constraints: *Constraints, next_type_var: *TypeVar, builtins: Builtins, ast: untyped_ast.Module) !Module {
         var order = List(Interned).init(allocator);
@@ -509,7 +508,6 @@ pub const Module = struct {
             .untyped = untyped,
             .typed = typed,
             .scope = scope,
-            .intern = ast.intern,
         };
     }
 

@@ -49,7 +49,7 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     var constraints = Constraints.init(arena.allocator());
     var next_type_var: TypeVar = 0;
     var ast = try Module.init(arena.allocator(), &constraints, &next_type_var, builtins, untyped_ast);
-    try type_checker.infer(&ast, name);
+    try type_checker.infer(&ast, try intern.store(name));
     const substitution = try constraints.solve(arena.allocator());
     ast.apply(substitution);
     return try std.fmt.allocPrint(allocator, "{}", .{ast});
@@ -88,11 +88,11 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     var constraints = Constraints.init(arena.allocator());
     var next_type_var: TypeVar = 0;
     var ast = try Module.init(arena.allocator(), &constraints, &next_type_var, builtins, untyped_ast);
-    try type_checker.infer(&ast, "start");
+    const start = try intern.store("start");
+    try type_checker.infer(&ast, start);
     const substitution = try constraints.solve(arena.allocator());
     ast.apply(substitution);
     var ir = try lower.buildIr(arena.allocator(), builtins, ast);
-    const start = try intern.store("start");
     const alias = try intern.store("_start");
     const exports = try arena.allocator().alloc(lower.Export, ir.exports.len + 1);
     std.mem.copy(lower.Export, exports, ir.exports);
