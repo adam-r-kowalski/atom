@@ -5,6 +5,7 @@ const Allocator = std.mem.Allocator;
 const substitution = @import("substitution.zig");
 const Substitution = substitution.Substitution;
 const MonoType = substitution.MonoType;
+const TypeVar = substitution.TypeVar;
 const Indent = @import("indent.zig").Indent;
 
 pub const Equal = struct {
@@ -49,10 +50,12 @@ pub const Equal = struct {
 
 pub const Constraints = struct {
     equal: List(Equal),
+    next_type_var: TypeVar,
 
     pub fn init(allocator: Allocator) Constraints {
         return Constraints{
             .equal = List(Equal).init(allocator),
+            .next_type_var = TypeVar{ .value = 0 },
         };
     }
 
@@ -62,6 +65,12 @@ pub const Constraints = struct {
         var max_attemps: u64 = 3;
         while (s.simplify() > 0 and max_attemps != 0) : (max_attemps -= 1) {}
         return s;
+    }
+
+    pub fn freshTypeVar(self: *Constraints) MonoType {
+        const typevar = self.next_type_var;
+        self.next_type_var = TypeVar{ .value = self.next_type_var.value + 1 };
+        return .{ .typevar = typevar };
     }
 
     pub fn format(self: Constraints, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {

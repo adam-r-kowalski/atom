@@ -499,14 +499,13 @@ pub const Typed = Map(Interned, Expression);
 pub const Module = struct {
     allocator: Allocator,
     constraints: *Constraints,
-    next_type_var: *TypeVar,
     builtins: Builtins,
     order: []const Interned,
     untyped: Untyped,
     typed: Typed,
     scope: Scope,
 
-    pub fn init(allocator: Allocator, constraints: *Constraints, next_type_var: *TypeVar, builtins: Builtins, ast: untyped_ast.Module) !Module {
+    pub fn init(allocator: Allocator, constraints: *Constraints, builtins: Builtins, ast: untyped_ast.Module) !Module {
         var order = List(Interned).init(allocator);
         var untyped = Untyped.init(allocator);
         var typed = Typed.init(allocator);
@@ -526,7 +525,6 @@ pub const Module = struct {
         return Module{
             .allocator = allocator,
             .constraints = constraints,
-            .next_type_var = next_type_var,
             .builtins = builtins,
             .order = try order.toOwnedSlice(),
             .untyped = untyped,

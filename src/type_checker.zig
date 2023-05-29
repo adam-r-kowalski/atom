@@ -35,7 +35,6 @@ const Context = struct {
     builtins: Builtins,
     constraints: *Constraints,
     scopes: *Scopes,
-    next_type_var: *TypeVar,
 };
 
 fn freshTypeVar(next_type_var: *TypeVar) MonoType {
@@ -56,19 +55,19 @@ fn symbol(scopes: Scopes, s: ast.Symbol) !Symbol {
     };
 }
 
-fn int(i: ast.Int, next_type_var: *TypeVar) Int {
+fn int(context: Context, i: ast.Int) Int {
     return Int{
         .value = i.value,
         .span = i.span,
-        .type = freshTypeVar(next_type_var),
+        .type = context.constraints.freshTypeVar(),
     };
 }
 
-fn float(f: ast.Float, next_type_var: *TypeVar) Float {
+fn float(context: Context, f: ast.Float) Float {
     return Float{
         .value = f.value,
         .span = f.span,
-        .type = freshTypeVar(next_type_var),
+        .type = context.constraints.freshTypeVar(),
     };
 }
 
@@ -92,7 +91,7 @@ fn ifElse(context: Context, i: ast.If) !If {
     const condition = try expressionAlloc(context, i.condition.*);
     const then = try block(context, i.then);
     const else_ = try block(context, i.else_);
-    const type_ = freshTypeVar(context.next_type_var);
+    const type_ = context.constraints.freshTypeVar();
     try context.constraints.equal.appendSlice(&[_]Equal{
         .{ .left = condition.typeOf(), .right = .bool },
         .{ .left = then.type, .right = type_ },
@@ -110,7 +109,7 @@ fn ifElse(context: Context, i: ast.If) !If {
 fn cond(context: Context, c: ast.Cond) !Cond {
     const conditions = try context.allocator.alloc(Expression, c.conditions.len);
     const thens = try context.allocator.alloc(Block, c.thens.len);
-    const type_ = freshTypeVar(context.next_type_var);
+    const type_ = context.constraints.freshTypeVar();
     for (conditions, thens, c.conditions, c.thens) |*typed_c, *typed_t, untyped_c, untyped_t| {
         typed_c.* = try expression(context, untyped_c);
         typed_t.* = try block(context, untyped_t);
@@ -170,7 +169,7 @@ fn binaryOp(context: Context, b: ast.BinaryOp) !Expression {
             const right = try expressionAlloc(context, b.right.*);
             const left_type = left.typeOf();
             try context.constraints.equal.append(.{ .left = left_type, .right = right.typeOf() });
-            const tvar = freshTypeVar(context.next_type_var);
+            const tvar = context.constraints.freshTypeVar();
             try context.constraints.equal.append(.{ .left = left_type, .right = tvar });
             return Expression{
                 .binary_op = .{
@@ -185,13 +184,15 @@ fn binaryOp(context: Context, b: ast.BinaryOp) !Expression {
     }
 }
 
-fn explicitTypeOrVar(allocator: Allocator, builtins: Builtins, next_type_var: *TypeVar, e: ?*const ast.Expression) !MonoType {
-    return if (e) |t| try expressionToMonoType(allocator, builtins, t.*) else freshTypeVar(next_type_var);
+fn explicitTypeOrVar(context: Context, e: ?*const ast.Expression) !MonoType {
+    if (e) |t|
+        return try expressionToMonoType(context.allocator, context.builtins, t.*);
+    return context.constraints.freshTypeVar();
 }
 
 fn define(context: Context, d: ast.Define) !Define {
     const value = try expressionAlloc(context, d.value.*);
-    const monotype = try explicitTypeOrVar(context.allocator, context.builtins, context.next_type_var, d.type);
+    const monotype = try explicitTypeOrVar(context, d.type);
     try context.constraints.equal.append(.{ .left = value.typeOf(), .right = monotype });
     const name = Symbol{
         .value = d.name.value,
@@ -260,7 +261,7 @@ fn call(context: Context, c: ast.Call) !Expression {
                 typed_arg.* = try expression(context, untyped_arg);
                 t.* = typed_arg.typeOf();
             }
-            const return_type = freshTypeVar(context.next_type_var);
+            const return_type = context.constraints.freshTypeVar();
             function_type[len] = return_type;
             try context.constraints.equal.append(.{
                 .left = f.type,
@@ -328,8 +329,8 @@ fn block(context: Context, b: ast.Block) !Block {
 
 fn expression(context: Context, e: ast.Expression) error{OutOfMemory}!Expression {
     switch (e) {
-        .int => |i| return .{ .int = int(i, context.next_type_var) },
-        .float => |f| return .{ .float = float(f, context.next_type_var) },
+        .int => |i| return .{ .int = int(context, i) },
+        .float => |f| return .{ .float = float(context, f) },
         .string => |s| return .{ .string = string(s) },
         .symbol => |s| return .{ .symbol = try symbol(context.scopes.*, s) },
         .bool => |b| return .{ .bool = boolean(b) },
@@ -366,7 +367,6 @@ pub fn infer(module: *Module, name: Interned) !void {
                 .builtins = module.builtins,
                 .constraints = module.constraints,
                 .scopes = &scopes,
-                .next_type_var = module.next_type_var,
             };
             const expr = try expression(context, entry.value);
             try module.typed.putNoClobber(current, expr);
