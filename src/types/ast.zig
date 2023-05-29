@@ -18,14 +18,13 @@ pub const Define = struct {
     span: Span,
 
     fn toString(self: Define, writer: anytype, intern: Intern, indent: Indent) !void {
-        try writer.writeAll("(def ");
-        try writer.writeAll(intern.lookup(self.name.value));
+        try writer.print("(def {}", .{self.name.value});
         if (self.type) |t| {
             try writer.writeAll(" ");
             try t.toString(writer, intern, Indent{ .value = 0 });
         }
         try writer.writeAll(" ");
-        try self.value.toString(writer, intern, indent.increment());
+        try self.value.toString(writer, intern, indent.add(1));
         try writer.writeAll(")");
     }
 };
@@ -35,9 +34,7 @@ pub const Parameter = struct {
     type: Expression,
 
     fn toString(self: Parameter, writer: anytype, intern: Intern) !void {
-        try writer.writeAll("(");
-        try writer.writeAll(intern.lookup(self.name.value));
-        try writer.writeAll(" ");
+        try writer.print("({} ", .{self.name.value});
         try self.type.toString(writer, intern, Indent{ .value = 0 });
         try writer.writeAll(")");
     }
@@ -50,12 +47,12 @@ pub const Block = struct {
     fn toString(self: Block, writer: anytype, intern: Intern, indent: Indent) !void {
         try indent.toString(writer);
         if (self.expressions.len == 1) {
-            return try self.expressions[0].toString(writer, intern, indent.increment());
+            return try self.expressions[0].toString(writer, intern, indent.add(1));
         }
         try writer.writeAll("(block");
         for (self.expressions) |expr| {
-            try indent.increment().toString(writer);
-            try expr.toString(writer, intern, indent.increment());
+            try indent.add(1).toString(writer);
+            try expr.toString(writer, intern, indent.add(1));
         }
         try writer.writeAll(")");
     }
@@ -179,11 +176,11 @@ pub const Cond = struct {
         for (self.conditions, self.thens) |b, t| {
             try indent.toString(writer);
             try b.toString(writer, intern, indent);
-            try t.toString(writer, intern, indent.increment());
+            try t.toString(writer, intern, indent.add(1));
         }
         try indent.toString(writer);
         try writer.writeAll("else");
-        try self.else_.toString(writer, intern, indent.increment());
+        try self.else_.toString(writer, intern, indent.add(1));
         try writer.writeAll(")");
     }
 };
@@ -198,7 +195,7 @@ pub const Call = struct {
         try self.function.toString(writer, intern, indent);
         for (self.arguments) |a| {
             try writer.writeAll(" ");
-            try a.toString(writer, intern, indent.increment());
+            try a.toString(writer, intern, indent.add(1));
         }
         try writer.writeAll(")");
     }
@@ -241,10 +238,10 @@ pub const Expression = union(enum) {
 
     fn toString(self: Expression, writer: anytype, intern: Intern, indent: Indent) error{NoSpaceLeft}!void {
         switch (self) {
-            .int => |i| try writer.writeAll(intern.lookup(i.value)),
-            .float => |f| try writer.writeAll(intern.lookup(f.value)),
-            .symbol => |s| try writer.writeAll(intern.lookup(s.value)),
-            .string => |s| try writer.writeAll(intern.lookup(s.value)),
+            .int => |i| try writer.print("{}", .{i.value}),
+            .float => |f| try writer.print("{}", .{f.value}),
+            .symbol => |s| try writer.print("{}", .{s.value}),
+            .string => |s| try writer.print("{}", .{s.value}),
             .bool => |b| try writer.print("{}", .{b.value}),
             .define => |d| try d.toString(writer, intern, indent),
             .function => |f| try f.toString(writer, intern, indent),
@@ -269,8 +266,8 @@ pub const Ast = struct {
         options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        _ = options;
         _ = fmt;
+        _ = options;
         for (self.expressions, 0..) |e, i| {
             if (i > 0) try writer.writeAll("\n\n");
             e.toString(writer, self.intern.*, Indent{ .value = 0 }) catch unreachable;

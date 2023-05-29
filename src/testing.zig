@@ -33,7 +33,7 @@ pub fn parse(allocator: Allocator, source: []const u8) ![]const u8 {
     const builtins = try Builtins.init(&intern);
     var tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
     const ast = try parser.parse(arena.allocator(), &tokens);
-    return try std.fmt.allocPrint(allocator, "{}", .{ast});
+    return try std.fmt.allocPrint(allocator, "{indent 3}", .{ast});
 }
 
 pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]const u8 {
@@ -95,5 +95,5 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     std.mem.copy(lower.Export, exports, ir.exports);
     exports[ir.exports.len] = lower.Export{ .name = start, .alias = alias };
     ir.exports = exports;
-    return try wat(allocator, intern, ir);
+    return try wat(allocator, ir);
 }

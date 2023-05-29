@@ -1,8 +1,8 @@
 pub const Indent = struct {
     value: u64,
 
-    pub fn increment(self: Indent) Indent {
-        return Indent{ .value = self.value + 1 };
+    pub fn add(self: Indent, n: u64) Indent {
+        return Indent{ .value = self.value + n };
     }
 
     pub fn toString(self: Indent, writer: anytype) !void {
