@@ -60,7 +60,7 @@ pub fn main() !void {
     exports[ir.exports.len] = neuron.lower.Export{ .name = start, .alias = alias };
     ir.exports = exports;
     const t7 = timer.read();
-    const wat_string = try neuron.codegen.wat(allocator, intern, ir);
+    const wat_string = try neuron.codegen.wat(allocator, ir);
     const t8 = timer.read();
     if (flags.contains("--wat")) {
         const file_name_no_suffix = file_name[0 .. file_name.len - 7];
