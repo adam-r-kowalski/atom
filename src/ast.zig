@@ -178,46 +178,29 @@ pub const Group = struct {
     }
 };
 
-pub const If = struct {
-    condition: *const Expression,
+pub const Arm = struct {
+    condition: Expression,
     then: Block,
-    else_: Block,
-    span: Span,
-
-    fn toString(self: If, writer: anytype, indent: Indent) !void {
-        try writer.writeAll("(if ");
-        try self.condition.toString(writer, indent);
-        try self.then.toString(writer, indent);
-        try self.else_.toString(writer, indent);
-        try writer.writeAll(")");
-    }
-
-    pub fn format(self: If, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = fmt;
-        _ = options;
-        try self.toString(writer, Indent{ .value = 0 });
-    }
 };
 
-pub const Cond = struct {
-    conditions: []const Expression,
-    thens: []const Block,
+pub const Branch = struct {
+    arms: []const Arm,
     else_: Block,
     span: Span,
 
-    fn toString(self: Cond, writer: anytype, indent: Indent) !void {
-        try writer.writeAll("(cond");
-        for (self.conditions, self.thens) |b, t| {
+    fn toString(self: Branch, writer: anytype, indent: Indent) !void {
+        try writer.writeAll("(branch");
+        for (self.arms) |arm| {
             try writer.print("{}", .{indent});
-            try b.toString(writer, indent);
-            try t.toString(writer, indent.add(1));
+            try arm.condition.toString(writer, indent);
+            try arm.then.toString(writer, indent.add(1));
         }
         try writer.print("{}else", .{indent});
         try self.else_.toString(writer, indent.add(1));
         try writer.writeAll(")");
     }
 
-    pub fn format(self: Cond, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+    pub fn format(self: Branch, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = fmt;
         _ = options;
         try self.toString(writer, Indent{ .value = 0 });
@@ -258,8 +241,7 @@ pub const Expression = union(enum) {
     binary_op: BinaryOp,
     group: Group,
     block: Block,
-    if_else: If,
-    cond: Cond,
+    branch: Branch,
     call: Call,
 
     pub fn span(self: Expression) Span {
@@ -275,8 +257,7 @@ pub const Expression = union(enum) {
             .binary_op => |e| e.span,
             .group => |e| e.span,
             .block => |e| e.span,
-            .if_else => |e| e.span,
-            .cond => |e| e.span,
+            .branch => |e| e.span,
             .call => |e| e.span,
         };
     }
@@ -294,8 +275,7 @@ pub const Expression = union(enum) {
             .binary_op => |b| try b.toString(writer, indent),
             .group => |g| try g.toString(writer, indent),
             .block => |b| try b.toString(writer, indent),
-            .if_else => |i| try i.toString(writer, indent),
-            .cond => |c| try c.toString(writer, indent),
+            .branch => |b| try b.toString(writer, indent),
             .call => |c| try c.toString(writer, indent),
         }
     }

@@ -16,7 +16,7 @@ test "tokenize add then multiply" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "parse add asdfas" {
+test "parse add" {
     const allocator = std.testing.allocator;
     const source = "x + y";
     const actual = try neuron.testing.parse(allocator, source);

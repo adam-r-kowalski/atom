@@ -17,8 +17,8 @@ const ast = @import("ast.zig");
 const Expression = ast.Expression;
 const Block = ast.Block;
 const Group = ast.Group;
-const Cond = ast.Cond;
-const If = ast.If;
+const Arm = ast.Arm;
+const Branch = ast.Branch;
 const Parameter = ast.Parameter;
 const Span = ast.Span;
 const Symbol = ast.Symbol;
@@ -117,83 +117,51 @@ fn group(context: Context, left_paren: LeftParen) !Group {
     };
 }
 
-fn cond(context: Context, if_: IfToken) !Cond {
-    const begin = if_.span.begin;
-    context.tokens.advance();
-    var conditions = List(Expression).init(context.allocator);
-    var thens = List(Block).init(context.allocator);
+fn branch(context: Context, if_token: IfToken) !Branch {
+    const begin = if_token.span.begin;
     const lowest = withPrecedence(context, LOWEST);
-    while (true) {
-        consumeNewLines(context);
-        if (context.tokens.peek()) |t| {
-            switch (t) {
-                .else_ => {
-                    context.tokens.advance();
-                    break;
-                },
-                else => {
-                    try conditions.append(try expression(lowest));
-                    try thens.append(try block(lowest, consume(context.tokens, .left_brace).span().begin));
-                },
-            }
-        } else {
-            std.debug.panic("\nExpected else in cond", .{});
+    var arms = List(Arm).init(context.allocator);
+    try arms.append(Arm{
+        .condition = try expression(lowest),
+        .then = try block(lowest, consume(context.tokens, .left_brace).span().begin),
+    });
+    consumeNewLines(context);
+    while (context.tokens.peek()) |t| {
+        switch (t) {
+            .else_ => {
+                context.tokens.advance();
+                switch (context.tokens.next().?) {
+                    .left_brace => |l| {
+                        const else_ = try block(lowest, l.span.begin);
+                        const end = else_.span.end;
+                        return Branch{
+                            .arms = try arms.toOwnedSlice(),
+                            .else_ = else_,
+                            .span = .{ .begin = begin, .end = end },
+                        };
+                    },
+                    .if_ => {
+                        try arms.append(Arm{
+                            .condition = try expression(lowest),
+                            .then = try block(lowest, consume(context.tokens, .left_brace).span().begin),
+                        });
+                        consumeNewLines(context);
+                    },
+                    else => |k| std.debug.panic("\nExpected (delimiter '{{') found {}", .{k}),
+                }
+            },
+            else => {
+                const pos = arms.items[0].then.span.end;
+                const else_ = Block{ .expressions = &.{}, .span = .{ .begin = pos, .end = pos } };
+                return Branch{
+                    .arms = try arms.toOwnedSlice(),
+                    .else_ = else_,
+                    .span = .{ .begin = begin, .end = pos },
+                };
+            },
         }
     }
-    const else_ = try block(lowest, consume(context.tokens, .left_brace).span().begin);
-    consumeNewLines(context);
-    const end = consume(context.tokens, .right_brace).span().end;
-    return Cond{
-        .conditions = try conditions.toOwnedSlice(),
-        .thens = try thens.toOwnedSlice(),
-        .else_ = else_,
-        .span = .{ .begin = begin, .end = end },
-    };
-}
-
-fn ifElse(context: Context, if_: IfToken) !If {
-    const begin = if_.span.begin;
-    const lowest = withPrecedence(context, LOWEST);
-    const condition = try expressionAlloc(lowest);
-    const then = try block(lowest, consume(context.tokens, .left_brace).span().begin);
-    switch (context.tokens.next().?) {
-        .else_ => {
-            const else_ = try block(lowest, consume(context.tokens, .left_brace).span().begin);
-            const end = else_.span.end;
-            return If{
-                .condition = condition,
-                .then = then,
-                .else_ = else_,
-                .span = .{ .begin = begin, .end = end },
-            };
-        },
-        else => {
-            const else_ = Block{
-                .expressions = &.{},
-                .span = .{
-                    .begin = then.span.begin,
-                    .end = then.span.end,
-                },
-            };
-            const end = then.span.end;
-            return If{
-                .condition = condition,
-                .then = then,
-                .else_ = else_,
-                .span = .{ .begin = begin, .end = end },
-            };
-        },
-    }
-}
-
-fn ifElseOrCond(context: Context, if_: IfToken) !Expression {
-    if (context.tokens.peek()) |t| {
-        return switch (t) {
-            .left_brace => .{ .cond = try cond(context, if_) },
-            else => .{ .if_else = try ifElse(context, if_) },
-        };
-    }
-    std.debug.panic("\nExpected left brace or expression after if", .{});
+    std.debug.panic("\nExpected else token", .{});
 }
 
 fn functionParameters(context: Context) ![]const Parameter {
@@ -252,7 +220,7 @@ fn prefix(context: Context) !Expression {
         .string => |s| return .{ .string = s },
         .bool => |b| return .{ .bool = b },
         .left_paren => |l| return .{ .group = try group(context, l) },
-        .if_ => |i| return try ifElseOrCond(context, i),
+        .if_ => |i| return .{ .branch = try branch(context, i) },
         .fn_ => |f| return try function(context, f),
         .left_brace => |l| return .{ .block = try block(context, l.span.begin) },
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),

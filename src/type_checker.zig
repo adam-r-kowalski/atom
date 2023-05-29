@@ -20,8 +20,8 @@ const Int = typed_ast.Int;
 const Float = typed_ast.Float;
 const String = typed_ast.String;
 const Bool = typed_ast.Bool;
-const If = typed_ast.If;
-const Cond = typed_ast.Cond;
+const Arm = typed_ast.Arm;
+const Branch = typed_ast.Branch;
 const Expression = typed_ast.Expression;
 const Block = typed_ast.Block;
 const Define = typed_ast.Define;
@@ -87,45 +87,25 @@ fn boolean(b: ast.Bool) Bool {
     };
 }
 
-fn ifElse(context: Context, i: ast.If) !If {
-    const condition = try expressionAlloc(context, i.condition.*);
-    const then = try block(context, i.then);
-    const else_ = try block(context, i.else_);
-    const type_ = context.constraints.freshTypeVar();
-    try context.constraints.equal.appendSlice(&[_]Equal{
-        .{ .left = condition.typeOf(), .right = .bool },
-        .{ .left = then.type, .right = type_ },
-        .{ .left = else_.type, .right = type_ },
-    });
-    return If{
-        .condition = condition,
-        .then = then,
-        .else_ = else_,
-        .type = type_,
-        .span = i.span,
-    };
-}
-
-fn cond(context: Context, c: ast.Cond) !Cond {
-    const conditions = try context.allocator.alloc(Expression, c.conditions.len);
-    const thens = try context.allocator.alloc(Block, c.thens.len);
-    const type_ = context.constraints.freshTypeVar();
-    for (conditions, thens, c.conditions, c.thens) |*typed_c, *typed_t, untyped_c, untyped_t| {
-        typed_c.* = try expression(context, untyped_c);
-        typed_t.* = try block(context, untyped_t);
+fn branch(context: Context, b: ast.Branch) !Branch {
+    const arms = try context.allocator.alloc(Arm, b.arms.len);
+    const result_type = context.constraints.freshTypeVar();
+    for (arms, b.arms) |*typed_arm, untyped_arm| {
+        const condition = try expression(context, untyped_arm.condition);
+        const then = try block(context, untyped_arm.then);
+        typed_arm.* = Arm{ .condition = condition, .then = then };
         try context.constraints.equal.appendSlice(&[_]Equal{
-            .{ .left = typed_c.typeOf(), .right = .bool },
-            .{ .left = typed_t.type, .right = type_ },
+            .{ .left = condition.typeOf(), .right = .bool },
+            .{ .left = then.type, .right = result_type },
         });
     }
-    const else_ = try block(context, c.else_);
-    try context.constraints.equal.append(.{ .left = else_.type, .right = type_ });
-    return Cond{
-        .conditions = conditions,
-        .thens = thens,
+    const else_ = try block(context, b.else_);
+    try context.constraints.equal.append(.{ .left = else_.type, .right = result_type });
+    return Branch{
+        .arms = arms,
         .else_ = else_,
-        .type = type_,
-        .span = c.span,
+        .type = result_type,
+        .span = b.span,
     };
 }
 
@@ -338,8 +318,7 @@ fn expression(context: Context, e: ast.Expression) error{OutOfMemory}!Expression
         .function => |f| return .{ .function = try function(context, f) },
         .binary_op => |b| return try binaryOp(context, b),
         .block => |b| return .{ .block = try block(context, b) },
-        .if_else => |i| return .{ .if_else = try ifElse(context, i) },
-        .cond => |c| return .{ .cond = try cond(context, c) },
+        .branch => |b| return .{ .branch = try branch(context, b) },
         .call => |c| return try call(context, c),
         else => |k| std.debug.panic("\nUnsupported expression {}", .{k}),
     }

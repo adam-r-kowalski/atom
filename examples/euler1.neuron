@@ -1,7 +1,6 @@
 problem1 = fn(n: i32, sum: i32) i32 {
-    if n == 0 {
-        sum
-    } else {
+    if n == 0 { sum }
+    else {
         multiple = n % 3 == 0 or n % 5 == 0
         delta = if multiple { n } else { 0 }
         problem1(n - 1, sum + delta)
