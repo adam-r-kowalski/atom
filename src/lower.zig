@@ -218,39 +218,28 @@ fn intrinsic(allocator: Allocator, builtins: Builtins, locals: *List(Local), i: 
     std.debug.panic("\nIntrinsic {} not yet supported", .{i.function});
 }
 
-fn ifElse(allocator: Allocator, builtins: Builtins, locals: *List(Local), i: typed_ast.If) !Expression {
-    const condition = try expressionAlloc(allocator, builtins, locals, i.condition.*);
-    const then = try block(allocator, builtins, locals, i.then);
-    const else_ = try block(allocator, builtins, locals, i.else_);
-    return Expression{
-        .if_ = .{
-            .result = mapType(i.type),
-            .condition = condition,
-            .then = then,
-            .else_ = else_,
-        },
-    };
-}
-
-fn cond(allocator: Allocator, builtins: Builtins, locals: *List(Local), c: typed_ast.Cond) !Expression {
-    const len = c.conditions.len;
+fn branch(allocator: Allocator, builtins: Builtins, locals: *List(Local), b: typed_ast.Branch) !Expression {
+    const len = b.arms.len;
+    const last_arm = b.arms[len - 1];
+    const result_type = mapType(b.type);
     var result = Expression{
         .if_ = .{
-            .result = mapType(c.type),
-            .condition = try expressionAlloc(allocator, builtins, locals, c.conditions[len - 1]),
-            .then = try block(allocator, builtins, locals, c.thens[len - 1]),
-            .else_ = try block(allocator, builtins, locals, c.else_),
+            .result = result_type,
+            .condition = try expressionAlloc(allocator, builtins, locals, last_arm.condition),
+            .then = try block(allocator, builtins, locals, last_arm.then),
+            .else_ = try block(allocator, builtins, locals, b.else_),
         },
     };
     var i: usize = len - 1;
     while (i > 0) : (i -= 1) {
         const else_ = try allocator.alloc(Expression, 1);
         else_[0] = result;
+        const arm = b.arms[i - 1];
         result = Expression{
             .if_ = .{
-                .result = mapType(c.type),
-                .condition = try expressionAlloc(allocator, builtins, locals, c.conditions[i - 1]),
-                .then = try block(allocator, builtins, locals, c.thens[i - 1]),
+                .result = result_type,
+                .condition = try expressionAlloc(allocator, builtins, locals, arm.condition),
+                .then = try block(allocator, builtins, locals, arm.then),
                 .else_ = Block{ .expressions = else_ },
             },
         };
@@ -298,8 +287,7 @@ fn expression(allocator: Allocator, builtins: Builtins, locals: *List(Local), e:
         .symbol => |s| return symbol(s),
         .call => |c| return try call(allocator, builtins, locals, c),
         .intrinsic => |i| return try intrinsic(allocator, builtins, locals, i),
-        .if_else => |i| return try ifElse(allocator, builtins, locals, i),
-        .cond => |c| return try cond(allocator, builtins, locals, c),
+        .branch => |b| return try branch(allocator, builtins, locals, b),
         .define => |d| return try define(allocator, builtins, locals, d),
         .convert => |c| return try convert(allocator, builtins, locals, c),
         else => |k| std.debug.panic("\nExpression {} not yet supported", .{k}),

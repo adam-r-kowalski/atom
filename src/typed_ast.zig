@@ -247,56 +247,39 @@ pub const BinaryOp = struct {
     }
 };
 
-pub const If = struct {
-    condition: *Expression,
+pub const Arm = struct {
+    condition: Expression,
     then: Block,
-    else_: Block,
-    span: Span,
-    type: MonoType,
 
-    pub fn apply(self: *If, s: Substitution) void {
+    pub fn apply(self: *Arm, s: Substitution) void {
         self.condition.apply(s);
         self.then.apply(s);
-        self.else_.apply(s);
-        self.type.apply(s);
     }
 
-    fn toString(self: If, writer: anytype, indent: Indent) !void {
-        try writer.print("{}if ={}condition = ", .{ indent, indent.add(1) });
-        try self.condition.toString(writer, indent.add(2));
-        try writer.print("{}then = ", .{indent.add(1)});
-        try self.then.toString(writer, indent.add(2));
-        try writer.print("{}else = ", .{indent.add(1)});
-        try self.else_.toString(writer, indent.add(2));
-        try writer.print("{}type = {}", .{ indent.add(1), self.type });
+    fn toString(self: Arm, writer: anytype, indent: Indent) !void {
+        try writer.print("{}condition = ", .{indent});
+        try self.condition.toString(writer, indent.add(1));
+        try writer.print("{}then = ", .{indent});
+        try self.then.toString(writer, indent.add(1));
     }
 };
 
-pub const Cond = struct {
-    conditions: []Expression,
-    thens: []Block,
+pub const Branch = struct {
+    arms: []Arm,
     else_: Block,
     span: Span,
     type: MonoType,
 
-    pub fn apply(self: *Cond, s: Substitution) void {
-        for (self.conditions, self.thens) |*c, *t| {
-            c.apply(s);
-            t.apply(s);
-        }
+    pub fn apply(self: *Branch, s: Substitution) void {
+        for (self.arms) |*arm| arm.apply(s);
         self.else_.apply(s);
         self.type.apply(s);
     }
 
-    fn toString(self: Cond, writer: anytype, indent: Indent) !void {
+    fn toString(self: Branch, writer: anytype, indent: Indent) !void {
         try writer.print("{}", .{indent});
-        try writer.writeAll("cond =");
-        for (self.conditions, self.thens) |c, t| {
-            try writer.print("{}condition = ", .{indent.add(1)});
-            try c.toString(writer, indent.add(2));
-            try writer.print("{}then = ", .{indent.add(1)});
-            try t.toString(writer, indent.add(2));
-        }
+        try writer.writeAll("branch =");
+        for (self.arms) |arm| try arm.toString(writer, indent.add(1));
         try writer.print("{}else = ", .{indent.add(1)});
         try self.else_.toString(writer, indent.add(2));
         try writer.print("{}type = {}", .{ indent.add(1), self.type });
@@ -422,8 +405,7 @@ pub const Expression = union(enum) {
     binary_op: BinaryOp,
     group: Group,
     block: Block,
-    if_else: If,
-    cond: Cond,
+    branch: Branch,
     call: Call,
     intrinsic: Intrinsic,
     foreign_import: ForeignImport,
@@ -441,8 +423,7 @@ pub const Expression = union(enum) {
             .binary_op => |b| b.type,
             .group => |g| g.type,
             .block => |b| b.type,
-            .if_else => |i| i.type,
-            .cond => |c| c.type,
+            .branch => |b| b.type,
             .call => |c| c.type,
             .intrinsic => |i| i.type,
             .foreign_import => |f| f.type,
@@ -457,8 +438,7 @@ pub const Expression = union(enum) {
             .float => |*f| f.apply(s),
             .bool => return,
             .string => return,
-            .if_else => |*i| i.apply(s),
-            .cond => |*c| c.apply(s),
+            .branch => |*b| b.apply(s),
             .binary_op => |*b| b.apply(s),
             .define => |*d| d.apply(s),
             .call => |*c| c.apply(s),
@@ -478,8 +458,7 @@ pub const Expression = union(enum) {
             .float => |f| try writer.print("{}", .{f}),
             .string => |s| try writer.print("{}", .{s}),
             .bool => |b| try writer.print("{}", .{b}),
-            .if_else => |i| try i.toString(writer, indent),
-            .cond => |c| try c.toString(writer, indent),
+            .branch => |b| try b.toString(writer, indent),
             .binary_op => |b| try b.toString(writer, indent),
             .call => |c| try c.toString(writer, indent),
             .intrinsic => |i| try i.toString(writer, indent),

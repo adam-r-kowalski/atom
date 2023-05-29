@@ -31,9 +31,11 @@ test "parse if" {
     defer allocator.free(actual);
     const expected =
         \\(def f (fn [(x bool) (y i32) (z i32)] i32
-        \\    (if x
-        \\        y
-        \\        z)))
+        \\    (branch
+        \\        x
+        \\            y
+        \\        else
+        \\            z)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -53,9 +55,11 @@ test "parse multiple line if" {
     defer allocator.free(actual);
     const expected =
         \\(def f (fn [(x bool) (y i32) (z i32)] i32
-        \\    (if x
-        \\        y
-        \\        z)))
+        \\    (branch
+        \\        x
+        \\            y
+        \\        else
+        \\            z)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -76,11 +80,13 @@ test "parse if multi line then else" {
     defer allocator.free(actual);
     const expected =
         \\(def f (fn [(x bool) (y i32) (z i32)] i32
-        \\    (if x
-        \\        (block
-        \\            (def a (^ y 2))
-        \\            (* a 5))
-        \\        z)))
+        \\    (branch
+        \\        x
+        \\            (block
+        \\                (def a (^ y 2))
+        \\                (* a 5))
+        \\        else
+        \\            z)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -101,11 +107,13 @@ test "parse if then multi line else" {
     defer allocator.free(actual);
     const expected =
         \\(def f (fn [(x bool) (y i32) (z i32)] i32
-        \\    (if x
-        \\        y
-        \\        (block
-        \\            (def a (^ z 2))
-        \\            (* a 5)))))
+        \\    (branch
+        \\        x
+        \\            y
+        \\        else
+        \\            (block
+        \\                (def a (^ z 2))
+        \\                (* a 5)))))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -123,11 +131,13 @@ test "parse let on result of if then else" {
     const actual = try neuron.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def b (if x
-        \\    y
-        \\    (block
-        \\        (def a (^ z 2))
-        \\        (* a 5))))
+        \\(def b (branch
+        \\    x
+        \\        y
+        \\    else
+        \\        (block
+        \\            (def a (^ z 2))
+        \\            (* a 5))))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -151,11 +161,15 @@ test "parse nested if then else" {
     defer allocator.free(actual);
     const expected =
         \\(def f (fn [(x i32) (y i32)] i32
-        \\    (if (> x y)
-        \\        1
-        \\        (if (< x y)
-        \\            -1
-        \\            0))))
+        \\    (branch
+        \\        (> x y)
+        \\            1
+        \\        else
+        \\            (branch
+        \\                (< x y)
+        \\                    -1
+        \\                else
+        \\                    0))))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -181,7 +195,7 @@ test "type infer if then else" {
         \\                symbol{ value = y, type = i32 }
         \\            return_type = i32
         \\            body = 
-        \\                if =
+        \\                branch =
         \\                    condition = symbol{ value = c, type = bool }
         \\                    then = symbol{ value = x, type = i32 }
         \\                    else = symbol{ value = y, type = i32 }
@@ -308,18 +322,16 @@ test "parse multi arm if" {
     const allocator = std.testing.allocator;
     const source =
         \\clamp = fn(x: i32, lb: i32, ub: i32) i32 {
-        \\    if {
-        \\        x < lb { lb }
-        \\        x > ub { ub }
-        \\        else { x }
-        \\    }
+        \\    if x < lb { lb }
+        \\    else if x > ub { ub }
+        \\    else { x }
         \\}
     ;
     const actual = try neuron.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def clamp (fn [(x i32) (lb i32) (ub i32)] i32
-        \\    (cond
+        \\    (branch
         \\        (< x lb)
         \\            lb
         \\        (> x ub)
@@ -334,11 +346,9 @@ test "type infer multi arm if" {
     const allocator = std.testing.allocator;
     const source =
         \\clamp = fn(x: i32, lb: i32, ub: i32) i32 {
-        \\    if {
-        \\        x < lb { lb }
-        \\        x > ub { ub }
-        \\        else { x }
-        \\    }
+        \\    if x < lb { lb }
+        \\    else if x > ub { ub }
+        \\    else { x }
         \\}
     ;
     const actual = try neuron.testing.typeInfer(allocator, source, "clamp");
@@ -355,7 +365,7 @@ test "type infer multi arm if" {
         \\                symbol{ value = ub, type = i32 }
         \\            return_type = i32
         \\            body = 
-        \\                cond =
+        \\                branch =
         \\                    condition = 
         \\                        binary_op =
         \\                            kind = <
@@ -380,11 +390,9 @@ test "codegen multi arm if" {
     const allocator = std.testing.allocator;
     const source =
         \\clamp = fn(x: i32, lb: i32, ub: i32) i32 {
-        \\    if {
-        \\        x < lb { lb }
-        \\        x > ub { ub }
-        \\        else { x }
-        \\    }
+        \\    if x < lb { lb }
+        \\    else if x > ub { ub }
+        \\    else { x }
         \\}
         \\
         \\start = fn() i32 {

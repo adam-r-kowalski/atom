@@ -98,7 +98,7 @@ test "type infer float literal as f32" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "codegen i32 with int literal woah" {
+test "codegen i32 with int literal" {
     const allocator = std.testing.allocator;
     const source = "start = fn() i32 { 42 }";
     const actual = try neuron.testing.codegen(allocator, source);
