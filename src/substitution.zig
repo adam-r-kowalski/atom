@@ -2,7 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Map = std.AutoHashMap;
 
-pub const TypeVar = u64;
+pub const TypeVar = struct { value: u64 };
 
 pub const MonoType = union(enum) {
     void,

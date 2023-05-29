@@ -150,8 +150,7 @@ pub fn main() !void {
     const untyped_ast = try neuron.parse(allocator, &tokens);
     const t5 = timer.read();
     var constraints = neuron.Constraints.init(arena.allocator());
-    var next_type_var: neuron.TypeVar = 0;
-    var ast = try neuron.Module.init(arena.allocator(), &constraints, &next_type_var, builtins, untyped_ast);
+    var ast = try neuron.Module.init(arena.allocator(), &constraints, builtins, untyped_ast);
     const start = try intern.store("start");
     try neuron.type_checker.infer(&ast, start);
     const substitution = try constraints.solve(allocator);

@@ -10,10 +10,10 @@ const Equal = constraints.Equal;
 const substitution = @import("substitution.zig");
 const MonoType = substitution.MonoType;
 const TypeVar = substitution.TypeVar;
-const WorkQueue = List(Interned);
 const typed_ast = @import("typed_ast.zig");
 const Scope = typed_ast.Scope;
 const Scopes = typed_ast.Scopes;
+const WorkQueue = typed_ast.WorkQueue;
 const expressionToMonoType = typed_ast.expressionToMonoType;
 const Symbol = typed_ast.Symbol;
 const Int = typed_ast.Int;
@@ -32,11 +32,9 @@ const ast = @import("ast.zig");
 
 const Context = struct {
     allocator: Allocator,
-    work_queue: *WorkQueue,
     builtins: Builtins,
     constraints: *Constraints,
     scopes: *Scopes,
-    next_type_var: *TypeVar,
 };
 
 fn freshTypeVar(next_type_var: *TypeVar) MonoType {
@@ -45,54 +43,31 @@ fn freshTypeVar(next_type_var: *TypeVar) MonoType {
     return .{ .typevar = typevar };
 }
 
-fn pushScope(scopes: *Scopes) !void {
-    try scopes.append(Scope.init(scopes.allocator));
-}
-
-fn popScope(scopes: *Scopes) void {
-    _ = scopes.pop();
-}
-
-fn putInScope(scopes: *Scopes, name: Interned, type_: MonoType) !void {
-    try scopes.items[scopes.items.len - 1].put(name, type_);
-}
-
-fn findInScope(scopes: Scopes, work_queue: *WorkQueue, name: Interned) !MonoType {
-    var i = scopes.items.len;
-    while (i != 0) : (i -= 1) {
-        if (scopes.items[i - 1].get(name)) |type_| {
-            if (i == 1) try work_queue.append(name);
-            return type_;
-        }
-    }
-    std.debug.panic("\nCould not find {} in scopes", .{name});
-}
-
 fn returnType(builtins: Builtins, next_type_var: *TypeVar, f: ast.Function) MonoType {
     return if (f.return_type) |t| expressionToMonoType(t.*, builtins) else freshTypeVar(next_type_var);
 }
 
-fn symbol(scopes: Scopes, work_queue: *WorkQueue, s: ast.Symbol) !Symbol {
+fn symbol(scopes: Scopes, s: ast.Symbol) !Symbol {
     return Symbol{
         .value = s.value,
         .span = s.span,
-        .type = try findInScope(scopes, work_queue, s.value),
+        .type = try scopes.find(s.value),
     };
 }
 
-fn int(i: ast.Int, next_type_var: *TypeVar) Int {
+fn int(context: Context, i: ast.Int) Int {
     return Int{
         .value = i.value,
         .span = i.span,
-        .type = freshTypeVar(next_type_var),
+        .type = context.constraints.freshTypeVar(),
     };
 }
 
-fn float(f: ast.Float, next_type_var: *TypeVar) Float {
+fn float(context: Context, f: ast.Float) Float {
     return Float{
         .value = f.value,
         .span = f.span,
-        .type = freshTypeVar(next_type_var),
+        .type = context.constraints.freshTypeVar(),
     };
 }
 
@@ -116,7 +91,7 @@ fn ifElse(context: Context, i: ast.If) !If {
     const condition = try expressionAlloc(context, i.condition.*);
     const then = try block(context, i.then);
     const else_ = try block(context, i.else_);
-    const type_ = freshTypeVar(context.next_type_var);
+    const type_ = context.constraints.freshTypeVar();
     try context.constraints.equal.appendSlice(&[_]Equal{
         .{ .left = condition.typeOf(), .right = .bool },
         .{ .left = then.type, .right = type_ },
@@ -134,7 +109,7 @@ fn ifElse(context: Context, i: ast.If) !If {
 fn cond(context: Context, c: ast.Cond) !Cond {
     const conditions = try context.allocator.alloc(Expression, c.conditions.len);
     const thens = try context.allocator.alloc(Block, c.thens.len);
-    const type_ = freshTypeVar(context.next_type_var);
+    const type_ = context.constraints.freshTypeVar();
     for (conditions, thens, c.conditions, c.thens) |*typed_c, *typed_t, untyped_c, untyped_t| {
         typed_c.* = try expression(context, untyped_c);
         typed_t.* = try block(context, untyped_t);
@@ -194,7 +169,7 @@ fn binaryOp(context: Context, b: ast.BinaryOp) !Expression {
             const right = try expressionAlloc(context, b.right.*);
             const left_type = left.typeOf();
             try context.constraints.equal.append(.{ .left = left_type, .right = right.typeOf() });
-            const tvar = freshTypeVar(context.next_type_var);
+            const tvar = context.constraints.freshTypeVar();
             try context.constraints.equal.append(.{ .left = left_type, .right = tvar });
             return Expression{
                 .binary_op = .{
@@ -209,20 +184,22 @@ fn binaryOp(context: Context, b: ast.BinaryOp) !Expression {
     }
 }
 
-fn explicitTypeOrVar(allocator: Allocator, builtins: Builtins, next_type_var: *TypeVar, e: ?*const ast.Expression) !MonoType {
-    return if (e) |t| try expressionToMonoType(allocator, builtins, t.*) else freshTypeVar(next_type_var);
+fn explicitTypeOrVar(context: Context, e: ?*const ast.Expression) !MonoType {
+    if (e) |t|
+        return try expressionToMonoType(context.allocator, context.builtins, t.*);
+    return context.constraints.freshTypeVar();
 }
 
 fn define(context: Context, d: ast.Define) !Define {
     const value = try expressionAlloc(context, d.value.*);
-    const type_ = try explicitTypeOrVar(context.allocator, context.builtins, context.next_type_var, d.type);
-    try context.constraints.equal.append(.{ .left = value.typeOf(), .right = type_ });
+    const monotype = try explicitTypeOrVar(context, d.type);
+    try context.constraints.equal.append(.{ .left = value.typeOf(), .right = monotype });
     const name = Symbol{
         .value = d.name.value,
         .span = d.span,
-        .type = type_,
+        .type = monotype,
     };
-    try putInScope(context.scopes, d.name.value, type_);
+    try context.scopes.put(d.name.value, monotype);
     return Define{
         .name = name,
         .value = value,
@@ -278,13 +255,13 @@ fn call(context: Context, c: ast.Call) !Expression {
             if (s.value.eql(context.builtins.foreign_import)) return try callForeignImport(context, c);
             if (s.value.eql(context.builtins.convert)) return try callConvert(context, c);
             if (s.value.eql(context.builtins.sqrt)) return try callSqrt(context, c);
-            const f = try symbol(context.scopes.*, context.work_queue, s);
+            const f = try symbol(context.scopes.*, s);
             const arguments = try context.allocator.alloc(Expression, len);
             for (c.arguments, arguments, function_type[0..len]) |untyped_arg, *typed_arg, *t| {
                 typed_arg.* = try expression(context, untyped_arg);
                 t.* = typed_arg.typeOf();
             }
-            const return_type = freshTypeVar(context.next_type_var);
+            const return_type = context.constraints.freshTypeVar();
             function_type[len] = return_type;
             try context.constraints.equal.append(.{
                 .left = f.type,
@@ -304,8 +281,8 @@ fn call(context: Context, c: ast.Call) !Expression {
 }
 
 fn function(context: Context, f: ast.Function) !Function {
-    try pushScope(context.scopes);
-    defer popScope(context.scopes);
+    try context.scopes.push();
+    defer context.scopes.pop();
     const len = f.parameters.len;
     const parameters = try context.allocator.alloc(Symbol, len);
     const function_type = try context.allocator.alloc(MonoType, len + 1);
@@ -322,7 +299,7 @@ fn function(context: Context, f: ast.Function) !Function {
             .type = p_type,
         };
         t.* = p_type;
-        try putInScope(context.scopes, name_symbol, p_type);
+        try context.scopes.put(name_symbol, p_type);
     }
     const return_type = try expressionToMonoType(context.allocator, context.builtins, f.return_type.*);
     const body = try block(context, f.body);
@@ -352,10 +329,10 @@ fn block(context: Context, b: ast.Block) !Block {
 
 fn expression(context: Context, e: ast.Expression) error{OutOfMemory}!Expression {
     switch (e) {
-        .int => |i| return .{ .int = int(i, context.next_type_var) },
-        .float => |f| return .{ .float = float(f, context.next_type_var) },
+        .int => |i| return .{ .int = int(context, i) },
+        .float => |f| return .{ .float = float(context, f) },
         .string => |s| return .{ .string = string(s) },
-        .symbol => |s| return .{ .symbol = try symbol(context.scopes.*, context.work_queue, s) },
+        .symbol => |s| return .{ .symbol = try symbol(context.scopes.*, s) },
         .bool => |b| return .{ .bool = boolean(b) },
         .define => |d| return .{ .define = try define(context, d) },
         .function => |f| return .{ .function = try function(context, f) },
@@ -384,15 +361,12 @@ pub fn infer(module: *Module, name: Interned) !void {
     while (work_queue.items.len != 0) {
         const current = work_queue.pop();
         if (module.untyped.fetchRemove(current)) |entry| {
-            var scopes = Scopes.init(module.allocator);
-            try scopes.append(module.scope);
+            var scopes = try Scopes.init(module.allocator, &work_queue, module.scope);
             const context = Context{
                 .allocator = module.allocator,
-                .work_queue = &work_queue,
                 .builtins = module.builtins,
                 .constraints = module.constraints,
                 .scopes = &scopes,
-                .next_type_var = module.next_type_var,
             };
             const expr = try expression(context, entry.value);
             try module.typed.putNoClobber(current, expr);

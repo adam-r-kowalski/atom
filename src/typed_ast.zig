@@ -18,9 +18,48 @@ const Substitution = substitution.Substitution;
 const TypeVar = substitution.TypeVar;
 const Constraints = @import("constraints.zig").Constraints;
 
+pub const WorkQueue = List(Interned);
+
 pub const Scope = Map(Interned, MonoType);
 
-pub const Scopes = List(Scope);
+pub const Scopes = struct {
+    allocator: Allocator,
+    scopes: List(Scope),
+    work_queue: *WorkQueue,
+
+    pub fn init(allocator: Allocator, work_queue: *WorkQueue, scope: Scope) !Scopes {
+        var scopes = List(Scope).init(allocator);
+        try scopes.append(scope);
+        return .{
+            .allocator = allocator,
+            .work_queue = work_queue,
+            .scopes = scopes,
+        };
+    }
+
+    pub fn push(self: *Scopes) !void {
+        try self.scopes.append(Scope.init(self.allocator));
+    }
+
+    pub fn pop(self: *Scopes) void {
+        _ = self.scopes.pop();
+    }
+
+    pub fn put(self: *Scopes, name: Interned, monotype: MonoType) !void {
+        try self.scopes.items[self.scopes.items.len - 1].put(name, monotype);
+    }
+
+    pub fn find(self: Scopes, name: Interned) !MonoType {
+        var i = self.scopes.items.len;
+        while (i != 0) : (i -= 1) {
+            if (self.scopes.items[i - 1].get(name)) |type_| {
+                if (i == 1) try self.work_queue.append(name);
+                return type_;
+            }
+        }
+        std.debug.panic("\nCould not find {} in scopes", .{name});
+    }
+};
 
 pub const Int = struct {
     value: Interned,
@@ -460,14 +499,13 @@ pub const Typed = Map(Interned, Expression);
 pub const Module = struct {
     allocator: Allocator,
     constraints: *Constraints,
-    next_type_var: *TypeVar,
     builtins: Builtins,
     order: []const Interned,
     untyped: Untyped,
     typed: Typed,
     scope: Scope,
 
-    pub fn init(allocator: Allocator, constraints: *Constraints, next_type_var: *TypeVar, builtins: Builtins, ast: untyped_ast.Module) !Module {
+    pub fn init(allocator: Allocator, constraints: *Constraints, builtins: Builtins, ast: untyped_ast.Module) !Module {
         var order = List(Interned).init(allocator);
         var untyped = Untyped.init(allocator);
         var typed = Typed.init(allocator);
@@ -487,7 +525,6 @@ pub const Module = struct {
         return Module{
             .allocator = allocator,
             .constraints = constraints,
-            .next_type_var = next_type_var,
             .builtins = builtins,
             .order = try order.toOwnedSlice(),
             .untyped = untyped,
