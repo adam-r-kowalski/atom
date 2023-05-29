@@ -1,7 +1,6 @@
 problem2 = fn(n: i32, sum: i32, prev: i32, curr: i32) i32 {
-    if curr > n {
-        sum
-    } else {
+    if curr > n { sum }
+    else {
         delta = if curr % 2 == 0 { curr } else { 0 }
         problem2(n, sum + delta, curr, prev + curr)
     }
