@@ -45,13 +45,13 @@ pub const Block = struct {
     span: Span,
 
     fn toString(self: Block, writer: anytype, indent: Indent) !void {
-        try indent.toString(writer);
+        try writer.print("{}", .{indent});
         if (self.expressions.len == 1) {
             return try self.expressions[0].toString(writer, indent.add(1));
         }
         try writer.writeAll("(block");
         for (self.expressions) |expr| {
-            try indent.add(1).toString(writer);
+            try writer.print("{}", .{indent.add(1)});
             try expr.toString(writer, indent.add(1));
         }
         try writer.writeAll(")");
@@ -174,11 +174,11 @@ pub const Cond = struct {
     fn toString(self: Cond, writer: anytype, indent: Indent) !void {
         try writer.writeAll("(cond");
         for (self.conditions, self.thens) |b, t| {
-            try indent.toString(writer);
+            try writer.print("{}", .{indent});
             try b.toString(writer, indent);
             try t.toString(writer, indent.add(1));
         }
-        try indent.toString(writer);
+        try writer.print("{}", .{indent});
         try writer.writeAll("else");
         try self.else_.toString(writer, indent.add(1));
         try writer.writeAll(")");
@@ -259,12 +259,7 @@ pub const Expression = union(enum) {
 pub const Module = struct {
     expressions: []const Expression,
 
-    pub fn format(
-        self: Module,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
+    pub fn format(self: Module, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = fmt;
         _ = options;
         for (self.expressions, 0..) |e, i| {

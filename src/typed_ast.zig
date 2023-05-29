@@ -107,15 +107,15 @@ pub const Define = struct {
     }
 
     fn toString(self: Define, writer: anytype, indent: Indent) !void {
-        try indent.toString(writer);
+        try writer.print("{}", .{indent});
         try writer.writeAll("define =");
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.writeAll("name = ");
         try self.name.toString(writer);
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.writeAll("type = ");
         try self.type.toString(writer);
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.writeAll("value = ");
         try self.value.toString(writer, indent.add(2));
     }
@@ -151,20 +151,20 @@ pub const Function = struct {
     }
 
     fn toString(self: Function, writer: anytype, indent: Indent) !void {
-        try indent.toString(writer);
+        try writer.print("{}", .{indent});
         try writer.writeAll("function =");
         if (self.parameters.len != 0) {
-            try indent.add(1).toString(writer);
+            try writer.print("{}", .{indent.add(1)});
             try writer.print("parameters =", .{});
         }
         for (self.parameters) |p| {
-            try indent.add(2).toString(writer);
+            try writer.print("{}", .{indent.add(2)});
             try p.toString(writer);
         }
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.print("return_type = ", .{});
         try self.return_type.toString(writer);
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.print("body = ", .{});
         try self.body.toString(writer, indent.add(2));
     }
@@ -184,18 +184,18 @@ pub const BinaryOp = struct {
     }
 
     fn toString(self: BinaryOp, writer: anytype, indent: Indent) !void {
-        try indent.toString(writer);
+        try writer.print("{}", .{indent});
         try writer.writeAll("binary_op =");
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.writeAll("kind = ");
         try self.kind.toString(writer);
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.writeAll("left = ");
         try self.left.toString(writer, indent.add(2));
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.writeAll("right = ");
         try self.right.toString(writer, indent.add(2));
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.print("type = ", .{});
         try self.type.toString(writer);
     }
@@ -216,19 +216,13 @@ pub const If = struct {
     }
 
     fn toString(self: If, writer: anytype, indent: Indent) !void {
-        try indent.toString(writer);
-        try writer.writeAll("if =");
-        try indent.add(1).toString(writer);
-        try writer.writeAll("condition = ");
+        try writer.print("{}if ={}condition = ", .{ indent, indent.add(1) });
         try self.condition.toString(writer, indent.add(2));
-        try indent.add(1).toString(writer);
-        try writer.writeAll("then = ");
+        try writer.print("{}then = ", .{indent.add(1)});
         try self.then.toString(writer, indent.add(2));
-        try indent.add(1).toString(writer);
-        try writer.writeAll("else = ");
+        try writer.print("{}else = ", .{indent.add(1)});
         try self.else_.toString(writer, indent.add(2));
-        try indent.add(1).toString(writer);
-        try writer.print("type = ", .{});
+        try writer.print("{}type = ", .{indent.add(1)});
         try self.type.toString(writer);
     }
 };
@@ -250,20 +244,20 @@ pub const Cond = struct {
     }
 
     fn toString(self: Cond, writer: anytype, indent: Indent) !void {
-        try indent.toString(writer);
+        try writer.print("{}", .{indent});
         try writer.writeAll("cond =");
         for (self.conditions, self.thens) |c, t| {
-            try indent.add(1).toString(writer);
+            try writer.print("{}", .{indent.add(1)});
             try writer.writeAll("condition = ");
             try c.toString(writer, indent.add(2));
-            try indent.add(1).toString(writer);
+            try writer.print("{}", .{indent.add(1)});
             try writer.writeAll("then = ");
             try t.toString(writer, indent.add(2));
         }
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.writeAll("else = ");
         try self.else_.toString(writer, indent.add(2));
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.print("type = ", .{});
         try self.type.toString(writer);
     }
@@ -282,17 +276,17 @@ pub const Call = struct {
     }
 
     fn toString(self: Call, writer: anytype, indent: Indent) !void {
-        try indent.toString(writer);
+        try writer.print("{}", .{indent});
         try writer.writeAll("call =");
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try self.function.toString(writer, indent.add(2));
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.writeAll("arguments =");
         for (self.arguments) |a| {
-            try indent.add(2).toString(writer);
+            try writer.print("{}", .{indent.add(2)});
             try a.toString(writer, indent.add(3));
         }
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.print("type = ", .{});
         try self.type.toString(writer);
     }
@@ -310,17 +304,17 @@ pub const Intrinsic = struct {
     }
 
     fn toString(self: Intrinsic, writer: anytype, indent: Indent) !void {
-        try indent.toString(writer);
+        try writer.print("{}", .{indent});
         try writer.writeAll("intrinsic =");
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.print("{}", .{self.function});
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.writeAll("arguments =");
         for (self.arguments) |a| {
-            try indent.add(2).toString(writer);
+            try writer.print("{}", .{indent.add(2)});
             try a.toString(writer, indent.add(3));
         }
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.print("type = ", .{});
         try self.type.toString(writer);
     }
@@ -337,15 +331,15 @@ pub const Group = struct {
     }
 
     fn toString(self: Group, writer: anytype, indent: Indent) !void {
-        try indent.toString(writer);
+        try writer.print("{}", .{indent});
         try writer.writeAll("group =");
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.writeAll("expressions =");
         for (self.expressions) |expr| {
-            try indent.add(2).toString(writer);
+            try writer.print("{}", .{indent.add(2)});
             try expr.toString(writer, indent.add(2));
         }
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.print("type = ", .{});
         try self.type.toString(writer);
     }
@@ -358,13 +352,13 @@ pub const ForeignImport = struct {
     type: MonoType,
 
     fn toString(self: ForeignImport, writer: anytype, indent: Indent) !void {
-        try indent.toString(writer);
+        try writer.print("{}", .{indent});
         try writer.writeAll("foreign_import =");
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.print("module = {}", .{self.module});
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.print("name = {}", .{self.name});
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.print("type = ", .{});
         try self.type.toString(writer);
     }
@@ -376,12 +370,12 @@ pub const Convert = struct {
     type: MonoType,
 
     fn toString(self: Convert, writer: anytype, indent: Indent) !void {
-        try indent.toString(writer);
+        try writer.print("{}", .{indent});
         try writer.writeAll("convert =");
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.print("value = ", .{});
         try self.value.toString(writer, indent.add(1));
-        try indent.add(1).toString(writer);
+        try writer.print("{}", .{indent.add(1)});
         try writer.print("type = ", .{});
         try self.type.toString(writer);
     }
