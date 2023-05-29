@@ -1,8 +1,8 @@
 const std = @import("std");
 
-const Intern = @import("../interner.zig").Intern;
-const Indent = @import("../indent.zig").Indent;
-const tokens = @import("tokens.zig");
+const Intern = @import("interner.zig").Intern;
+const Indent = @import("indent.zig").Indent;
+const tokens = @import("types/tokens.zig");
 
 pub const Span = tokens.Span;
 pub const Int = tokens.Int;
@@ -256,12 +256,12 @@ pub const Expression = union(enum) {
     }
 };
 
-pub const Ast = struct {
+pub const Module = struct {
     expressions: []const Expression,
     intern: *Intern,
 
     pub fn format(
-        self: Ast,
+        self: Module,
         comptime fmt: []const u8,
         options: std.fmt.FormatOptions,
         writer: anytype,

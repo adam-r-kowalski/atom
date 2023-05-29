@@ -13,19 +13,20 @@ const IfToken = types.tokens.If;
 const FnToken = types.tokens.Fn;
 const Token = types.tokens.Token;
 const Tokens = types.tokens.Tokens;
-const Expression = types.ast.Expression;
-const Block = types.ast.Block;
-const Group = types.ast.Group;
-const Cond = types.ast.Cond;
-const If = types.ast.If;
-const Parameter = types.ast.Parameter;
-const Span = types.ast.Span;
-const Symbol = types.ast.Symbol;
-const BinaryOpKind = types.ast.BinaryOpKind;
-const Define = types.ast.Define;
-const BinaryOp = types.ast.BinaryOp;
-const Call = types.ast.Call;
-const Ast = types.ast.Ast;
+const ast = @import("ast.zig");
+const Expression = ast.Expression;
+const Block = ast.Block;
+const Group = ast.Group;
+const Cond = ast.Cond;
+const If = ast.If;
+const Parameter = ast.Parameter;
+const Span = ast.Span;
+const Symbol = ast.Symbol;
+const BinaryOpKind = ast.BinaryOpKind;
+const Define = ast.Define;
+const BinaryOp = ast.BinaryOp;
+const Call = ast.Call;
+const Module = ast.Module;
 
 const Precedence = u32;
 
@@ -387,7 +388,7 @@ fn expression(context: Context) error{OutOfMemory}!Expression {
     }
 }
 
-pub fn parse(allocator: Allocator, tokens: *Tokens) !Ast {
+pub fn parse(allocator: Allocator, tokens: *Tokens) !Module {
     const context = Context{
         .allocator = allocator,
         .tokens = tokens,
@@ -400,7 +401,7 @@ pub fn parse(allocator: Allocator, tokens: *Tokens) !Ast {
             else => try expressions.append(try expression(context)),
         }
     }
-    return Ast{
+    return Module{
         .expressions = try expressions.toOwnedSlice(),
         .intern = tokens.intern,
     };

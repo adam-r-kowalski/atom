@@ -8,7 +8,7 @@ const Indent = @import("../indent.zig").Indent;
 const interner = @import("../interner.zig");
 const Interned = interner.Interned;
 const Intern = interner.Intern;
-const untyped_ast = @import("ast.zig");
+const untyped_ast = @import("../ast.zig");
 pub const Span = untyped_ast.Span;
 const BinaryOpKind = untyped_ast.BinaryOpKind;
 const UntypedExpression = untyped_ast.Expression;
@@ -472,7 +472,7 @@ pub const Expression = union(enum) {
 pub const Untyped = Map(Interned, UntypedExpression);
 pub const Typed = Map(Interned, Expression);
 
-pub const Ast = struct {
+pub const Module = struct {
     allocator: Allocator,
     constraints: *Constraints,
     next_type_var: *TypeVar,
@@ -483,7 +483,7 @@ pub const Ast = struct {
     scope: Scope,
     intern: *Intern,
 
-    pub fn init(allocator: Allocator, constraints: *Constraints, next_type_var: *TypeVar, builtins: Builtins, ast: untyped_ast.Ast) !Ast {
+    pub fn init(allocator: Allocator, constraints: *Constraints, next_type_var: *TypeVar, builtins: Builtins, ast: untyped_ast.Module) !Module {
         var order = List(Interned).init(allocator);
         var untyped = Untyped.init(allocator);
         var typed = Typed.init(allocator);
@@ -500,7 +500,7 @@ pub const Ast = struct {
                 else => |k| std.debug.panic("\nInvalid top level expression {}", .{k}),
             }
         }
-        return Ast{
+        return Module{
             .allocator = allocator,
             .constraints = constraints,
             .next_type_var = next_type_var,
@@ -513,13 +513,13 @@ pub const Ast = struct {
         };
     }
 
-    pub fn apply(self: *Ast, s: Substitution) void {
+    pub fn apply(self: *Module, s: Substitution) void {
         var iterator = self.typed.valueIterator();
         while (iterator.next()) |value_ptr| value_ptr.apply(s);
     }
 
     pub fn format(
-        self: Ast,
+        self: Module,
         comptime fmt: []const u8,
         options: std.fmt.FormatOptions,
         writer: anytype,
