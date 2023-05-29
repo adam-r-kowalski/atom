@@ -55,12 +55,9 @@ pub fn main() !void {
     const t6 = timer.read();
     var ir = try neuron.lower.buildIr(allocator, builtins, ast);
     const alias = try intern.store("_start");
-    const exports = try allocator.alloc(neuron.lower.Export, ir.exports.len + 1);
-    std.mem.copy(neuron.lower.Export, exports, ir.exports);
-    exports[ir.exports.len] = neuron.lower.Export{ .name = start, .alias = alias };
-    ir.exports = exports;
+    ir.exports = &.{.{ .name = start, .alias = alias }};
     const t7 = timer.read();
-    const wat_string = try neuron.codegen.wat(allocator, ir);
+    const wat_string = try std.fmt.allocPrint(allocator, "{}", .{ir});
     const t8 = timer.read();
     if (flags.contains("--wat")) {
         const file_name_no_suffix = file_name[0 .. file_name.len - 7];
@@ -83,7 +80,7 @@ pub fn main() !void {
     var wasm_exports: wasmer.wasm_extern_vec_t = undefined;
     wasmer.wasm_instance_exports(instance, &wasm_exports);
     if (wasm_exports.size == 0) std.debug.panic("\nError getting exports!\n", .{});
-    if (exports.len != 1 or wasm_exports.size != exports.len) std.debug.panic("\nOnly one export supported!\n", .{});
+    if (ir.exports.len != 1 or wasm_exports.size != ir.exports.len) std.debug.panic("\nOnly one export supported!\n", .{});
     const start_func = wasmer.wasm_extern_as_func(wasm_exports.data[0]);
     if (start_func == null) std.debug.panic("\nError getting start!\n", .{});
     var args_val = [0]wasmer.wasm_val_t{};
