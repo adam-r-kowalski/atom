@@ -20,12 +20,17 @@ pub const Define = struct {
     fn toString(self: Define, writer: anytype, indent: Indent) !void {
         try writer.print("(def {}", .{self.name.value});
         if (self.type) |t| {
-            try writer.writeAll(" ");
-            try t.toString(writer, Indent{ .value = 0 });
+            try writer.print(" {}", .{t});
         }
         try writer.writeAll(" ");
         try self.value.toString(writer, indent.add(1));
         try writer.writeAll(")");
+    }
+
+    pub fn format(self: Parameter, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
+        try self.toString(writer, Indent{ .value = 0 });
     }
 };
 
@@ -33,10 +38,10 @@ pub const Parameter = struct {
     name: Symbol,
     type: Expression,
 
-    fn toString(self: Parameter, writer: anytype) !void {
-        try writer.print("({} ", .{self.name.value});
-        try self.type.toString(writer, Indent{ .value = 0 });
-        try writer.writeAll(")");
+    pub fn format(self: Parameter, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
+        try writer.print("({} {})", .{ self.name.value, self.type });
     }
 };
 
@@ -56,6 +61,12 @@ pub const Block = struct {
         }
         try writer.writeAll(")");
     }
+
+    pub fn format(self: Block, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
+        try self.toString(writer, Indent{ .value = 0 });
+    }
 };
 
 pub const Function = struct {
@@ -68,12 +79,17 @@ pub const Function = struct {
         try writer.writeAll("(fn [");
         for (self.parameters, 0..) |p, j| {
             if (j > 0) try writer.writeAll(" ");
-            try p.toString(writer);
+            try writer.print("{}", .{p});
         }
-        try writer.writeAll("] ");
-        try self.return_type.toString(writer, indent);
+        try writer.print("] {}", .{self.return_type});
         try self.body.toString(writer, indent);
         try writer.writeAll(")");
+    }
+
+    pub fn format(self: Function, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
+        try self.toString(writer, Indent{ .value = 0 });
     }
 };
 
@@ -82,15 +98,15 @@ pub const Prototype = struct {
     return_type: *const Expression,
     span: Span,
 
-    fn toString(self: Prototype, writer: anytype) !void {
+    pub fn format(self: Prototype, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
         try writer.writeAll("(fn [");
         for (self.parameters, 0..) |p, j| {
             if (j > 0) try writer.writeAll(" ");
-            try p.toString(writer);
+            try writer.print("{}", .{p});
         }
-        try writer.writeAll("] ");
-        try self.return_type.toString(writer, Indent{ .value = 0 });
-        try writer.writeAll(")");
+        try writer.print("] {})", .{self.return_type});
     }
 };
 
@@ -107,7 +123,9 @@ pub const BinaryOpKind = enum {
     or_,
     dot,
 
-    pub fn toString(self: BinaryOpKind, writer: anytype) !void {
+    pub fn format(self: BinaryOpKind, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
         switch (self) {
             .add => try writer.writeAll("+"),
             .subtract => try writer.writeAll("-"),
@@ -131,13 +149,17 @@ pub const BinaryOp = struct {
     span: Span,
 
     fn toString(self: BinaryOp, writer: anytype, indent: Indent) !void {
-        try writer.writeAll("(");
-        try self.kind.toString(writer);
-        try writer.writeAll(" ");
+        try writer.print("({} ", .{self.kind});
         try self.left.toString(writer, indent);
         try writer.writeAll(" ");
         try self.right.toString(writer, indent);
         try writer.writeAll(")");
+    }
+
+    pub fn format(self: BinaryOp, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
+        try self.toString(writer, Indent{ .value = 0 });
     }
 };
 
@@ -147,6 +169,12 @@ pub const Group = struct {
 
     fn toString(self: Group, writer: anytype, indent: Indent) !void {
         try self.expression.toString(writer, indent);
+    }
+
+    pub fn format(self: Group, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
+        try self.toString(writer, Indent{ .value = 0 });
     }
 };
 
@@ -163,6 +191,12 @@ pub const If = struct {
         try self.else_.toString(writer, indent);
         try writer.writeAll(")");
     }
+
+    pub fn format(self: If, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
+        try self.toString(writer, Indent{ .value = 0 });
+    }
 };
 
 pub const Cond = struct {
@@ -178,10 +212,15 @@ pub const Cond = struct {
             try b.toString(writer, indent);
             try t.toString(writer, indent.add(1));
         }
-        try writer.print("{}", .{indent});
-        try writer.writeAll("else");
+        try writer.print("{}else", .{indent});
         try self.else_.toString(writer, indent.add(1));
         try writer.writeAll(")");
+    }
+
+    pub fn format(self: Cond, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
+        try self.toString(writer, Indent{ .value = 0 });
     }
 };
 
@@ -198,6 +237,12 @@ pub const Call = struct {
             try a.toString(writer, indent.add(1));
         }
         try writer.writeAll(")");
+    }
+
+    pub fn format(self: Call, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
+        try self.toString(writer, Indent{ .value = 0 });
     }
 };
 
@@ -245,7 +290,7 @@ pub const Expression = union(enum) {
             .bool => |b| try writer.print("{}", .{b.value}),
             .define => |d| try d.toString(writer, indent),
             .function => |f| try f.toString(writer, indent),
-            .prototype => |p| try p.toString(writer),
+            .prototype => |p| try writer.print("{}", .{p}),
             .binary_op => |b| try b.toString(writer, indent),
             .group => |g| try g.toString(writer, indent),
             .block => |b| try b.toString(writer, indent),
@@ -253,6 +298,12 @@ pub const Expression = union(enum) {
             .cond => |c| try c.toString(writer, indent),
             .call => |c| try c.toString(writer, indent),
         }
+    }
+
+    pub fn format(self: Expression, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
+        self.toString(writer, Indent{ .value = 0 }) catch unreachable;
     }
 };
 

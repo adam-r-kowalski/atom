@@ -187,8 +187,7 @@ pub const BinaryOp = struct {
         try writer.print("{}", .{indent});
         try writer.writeAll("binary_op =");
         try writer.print("{}", .{indent.add(1)});
-        try writer.writeAll("kind = ");
-        try self.kind.toString(writer);
+        try writer.print("kind = {}", .{self.kind});
         try writer.print("{}", .{indent.add(1)});
         try writer.writeAll("left = ");
         try self.left.toString(writer, indent.add(2));
