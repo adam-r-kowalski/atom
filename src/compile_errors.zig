@@ -36,11 +36,8 @@ pub const UndefinedVariable = struct {
             \\
             \\Maybe you want one of the following?
             \\
-            \\
         );
-        for (self.in_scope) |symbol| {
-            try writer.print("    {}", .{symbol});
-        }
+        for (self.in_scope) |symbol| try writer.print("\n    {}", .{symbol});
         try writer.writeAll(
             \\
             \\
