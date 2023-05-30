@@ -30,7 +30,7 @@ test "use of undefined variable" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "type error" {
+test "type error of if" {
     const allocator = std.testing.allocator;
     const source =
         \\start = fn(x: i32, y: f64) f32 {
@@ -87,14 +87,14 @@ test "type error of define" {
         \\Here the inferred type is f64
         \\
         \\1 | start = fn() f32 {s}{{
-        \\2 |     x: f64 = 5
-        \\3 |     x
-        \\4 | }}{s}
+        \\{s}2 |{s}     x: f64 = 5
+        \\{s}3 |{s}     x
+        \\{s}4 |{s} }}{s}
         \\
         \\Expected these two types to be the same.
         \\
         \\
-    , .{ RED, CLEAR, RED, CLEAR });
+    , .{ RED, CLEAR, RED, CLEAR, RED, CLEAR, RED, CLEAR, RED, CLEAR });
     defer allocator.free(expected);
     try std.testing.expectEqualStrings(expected, actual);
 }

@@ -24,7 +24,7 @@ fn writeSource(lines: [][]const u8, span: Span, writer: anytype) !void {
     } else {
         try writer.writeAll(line[span.begin.column - 1 ..]);
         for (span.begin.line..span.end.line) |i| {
-            try writer.print("\n{} | {s}", .{ i + 1, lines[i] });
+            try writer.print("\n{s}{} |{s} {s}", .{ CLEAR, i + 1, RED, lines[i] });
         }
         try writer.writeAll(CLEAR);
     }
