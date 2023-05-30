@@ -3,8 +3,9 @@ const std = @import("std");
 const Intern = @import("interner.zig").Intern;
 const Indent = @import("indent.zig").Indent;
 const token = @import("token.zig");
+const CompileErrors = @import("compile_errors.zig").CompileErrors;
 
-pub const Span = token.Span;
+const Span = @import("span.zig").Span;
 pub const Int = token.Int;
 pub const Float = token.Float;
 pub const Symbol = token.Symbol;
@@ -289,6 +290,7 @@ pub const Expression = union(enum) {
 
 pub const Module = struct {
     expressions: []const Expression,
+    compile_errors: *CompileErrors,
 
     pub fn format(self: Module, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = fmt;

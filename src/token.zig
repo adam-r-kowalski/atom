@@ -5,9 +5,9 @@ const List = std.ArrayList;
 const interner = @import("interner.zig");
 const Interned = interner.Interned;
 const Intern = interner.Intern;
-
-pub const Pos = struct { line: u64, column: u64 };
-pub const Span = struct { begin: Pos, end: Pos };
+const CompileErrors = @import("compile_errors.zig").CompileErrors;
+const Span = @import("span.zig").Span;
+const Pos = @import("span.zig").Pos;
 
 pub const Symbol = struct {
     value: Interned,
@@ -406,6 +406,7 @@ pub const Tokens = struct {
     tokens: []Token,
     index: usize,
     intern: *Intern,
+    compile_errors: *CompileErrors,
 
     pub fn peek(self: Tokens) ?Token {
         if (self.index >= self.tokens.len) return null;

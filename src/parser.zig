@@ -7,7 +7,8 @@ const Intern = interner.Intern;
 const Interned = interner.Interned;
 const Indent = @import("indent.zig").Indent;
 const token = @import("token.zig");
-const Pos = token.Pos;
+const Span = @import("span.zig").Span;
+const Pos = @import("span.zig").Pos;
 const LeftParen = token.LeftParen;
 const IfToken = token.If;
 const FnToken = token.Fn;
@@ -20,7 +21,6 @@ const Group = ast.Group;
 const Arm = ast.Arm;
 const Branch = ast.Branch;
 const Parameter = ast.Parameter;
-const Span = ast.Span;
 const Symbol = ast.Symbol;
 const BinaryOpKind = ast.BinaryOpKind;
 const Define = ast.Define;
@@ -371,5 +371,6 @@ pub fn parse(allocator: Allocator, tokens: *Tokens) !Module {
     }
     return Module{
         .expressions = try expressions.toOwnedSlice(),
+        .compile_errors = tokens.compile_errors,
     };
 }

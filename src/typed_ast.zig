@@ -8,8 +8,8 @@ const Indent = @import("indent.zig").Indent;
 const interner = @import("interner.zig");
 const Interned = interner.Interned;
 const Intern = interner.Intern;
+const Span = @import("span.zig").Span;
 const untyped_ast = @import("ast.zig");
-pub const Span = untyped_ast.Span;
 const BinaryOpKind = untyped_ast.BinaryOpKind;
 const UntypedExpression = untyped_ast.Expression;
 const substitution = @import("substitution.zig");
@@ -17,6 +17,7 @@ const MonoType = substitution.MonoType;
 const Substitution = substitution.Substitution;
 const TypeVar = substitution.TypeVar;
 const Constraints = @import("constraints.zig").Constraints;
+const CompileErrors = @import("compile_errors.zig").CompileErrors;
 
 pub const WorkQueue = List(Interned);
 
@@ -24,16 +25,20 @@ pub const Scope = Map(Interned, MonoType);
 
 pub const Scopes = struct {
     allocator: Allocator,
+    base: Scope,
     scopes: List(Scope),
     work_queue: *WorkQueue,
+    compile_errors: *CompileErrors,
 
-    pub fn init(allocator: Allocator, work_queue: *WorkQueue, scope: Scope) !Scopes {
+    pub fn init(allocator: Allocator, base: Scope, work_queue: *WorkQueue, compile_errors: *CompileErrors) !Scopes {
         var scopes = List(Scope).init(allocator);
-        try scopes.append(scope);
+        try scopes.append(Scope.init(allocator));
         return .{
             .allocator = allocator,
             .work_queue = work_queue,
             .scopes = scopes,
+            .base = base,
+            .compile_errors = compile_errors,
         };
     }
 
@@ -49,15 +54,30 @@ pub const Scopes = struct {
         try self.scopes.items[self.scopes.items.len - 1].put(name, monotype);
     }
 
-    pub fn find(self: Scopes, name: Interned) !MonoType {
-        var i = self.scopes.items.len;
-        while (i != 0) : (i -= 1) {
-            if (self.scopes.items[i - 1].get(name)) |type_| {
-                if (i == 1) try self.work_queue.append(name);
-                return type_;
-            }
+    pub fn find(self: Scopes, symbol: untyped_ast.Symbol) !MonoType {
+        var reverse_iterator = std.mem.reverseIterator(self.scopes.items);
+        while (reverse_iterator.next()) |scope| {
+            if (scope.get(symbol.value)) |monotype| return monotype;
         }
-        std.debug.panic("\nCould not find {} in scopes", .{name});
+        if (self.base.get(symbol.value)) |monotype| {
+            try self.work_queue.append(symbol.value);
+            return monotype;
+        }
+        var in_scope = List(Interned).init(self.allocator);
+        var base_iterator = self.base.keyIterator();
+        while (base_iterator.next()) |key| try in_scope.append(key.*);
+        for (self.scopes.items) |scope| {
+            var scope_iterator = scope.keyIterator();
+            while (scope_iterator.next()) |key| try in_scope.append(key.*);
+        }
+        try self.compile_errors.errors.append(.{
+            .undefined_variable = .{
+                .symbol = symbol.value,
+                .span = symbol.span,
+                .in_scope = try in_scope.toOwnedSlice(),
+            },
+        });
+        return error.CompileError;
     }
 };
 
@@ -483,6 +503,7 @@ pub const Module = struct {
     untyped: Untyped,
     typed: Typed,
     scope: Scope,
+    compile_errors: *CompileErrors,
 
     pub fn init(allocator: Allocator, constraints: *Constraints, builtins: Builtins, ast: untyped_ast.Module) !Module {
         var order = List(Interned).init(allocator);
@@ -509,6 +530,7 @@ pub const Module = struct {
             .untyped = untyped,
             .typed = typed,
             .scope = scope,
+            .compile_errors = ast.compile_errors,
         };
     }
 
