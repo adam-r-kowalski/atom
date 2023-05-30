@@ -4,12 +4,12 @@ const Allocator = std.mem.Allocator;
 
 const substitution = @import("substitution.zig");
 const Substitution = substitution.Substitution;
-const TypedSpan = substitution.TypedSpan;
 const MonoType = substitution.MonoType;
 const TypeVar = substitution.TypeVar;
 const Indent = @import("indent.zig").Indent;
 const errors = @import("compile_errors.zig");
 const CompileErrors = errors.CompileErrors;
+const TypedSpan = errors.TypedSpan;
 const Span = @import("span.zig").Span;
 
 pub const Equal = struct {
@@ -20,33 +20,9 @@ pub const Equal = struct {
         const left_tag = std.meta.activeTag(self.left.type);
         const right_tag = std.meta.activeTag(self.right.type);
         if (left_tag == .typevar)
-            return s.set(self.left.type.typevar, self.right.type) catch |e| switch (e) {
-                error.CompileError => {
-                    const left = if (s.get(self.left.type.typevar)) |t| TypedSpan{ .type = t, .span = self.left.span } else self.left;
-                    try compile_errors.errors.append(.{
-                        .type_error = .{
-                            .left = left,
-                            .right = self.right,
-                        },
-                    });
-                    return error.CompileError;
-                },
-                else => return e,
-            };
+            return try s.set(self.left.type.typevar, self.right.type);
         if (right_tag == .typevar)
-            return s.set(self.right.type.typevar, self.left.type) catch |e| switch (e) {
-                error.CompileError => {
-                    const right = if (s.get(self.right.type.typevar)) |t| TypedSpan{ .type = t, .span = self.right.span } else self.right;
-                    try compile_errors.errors.append(.{
-                        .type_error = .{
-                            .left = self.left,
-                            .right = right,
-                        },
-                    });
-                    return error.CompileError;
-                },
-                else => return e,
-            };
+            return try s.set(self.right.type.typevar, self.left.type);
         if (left_tag == .function and right_tag == .function) {
             if (self.left.type.function.len != self.right.type.function.len)
                 std.debug.panic("\nFunction arity mismatch: {} != {}\n", .{
@@ -58,18 +34,13 @@ pub const Equal = struct {
                 try (Equal{
                     .left = .{ .type = left, .span = null },
                     .right = .{ .type = right, .span = null },
-                }).solve(s, compile_errors);
+                }).solve(s);
             }
         }
         if (left_tag == right_tag)
             return;
-        try compile_errors.errors.append(.{
-            .type_error = .{
-                .left = self.left,
-                .right = self.right,
-            },
-        });
-        return error.CompileError;
+        try compile_errors.append(.{ .left = self.left, .right = self.right });
+        std.debug.panic("\nUnsupported type in equal: {} {}\n", .{ self.left, self.right });
     }
 
     pub fn format(self: Equal, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
@@ -100,7 +71,7 @@ pub const Constraints = struct {
 
     pub fn solve(self: Constraints, allocator: Allocator) !Substitution {
         var s = Substitution.init(allocator);
-        for (self.equal.items) |e| try e.solve(&s, self.compile_errors);
+        for (self.equal.items) |e| try e.solve(&s);
         var max_attemps: u64 = 3;
         while (s.simplify() > 0 and max_attemps != 0) : (max_attemps -= 1) {}
         return s;
