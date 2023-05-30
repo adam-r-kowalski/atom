@@ -10,3 +10,4 @@ pub const testing = @import("testing.zig");
 pub const Constraints = @import("constraints.zig").Constraints;
 pub const TypeVar = @import("substitution.zig").TypeVar;
 pub const Module = @import("typed_ast.zig").Module;
+pub const CompileErrors = @import("compile_errors.zig").CompileErrors;

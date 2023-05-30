@@ -31,13 +31,6 @@ const Flags = struct {
     }
 };
 
-fn printTime(writer: std.fs.File.Writer, label: []const u8, time: u64) !void {
-    try writer.print("\n{s}: {d:0.07}s", .{
-        label,
-        @intToFloat(f64, time) / std.time.ns_per_s,
-    });
-}
-
 fn writeWat(allocator: Allocator, flags: Flags, wat_string: []const u8) !void {
     if (!flags.contains("--wat")) return;
     const file_name_no_suffix = flags.file_name[0 .. flags.file_name.len - 7];
@@ -130,55 +123,42 @@ const WasmModule = struct {
     }
 };
 
-pub fn main() !void {
-    var timer = try std.time.Timer.start();
-    const t0 = timer.read();
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-    const stdout = std.io.getStdOut();
-    const writer = stdout.writer();
-    const flags = try Flags.init(allocator);
-    const t1 = timer.read();
-    const source = try std.fs.cwd().readFileAlloc(allocator, flags.file_name, std.math.maxInt(usize));
-    const t2 = timer.read();
-    var intern = neuron.Intern.init(allocator);
-    const builtins = try neuron.Builtins.init(&intern);
-    const t3 = timer.read();
-    var tokens = try neuron.tokenize(allocator, &intern, builtins, source);
-    const t4 = timer.read();
+fn compileAndRun(allocator: Allocator, intern: *neuron.Intern, compile_errors: *neuron.CompileErrors, flags: Flags, source: []const u8) !void {
+    const builtins = try neuron.Builtins.init(intern);
+    var tokens = try neuron.tokenize(allocator, intern, compile_errors, builtins, source);
     const untyped_ast = try neuron.parse(allocator, &tokens);
-    const t5 = timer.read();
-    var constraints = neuron.Constraints.init(arena.allocator());
-    var ast = try neuron.Module.init(arena.allocator(), &constraints, builtins, untyped_ast);
+    var constraints = neuron.Constraints.init(allocator);
+    var ast = try neuron.Module.init(allocator, &constraints, builtins, untyped_ast);
     const start = try intern.store("start");
     try neuron.type_checker.infer(&ast, start);
     const substitution = try constraints.solve(allocator);
     ast.apply(substitution);
-    const t6 = timer.read();
     var ir = try neuron.lower.buildIr(allocator, builtins, ast);
     const alias = try intern.store("_start");
     ir.exports = &.{.{ .name = start, .alias = alias }};
-    const t7 = timer.read();
     const wat_string = try std.fmt.allocPrint(allocator, "{}", .{ir});
-    const t8 = timer.read();
     try writeWat(allocator, flags, wat_string);
-    const t9 = timer.read();
     const wasm_module = WasmModule.init(allocator, ast, wat_string);
-    const t10 = timer.read();
     const value = try wasm_module.run(start);
-    const t11 = timer.read();
+    const stdout = std.io.getStdOut();
+    const writer = stdout.writer();
     try writer.print("{}", .{value});
-    if (flags.contains("--timings")) {
-        try printTime(writer, "total", t11 - t0);
-        try printTime(writer, "read file", t2 - t1);
-        try printTime(writer, "tokenize", t4 - t3);
-        try printTime(writer, "parse", t5 - t4);
-        try printTime(writer, "type infer", t6 - t5);
-        try printTime(writer, "ir", t7 - t6);
-        try printTime(writer, "codegen", t8 - t7);
-        try printTime(writer, "write wat", t9 - t8);
-        try printTime(writer, "init wasmer", t10 - t9);
-        try printTime(writer, "execute", t11 - t10);
-    }
+}
+
+pub fn main() !void {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+    const flags = try Flags.init(allocator);
+    const source = try std.fs.cwd().readFileAlloc(allocator, flags.file_name, std.math.maxInt(usize));
+    var intern = neuron.Intern.init(allocator);
+    var compile_errors = neuron.CompileErrors.init(allocator, source);
+    compileAndRun(allocator, &intern, &compile_errors, flags, source) catch |e| switch (e) {
+        error.CompileError => {
+            const stderr = std.io.getStdErr();
+            const writer = stderr.writer();
+            try writer.print("{}", .{compile_errors});
+        },
+        else => return e,
+    };
 }

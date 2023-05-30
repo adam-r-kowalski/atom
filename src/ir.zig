@@ -171,9 +171,9 @@ pub const UnaryOp = struct {
     kind: UnaryOpKind,
     expression: *const Expression,
 
-    fn toString(self: UnaryOp, writer: anytype, i: Indent) !void {
-        try writer.print("({}{}", .{ self.kind, i });
-        try self.expression.toString(writer, i);
+    fn toString(self: UnaryOp, writer: anytype, indent: Indent) !void {
+        try writer.print("({}{}", .{ self.kind, indent.add(1) });
+        try self.expression.toString(writer, indent.add(1));
         try writer.writeAll(")");
     }
 

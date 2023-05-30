@@ -27,7 +27,7 @@ const Block = typed_ast.Block;
 const Define = typed_ast.Define;
 const Function = typed_ast.Function;
 const Module = typed_ast.Module;
-const Span = typed_ast.Span;
+const Span = @import("span.zig").Span;
 const ast = @import("ast.zig");
 
 const Context = struct {
@@ -51,7 +51,7 @@ fn symbol(scopes: Scopes, s: ast.Symbol) !Symbol {
     return Symbol{
         .value = s.value,
         .span = s.span,
-        .type = try scopes.find(s.value),
+        .type = try scopes.find(s),
     };
 }
 
@@ -307,7 +307,7 @@ fn block(context: Context, b: ast.Block) !Block {
     };
 }
 
-fn expression(context: Context, e: ast.Expression) error{OutOfMemory}!Expression {
+fn expression(context: Context, e: ast.Expression) error{ OutOfMemory, CompileError }!Expression {
     switch (e) {
         .int => |i| return .{ .int = int(context, i) },
         .float => |f| return .{ .float = float(context, f) },
@@ -340,7 +340,7 @@ pub fn infer(module: *Module, name: Interned) !void {
     while (work_queue.items.len != 0) {
         const current = work_queue.pop();
         if (module.untyped.fetchRemove(current)) |entry| {
-            var scopes = try Scopes.init(module.allocator, &work_queue, module.scope);
+            var scopes = try Scopes.init(module.allocator, module.scope, &work_queue, module.compile_errors);
             const context = Context{
                 .allocator = module.allocator,
                 .builtins = module.builtins,

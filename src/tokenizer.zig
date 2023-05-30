@@ -7,10 +7,11 @@ const Interned = interner.Interned;
 const Intern = interner.Intern;
 const Builtins = @import("builtins.zig").Builtins;
 const token = @import("token.zig");
-const Pos = token.Pos;
-const Span = token.Span;
+const Span = @import("span.zig").Span;
+const Pos = @import("span.zig").Pos;
 const Token = token.Token;
 const Tokens = token.Tokens;
+const CompileErrors = @import("compile_errors.zig").CompileErrors;
 
 const Cursor = struct {
     source: []const u8,
@@ -165,7 +166,7 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?Token {
     };
 }
 
-pub fn tokenize(allocator: Allocator, intern: *Intern, builtins: Builtins, source: []const u8) !Tokens {
+pub fn tokenize(allocator: Allocator, intern: *Intern, compile_errors: *CompileErrors, builtins: Builtins, source: []const u8) !Tokens {
     var cursor = Cursor{
         .source = source,
         .pos = .{ .line = 1, .column = 1 },
@@ -176,5 +177,6 @@ pub fn tokenize(allocator: Allocator, intern: *Intern, builtins: Builtins, sourc
         .tokens = try tokens.toOwnedSlice(),
         .index = 0,
         .intern = intern,
+        .compile_errors = compile_errors,
     };
 }
