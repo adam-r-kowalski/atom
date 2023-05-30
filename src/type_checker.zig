@@ -173,13 +173,14 @@ fn binaryOp(context: Context, b: ast.BinaryOp) !Expression {
 
 fn define(context: Context, d: ast.Define) !Define {
     const value = try expressionAlloc(context, d.value.*);
-    const monotype = value.typeOf();
+    var monotype = value.typeOf();
     if (d.type) |t| {
         const annotated_type = try expressionToMonoType(context.allocator, context.builtins, t.*);
         try context.constraints.equal.append(.{
             .left = .{ .type = annotated_type, .span = t.span() },
             .right = .{ .type = monotype, .span = d.value.span() },
         });
+        monotype = annotated_type;
     }
     const name = Symbol{
         .value = d.name.value,

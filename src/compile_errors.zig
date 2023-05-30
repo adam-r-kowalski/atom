@@ -29,7 +29,7 @@ fn writeSource(lines: [][]const u8, span: Span, writer: anytype) !void {
         try writer.writeAll(CLEAR);
     }
     index = span.end.line - 1;
-    if (index < lines.len - 1) try writer.print("\n{} | {s}", .{ span.begin.line + 1, lines[index + 1] });
+    if (index < lines.len - 1) try writer.print("\n{} | {s}", .{ span.end.line + 1, lines[index + 1] });
 }
 
 pub const UndefinedVariable = struct {
