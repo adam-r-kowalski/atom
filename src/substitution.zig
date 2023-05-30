@@ -2,6 +2,8 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Map = std.AutoHashMap;
 
+const Span = @import("span.zig").Span;
+
 pub const TypeVar = struct { value: u64 };
 
 pub const MonoType = union(enum) {
@@ -52,6 +54,17 @@ pub const MonoType = union(enum) {
     }
 };
 
+pub const TypedSpan = struct {
+    span: ?Span,
+    type: MonoType,
+
+    pub fn format(self: TypedSpan, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
+        try writer.print("{}", .{self.type});
+    }
+};
+
 pub const Substitution = struct {
     map: Map(TypeVar, MonoType),
 
@@ -69,7 +82,8 @@ pub const Substitution = struct {
                 .typevar => |t1| try self.set(t1, result.value_ptr.*),
                 else => switch (result.value_ptr.*) {
                     .typevar => |t1| try self.set(t1, m),
-                    else => std.debug.panic("\nType mismatch: {} != {}\n", .{ result.value_ptr.*, m }),
+                    // else => std.debug.panic("\nType mismatch: {} != {}\n", .{ result.value_ptr.*, m }),
+                    else => return error.CompileError,
                 },
             }
         }

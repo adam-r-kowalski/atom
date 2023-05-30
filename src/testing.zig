@@ -49,7 +49,7 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     const builtins = try Builtins.init(&intern);
     var tokens = try tokenizer.tokenize(arena.allocator(), &intern, &compile_errors, builtins, source);
     const untyped_ast = try parser.parse(arena.allocator(), &tokens);
-    var constraints = Constraints.init(arena.allocator());
+    var constraints = Constraints.init(arena.allocator(), &compile_errors);
     var ast = try Module.init(arena.allocator(), &constraints, builtins, untyped_ast);
     try type_checker.infer(&ast, try intern.store(name));
     const substitution = try constraints.solve(arena.allocator());
@@ -65,7 +65,7 @@ pub fn typeInferVerbose(allocator: Allocator, source: []const u8, name: []const 
     const builtins = try Builtins.init(&intern);
     var tokens = try tokenizer.tokenize(arena.allocator(), &intern, &compile_errors, builtins, source);
     const untyped_ast = try parser.parse(arena.allocator(), &tokens);
-    var constraints = Constraints.init(arena.allocator());
+    var constraints = Constraints.init(arena.allocator(), &compile_errors);
     var ast = try Module.init(arena.allocator(), &constraints, builtins, untyped_ast);
     try type_checker.infer(&ast, try intern.store(name));
     const substitution = try constraints.solve(arena.allocator());
@@ -85,7 +85,7 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     const builtins = try Builtins.init(&intern);
     var tokens = try tokenizer.tokenize(arena.allocator(), &intern, &compile_errors, builtins, source);
     const untyped_ast = try parser.parse(arena.allocator(), &tokens);
-    var constraints = Constraints.init(arena.allocator());
+    var constraints = Constraints.init(arena.allocator(), &compile_errors);
     var ast = try Module.init(arena.allocator(), &constraints, builtins, untyped_ast);
     const start = try intern.store("start");
     try type_checker.infer(&ast, start);
@@ -101,7 +101,7 @@ fn endToEnd(allocator: Allocator, intern: *Intern, compile_errors: *CompileError
     const builtins = try Builtins.init(intern);
     var tokens = try tokenizer.tokenize(allocator, intern, compile_errors, builtins, source);
     const untyped_ast = try parser.parse(allocator, &tokens);
-    var constraints = Constraints.init(allocator);
+    var constraints = Constraints.init(allocator, compile_errors);
     var ast = try Module.init(allocator, &constraints, builtins, untyped_ast);
     const start = try intern.store("start");
     try type_checker.infer(&ast, start);

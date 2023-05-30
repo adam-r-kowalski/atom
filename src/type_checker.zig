@@ -37,16 +37,6 @@ const Context = struct {
     scopes: *Scopes,
 };
 
-fn freshTypeVar(next_type_var: *TypeVar) MonoType {
-    const typevar = next_type_var.*;
-    next_type_var.* += 1;
-    return .{ .typevar = typevar };
-}
-
-fn returnType(builtins: Builtins, next_type_var: *TypeVar, f: ast.Function) MonoType {
-    return if (f.return_type) |t| expressionToMonoType(t.*, builtins) else freshTypeVar(next_type_var);
-}
-
 fn symbol(scopes: Scopes, s: ast.Symbol) !Symbol {
     return Symbol{
         .value = s.value,
@@ -95,12 +85,21 @@ fn branch(context: Context, b: ast.Branch) !Branch {
         const then = try block(context, untyped_arm.then);
         typed_arm.* = Arm{ .condition = condition, .then = then };
         try context.constraints.equal.appendSlice(&[_]Equal{
-            .{ .left = condition.typeOf(), .right = .bool },
-            .{ .left = then.type, .right = result_type },
+            .{
+                .left = .{ .type = condition.typeOf(), .span = condition.span() },
+                .right = .{ .type = .bool, .span = null },
+            },
+            .{
+                .left = .{ .type = then.type, .span = then.span },
+                .right = .{ .type = result_type, .span = null },
+            },
         });
     }
     const else_ = try block(context, b.else_);
-    try context.constraints.equal.append(.{ .left = else_.type, .right = result_type });
+    try context.constraints.equal.append(.{
+        .left = .{ .type = else_.type, .span = else_.span },
+        .right = .{ .type = result_type, .span = null },
+    });
     return Branch{
         .arms = arms,
         .else_ = else_,
@@ -132,8 +131,10 @@ fn binaryOp(context: Context, b: ast.BinaryOp) !Expression {
         .equal, .greater, .less => {
             const left = try expressionAlloc(context, b.left.*);
             const right = try expressionAlloc(context, b.right.*);
-            const left_type = left.typeOf();
-            try context.constraints.equal.append(.{ .left = left_type, .right = right.typeOf() });
+            try context.constraints.equal.append(.{
+                .left = .{ .type = left.typeOf(), .span = b.left.span() },
+                .right = .{ .type = right.typeOf(), .span = b.right.span() },
+            });
             return Expression{
                 .binary_op = .{
                     .kind = b.kind,
@@ -147,10 +148,16 @@ fn binaryOp(context: Context, b: ast.BinaryOp) !Expression {
         else => {
             const left = try expressionAlloc(context, b.left.*);
             const right = try expressionAlloc(context, b.right.*);
-            const left_type = left.typeOf();
-            try context.constraints.equal.append(.{ .left = left_type, .right = right.typeOf() });
+            const left_typed_span = .{ .type = left.typeOf(), .span = b.left.span() };
+            try context.constraints.equal.append(.{
+                .left = left_typed_span,
+                .right = .{ .type = right.typeOf(), .span = b.right.span() },
+            });
             const tvar = context.constraints.freshTypeVar();
-            try context.constraints.equal.append(.{ .left = left_type, .right = tvar });
+            try context.constraints.equal.append(.{
+                .left = left_typed_span,
+                .right = .{ .type = tvar, .span = null },
+            });
             return Expression{
                 .binary_op = .{
                     .kind = b.kind,
@@ -164,16 +171,17 @@ fn binaryOp(context: Context, b: ast.BinaryOp) !Expression {
     }
 }
 
-fn explicitTypeOrVar(context: Context, e: ?*const ast.Expression) !MonoType {
-    if (e) |t|
-        return try expressionToMonoType(context.allocator, context.builtins, t.*);
-    return context.constraints.freshTypeVar();
-}
-
 fn define(context: Context, d: ast.Define) !Define {
     const value = try expressionAlloc(context, d.value.*);
-    const monotype = try explicitTypeOrVar(context, d.type);
-    try context.constraints.equal.append(.{ .left = value.typeOf(), .right = monotype });
+    var monotype = value.typeOf();
+    if (d.type) |t| {
+        const annotated_type = try expressionToMonoType(context.allocator, context.builtins, t.*);
+        try context.constraints.equal.append(.{
+            .left = .{ .type = annotated_type, .span = t.span() },
+            .right = .{ .type = monotype, .span = d.value.span() },
+        });
+        monotype = annotated_type;
+    }
     const name = Symbol{
         .value = d.name.value,
         .span = d.span,
@@ -244,8 +252,8 @@ fn call(context: Context, c: ast.Call) !Expression {
             const return_type = context.constraints.freshTypeVar();
             function_type[len] = return_type;
             try context.constraints.equal.append(.{
-                .left = f.type,
-                .right = .{ .function = function_type },
+                .left = .{ .type = f.type, .span = f.span },
+                .right = .{ .type = .{ .function = function_type }, .span = null },
             });
             return Expression{
                 .call = .{
@@ -283,7 +291,10 @@ fn function(context: Context, f: ast.Function) !Function {
     }
     const return_type = try expressionToMonoType(context.allocator, context.builtins, f.return_type.*);
     const body = try block(context, f.body);
-    try context.constraints.equal.append(.{ .left = return_type, .right = body.type });
+    try context.constraints.equal.append(.{
+        .left = .{ .type = return_type, .span = f.return_type.span() },
+        .right = .{ .type = body.type, .span = body.span },
+    });
     function_type[len] = return_type;
     return Function{
         .parameters = parameters,

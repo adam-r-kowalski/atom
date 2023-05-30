@@ -127,7 +127,7 @@ fn compileAndRun(allocator: Allocator, intern: *neuron.Intern, compile_errors: *
     const builtins = try neuron.Builtins.init(intern);
     var tokens = try neuron.tokenize(allocator, intern, compile_errors, builtins, source);
     const untyped_ast = try neuron.parse(allocator, &tokens);
-    var constraints = neuron.Constraints.init(allocator);
+    var constraints = neuron.Constraints.init(allocator, compile_errors);
     var ast = try neuron.Module.init(allocator, &constraints, builtins, untyped_ast);
     const start = try intern.store("start");
     try neuron.type_checker.infer(&ast, start);
