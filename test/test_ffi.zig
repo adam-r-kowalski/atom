@@ -170,3 +170,66 @@ test "parse named export" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "type check export" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\foreign_export("double", fn(x: i32) i32 {
+        \\    x * 2
+        \\})
+    ;
+    const actual = try neuron.testing.typeInfer(allocator, source, "\"double\"");
+    defer allocator.free(actual);
+    const expected =
+        \\foreign_export =
+        \\    name = "double"
+        \\    value = 
+        \\        function =
+        \\            parameters =
+        \\                symbol{ value = x, type = i32 }
+        \\            return_type = i32
+        \\            body = 
+        \\                binary_op =
+        \\                    kind = *
+        \\                    left = symbol{ value = x, type = i32 }
+        \\                    right = int{ value = 2, type = i32 }
+        \\                    type = i32
+        \\    type = void
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type check named export" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\double = fn(x: i32) i32 {
+        \\    x * 2
+        \\}
+        \\
+        \\foreign_export("double", double)
+    ;
+    const actual = try neuron.testing.typeInfer(allocator, source, "\"double\"");
+    defer allocator.free(actual);
+    const expected =
+        \\define =
+        \\    name = symbol{ value = double, type = fn(i32) i32 }
+        \\    type = void
+        \\    value = 
+        \\        function =
+        \\            parameters =
+        \\                symbol{ value = x, type = i32 }
+        \\            return_type = i32
+        \\            body = 
+        \\                binary_op =
+        \\                    kind = *
+        \\                    left = symbol{ value = x, type = i32 }
+        \\                    right = int{ value = 2, type = i32 }
+        \\                    type = i32
+        \\
+        \\foreign_export =
+        \\    name = "double"
+        \\    value = symbol{ value = double, type = fn(i32) i32 }
+        \\    type = void
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

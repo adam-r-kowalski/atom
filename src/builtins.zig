@@ -19,6 +19,7 @@ pub const Builtins = struct {
     one: Interned,
     zero: Interned,
     foreign_import: Interned,
+    foreign_export: Interned,
     convert: Interned,
     sqrt: Interned,
 
@@ -40,6 +41,7 @@ pub const Builtins = struct {
             .one = try intern.store("1"),
             .zero = try intern.store("0"),
             .foreign_import = try intern.store("foreign_import"),
+            .foreign_export = try intern.store("foreign_export"),
             .convert = try intern.store("convert"),
             .sqrt = try intern.store("sqrt"),
         };
