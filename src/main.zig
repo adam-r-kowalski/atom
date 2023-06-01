@@ -32,7 +32,6 @@ const Flags = struct {
 };
 
 fn writeWat(allocator: Allocator, flags: Flags, wat_string: []const u8) !void {
-    if (!flags.contains("--wat")) return;
     const file_name_no_suffix = flags.file_name[0 .. flags.file_name.len - 7];
     const file_name_wat = try std.fmt.allocPrint(allocator, "{s}.wat", .{file_name_no_suffix});
     const file = try std.fs.cwd().createFile(file_name_wat, .{});
@@ -129,15 +128,23 @@ fn compileAndRun(allocator: Allocator, intern: *neuron.Intern, compile_errors: *
     const untyped_ast = try neuron.parse(allocator, &tokens);
     var constraints = neuron.Constraints.init(allocator, compile_errors);
     var ast = try neuron.Module.init(allocator, &constraints, builtins, untyped_ast);
+    const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
-    try neuron.type_checker.infer(&ast, start);
+    if (export_count == 0) ast.foreign_exports = &.{start};
+    for (ast.foreign_exports) |foreign_export| try neuron.type_checker.infer(&ast, foreign_export);
     const substitution = try constraints.solve(allocator);
     ast.apply(substitution);
     var ir = try neuron.lower.buildIr(allocator, builtins, ast);
-    const alias = try intern.store("_start");
-    ir.exports = &.{.{ .name = start, .alias = alias }};
+    if (export_count == 0) {
+        const alias = try intern.store("_start");
+        ir.exports = &.{.{ .name = start, .alias = alias }};
+    }
     const wat_string = try std.fmt.allocPrint(allocator, "{}", .{ir});
-    try writeWat(allocator, flags, wat_string);
+    if (!flags.contains("--wat")) try writeWat(allocator, flags, wat_string);
+    if (export_count > 0) {
+        try writeWat(allocator, flags, wat_string);
+        return;
+    }
     const wasm_module = WasmModule.init(allocator, ast, wat_string);
     const value = try wasm_module.run(start);
     const stdout = std.io.getStdOut();
