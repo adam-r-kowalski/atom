@@ -233,3 +233,49 @@ test "type check named export" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "codegen foreign export" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\foreign_export("double", fn(x: i32) i32 {
+        \\    x * 2
+        \\})
+    ;
+    const actual = try neuron.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $double (param $x i32) (result i32)
+        \\        (i32.mul
+        \\            (local.get $x)
+        \\            (i32.const 2)))
+        \\
+        \\    (export "double" (func $double)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen named foreign export" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\double = fn(x: i32) i32 {
+        \\    x * 2
+        \\}
+        \\
+        \\foreign_export("double", double)
+    ;
+    const actual = try neuron.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $double (param $x i32) (result i32)
+        \\        (i32.mul
+        \\            (local.get $x)
+        \\            (i32.const 2)))
+        \\
+        \\    (export "double" (func $double)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

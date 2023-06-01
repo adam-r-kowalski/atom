@@ -552,6 +552,7 @@ pub const Module = struct {
     scope: Scope,
     foreign_exports: []const Interned,
     compile_errors: *CompileErrors,
+    intern: *Intern,
 
     pub fn init(allocator: Allocator, constraints: *Constraints, builtins: Builtins, ast: untyped_ast.Module) !Module {
         var order = List(Interned).init(allocator);
@@ -601,6 +602,7 @@ pub const Module = struct {
             .scope = scope,
             .foreign_exports = try foreign_exports.toOwnedSlice(),
             .compile_errors = ast.compile_errors,
+            .intern = ast.intern,
         };
     }
 

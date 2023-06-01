@@ -14,6 +14,7 @@ const Expression = ir.Expression;
 const Local = ir.Local;
 const Function = ir.Function;
 const Import = ir.Import;
+const Export = ir.Export;
 const Parameter = ir.Parameter;
 const IR = ir.IR;
 const I32Const = ir.I32Const;
@@ -337,6 +338,7 @@ fn foreignImport(allocator: Allocator, name: Interned, i: typed_ast.ForeignImpor
 pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
     var functions = std.ArrayList(Function).init(allocator);
     var imports = std.ArrayList(Import).init(allocator);
+    var exports = std.ArrayList(Export).init(allocator);
     for (module.order) |name| {
         if (module.typed.get(name)) |top_level| {
             switch (top_level) {
@@ -354,6 +356,19 @@ pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
                         else => |e| std.debug.panic("\nTop level kind {} no yet supported", .{e}),
                     }
                 },
+                .foreign_export => |e| {
+                    const string = e.name.string();
+                    const trimmed = try module.intern.store(string[1 .. string.len - 1]);
+                    switch (e.value.*) {
+                        .function => |f| {
+                            const lowered = try function(allocator, builtins, trimmed, f);
+                            try functions.append(lowered);
+                        },
+                        .symbol => {},
+                        else => |k| std.debug.panic("\nForeign export kind {} no yet supported", .{k}),
+                    }
+                    try exports.append(.{ .name = trimmed, .alias = trimmed });
+                },
                 else => std.debug.panic("\nTop level kind {} no yet supported", .{top_level}),
             }
         }
@@ -361,6 +376,6 @@ pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
     return IR{
         .functions = try functions.toOwnedSlice(),
         .imports = try imports.toOwnedSlice(),
-        .exports = &.{},
+        .exports = try exports.toOwnedSlice(),
     };
 }
