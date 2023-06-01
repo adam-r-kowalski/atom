@@ -87,13 +87,17 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     const untyped_ast = try parser.parse(arena.allocator(), &tokens);
     var constraints = Constraints.init(arena.allocator(), &compile_errors);
     var ast = try Module.init(arena.allocator(), &constraints, builtins, untyped_ast);
+    const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
-    try type_checker.infer(&ast, start);
+    if (export_count == 0) ast.foreign_exports = &.{start};
+    for (ast.foreign_exports) |foreign_export| try type_checker.infer(&ast, foreign_export);
     const substitution = try constraints.solve(arena.allocator());
     ast.apply(substitution);
     var ir = try lower.buildIr(arena.allocator(), builtins, ast);
-    const alias = try intern.store("_start");
-    ir.exports = &.{.{ .name = start, .alias = alias }};
+    if (export_count == 0) {
+        const alias = try intern.store("_start");
+        ir.exports = &.{.{ .name = start, .alias = alias }};
+    }
     return try std.fmt.allocPrint(allocator, "{}", .{ir});
 }
 
@@ -103,13 +107,17 @@ fn endToEnd(allocator: Allocator, intern: *Intern, compile_errors: *CompileError
     const untyped_ast = try parser.parse(allocator, &tokens);
     var constraints = Constraints.init(allocator, compile_errors);
     var ast = try Module.init(allocator, &constraints, builtins, untyped_ast);
+    const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
-    try type_checker.infer(&ast, start);
+    if (export_count == 0) ast.foreign_exports = &.{start};
+    for (ast.foreign_exports) |foreign_export| try type_checker.infer(&ast, foreign_export);
     const substitution = try constraints.solve(allocator);
     ast.apply(substitution);
     var ir = try lower.buildIr(allocator, builtins, ast);
-    const alias = try intern.store("_start");
-    ir.exports = &.{.{ .name = start, .alias = alias }};
+    if (export_count == 0) {
+        const alias = try intern.store("_start");
+        ir.exports = &.{.{ .name = start, .alias = alias }};
+    }
     return try std.fmt.allocPrint(allocator, "{}", .{ir});
 }
 

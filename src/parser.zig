@@ -372,5 +372,6 @@ pub fn parse(allocator: Allocator, tokens: *Tokens) !Module {
     return Module{
         .expressions = try expressions.toOwnedSlice(),
         .compile_errors = tokens.compile_errors,
+        .intern = tokens.intern,
     };
 }

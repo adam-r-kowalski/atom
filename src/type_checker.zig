@@ -209,6 +209,18 @@ fn callForeignImport(context: Context, c: ast.Call) !Expression {
     };
 }
 
+fn callForeignExport(context: Context, c: ast.Call) !Expression {
+    if (c.arguments.len != 2) std.debug.panic("foreign_export takes 2 arguments", .{});
+    return Expression{
+        .foreign_export = .{
+            .name = c.arguments[0].string.value,
+            .value = try expressionAlloc(context, c.arguments[1]),
+            .span = c.span,
+            .type = .void,
+        },
+    };
+}
+
 fn callConvert(context: Context, c: ast.Call) !Expression {
     if (c.arguments.len != 2) std.debug.panic("convert takes 2 arguments", .{});
     const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[1]);
@@ -241,6 +253,7 @@ fn call(context: Context, c: ast.Call) !Expression {
             const len = c.arguments.len;
             const function_type = try context.allocator.alloc(MonoType, len + 1);
             if (s.value.eql(context.builtins.foreign_import)) return try callForeignImport(context, c);
+            if (s.value.eql(context.builtins.foreign_export)) return try callForeignExport(context, c);
             if (s.value.eql(context.builtins.convert)) return try callConvert(context, c);
             if (s.value.eql(context.builtins.sqrt)) return try callSqrt(context, c);
             const f = try symbol(context.scopes.*, s);

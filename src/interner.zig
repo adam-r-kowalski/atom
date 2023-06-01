@@ -9,10 +9,14 @@ pub const Interned = struct {
         return self.value == other.value;
     }
 
+    pub fn string(self: Interned) []const u8 {
+        return self.intern.lookup(self);
+    }
+
     pub fn format(self: Interned, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = options;
         _ = fmt;
-        try writer.writeAll(self.intern.lookup(self));
+        try writer.writeAll(self.string());
     }
 };
 

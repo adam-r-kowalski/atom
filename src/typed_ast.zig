@@ -398,6 +398,28 @@ pub const ForeignImport = struct {
     }
 };
 
+pub const ForeignExport = struct {
+    name: Interned,
+    value: *Expression,
+    span: Span,
+    type: MonoType,
+
+    fn toString(self: ForeignExport, writer: anytype, indent: Indent) !void {
+        try writer.print("{}", .{indent});
+        try writer.writeAll("foreign_export =");
+        try writer.print("{}", .{indent.add(1)});
+        try writer.print("name = {}", .{self.name});
+        try writer.print("{}value = ", .{indent.add(1)});
+        try self.value.toString(writer, indent.add(2));
+        try writer.print("{}", .{indent.add(1)});
+        try writer.print("type = {}", .{self.type});
+    }
+
+    pub fn apply(self: *ForeignExport, s: Substitution) void {
+        self.value.apply(s);
+    }
+};
+
 pub const Convert = struct {
     value: *Expression,
     span: Span,
@@ -429,6 +451,7 @@ pub const Expression = union(enum) {
     call: Call,
     intrinsic: Intrinsic,
     foreign_import: ForeignImport,
+    foreign_export: ForeignExport,
     convert: Convert,
 
     pub fn span(self: Expression) Span {
@@ -447,6 +470,7 @@ pub const Expression = union(enum) {
             .call => |c| c.span,
             .intrinsic => |i| i.span,
             .foreign_import => |f| f.span,
+            .foreign_export => |f| f.span,
             .convert => |c| c.span,
         };
     }
@@ -467,6 +491,7 @@ pub const Expression = union(enum) {
             .call => |c| c.type,
             .intrinsic => |i| i.type,
             .foreign_import => |f| f.type,
+            .foreign_export => |f| f.type,
             .convert => |c| c.type,
         };
     }
@@ -487,6 +512,7 @@ pub const Expression = union(enum) {
             .block => |*b| b.apply(s),
             .group => |*g| g.apply(s),
             .foreign_import => return,
+            .foreign_export => |*f| f.apply(s),
             .convert => return,
         }
     }
@@ -507,6 +533,7 @@ pub const Expression = union(enum) {
             .block => |b| try b.toString(writer, indent),
             .group => |g| try g.toString(writer, indent),
             .foreign_import => |f| try f.toString(writer, indent),
+            .foreign_export => |f| try f.toString(writer, indent),
             .convert => |c| try c.toString(writer, indent),
         }
     }
@@ -523,13 +550,16 @@ pub const Module = struct {
     untyped: Untyped,
     typed: Typed,
     scope: Scope,
+    foreign_exports: []const Interned,
     compile_errors: *CompileErrors,
+    intern: *Intern,
 
     pub fn init(allocator: Allocator, constraints: *Constraints, builtins: Builtins, ast: untyped_ast.Module) !Module {
         var order = List(Interned).init(allocator);
         var untyped = Untyped.init(allocator);
         var typed = Typed.init(allocator);
         var scope = Scope.init(allocator);
+        var foreign_exports = List(Interned).init(allocator);
         for (ast.expressions) |top_level| {
             switch (top_level) {
                 .define => |d| {
@@ -538,6 +568,26 @@ pub const Module = struct {
                     try untyped.putNoClobber(name, top_level);
                     const monotype = try topLevelType(allocator, builtins, d.value.*);
                     try scope.put(name, monotype);
+                },
+                .call => |c| {
+                    switch (c.function.*) {
+                        .symbol => |sym| {
+                            if (sym.value.eql(builtins.foreign_export)) {
+                                if (c.arguments.len != 2) std.debug.panic("\nInvalid foreign export call {}", .{c});
+                                switch (c.arguments[0]) {
+                                    .string => |str| {
+                                        try order.append(str.value);
+                                        try untyped.putNoClobber(str.value, top_level);
+                                        try foreign_exports.append(str.value);
+                                    },
+                                    else => |k| std.debug.panic("\nInvalid foreign export call {}", .{k}),
+                                }
+                            } else {
+                                std.debug.panic("\nInvalid top level call to {}", .{sym});
+                            }
+                        },
+                        else => |k| std.debug.panic("\nInvalid top level call {}", .{k}),
+                    }
                 },
                 else => |k| std.debug.panic("\nInvalid top level expression {}", .{k}),
             }
@@ -550,7 +600,9 @@ pub const Module = struct {
             .untyped = untyped,
             .typed = typed,
             .scope = scope,
+            .foreign_exports = try foreign_exports.toOwnedSlice(),
             .compile_errors = ast.compile_errors,
+            .intern = ast.intern,
         };
     }
 
