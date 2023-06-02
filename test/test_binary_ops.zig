@@ -267,8 +267,8 @@ test "codegen binary op f32.add" {
         \\
         \\    (func $start (result f32)
         \\        (f32.add
-        \\            (f32.const 42)
-        \\            (f32.const 29)))
+        \\            (f32.const 4.2e+01)
+        \\            (f32.const 2.9e+01)))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -285,8 +285,8 @@ test "codegen binary op f64.add" {
         \\
         \\    (func $start (result f64)
         \\        (f64.add
-        \\            (f64.const 42)
-        \\            (f64.const 29)))
+        \\            (f64.const 4.2e+01)
+        \\            (f64.const 2.9e+01)))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -303,8 +303,8 @@ test "codegen binary op f32.sub" {
         \\
         \\    (func $start (result f32)
         \\        (f32.sub
-        \\            (f32.const 42)
-        \\            (f32.const 29)))
+        \\            (f32.const 4.2e+01)
+        \\            (f32.const 2.9e+01)))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -339,8 +339,8 @@ test "codegen binary op f32.mul" {
         \\
         \\    (func $start (result f32)
         \\        (f32.mul
-        \\            (f32.const 42)
-        \\            (f32.const 29)))
+        \\            (f32.const 4.2e+01)
+        \\            (f32.const 2.9e+01)))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -358,9 +358,9 @@ test "codegen nested binary op f32.add and f32.mul" {
         \\    (func $start (result f32)
         \\        (f32.add
         \\            (f32.mul
-        \\                (f32.const 42)
-        \\                (f32.const 29))
-        \\            (f32.const 15)))
+        \\                (f32.const 4.2e+01)
+        \\                (f32.const 2.9e+01))
+        \\            (f32.const 1.5e+01)))
         \\
         \\    (export "_start" (func $start)))
     ;

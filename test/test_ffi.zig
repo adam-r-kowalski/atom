@@ -296,12 +296,32 @@ test "codegen hello world" {
     const expected =
         \\(module
         \\
-        \\    (func $double (param $x i32) (result i32)
-        \\        (i32.mul
-        \\            (local.get $x)
-        \\            (i32.const 2)))
+        \\    (import "wasi_unstable" "fd_write" (func $fd_write (param i32) (param i32) (param i32) (param i32) (result i32)))
         \\
-        \\    (export "double" (func $double)))
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (data (i32.const 0) "Hello, World!")
+        \\
+        \\    (func $start (result i32)
+        \\        (local $stdout i32)
+        \\        (local $text i32)
+        \\        (local.set $stdout
+        \\            (i32.const 1))
+        \\        (local.set $text
+        \\            (block (result i32)
+        \\                (i32.store
+        \\                    (i32.const 0)
+        \\                    (i32.const 0))
+        \\                (i32.const 0)
+        \\                (i32.const 0)))
+        \\        (call $fd_write
+        \\            (local.get $stdout)
+        \\            (local.get $text)
+        \\            (i32.const 1)
+        \\            (i32.const 200)))
+        \\
+        \\    (export "_start" (func $start)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

@@ -63,6 +63,7 @@ pub const BinaryOpKind = enum {
     i32_lt_s,
     i32_rem_s,
     i32_or,
+    i32_store,
     i64_add,
     i64_sub,
     i64_mul,
@@ -99,6 +100,7 @@ pub const BinaryOpKind = enum {
             .i32_or => try writer.writeAll("i32.or"),
             .i32_gt_s => try writer.writeAll("i32.gt_s"),
             .i32_lt_s => try writer.writeAll("i32.lt_s"),
+            .i32_store => try writer.writeAll("i32.store"),
             .i64_add => try writer.writeAll("i64.add"),
             .i64_sub => try writer.writeAll("i64.sub"),
             .i64_mul => try writer.writeAll("i64.mul"),
@@ -224,46 +226,6 @@ pub const If = struct {
     }
 };
 
-pub const I32Const = struct {
-    value: Interned,
-
-    pub fn format(self: I32Const, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = options;
-        _ = fmt;
-        try writer.print("(i32.const {})", .{self.value});
-    }
-};
-
-pub const I64Const = struct {
-    value: Interned,
-
-    pub fn format(self: I64Const, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = options;
-        _ = fmt;
-        try writer.print("(i64.const {})", .{self.value});
-    }
-};
-
-pub const F32Const = struct {
-    value: Interned,
-
-    pub fn format(self: F32Const, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = options;
-        _ = fmt;
-        try writer.print("(f32.const {})", .{self.value});
-    }
-};
-
-pub const F64Const = struct {
-    value: Interned,
-
-    pub fn format(self: F64Const, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = options;
-        _ = fmt;
-        try writer.print("(f64.const {})", .{self.value});
-    }
-};
-
 pub const LocalGet = struct {
     name: Interned,
 
@@ -302,32 +264,64 @@ pub const Expressions = struct {
     }
 };
 
+pub const Block = struct {
+    result: Type,
+    expressions: []const Expression,
+
+    pub fn toString(self: Block, writer: anytype, indent: Indent) !void {
+        try writer.print("(block (result {})", .{self.result});
+        for (self.expressions) |expr| {
+            try writer.print("{}", .{indent.add(1)});
+            expr.toString(writer, indent.add(1)) catch unreachable;
+        }
+        try writer.writeAll(")");
+    }
+};
+
+pub const Literal = union(enum) {
+    bool: bool,
+    u32: u32,
+    i32: i32,
+    i64: i64,
+    f32: f32,
+    f64: f64,
+
+    pub fn format(self: Literal, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        switch (self) {
+            .bool => |v| try writer.print("(i32.const {})", .{@as(i32, if (v) 1 else 0)}),
+            .u32 => |v| try writer.print("(i32.const {})", .{v}),
+            .i32 => |v| try writer.print("(i32.const {})", .{v}),
+            .i64 => |v| try writer.print("(i64.const {})", .{v}),
+            .f32 => |v| try writer.print("(f32.const {})", .{v}),
+            .f64 => |v| try writer.print("(f64.const {})", .{v}),
+        }
+    }
+};
+
 pub const Expression = union(enum) {
     local_get: LocalGet,
     local_set: LocalSet,
-    i32_const: I32Const,
-    i64_const: I64Const,
-    f32_const: F32Const,
-    f64_const: F64Const,
+    literal: Literal,
     call: Call,
     if_: If,
     unary_op: UnaryOp,
     binary_op: BinaryOp,
     expressions: Expressions,
+    block: Block,
 
     pub fn toString(self: Expression, writer: anytype, indent: Indent) error{NoSpaceLeft}!void {
         switch (self) {
             .local_get => |l| try writer.print("{}", .{l}),
             .local_set => |l| try l.toString(writer, indent),
-            .i32_const => |i| try writer.print("{}", .{i}),
-            .i64_const => |i| try writer.print("{}", .{i}),
-            .f32_const => |f| try writer.print("{}", .{f}),
-            .f64_const => |f| try writer.print("{}", .{f}),
+            .literal => |l| try writer.print("{}", .{l}),
             .call => |c| try c.toString(writer, indent),
             .if_ => |i| try i.toString(writer, indent),
             .unary_op => |u| try u.toString(writer, indent),
             .binary_op => |b| try b.toString(writer, indent),
             .expressions => |e| try e.toString(writer, indent),
+            .block => |b| try b.toString(writer, indent),
         }
     }
 
@@ -394,7 +388,7 @@ pub const Export = struct {
     }
 };
 
-pub const Offset = u64;
+pub const Offset = u32;
 
 pub const Data = struct {
     offset: Offset,
@@ -422,7 +416,7 @@ pub const DataSegment = struct {
         const bytes = s.value.string();
         const offset = self.offset;
         try self.data.append(Data{ .offset = offset, .bytes = bytes });
-        self.offset += bytes.len;
+        self.offset += @intCast(u32, bytes.len);
         return offset;
     }
 

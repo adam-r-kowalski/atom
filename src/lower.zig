@@ -18,17 +18,16 @@ const DataSegment = ir.DataSegment;
 const Export = ir.Export;
 const Parameter = ir.Parameter;
 const IR = ir.IR;
-const I32Const = ir.I32Const;
-const I64Const = ir.I64Const;
-const F32Const = ir.F32Const;
-const F64Const = ir.F64Const;
+const Literal = ir.Literal;
 const Expressions = ir.Expressions;
+const Block = ir.Block;
 
 const Context = struct {
     allocator: Allocator,
     builtins: Builtins,
     locals: *List(Local),
     data_segment: *DataSegment,
+    intern: *Intern,
 };
 
 fn mapType(monotype: MonoType) Type {
@@ -46,26 +45,24 @@ fn mapType(monotype: MonoType) Type {
 
 fn int(i: typed_ast.Int) !Expression {
     switch (i.type) {
-        .i32 => return .{ .i32_const = I32Const{ .value = i.value } },
-        .i64 => return .{ .i64_const = I64Const{ .value = i.value } },
-        .f32 => return .{ .f32_const = F32Const{ .value = i.value } },
-        .f64 => return .{ .f64_const = F64Const{ .value = i.value } },
+        .i32 => return .{ .literal = Literal{ .i32 = try std.fmt.parseInt(i32, i.value.string(), 10) } },
+        .i64 => return .{ .literal = Literal{ .i64 = try std.fmt.parseInt(i64, i.value.string(), 10) } },
+        .f32 => return .{ .literal = Literal{ .f32 = try std.fmt.parseFloat(f32, i.value.string()) } },
+        .f64 => return .{ .literal = Literal{ .f64 = try std.fmt.parseFloat(f64, i.value.string()) } },
         else => |k| std.debug.panic("\nInt type {} not yet supported", .{k}),
     }
 }
 
 fn float(f: typed_ast.Float) !Expression {
     switch (f.type) {
-        .f32 => return .{ .f32_const = F32Const{ .value = f.value } },
-        .f64 => return .{ .f64_const = F64Const{ .value = f.value } },
+        .f32 => return .{ .literal = Literal{ .f32 = try std.fmt.parseFloat(f32, f.value.string()) } },
+        .f64 => return .{ .literal = Literal{ .f64 = try std.fmt.parseFloat(f64, f.value.string()) } },
         else => |k| std.debug.panic("\nFloat type {} not yet supported", .{k}),
     }
 }
 
-fn boolean(builtins: Builtins, b: typed_ast.Bool) !Expression {
-    return Expression{
-        .i32_const = I32Const{ .value = if (b.value) builtins.one else builtins.zero },
-    };
+fn boolean(b: typed_ast.Bool) !Expression {
+    return Expression{ .literal = Literal{ .bool = b.value } };
 }
 
 fn expressions(context: Context, b: typed_ast.Block) !Expressions {
@@ -287,15 +284,23 @@ fn convert(context: Context, c: typed_ast.Convert) !Expression {
 }
 
 fn string(context: Context, s: typed_ast.String) !Expression {
-    _ = try context.data_segment.string(s);
-    return .{ .i32_const = I32Const{ .value = context.builtins.zero } };
+    const offset = try context.data_segment.string(s);
+    const left = try context.allocator.create(Expression);
+    left.* = .{ .literal = .{ .u32 = 0 } };
+    const right = try context.allocator.create(Expression);
+    right.* = .{ .literal = .{ .u32 = offset } };
+    const exprs = try context.allocator.alloc(Expression, 3);
+    exprs[0] = .{ .binary_op = .{ .kind = .i32_store, .left = left, .right = right } };
+    exprs[1] = .{ .literal = .{ .i32 = 0 } };
+    exprs[2] = .{ .literal = .{ .i32 = 0 } };
+    return .{ .block = Block{ .result = .i32, .expressions = exprs } };
 }
 
-fn expression(context: Context, e: typed_ast.Expression) error{OutOfMemory}!Expression {
+fn expression(context: Context, e: typed_ast.Expression) error{ OutOfMemory, InvalidCharacter, Overflow }!Expression {
     switch (e) {
         .int => |i| return try int(i),
         .float => |f| return try float(f),
-        .bool => |b| return try boolean(context.builtins, b),
+        .bool => |b| return try boolean(b),
         .block => |b| return .{ .expressions = try expressions(context, b) },
         .binary_op => |b| return try binaryOp(context, b),
         .symbol => |s| return symbol(s),
@@ -315,7 +320,7 @@ fn expressionAlloc(context: Context, e: typed_ast.Expression) !*const Expression
     return ptr;
 }
 
-fn function(allocator: Allocator, builtins: Builtins, data_segment: *DataSegment, name: Interned, f: typed_ast.Function) !Function {
+fn function(allocator: Allocator, builtins: Builtins, data_segment: *DataSegment, intern: *Intern, name: Interned, f: typed_ast.Function) !Function {
     const parameters = try allocator.alloc(Parameter, f.parameters.len);
     for (f.parameters, parameters) |typed_p, *ir_p| {
         ir_p.* = Parameter{
@@ -329,6 +334,7 @@ fn function(allocator: Allocator, builtins: Builtins, data_segment: *DataSegment
         .builtins = builtins,
         .locals = &locals,
         .data_segment = data_segment,
+        .intern = intern,
     };
     const body = try expressions(context, f.body);
     return Function{
@@ -368,7 +374,7 @@ pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
                     const name_symbol = d.name.value;
                     switch (d.value.*) {
                         .function => |f| {
-                            const lowered = try function(allocator, builtins, &data_segment, name_symbol, f);
+                            const lowered = try function(allocator, builtins, &data_segment, module.intern, name_symbol, f);
                             try functions.append(lowered);
                         },
                         .foreign_import => |i| {
@@ -383,7 +389,7 @@ pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
                     const trimmed = try module.intern.store(name_string[1 .. name_string.len - 1]);
                     switch (e.value.*) {
                         .function => |f| {
-                            const lowered = try function(allocator, builtins, &data_segment, trimmed, f);
+                            const lowered = try function(allocator, builtins, &data_segment, module.intern, trimmed, f);
                             try functions.append(lowered);
                         },
                         .symbol => {},
