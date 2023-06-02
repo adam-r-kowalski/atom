@@ -279,3 +279,29 @@ test "codegen named foreign export" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "codegen hello world" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, text: str, count: i32, out: i32) i32)
+        \\
+        \\start = fn() i32 {
+        \\    stdout = 1
+        \\    text = "Hello, World!"
+        \\    fd_write(stdout, text, 1, 200)
+        \\}
+    ;
+    const actual = try neuron.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (func $double (param $x i32) (result i32)
+        \\        (i32.mul
+        \\            (local.get $x)
+        \\            (i32.const 2)))
+        \\
+        \\    (export "double" (func $double)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

@@ -201,8 +201,8 @@ pub const Call = struct {
 pub const If = struct {
     result: Type,
     condition: *const Expression,
-    then: Block,
-    else_: Block,
+    then: Expressions,
+    else_: Expressions,
 
     fn toString(self: If, writer: anytype, indent: Indent) !void {
         try writer.writeAll("(if ");
@@ -291,10 +291,10 @@ pub const LocalSet = struct {
     }
 };
 
-pub const Block = struct {
+pub const Expressions = struct {
     expressions: []const Expression,
 
-    pub fn toString(self: Block, writer: anytype, indent: Indent) !void {
+    pub fn toString(self: Expressions, writer: anytype, indent: Indent) !void {
         for (self.expressions) |expr| {
             try writer.print("{}", .{indent});
             expr.toString(writer, indent) catch unreachable;
@@ -313,7 +313,7 @@ pub const Expression = union(enum) {
     if_: If,
     unary_op: UnaryOp,
     binary_op: BinaryOp,
-    block: Block,
+    expressions: Expressions,
 
     pub fn toString(self: Expression, writer: anytype, indent: Indent) error{NoSpaceLeft}!void {
         switch (self) {
@@ -327,7 +327,7 @@ pub const Expression = union(enum) {
             .if_ => |i| try i.toString(writer, indent),
             .unary_op => |u| try u.toString(writer, indent),
             .binary_op => |b| try b.toString(writer, indent),
-            .block => |b| try b.toString(writer, indent),
+            .expressions => |e| try e.toString(writer, indent),
         }
     }
 
@@ -354,7 +354,7 @@ pub const Function = struct {
     parameters: []const Parameter,
     return_type: Type,
     locals: []const Local,
-    body: Block,
+    body: Expressions,
 
     pub fn format(self: Function, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = options;
@@ -394,9 +394,57 @@ pub const Export = struct {
     }
 };
 
+pub const Offset = u64;
+
+pub const Data = struct {
+    offset: Offset,
+    bytes: []const u8,
+
+    pub fn format(self: Data, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        try writer.print("(data (i32.const {}) {s})", .{ self.offset, self.bytes });
+    }
+};
+
+pub const DataSegment = struct {
+    offset: Offset,
+    data: List(Data),
+
+    pub fn init(allocator: Allocator) DataSegment {
+        return DataSegment{
+            .offset = 0,
+            .data = List(Data).init(allocator),
+        };
+    }
+
+    pub fn string(self: *DataSegment, s: typed_ast.String) !Offset {
+        const bytes = s.value.string();
+        const offset = self.offset;
+        try self.data.append(Data{ .offset = offset, .bytes = bytes });
+        self.offset += bytes.len;
+        return offset;
+    }
+
+    pub fn format(self: DataSegment, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        if (self.data.items.len == 0) return;
+        try writer.writeAll(
+            \\
+            \\
+            \\    (memory 1)
+            \\    (export "memory" (memory 0))
+            \\
+        );
+        for (self.data.items) |d| try writer.print("\n    {}", .{d});
+    }
+};
+
 pub const IR = struct {
     functions: []const Function,
     imports: []const Import,
+    data_segment: DataSegment,
     exports: []const Export,
 
     pub fn format(self: IR, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
@@ -404,6 +452,7 @@ pub const IR = struct {
         _ = fmt;
         try writer.writeAll("(module");
         for (self.imports) |i| try writer.print("\n{}{}", .{ Indent{ .value = 1 }, i });
+        try writer.print("{}", .{self.data_segment});
         for (self.functions) |f| try writer.print("\n{}{}", .{ Indent{ .value = 1 }, f });
         for (self.exports) |e| try writer.print("\n{}{}", .{ Indent{ .value = 1 }, e });
         try writer.writeAll(")");
