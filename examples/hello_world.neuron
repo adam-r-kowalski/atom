@@ -1,10 +1,10 @@
 fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, text: str, count: i32, out: i32) i32)
 
-print = fn(text: str) void {
-    _ = fd_write(1, text, 1, 200)
+print = fn(text: str) i32 {
+    stdout = 1
+    stdout.fd_write(text, 1, 200)
 }
 
-start = fn() void {
-    print("Hello, World!\n")
-    print("Goodbye, World!")
+start = fn() i32 {
+    print("Hello, World!")
 }
