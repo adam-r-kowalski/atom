@@ -454,16 +454,14 @@ pub const DataSegment = struct {
     pub fn format(self: DataSegment, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = options;
         _ = fmt;
-        if (self.data.items.len == 0) return;
-        try writer.writeAll(
+        try writer.print(
             \\
             \\
             \\    (memory 1)
             \\    (export "memory" (memory 0))
-            \\
-        );
+            \\    (global $arena (mut i32) (i32.const {}))
+        , .{self.offset});
         for (self.data.items) |d| try writer.print("\n    {}", .{d});
-        try writer.print("\n\n    (global $arena (mut i32) (i32.const {}))", .{self.offset});
     }
 };
 

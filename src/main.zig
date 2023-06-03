@@ -43,6 +43,7 @@ const Value = union(enum) {
     i64: i64,
     f32: f32,
     f64: f64,
+    void,
 
     pub fn format(self: Value, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = options;
@@ -52,6 +53,7 @@ const Value = union(enum) {
             .i64 => |i| try writer.print("{}", .{i}),
             .f32 => |f| try writer.print("{}", .{f}),
             .f64 => |f| try writer.print("{}", .{f}),
+            .void => {},
         }
     }
 };
@@ -78,8 +80,7 @@ const WasmModule = struct {
         const wasi_env = wasmer.wasi_env_new(store, config);
         if (wasi_env == null) std.debug.panic("\nError building WASI env!\n", .{});
         var imports: wasmer.wasm_extern_vec_t = undefined;
-        const get_imports_result = wasmer.wasi_get_imports(store, wasi_env, module, &imports);
-        if (!get_imports_result) std.debug.panic("\nError getting WASI imports!\n", .{});
+        _ = wasmer.wasi_get_imports(store, wasi_env, module, &imports);
         const instance = wasmer.wasm_instance_new(store, module, &imports, null);
         if (instance == null) std.debug.panic("\nError instantiating module!\n", .{});
         if (!wasmer.wasi_env_initialize_instance(wasi_env, store, instance))
@@ -115,7 +116,7 @@ const WasmModule = struct {
         var args: wasmer.wasm_val_vec_t = undefined;
         var results: wasmer.wasm_val_vec_t = undefined;
         wasmer.wasm_val_vec_new(&args, 0, &args_val);
-        wasmer.wasm_val_vec_new(&results, 1, results_val.items.ptr);
+        wasmer.wasm_val_vec_new(&results, results_val.items.len, results_val.items.ptr);
         if (wasmer.wasm_func_call(func, &args, &results)) |_| {
             std.debug.panic("\nError calling start!\n", .{});
         }
@@ -124,6 +125,7 @@ const WasmModule = struct {
             .i64 => return .{ .i64 = results.data[0].of.i64 },
             .f32 => return .{ .f32 = results.data[0].of.f32 },
             .f64 => return .{ .f64 = results.data[0].of.f64 },
+            .void => return .void,
             else => |k| std.debug.panic("\nUnsupported return type {}!\n", .{k}),
         }
     }
@@ -156,7 +158,7 @@ fn compileAndRun(allocator: Allocator, intern: *mantis.Intern, compile_errors: *
     const value = try wasm_module.run(start);
     const stdout = std.io.getStdOut();
     const writer = stdout.writer();
-    try writer.print("\n{}", .{value});
+    try writer.print("{}", .{value});
 }
 
 pub fn main() !void {
