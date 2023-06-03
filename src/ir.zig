@@ -253,6 +253,33 @@ pub const LocalSet = struct {
     }
 };
 
+pub const GlobalGet = struct {
+    name: Interned,
+
+    pub fn format(self: GlobalGet, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        try writer.print("(global.get ${})", .{self.name});
+    }
+};
+
+pub const GlobalSet = struct {
+    name: Interned,
+    value: *const Expression,
+
+    pub fn toString(self: GlobalSet, writer: anytype, indent: Indent) !void {
+        try writer.print("(global.set ${}{}", .{ self.name, indent.add(1) });
+        try self.value.toString(writer, indent.add(1));
+        try writer.writeAll(")");
+    }
+
+    pub fn format(self: GlobalSet, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        try self.toString(writer, Indent{ .value = 0 });
+    }
+};
+
 pub const Expressions = struct {
     expressions: []const Expression,
 
@@ -303,6 +330,8 @@ pub const Literal = union(enum) {
 pub const Expression = union(enum) {
     local_get: LocalGet,
     local_set: LocalSet,
+    global_get: GlobalGet,
+    global_set: GlobalSet,
     literal: Literal,
     call: Call,
     if_: If,
@@ -315,6 +344,8 @@ pub const Expression = union(enum) {
         switch (self) {
             .local_get => |l| try writer.print("{}", .{l}),
             .local_set => |l| try l.toString(writer, indent),
+            .global_get => |g| try writer.print("{}", .{g}),
+            .global_set => |g| try g.toString(writer, indent),
             .literal => |l| try writer.print("{}", .{l}),
             .call => |c| try c.toString(writer, indent),
             .if_ => |i| try i.toString(writer, indent),
@@ -416,7 +447,7 @@ pub const DataSegment = struct {
         const bytes = s.value.string();
         const offset = self.offset;
         try self.data.append(Data{ .offset = offset, .bytes = bytes });
-        self.offset += @intCast(u32, bytes.len);
+        self.offset += @intCast(u32, bytes.len - 2);
         return offset;
     }
 
@@ -432,6 +463,7 @@ pub const DataSegment = struct {
             \\
         );
         for (self.data.items) |d| try writer.print("\n    {}", .{d});
+        try writer.print("\n\n    (global $arena (mut i32) (i32.const {}))", .{self.offset});
     }
 };
 

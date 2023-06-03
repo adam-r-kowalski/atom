@@ -1,0 +1,5 @@
+fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, text: str, count: i32, out: i32) i32)
+
+start = fn() i32 {
+    fd_write(1, "Hello, World!", 1, 200)
+}

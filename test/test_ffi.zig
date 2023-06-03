@@ -303,18 +303,31 @@ test "codegen hello world" {
         \\
         \\    (data (i32.const 0) "Hello, World!")
         \\
+        \\    (global $arena (mut i32) (i32.const 13))
+        \\
         \\    (func $start (result i32)
         \\        (local $stdout i32)
+        \\        (local $0 i32)
         \\        (local $text i32)
         \\        (local.set $stdout
         \\            (i32.const 1))
         \\        (local.set $text
         \\            (block (result i32)
+        \\                (local.set $0
+        \\                    (global.get $arena))
         \\                (i32.store
-        \\                    (i32.const 0)
+        \\                    (local.get $0)
         \\                    (i32.const 0))
-        \\                (i32.const 0)
-        \\                (i32.const 0)))
+        \\                (i32.store
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 4))
+        \\                    (i32.const 13))
+        \\                (global.set $arena
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 8)))
+        \\                (local.get $0)))
         \\        (call $fd_write
         \\            (local.get $stdout)
         \\            (local.get $text)

@@ -74,9 +74,16 @@ const WasmModule = struct {
         const store = wasmer.wasm_store_new(engine);
         const module = wasmer.wasm_module_new(store, &wasm_bytes);
         if (module == null) std.debug.panic("\nError compiling module!\n", .{});
-        const imports: wasmer.wasm_extern_vec_t = undefined;
+        const config = wasmer.wasi_config_new("example_program");
+        const wasi_env = wasmer.wasi_env_new(store, config);
+        if (wasi_env == null) std.debug.panic("\nError building WASI env!\n", .{});
+        var imports: wasmer.wasm_extern_vec_t = undefined;
+        const get_imports_result = wasmer.wasi_get_imports(store, wasi_env, module, &imports);
+        if (!get_imports_result) std.debug.panic("\nError getting WASI imports!\n", .{});
         const instance = wasmer.wasm_instance_new(store, module, &imports, null);
         if (instance == null) std.debug.panic("\nError instantiating module!\n", .{});
+        if (!wasmer.wasi_env_initialize_instance(wasi_env, store, instance))
+            std.debug.panic("\nError initializing WASI instance!\n", .{});
         var wasm_exports: wasmer.wasm_extern_vec_t = undefined;
         wasmer.wasm_instance_exports(instance, &wasm_exports);
         if (wasm_exports.size == 0) std.debug.panic("\nError getting exports!\n", .{});
@@ -92,7 +99,7 @@ const WasmModule = struct {
     }
 
     fn run(self: WasmModule, name: neuron.Interned) !Value {
-        const func = wasmer.wasm_extern_as_func(self.exports.data[0]);
+        const func = wasmer.wasi_get_start_function(self.instance);
         if (func == null) std.debug.panic("\nError getting start!\n", .{});
         var args_val = [0]wasmer.wasm_val_t{};
         var results_val = List(wasmer.wasm_val_t).init(self.allocator);
@@ -140,7 +147,7 @@ fn compileAndRun(allocator: Allocator, intern: *neuron.Intern, compile_errors: *
         ir.exports = &.{.{ .name = start, .alias = alias }};
     }
     const wat_string = try std.fmt.allocPrint(allocator, "{}", .{ir});
-    if (!flags.contains("--wat")) try writeWat(allocator, flags, wat_string);
+    if (flags.contains("--wat")) try writeWat(allocator, flags, wat_string);
     if (export_count > 0) {
         try writeWat(allocator, flags, wat_string);
         return;
@@ -149,7 +156,7 @@ fn compileAndRun(allocator: Allocator, intern: *neuron.Intern, compile_errors: *
     const value = try wasm_module.run(start);
     const stdout = std.io.getStdOut();
     const writer = stdout.writer();
-    try writer.print("{}", .{value});
+    try writer.print("\n{}", .{value});
 }
 
 pub fn main() !void {

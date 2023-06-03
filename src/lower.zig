@@ -26,8 +26,17 @@ const Context = struct {
     allocator: Allocator,
     builtins: Builtins,
     locals: *List(Local),
+    next_local: *u32,
     data_segment: *DataSegment,
     intern: *Intern,
+
+    fn fresh_local(self: Context, t: Type) !Interned {
+        const text = try std.fmt.allocPrint(self.allocator, "{}", .{self.next_local.*});
+        const interned = try self.intern.store(text);
+        self.next_local.* += 1;
+        try self.locals.append(.{ .name = interned, .type = t });
+        return interned;
+    }
 };
 
 fn mapType(monotype: MonoType) Type {
@@ -283,16 +292,49 @@ fn convert(context: Context, c: typed_ast.Convert) !Expression {
     }
 }
 
-fn string(context: Context, s: typed_ast.String) !Expression {
-    const offset = try context.data_segment.string(s);
+fn storeArenaInLocal(context: Context, local: Interned) !Expression {
+    const global_get = try context.allocator.create(Expression);
+    global_get.* = .{ .global_get = .{ .name = context.builtins.arena } };
+    return .{ .local_set = .{ .name = local, .value = global_get } };
+}
+
+fn storeStringOffsetInArena(context: Context, local: Interned, offset: u32) !Expression {
     const left = try context.allocator.create(Expression);
-    left.* = .{ .literal = .{ .u32 = 0 } };
+    left.* = .{ .local_get = .{ .name = local } };
     const right = try context.allocator.create(Expression);
     right.* = .{ .literal = .{ .u32 = offset } };
-    const exprs = try context.allocator.alloc(Expression, 3);
-    exprs[0] = .{ .binary_op = .{ .kind = .i32_store, .left = left, .right = right } };
-    exprs[1] = .{ .literal = .{ .i32 = 0 } };
-    exprs[2] = .{ .literal = .{ .i32 = 0 } };
+    return .{ .binary_op = .{ .kind = .i32_store, .left = left, .right = right } };
+}
+
+fn addLocalAndU32(context: Context, local: Interned, value: u32) !*const Expression {
+    const left = try context.allocator.create(Expression);
+    left.* = .{ .local_get = .{ .name = local } };
+    const right = try context.allocator.create(Expression);
+    right.* = .{ .literal = .{ .u32 = value } };
+    const result = try context.allocator.create(Expression);
+    result.* = .{ .binary_op = .{ .kind = .i32_add, .left = left, .right = right } };
+    return result;
+}
+
+fn storeStringLengthInArena(context: Context, local: Interned, offset: u32) !Expression {
+    const left = try addLocalAndU32(context, local, 4);
+    const right = try context.allocator.create(Expression);
+    right.* = .{ .literal = .{ .u32 = context.data_segment.offset - offset } };
+    return .{ .binary_op = .{ .kind = .i32_store, .left = left, .right = right } };
+}
+
+fn string(context: Context, s: typed_ast.String) !Expression {
+    const local = try context.fresh_local(.i32);
+    const exprs = try context.allocator.alloc(Expression, 5);
+    const offset = try context.data_segment.string(s);
+    exprs[0] = try storeArenaInLocal(context, local);
+    exprs[1] = try storeStringOffsetInArena(context, local, offset);
+    exprs[2] = try storeStringLengthInArena(context, local, offset);
+    exprs[3] = .{ .global_set = .{
+        .name = context.builtins.arena,
+        .value = try addLocalAndU32(context, local, 8),
+    } };
+    exprs[4] = .{ .local_get = .{ .name = local } };
     return .{ .block = Block{ .result = .i32, .expressions = exprs } };
 }
 
@@ -329,10 +371,12 @@ fn function(allocator: Allocator, builtins: Builtins, data_segment: *DataSegment
         };
     }
     var locals = List(Local).init(allocator);
+    var next_local: u32 = 0;
     const context = Context{
         .allocator = allocator,
         .builtins = builtins,
         .locals = &locals,
+        .next_local = &next_local,
         .data_segment = data_segment,
         .intern = intern,
     };
