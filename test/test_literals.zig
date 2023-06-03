@@ -106,6 +106,10 @@ test "codegen i32 with int literal" {
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (result i32)
         \\        (i32.const 42))
         \\
@@ -122,6 +126,10 @@ test "codegen f32 with int literal" {
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (result f32)
         \\        (f32.const 4.2e+01))
         \\
@@ -137,6 +145,10 @@ test "codegen f32 with float literal" {
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result f32)
         \\        (f32.const 4.25e+01))

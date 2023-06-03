@@ -93,6 +93,10 @@ test "codegen import" {
         \\
         \\    (import "console" "log" (func $print (param i32)))
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start
         \\        (call $print
         \\            (i32.const 42)))
@@ -246,6 +250,10 @@ test "codegen foreign export" {
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $double (param $x i32) (result i32)
         \\        (i32.mul
         \\            (local.get $x)
@@ -269,6 +277,10 @@ test "codegen named foreign export" {
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $double (param $x i32) (result i32)
         \\        (i32.mul
@@ -300,10 +312,9 @@ test "codegen hello world" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 13))
         \\
         \\    (data (i32.const 0) "Hello, World!")
-        \\
-        \\    (global $arena (mut i32) (i32.const 13))
         \\
         \\    (func $start (result i32)
         \\        (local $stdout i32)

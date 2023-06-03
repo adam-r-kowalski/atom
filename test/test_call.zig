@@ -118,6 +118,10 @@ test "codegen define then call" {
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $double (param $x i32) (result i32)
         \\        (i32.mul
         \\            (local.get $x)
@@ -145,6 +149,10 @@ test "codegen recursive function" {
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $factorial (param $n i32) (result i32)
         \\        (if (result i32)

@@ -258,6 +258,10 @@ test "codegen define" {
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (param $x i32) (param $y i32) (result i32)
         \\        (local $a i32)
         \\        (local $b i32)

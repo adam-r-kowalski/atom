@@ -211,6 +211,10 @@ test "codegen i32.add" {
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (result i32)
         \\        (i32.add
         \\            (i32.const 42)
@@ -228,6 +232,10 @@ test "codegen i64.add" {
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result i64)
         \\        (i64.add
@@ -247,6 +255,10 @@ test "codegen binary op i32.sub" {
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (result i32)
         \\        (i32.sub
         \\            (i32.const 42)
@@ -264,6 +276,10 @@ test "codegen binary op f32.add" {
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result f32)
         \\        (f32.add
@@ -283,6 +299,10 @@ test "codegen binary op f64.add" {
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (result f64)
         \\        (f64.add
         \\            (f64.const 4.2e+01)
@@ -300,6 +320,10 @@ test "codegen binary op f32.sub" {
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result f32)
         \\        (f32.sub
@@ -319,6 +343,10 @@ test "codegen binary op i32.mul" {
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (result i32)
         \\        (i32.mul
         \\            (i32.const 42)
@@ -337,6 +365,10 @@ test "codegen binary op f32.mul" {
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (result f32)
         \\        (f32.mul
         \\            (f32.const 4.2e+01)
@@ -354,6 +386,10 @@ test "codegen nested binary op f32.add and f32.mul" {
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result f32)
         \\        (f32.add
@@ -375,6 +411,10 @@ test "codegen i32.eq" {
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (param $x i32) (param $y i32) (result i32)
         \\        (i32.eq
         \\            (local.get $x)
@@ -393,6 +433,10 @@ test "codegen f32.eq" {
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (param $x f32) (param $y f32) (result i32)
         \\        (f32.eq
         \\            (local.get $x)
@@ -410,6 +454,10 @@ test "codegen i32.rem_s" {
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x i32) (result i32)
         \\        (i32.eq
@@ -431,6 +479,10 @@ test "codegen i32.or" {
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (param $x i32) (param $y i32) (result i32)
         \\        (i32.or
         \\            (local.get $x)
@@ -448,6 +500,10 @@ test "codegen i32.gt_s" {
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x i32) (param $y i32) (result i32)
         \\        (i32.gt_s
@@ -467,6 +523,10 @@ test "codegen f32.gt" {
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (param $x f32) (param $y f32) (result i32)
         \\        (f32.gt
         \\            (local.get $x)
@@ -484,6 +544,10 @@ test "codegen i32.div_s" {
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x i32) (param $y i32) (result i32)
         \\        (i32.div_s

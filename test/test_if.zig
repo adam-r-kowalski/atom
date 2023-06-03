@@ -216,6 +216,10 @@ test "codegen if" {
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (result i32)
         \\        (if (result i32)
         \\            (i32.const 1)
@@ -244,6 +248,10 @@ test "codegen if with void result" {
         \\(module
         \\
         \\    (import "stdout" "print" (func $print (param i32)))
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start
         \\        (if 
@@ -276,6 +284,10 @@ test "codegen if with empty else block" {
         \\
         \\    (import "stdout" "print" (func $print (param i32)))
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start
         \\        (if 
         \\            (i32.const 1)
@@ -305,6 +317,10 @@ test "codegen if with no else block" {
         \\(module
         \\
         \\    (import "stdout" "print" (func $print (param i32)))
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start
         \\        (if 
@@ -403,6 +419,10 @@ test "codegen multi arm if" {
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $clamp (param $x i32) (param $lb i32) (param $ub i32) (result i32)
         \\        (if (result i32)

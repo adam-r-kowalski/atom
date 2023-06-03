@@ -461,6 +461,8 @@ pub const DataSegment = struct {
             \\    (export "memory" (memory 0))
             \\    (global $arena (mut i32) (i32.const {}))
         , .{self.offset});
+        if (self.data.items.len == 0) return;
+        try writer.writeAll("\n");
         for (self.data.items) |d| try writer.print("\n    {}", .{d});
     }
 };

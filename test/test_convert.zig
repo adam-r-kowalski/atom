@@ -39,6 +39,10 @@ test "codegen convert i32 to f32" {
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (param $x i32) (result f32)
         \\        (f32.convert_i32_s
         \\            (local.get $x)))
@@ -59,6 +63,10 @@ test "codegen convert f32 to i32" {
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x f32) (result i32)
         \\        (i32.trunc_f32_s
@@ -81,6 +89,10 @@ test "codegen convert i64 to f64" {
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (param $x i64) (result f64)
         \\        (f64.convert_i64_s
         \\            (local.get $x)))
@@ -101,6 +113,10 @@ test "codegen convert f64 to i64" {
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x f64) (result i64)
         \\        (i64.trunc_f64_s
