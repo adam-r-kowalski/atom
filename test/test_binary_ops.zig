@@ -1,10 +1,10 @@
 const std = @import("std");
-const neuron = @import("neuron");
+const mantis = @import("mantis");
 
 test "tokenize add then multiply" {
     const allocator = std.testing.allocator;
     const source = "x + y * z";
-    const actual = try neuron.testing.tokenize(allocator, source);
+    const actual = try mantis.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol x)
@@ -19,7 +19,7 @@ test "tokenize add then multiply" {
 test "parse add" {
     const allocator = std.testing.allocator;
     const source = "x + y";
-    const actual = try neuron.testing.parse(allocator, source);
+    const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(+ x y)";
     try std.testing.expectEqualStrings(expected, actual);
@@ -28,7 +28,7 @@ test "parse add" {
 test "parse divide" {
     const allocator = std.testing.allocator;
     const source = "x / y";
-    const actual = try neuron.testing.parse(allocator, source);
+    const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(/ x y)";
     try std.testing.expectEqualStrings(expected, actual);
@@ -37,7 +37,7 @@ test "parse divide" {
 test "parse add then multiply" {
     const allocator = std.testing.allocator;
     const source = "x + y * z";
-    const actual = try neuron.testing.parse(allocator, source);
+    const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(+ x (* y z))";
     try std.testing.expectEqualStrings(expected, actual);
@@ -46,7 +46,7 @@ test "parse add then multiply" {
 test "parse multiply then add" {
     const allocator = std.testing.allocator;
     const source = "x * y + z";
-    const actual = try neuron.testing.parse(allocator, source);
+    const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(+ (* x y) z)";
     try std.testing.expectEqualStrings(expected, actual);
@@ -55,7 +55,7 @@ test "parse multiply then add" {
 test "parse multiply then grouped add" {
     const allocator = std.testing.allocator;
     const source = "x * (y + z)";
-    const actual = try neuron.testing.parse(allocator, source);
+    const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(* x (+ y z))";
     try std.testing.expectEqualStrings(expected, actual);
@@ -64,7 +64,7 @@ test "parse multiply then grouped add" {
 test "parse multiply is left associative" {
     const allocator = std.testing.allocator;
     const source = "x * y * z";
-    const actual = try neuron.testing.parse(allocator, source);
+    const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(* (* x y) z)";
     try std.testing.expectEqualStrings(expected, actual);
@@ -73,7 +73,7 @@ test "parse multiply is left associative" {
 test "parse exponentiate is right associative" {
     const allocator = std.testing.allocator;
     const source = "x ^ y ^ z";
-    const actual = try neuron.testing.parse(allocator, source);
+    const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(^ x (^ y z))";
     try std.testing.expectEqualStrings(expected, actual);
@@ -82,7 +82,7 @@ test "parse exponentiate is right associative" {
 test "parse greater has lower precedence then add" {
     const allocator = std.testing.allocator;
     const source = "a + b > c + d";
-    const actual = try neuron.testing.parse(allocator, source);
+    const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(> (+ a b) (+ c d))";
     try std.testing.expectEqualStrings(expected, actual);
@@ -91,7 +91,7 @@ test "parse greater has lower precedence then add" {
 test "parse grouped greater" {
     const allocator = std.testing.allocator;
     const source = "a + (b > c) + d";
-    const actual = try neuron.testing.parse(allocator, source);
+    const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(+ (+ a (> b c)) d)";
     try std.testing.expectEqualStrings(expected, actual);
@@ -100,7 +100,7 @@ test "parse grouped greater" {
 test "type infer add i32 boo" {
     const allocator = std.testing.allocator;
     const source = "add = fn(x: i32, y: i32) i32 { x + y }";
-    const actual = try neuron.testing.typeInfer(allocator, source, "add");
+    const actual = try mantis.testing.typeInfer(allocator, source, "add");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -125,7 +125,7 @@ test "type infer add i32 boo" {
 test "type infer binary op multiply" {
     const allocator = std.testing.allocator;
     const source = "multiply = fn(x: i32, y: i32) i32 { x * y }";
-    const actual = try neuron.testing.typeInfer(allocator, source, "multiply");
+    const actual = try mantis.testing.typeInfer(allocator, source, "multiply");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -150,7 +150,7 @@ test "type infer binary op multiply" {
 test "type infer divide i32" {
     const allocator = std.testing.allocator;
     const source = "div = fn(x: i32, y: i32) i32 { x / y }";
-    const actual = try neuron.testing.typeInfer(allocator, source, "div");
+    const actual = try mantis.testing.typeInfer(allocator, source, "div");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -175,7 +175,7 @@ test "type infer divide i32" {
 test "type infer binary op multiply then add" {
     const allocator = std.testing.allocator;
     const source = "f = fn(x: i32, y: i32, z: i32) i32 { x * y + z }";
-    const actual = try neuron.testing.typeInfer(allocator, source, "f");
+    const actual = try mantis.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -206,10 +206,14 @@ test "type infer binary op multiply then add" {
 test "codegen i32.add" {
     const allocator = std.testing.allocator;
     const source = "start = fn() i32 { 42 + 29 }";
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result i32)
         \\        (i32.add
@@ -224,10 +228,14 @@ test "codegen i32.add" {
 test "codegen i64.add" {
     const allocator = std.testing.allocator;
     const source = "start = fn() i64 { 42 + 29 }";
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result i64)
         \\        (i64.add
@@ -242,10 +250,14 @@ test "codegen i64.add" {
 test "codegen binary op i32.sub" {
     const allocator = std.testing.allocator;
     const source = "start = fn() i32 { 42 - 29 }";
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result i32)
         \\        (i32.sub
@@ -260,15 +272,19 @@ test "codegen binary op i32.sub" {
 test "codegen binary op f32.add" {
     const allocator = std.testing.allocator;
     const source = "start = fn() f32 { 42 + 29 }";
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (result f32)
         \\        (f32.add
-        \\            (f32.const 42)
-        \\            (f32.const 29)))
+        \\            (f32.const 4.2e+01)
+        \\            (f32.const 2.9e+01)))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -278,15 +294,19 @@ test "codegen binary op f32.add" {
 test "codegen binary op f64.add" {
     const allocator = std.testing.allocator;
     const source = "start = fn() f64 { 42 + 29 }";
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (result f64)
         \\        (f64.add
-        \\            (f64.const 42)
-        \\            (f64.const 29)))
+        \\            (f64.const 4.2e+01)
+        \\            (f64.const 2.9e+01)))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -296,15 +316,19 @@ test "codegen binary op f64.add" {
 test "codegen binary op f32.sub" {
     const allocator = std.testing.allocator;
     const source = "start = fn() f32 { 42 - 29 }";
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (result f32)
         \\        (f32.sub
-        \\            (f32.const 42)
-        \\            (f32.const 29)))
+        \\            (f32.const 4.2e+01)
+        \\            (f32.const 2.9e+01)))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -314,10 +338,14 @@ test "codegen binary op f32.sub" {
 test "codegen binary op i32.mul" {
     const allocator = std.testing.allocator;
     const source = "start = fn() i32 { 42 * 29 }";
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result i32)
         \\        (i32.mul
@@ -332,15 +360,19 @@ test "codegen binary op i32.mul" {
 test "codegen binary op f32.mul" {
     const allocator = std.testing.allocator;
     const source = "start = fn() f32 { 42 * 29 }";
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (result f32)
         \\        (f32.mul
-        \\            (f32.const 42)
-        \\            (f32.const 29)))
+        \\            (f32.const 4.2e+01)
+        \\            (f32.const 2.9e+01)))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -350,17 +382,21 @@ test "codegen binary op f32.mul" {
 test "codegen nested binary op f32.add and f32.mul" {
     const allocator = std.testing.allocator;
     const source = "start = fn() f32 { 42 * 29 + 15 }";
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
         \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
         \\    (func $start (result f32)
         \\        (f32.add
         \\            (f32.mul
-        \\                (f32.const 42)
-        \\                (f32.const 29))
-        \\            (f32.const 15)))
+        \\                (f32.const 4.2e+01)
+        \\                (f32.const 2.9e+01))
+        \\            (f32.const 1.5e+01)))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -370,10 +406,14 @@ test "codegen nested binary op f32.add and f32.mul" {
 test "codegen i32.eq" {
     const allocator = std.testing.allocator;
     const source = "start = fn(x: i32, y: i32) bool { x == y }";
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x i32) (param $y i32) (result i32)
         \\        (i32.eq
@@ -388,10 +428,14 @@ test "codegen i32.eq" {
 test "codegen f32.eq" {
     const allocator = std.testing.allocator;
     const source = "start = fn(x: f32, y: f32) bool { x == y }";
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x f32) (param $y f32) (result i32)
         \\        (f32.eq
@@ -406,10 +450,14 @@ test "codegen f32.eq" {
 test "codegen i32.rem_s" {
     const allocator = std.testing.allocator;
     const source = "start = fn(x: i32) bool { x % 2 == 0 }";
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x i32) (result i32)
         \\        (i32.eq
@@ -426,10 +474,14 @@ test "codegen i32.rem_s" {
 test "codegen i32.or" {
     const allocator = std.testing.allocator;
     const source = "start = fn(x: bool, y: bool) bool { x or y }";
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x i32) (param $y i32) (result i32)
         \\        (i32.or
@@ -444,10 +496,14 @@ test "codegen i32.or" {
 test "codegen i32.gt_s" {
     const allocator = std.testing.allocator;
     const source = "start = fn(x: i32, y: i32) bool { x > y }";
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x i32) (param $y i32) (result i32)
         \\        (i32.gt_s
@@ -462,10 +518,14 @@ test "codegen i32.gt_s" {
 test "codegen f32.gt" {
     const allocator = std.testing.allocator;
     const source = "start = fn(x: f32, y: f32) bool { x > y }";
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x f32) (param $y f32) (result i32)
         \\        (f32.gt
@@ -480,10 +540,14 @@ test "codegen f32.gt" {
 test "codegen i32.div_s" {
     const allocator = std.testing.allocator;
     const source = "start = fn(x: i32, y: i32) i32 { x / y }";
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x i32) (param $y i32) (result i32)
         \\        (i32.div_s

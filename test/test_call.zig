@@ -1,10 +1,10 @@
 const std = @import("std");
-const neuron = @import("neuron");
+const mantis = @import("mantis");
 
 test "tokenize call" {
     const allocator = std.testing.allocator;
     const source = "f(x, y, z)";
-    const actual = try neuron.testing.tokenize(allocator, source);
+    const actual = try mantis.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol f)
@@ -22,7 +22,7 @@ test "tokenize call" {
 test "parse call" {
     const allocator = std.testing.allocator;
     const source = "f(x, y, z)";
-    const actual = try neuron.testing.parse(allocator, source);
+    const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(f x y z)";
     try std.testing.expectEqualStrings(expected, actual);
@@ -31,7 +31,7 @@ test "parse call" {
 test "parse call with expression" {
     const allocator = std.testing.allocator;
     const source = "f(x + y, z)";
-    const actual = try neuron.testing.parse(allocator, source);
+    const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(f (+ x y) z)";
     try std.testing.expectEqualStrings(expected, actual);
@@ -40,7 +40,7 @@ test "parse call with expression" {
 test "parse dot call" {
     const allocator = std.testing.allocator;
     const source = "x.f(y, z)";
-    const actual = try neuron.testing.parse(allocator, source);
+    const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(. x (f y z))";
     try std.testing.expectEqualStrings(expected, actual);
@@ -53,7 +53,7 @@ test "parse define then call" {
         \\
         \\start = fn() i32 { double(2) }
     ;
-    const actual = try neuron.testing.parse(allocator, source);
+    const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def double (fn [(x i32)] i32
@@ -72,7 +72,7 @@ test "type infer define then call" {
         \\
         \\start = fn() i32 { double(2) }
     ;
-    const actual = try neuron.testing.typeInfer(allocator, source, "start");
+    const actual = try mantis.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -113,10 +113,14 @@ test "codegen define then call" {
         \\
         \\start = fn() i32 { double(2) }
     ;
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $double (param $x i32) (result i32)
         \\        (i32.mul
@@ -141,10 +145,14 @@ test "codegen recursive function" {
         \\
         \\start = fn() i32 { factorial(5) }
     ;
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $factorial (param $n i32) (result i32)
         \\        (if (result i32)
@@ -177,7 +185,7 @@ test "type infer dot call" {
         \\
         \\start = fn() i32 { 2.double() }
     ;
-    const actual = try neuron.testing.typeInfer(allocator, source, "start");
+    const actual = try mantis.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =

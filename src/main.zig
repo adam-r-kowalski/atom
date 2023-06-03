@@ -1,7 +1,7 @@
 const std = @import("std");
 const wasmer = @cImport(@cInclude("wasmer.h"));
 const Allocator = std.mem.Allocator;
-const neuron = @import("neuron");
+const mantis = @import("mantis");
 
 const List = std.ArrayList;
 
@@ -16,8 +16,8 @@ const Flags = struct {
                 \\
                 \\Correct usage:
                 \\
-                \\neuron <input file>.neuron
-                \\this will compile and run the neuron program using the wasmer runtime
+                \\mantis <input file>.mantis
+                \\this will compile and run the mantis program using the wasmer runtime
             , .{});
         }
         const file_name = std.mem.span(std.os.argv[1]);
@@ -43,6 +43,7 @@ const Value = union(enum) {
     i64: i64,
     f32: f32,
     f64: f64,
+    void,
 
     pub fn format(self: Value, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = options;
@@ -52,20 +53,21 @@ const Value = union(enum) {
             .i64 => |i| try writer.print("{}", .{i}),
             .f32 => |f| try writer.print("{}", .{f}),
             .f64 => |f| try writer.print("{}", .{f}),
+            .void => {},
         }
     }
 };
 
 const WasmModule = struct {
     allocator: Allocator,
-    ast: neuron.Module,
+    ast: mantis.Module,
     engine: *wasmer.wasm_engine_t,
     store: *wasmer.wasm_store_t,
     module: *wasmer.wasm_module_t,
     instance: *wasmer.wasm_instance_t,
     exports: wasmer.wasm_extern_vec_t,
 
-    fn init(allocator: Allocator, ast: neuron.Module, wat_string: []const u8) WasmModule {
+    fn init(allocator: Allocator, ast: mantis.Module, wat_string: []const u8) WasmModule {
         var wat: wasmer.wasm_byte_vec_t = undefined;
         wasmer.wasm_byte_vec_new(&wat, wat_string.len, wat_string.ptr);
         var wasm_bytes: wasmer.wasm_byte_vec_t = undefined;
@@ -74,9 +76,15 @@ const WasmModule = struct {
         const store = wasmer.wasm_store_new(engine);
         const module = wasmer.wasm_module_new(store, &wasm_bytes);
         if (module == null) std.debug.panic("\nError compiling module!\n", .{});
-        const imports: wasmer.wasm_extern_vec_t = undefined;
+        const config = wasmer.wasi_config_new("example_program");
+        const wasi_env = wasmer.wasi_env_new(store, config);
+        if (wasi_env == null) std.debug.panic("\nError building WASI env!\n", .{});
+        var imports: wasmer.wasm_extern_vec_t = undefined;
+        _ = wasmer.wasi_get_imports(store, wasi_env, module, &imports);
         const instance = wasmer.wasm_instance_new(store, module, &imports, null);
         if (instance == null) std.debug.panic("\nError instantiating module!\n", .{});
+        if (!wasmer.wasi_env_initialize_instance(wasi_env, store, instance))
+            std.debug.panic("\nError initializing WASI instance!\n", .{});
         var wasm_exports: wasmer.wasm_extern_vec_t = undefined;
         wasmer.wasm_instance_exports(instance, &wasm_exports);
         if (wasm_exports.size == 0) std.debug.panic("\nError getting exports!\n", .{});
@@ -91,8 +99,8 @@ const WasmModule = struct {
         };
     }
 
-    fn run(self: WasmModule, name: neuron.Interned) !Value {
-        const func = wasmer.wasm_extern_as_func(self.exports.data[0]);
+    fn run(self: WasmModule, name: mantis.Interned) !Value {
+        const func = wasmer.wasi_get_start_function(self.instance);
         if (func == null) std.debug.panic("\nError getting start!\n", .{});
         var args_val = [0]wasmer.wasm_val_t{};
         var results_val = List(wasmer.wasm_val_t).init(self.allocator);
@@ -108,7 +116,7 @@ const WasmModule = struct {
         var args: wasmer.wasm_val_vec_t = undefined;
         var results: wasmer.wasm_val_vec_t = undefined;
         wasmer.wasm_val_vec_new(&args, 0, &args_val);
-        wasmer.wasm_val_vec_new(&results, 1, results_val.items.ptr);
+        wasmer.wasm_val_vec_new(&results, results_val.items.len, results_val.items.ptr);
         if (wasmer.wasm_func_call(func, &args, &results)) |_| {
             std.debug.panic("\nError calling start!\n", .{});
         }
@@ -117,30 +125,31 @@ const WasmModule = struct {
             .i64 => return .{ .i64 = results.data[0].of.i64 },
             .f32 => return .{ .f32 = results.data[0].of.f32 },
             .f64 => return .{ .f64 = results.data[0].of.f64 },
+            .void => return .void,
             else => |k| std.debug.panic("\nUnsupported return type {}!\n", .{k}),
         }
     }
 };
 
-fn compileAndRun(allocator: Allocator, intern: *neuron.Intern, compile_errors: *neuron.CompileErrors, flags: Flags, source: []const u8) !void {
-    const builtins = try neuron.Builtins.init(intern);
-    var tokens = try neuron.tokenize(allocator, intern, compile_errors, builtins, source);
-    const untyped_ast = try neuron.parse(allocator, &tokens);
-    var constraints = neuron.Constraints.init(allocator, compile_errors);
-    var ast = try neuron.Module.init(allocator, &constraints, builtins, untyped_ast);
+fn compileAndRun(allocator: Allocator, intern: *mantis.Intern, compile_errors: *mantis.CompileErrors, flags: Flags, source: []const u8) !void {
+    const builtins = try mantis.Builtins.init(intern);
+    var tokens = try mantis.tokenize(allocator, intern, compile_errors, builtins, source);
+    const untyped_ast = try mantis.parse(allocator, &tokens);
+    var constraints = mantis.Constraints.init(allocator, compile_errors);
+    var ast = try mantis.Module.init(allocator, &constraints, builtins, untyped_ast);
     const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
     if (export_count == 0) ast.foreign_exports = &.{start};
-    for (ast.foreign_exports) |foreign_export| try neuron.type_checker.infer(&ast, foreign_export);
+    for (ast.foreign_exports) |foreign_export| try mantis.type_checker.infer(&ast, foreign_export);
     const substitution = try constraints.solve(allocator);
     ast.apply(substitution);
-    var ir = try neuron.lower.buildIr(allocator, builtins, ast);
+    var ir = try mantis.lower.buildIr(allocator, builtins, ast);
     if (export_count == 0) {
         const alias = try intern.store("_start");
         ir.exports = &.{.{ .name = start, .alias = alias }};
     }
     const wat_string = try std.fmt.allocPrint(allocator, "{}", .{ir});
-    if (!flags.contains("--wat")) try writeWat(allocator, flags, wat_string);
+    if (flags.contains("--wat")) try writeWat(allocator, flags, wat_string);
     if (export_count > 0) {
         try writeWat(allocator, flags, wat_string);
         return;
@@ -158,8 +167,8 @@ pub fn main() !void {
     const allocator = arena.allocator();
     const flags = try Flags.init(allocator);
     const source = try std.fs.cwd().readFileAlloc(allocator, flags.file_name, std.math.maxInt(usize));
-    var intern = neuron.Intern.init(allocator);
-    var compile_errors = neuron.CompileErrors.init(allocator, source);
+    var intern = mantis.Intern.init(allocator);
+    var compile_errors = mantis.CompileErrors.init(allocator, source);
     compileAndRun(allocator, &intern, &compile_errors, flags, source) catch |e| switch (e) {
         error.CompileError => {
             const stderr = std.io.getStdErr();

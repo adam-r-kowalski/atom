@@ -1,12 +1,12 @@
 const std = @import("std");
-const neuron = @import("neuron");
+const mantis = @import("mantis");
 
 test "tokenize import" {
     const allocator = std.testing.allocator;
     const source =
         \\print = foreign_import("console", "log", fn(msg: str) void)
     ;
-    const actual = try neuron.testing.tokenize(allocator, source);
+    const actual = try mantis.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol print)
@@ -34,7 +34,7 @@ test "parse import" {
     const source =
         \\print = foreign_import("console", "log", fn(msg: str) void)
     ;
-    const actual = try neuron.testing.parse(allocator, source);
+    const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def print (foreign_import "console" "log" (fn [(msg str)] void)))
@@ -51,7 +51,7 @@ test "type check import" {
         \\    print("hello world")
         \\}
     ;
-    const actual = try neuron.testing.typeInfer(allocator, source, "start");
+    const actual = try mantis.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -86,12 +86,16 @@ test "codegen import" {
         \\
         \\start = fn() void { print(42) }
     ;
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
         \\
         \\    (import "console" "log" (func $print (param i32)))
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start
         \\        (call $print
@@ -109,7 +113,7 @@ test "tokenize export" {
         \\    x * 2
         \\})
     ;
-    const actual = try neuron.testing.tokenize(allocator, source);
+    const actual = try mantis.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol foreign_export)
@@ -142,7 +146,7 @@ test "parse export" {
         \\    x * 2
         \\})
     ;
-    const actual = try neuron.testing.parse(allocator, source);
+    const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(foreign_export "double" (fn [(x i32)] i32
@@ -160,7 +164,7 @@ test "parse named export" {
         \\
         \\foreign_export("double", double)
     ;
-    const actual = try neuron.testing.parse(allocator, source);
+    const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def double (fn [(x i32)] i32
@@ -178,7 +182,7 @@ test "type check export" {
         \\    x * 2
         \\})
     ;
-    const actual = try neuron.testing.typeInfer(allocator, source, "\"double\"");
+    const actual = try mantis.testing.typeInfer(allocator, source, "\"double\"");
     defer allocator.free(actual);
     const expected =
         \\foreign_export =
@@ -208,7 +212,7 @@ test "type check named export" {
         \\
         \\foreign_export("double", double)
     ;
-    const actual = try neuron.testing.typeInfer(allocator, source, "\"double\"");
+    const actual = try mantis.testing.typeInfer(allocator, source, "\"double\"");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -241,10 +245,14 @@ test "codegen foreign export" {
         \\    x * 2
         \\})
     ;
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $double (param $x i32) (result i32)
         \\        (i32.mul
@@ -265,10 +273,14 @@ test "codegen named foreign export" {
         \\
         \\foreign_export("double", double)
     ;
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $double (param $x i32) (result i32)
         \\        (i32.mul
@@ -276,6 +288,64 @@ test "codegen named foreign export" {
         \\            (i32.const 2)))
         \\
         \\    (export "double" (func $double)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen hello world" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, text: str, count: i32, out: i32) i32)
+        \\
+        \\start = fn() i32 {
+        \\    stdout = 1
+        \\    text = "Hello, World!"
+        \\    fd_write(stdout, text, 1, 200)
+        \\}
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (import "wasi_unstable" "fd_write" (func $fd_write (param i32) (param i32) (param i32) (param i32) (result i32)))
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 13))
+        \\
+        \\    (data (i32.const 0) "Hello, World!")
+        \\
+        \\    (func $start (result i32)
+        \\        (local $stdout i32)
+        \\        (local $0 i32)
+        \\        (local $text i32)
+        \\        (local.set $stdout
+        \\            (i32.const 1))
+        \\        (local.set $text
+        \\            (block (result i32)
+        \\                (local.set $0
+        \\                    (global.get $arena))
+        \\                (i32.store
+        \\                    (local.get $0)
+        \\                    (i32.const 0))
+        \\                (i32.store
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 4))
+        \\                    (i32.const 13))
+        \\                (global.set $arena
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 8)))
+        \\                (local.get $0)))
+        \\        (call $fd_write
+        \\            (local.get $stdout)
+        \\            (local.get $text)
+        \\            (i32.const 1)
+        \\            (i32.const 200)))
+        \\
+        \\    (export "_start" (func $start)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

@@ -63,6 +63,7 @@ pub const BinaryOpKind = enum {
     i32_lt_s,
     i32_rem_s,
     i32_or,
+    i32_store,
     i64_add,
     i64_sub,
     i64_mul,
@@ -99,6 +100,7 @@ pub const BinaryOpKind = enum {
             .i32_or => try writer.writeAll("i32.or"),
             .i32_gt_s => try writer.writeAll("i32.gt_s"),
             .i32_lt_s => try writer.writeAll("i32.lt_s"),
+            .i32_store => try writer.writeAll("i32.store"),
             .i64_add => try writer.writeAll("i64.add"),
             .i64_sub => try writer.writeAll("i64.sub"),
             .i64_mul => try writer.writeAll("i64.mul"),
@@ -201,8 +203,8 @@ pub const Call = struct {
 pub const If = struct {
     result: Type,
     condition: *const Expression,
-    then: Block,
-    else_: Block,
+    then: Expressions,
+    else_: Expressions,
 
     fn toString(self: If, writer: anytype, indent: Indent) !void {
         try writer.writeAll("(if ");
@@ -221,46 +223,6 @@ pub const If = struct {
             try writer.writeAll(")");
         }
         try writer.writeAll(")");
-    }
-};
-
-pub const I32Const = struct {
-    value: Interned,
-
-    pub fn format(self: I32Const, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = options;
-        _ = fmt;
-        try writer.print("(i32.const {})", .{self.value});
-    }
-};
-
-pub const I64Const = struct {
-    value: Interned,
-
-    pub fn format(self: I64Const, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = options;
-        _ = fmt;
-        try writer.print("(i64.const {})", .{self.value});
-    }
-};
-
-pub const F32Const = struct {
-    value: Interned,
-
-    pub fn format(self: F32Const, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = options;
-        _ = fmt;
-        try writer.print("(f32.const {})", .{self.value});
-    }
-};
-
-pub const F64Const = struct {
-    value: Interned,
-
-    pub fn format(self: F64Const, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = options;
-        _ = fmt;
-        try writer.print("(f64.const {})", .{self.value});
     }
 };
 
@@ -291,10 +253,37 @@ pub const LocalSet = struct {
     }
 };
 
-pub const Block = struct {
+pub const GlobalGet = struct {
+    name: Interned,
+
+    pub fn format(self: GlobalGet, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        try writer.print("(global.get ${})", .{self.name});
+    }
+};
+
+pub const GlobalSet = struct {
+    name: Interned,
+    value: *const Expression,
+
+    pub fn toString(self: GlobalSet, writer: anytype, indent: Indent) !void {
+        try writer.print("(global.set ${}{}", .{ self.name, indent.add(1) });
+        try self.value.toString(writer, indent.add(1));
+        try writer.writeAll(")");
+    }
+
+    pub fn format(self: GlobalSet, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        try self.toString(writer, Indent{ .value = 0 });
+    }
+};
+
+pub const Expressions = struct {
     expressions: []const Expression,
 
-    pub fn toString(self: Block, writer: anytype, indent: Indent) !void {
+    pub fn toString(self: Expressions, writer: anytype, indent: Indent) !void {
         for (self.expressions) |expr| {
             try writer.print("{}", .{indent});
             expr.toString(writer, indent) catch unreachable;
@@ -302,31 +291,67 @@ pub const Block = struct {
     }
 };
 
+pub const Block = struct {
+    result: Type,
+    expressions: []const Expression,
+
+    pub fn toString(self: Block, writer: anytype, indent: Indent) !void {
+        try writer.print("(block (result {})", .{self.result});
+        for (self.expressions) |expr| {
+            try writer.print("{}", .{indent.add(1)});
+            expr.toString(writer, indent.add(1)) catch unreachable;
+        }
+        try writer.writeAll(")");
+    }
+};
+
+pub const Literal = union(enum) {
+    bool: bool,
+    u32: u32,
+    i32: i32,
+    i64: i64,
+    f32: f32,
+    f64: f64,
+
+    pub fn format(self: Literal, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        switch (self) {
+            .bool => |v| try writer.print("(i32.const {})", .{@as(i32, if (v) 1 else 0)}),
+            .u32 => |v| try writer.print("(i32.const {})", .{v}),
+            .i32 => |v| try writer.print("(i32.const {})", .{v}),
+            .i64 => |v| try writer.print("(i64.const {})", .{v}),
+            .f32 => |v| try writer.print("(f32.const {})", .{v}),
+            .f64 => |v| try writer.print("(f64.const {})", .{v}),
+        }
+    }
+};
+
 pub const Expression = union(enum) {
     local_get: LocalGet,
     local_set: LocalSet,
-    i32_const: I32Const,
-    i64_const: I64Const,
-    f32_const: F32Const,
-    f64_const: F64Const,
+    global_get: GlobalGet,
+    global_set: GlobalSet,
+    literal: Literal,
     call: Call,
     if_: If,
     unary_op: UnaryOp,
     binary_op: BinaryOp,
+    expressions: Expressions,
     block: Block,
 
     pub fn toString(self: Expression, writer: anytype, indent: Indent) error{NoSpaceLeft}!void {
         switch (self) {
             .local_get => |l| try writer.print("{}", .{l}),
             .local_set => |l| try l.toString(writer, indent),
-            .i32_const => |i| try writer.print("{}", .{i}),
-            .i64_const => |i| try writer.print("{}", .{i}),
-            .f32_const => |f| try writer.print("{}", .{f}),
-            .f64_const => |f| try writer.print("{}", .{f}),
+            .global_get => |g| try writer.print("{}", .{g}),
+            .global_set => |g| try g.toString(writer, indent),
+            .literal => |l| try writer.print("{}", .{l}),
             .call => |c| try c.toString(writer, indent),
             .if_ => |i| try i.toString(writer, indent),
             .unary_op => |u| try u.toString(writer, indent),
             .binary_op => |b| try b.toString(writer, indent),
+            .expressions => |e| try e.toString(writer, indent),
             .block => |b| try b.toString(writer, indent),
         }
     }
@@ -354,7 +379,7 @@ pub const Function = struct {
     parameters: []const Parameter,
     return_type: Type,
     locals: []const Local,
-    body: Block,
+    body: Expressions,
 
     pub fn format(self: Function, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = options;
@@ -394,9 +419,58 @@ pub const Export = struct {
     }
 };
 
+pub const Offset = u32;
+
+pub const Data = struct {
+    offset: Offset,
+    bytes: []const u8,
+
+    pub fn format(self: Data, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        try writer.print("(data (i32.const {}) {s})", .{ self.offset, self.bytes });
+    }
+};
+
+pub const DataSegment = struct {
+    offset: Offset,
+    data: List(Data),
+
+    pub fn init(allocator: Allocator) DataSegment {
+        return DataSegment{
+            .offset = 0,
+            .data = List(Data).init(allocator),
+        };
+    }
+
+    pub fn string(self: *DataSegment, s: typed_ast.String) !Offset {
+        const bytes = s.value.string();
+        const offset = self.offset;
+        try self.data.append(Data{ .offset = offset, .bytes = bytes });
+        self.offset += @intCast(u32, bytes.len - 2);
+        return offset;
+    }
+
+    pub fn format(self: DataSegment, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        try writer.print(
+            \\
+            \\
+            \\    (memory 1)
+            \\    (export "memory" (memory 0))
+            \\    (global $arena (mut i32) (i32.const {}))
+        , .{self.offset});
+        if (self.data.items.len == 0) return;
+        try writer.writeAll("\n");
+        for (self.data.items) |d| try writer.print("\n    {}", .{d});
+    }
+};
+
 pub const IR = struct {
     functions: []const Function,
     imports: []const Import,
+    data_segment: DataSegment,
     exports: []const Export,
 
     pub fn format(self: IR, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
@@ -404,6 +478,7 @@ pub const IR = struct {
         _ = fmt;
         try writer.writeAll("(module");
         for (self.imports) |i| try writer.print("\n{}{}", .{ Indent{ .value = 1 }, i });
+        try writer.print("{}", .{self.data_segment});
         for (self.functions) |f| try writer.print("\n{}{}", .{ Indent{ .value = 1 }, f });
         for (self.exports) |e| try writer.print("\n{}{}", .{ Indent{ .value = 1 }, e });
         try writer.writeAll(")");

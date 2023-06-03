@@ -1,7 +1,7 @@
 const std = @import("std");
-const neuron = @import("neuron");
-const RED = neuron.colors.RED;
-const CLEAR = neuron.colors.CLEAR;
+const mantis = @import("mantis");
+const RED = mantis.colors.RED;
+const CLEAR = mantis.colors.CLEAR;
 
 test "use of undefined variable" {
     const allocator = std.testing.allocator;
@@ -10,7 +10,7 @@ test "use of undefined variable" {
         \\    fib(5)
         \\}
     ;
-    const actual = try neuron.testing.compileErrors(allocator, source);
+    const actual = try mantis.testing.compileErrors(allocator, source);
     defer allocator.free(actual);
     const expected = try std.fmt.allocPrint(allocator,
         \\--- UNDEFINED VARIABLE ---------------------------------------------------
@@ -41,7 +41,7 @@ test "type error of if" {
         \\    }
         \\}
     ;
-    const actual = try neuron.testing.compileErrors(allocator, source);
+    const actual = try mantis.testing.compileErrors(allocator, source);
     defer allocator.free(actual);
     const expected = try std.fmt.allocPrint(allocator,
         \\--- TYPE ERROR ---------------------------------------------------
@@ -74,7 +74,7 @@ test "type error of define" {
         \\    x
         \\}
     ;
-    const actual = try neuron.testing.compileErrors(allocator, source);
+    const actual = try mantis.testing.compileErrors(allocator, source);
     defer allocator.free(actual);
     const expected = try std.fmt.allocPrint(allocator,
         \\--- TYPE ERROR ---------------------------------------------------
