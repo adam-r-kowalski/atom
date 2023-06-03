@@ -321,11 +321,13 @@ It's designed to be independent of browsers, so it doesn't depend on Web APIs or
 It is a first class citizen in Mantis and by targeting this API you can ensure that your programs work across as many platforms as possible.
 
 ```zig
-fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, text: str, count: i32, out: i32) i32)
+fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, text: str, count: i32, mut nwritten: i32) i32)
+
+stdout = 1
 
 print = fn(text: str) void {
-    stdout = 1
-    _ = stdout.fd_write(text, 1, 200)
+    mut nwritten: i32 = undefined
+    _ = stdout.fd_write(text, 1, nwritten)
 }
 
 start = fn() void {
