@@ -10,7 +10,7 @@ Mantis is a statically typed, high-performance programming language designed for
 
 #### Prerequisites
 
-Before installing Mantis, please ensure that you have installed [Zig](https://ziglang.org/) and [Wasmer](https://wasmer.io/). Zig is a fast and reliable language that we've used to develop Neuron's compiler, and Wasmer is the WebAssembly runtime that Neuron relies on for executing your code.
+Before installing Mantis, please ensure that you have installed [Zig](https://ziglang.org/) and [Wasmer](https://wasmer.io/). Zig is a fast and reliable language that we've used to develop Mantis's compiler, and Wasmer is the WebAssembly runtime that Mantis relies on for executing your code.
 
 #### Compiling From Source
 
@@ -21,7 +21,7 @@ Follow the steps below to compile Mantis from its source code:
 First, you'll need to clone the Mantis repository from GitHub. You can do this using Git with the following command:
 
 ```bash
-git clone git@github.com:adam-r-kowalski/neuron.git
+git clone git@github.com:adam-r-kowalski/mantis.git
 ```
 
 This command creates a copy of the Mantis repository on your local machine.
@@ -31,7 +31,7 @@ This command creates a copy of the Mantis repository on your local machine.
 Use the following command to navigate into the directory of the repository you just cloned:
 
 ```bash
-cd neuron
+cd mantis
 ```
 
 3. Run the tests:
@@ -68,7 +68,7 @@ Now, you have Mantis installed on your system, and you're ready to start coding!
 
 ### Your first Mantis program
 
-Mantis has a straightforward syntax that is easy to read and write. Here is a simple Neuron program that defines a function to calculate the square of a number:
+Mantis has a straightforward syntax that is easy to read and write. Here is a simple Mantis program that defines a function to calculate the square of a number:
 
 ```zig
 square = fn(x: i32) i32 { x^2 }
@@ -208,8 +208,8 @@ Circle = struct {
     radius: f32
 }
 
-# you can import functions from other neuron modules
-math = import("math.neuron")
+# you can import functions from other mantis modules
+math = import("math.mantis")
 
 implement Shape for Circle {
     area = fn(c: Circle) f32 {
@@ -276,7 +276,7 @@ Destructuring can make your code more readable and less error-prone by avoiding 
 
 ### Shadowing
 
-Shadowing in Mantis allows you to declare a new variable with the same name as a previously declared variable. The new variable shadows the previous one within its scope, meaning the previous variable cannot be accessed. This is not an error in Neuron; it's a feature of the language.
+Shadowing in Mantis allows you to declare a new variable with the same name as a previously declared variable. The new variable shadows the previous one within its scope, meaning the previous variable cannot be accessed. This is not an error in Mantis; it's a feature of the language.
 
 Here's an example:
 
@@ -346,7 +346,7 @@ matmul = fn[T: Num, m: u64, n: u64, p: u64](a: T[m][n], b: T[n][p]) T[m][p] {
 
 ### Machine Learning
 
-Mantis is designed with machine learning in mind. For expressions allow you to express how models work across a single example rather than dealing with batches. Here is a simple linear model implemented in Neuron:
+Mantis is designed with machine learning in mind. For expressions allow you to express how models work across a single example rather than dealing with batches. Here is a simple linear model implemented in Mantis:
 
 ```zig
 Linear = struct {
@@ -391,4 +391,4 @@ test "gradient descent" {
 
 ## Community
 
-Mantis is open-source and community-driven. We welcome contributions of any kind: code, documentation, design, etc. Join our community and help us make Neuron the best language for machine learning and high-performance computing!
+Mantis is open-source and community-driven. We welcome contributions of any kind: code, documentation, design, etc. Join our community and help us make Mantis the best language for machine learning and high-performance computing!

@@ -1,5 +1,5 @@
 const std = @import("std");
-const neuron = @import("neuron");
+const mantis = @import("mantis");
 
 test "type infer convert i32 to f32" {
     const allocator = std.testing.allocator;
@@ -8,7 +8,7 @@ test "type infer convert i32 to f32" {
         \\    convert(x, f32)
         \\}
     ;
-    const actual = try neuron.testing.typeInfer(allocator, source, "start");
+    const actual = try mantis.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -34,7 +34,7 @@ test "codegen convert i32 to f32" {
         \\    convert(x, f32)
         \\}
     ;
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -55,7 +55,7 @@ test "codegen convert f32 to i32" {
         \\    convert(x, i32)
         \\}
     ;
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -76,7 +76,7 @@ test "codegen convert i64 to f64" {
         \\    convert(x, f64)
         \\}
     ;
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -97,7 +97,7 @@ test "codegen convert f64 to i64" {
         \\    convert(x, i64)
         \\}
     ;
-    const actual = try neuron.testing.codegen(allocator, source);
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module

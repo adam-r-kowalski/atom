@@ -1,7 +1,7 @@
 const std = @import("std");
 const wasmer = @cImport(@cInclude("wasmer.h"));
 const Allocator = std.mem.Allocator;
-const neuron = @import("neuron");
+const mantis = @import("mantis");
 
 const List = std.ArrayList;
 
@@ -16,8 +16,8 @@ const Flags = struct {
                 \\
                 \\Correct usage:
                 \\
-                \\neuron <input file>.neuron
-                \\this will compile and run the neuron program using the wasmer runtime
+                \\mantis <input file>.mantis
+                \\this will compile and run the mantis program using the wasmer runtime
             , .{});
         }
         const file_name = std.mem.span(std.os.argv[1]);
@@ -58,14 +58,14 @@ const Value = union(enum) {
 
 const WasmModule = struct {
     allocator: Allocator,
-    ast: neuron.Module,
+    ast: mantis.Module,
     engine: *wasmer.wasm_engine_t,
     store: *wasmer.wasm_store_t,
     module: *wasmer.wasm_module_t,
     instance: *wasmer.wasm_instance_t,
     exports: wasmer.wasm_extern_vec_t,
 
-    fn init(allocator: Allocator, ast: neuron.Module, wat_string: []const u8) WasmModule {
+    fn init(allocator: Allocator, ast: mantis.Module, wat_string: []const u8) WasmModule {
         var wat: wasmer.wasm_byte_vec_t = undefined;
         wasmer.wasm_byte_vec_new(&wat, wat_string.len, wat_string.ptr);
         var wasm_bytes: wasmer.wasm_byte_vec_t = undefined;
@@ -98,7 +98,7 @@ const WasmModule = struct {
         };
     }
 
-    fn run(self: WasmModule, name: neuron.Interned) !Value {
+    fn run(self: WasmModule, name: mantis.Interned) !Value {
         const func = wasmer.wasi_get_start_function(self.instance);
         if (func == null) std.debug.panic("\nError getting start!\n", .{});
         var args_val = [0]wasmer.wasm_val_t{};
@@ -129,19 +129,19 @@ const WasmModule = struct {
     }
 };
 
-fn compileAndRun(allocator: Allocator, intern: *neuron.Intern, compile_errors: *neuron.CompileErrors, flags: Flags, source: []const u8) !void {
-    const builtins = try neuron.Builtins.init(intern);
-    var tokens = try neuron.tokenize(allocator, intern, compile_errors, builtins, source);
-    const untyped_ast = try neuron.parse(allocator, &tokens);
-    var constraints = neuron.Constraints.init(allocator, compile_errors);
-    var ast = try neuron.Module.init(allocator, &constraints, builtins, untyped_ast);
+fn compileAndRun(allocator: Allocator, intern: *mantis.Intern, compile_errors: *mantis.CompileErrors, flags: Flags, source: []const u8) !void {
+    const builtins = try mantis.Builtins.init(intern);
+    var tokens = try mantis.tokenize(allocator, intern, compile_errors, builtins, source);
+    const untyped_ast = try mantis.parse(allocator, &tokens);
+    var constraints = mantis.Constraints.init(allocator, compile_errors);
+    var ast = try mantis.Module.init(allocator, &constraints, builtins, untyped_ast);
     const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
     if (export_count == 0) ast.foreign_exports = &.{start};
-    for (ast.foreign_exports) |foreign_export| try neuron.type_checker.infer(&ast, foreign_export);
+    for (ast.foreign_exports) |foreign_export| try mantis.type_checker.infer(&ast, foreign_export);
     const substitution = try constraints.solve(allocator);
     ast.apply(substitution);
-    var ir = try neuron.lower.buildIr(allocator, builtins, ast);
+    var ir = try mantis.lower.buildIr(allocator, builtins, ast);
     if (export_count == 0) {
         const alias = try intern.store("_start");
         ir.exports = &.{.{ .name = start, .alias = alias }};
@@ -165,8 +165,8 @@ pub fn main() !void {
     const allocator = arena.allocator();
     const flags = try Flags.init(allocator);
     const source = try std.fs.cwd().readFileAlloc(allocator, flags.file_name, std.math.maxInt(usize));
-    var intern = neuron.Intern.init(allocator);
-    var compile_errors = neuron.CompileErrors.init(allocator, source);
+    var intern = mantis.Intern.init(allocator);
+    var compile_errors = mantis.CompileErrors.init(allocator, source);
     compileAndRun(allocator, &intern, &compile_errors, flags, source) catch |e| switch (e) {
         error.CompileError => {
             const stderr = std.io.getStdErr();
