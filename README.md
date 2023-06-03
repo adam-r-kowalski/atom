@@ -327,7 +327,7 @@ stdout = 1
 
 print = fn(text: str) void {
     mut nwritten: i32 = undefined
-    _ = stdout.fd_write(text, 1, nwritten)
+    _ = stdout.fd_write(text, 1, mut nwritten)
 }
 
 start = fn() void {
