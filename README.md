@@ -314,6 +314,26 @@ start = fn() void {
 
 In this example, the `log` function is imported from the host's console, and the `double` function is exported for use by the host.
 
+[WASI](https://wasi.dev/) stands for WebAssembly System Interface. It's an API designed by the Wasmtime project that provides access to several operating-system-like features, including files and filesystems, Berkeley sockets, clocks, and random numbers, that we'll be proposing for standardization.
+
+It's designed to be independent of browsers, so it doesn't depend on Web APIs or JS, and isn't limited by the need to be compatible with JS. And it has integrated capability-based security, so it extends WebAssembly's characteristic sandboxing to include I/O.
+
+It is a first class citizen in Mantis and by targeting this API you can ensure that your programs work across as many platforms as possible.
+
+```zig
+fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, text: str, count: i32, out: i32) i32)
+
+print = fn(text: str) void {
+    stdout = 1
+    _ = stdout.fd_write(text, 1, 200)
+}
+
+start = fn() void {
+    print("Hello, World!\n")
+    print("Goodbye!")
+}
+```
+
 ### Built-in Data Structures and Algorithms
 
 Mantis includes built-in support for arrays and powerful operations over them.
