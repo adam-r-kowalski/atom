@@ -1,6 +1,6 @@
 # Mantis Programming Language
 
-![](https://upload.wikimedia.org/wikipedia/commons/1/1e/Odontodactylus_scyllarus_R%C3%A9union.jpg?raw=true)
+![Mantis Shrimp](images/mantis.jpeg)
 
 Mantis is a statically typed, high-performance programming language designed for machine learning and high-performance computing. It compiles to WebAssembly, allowing your code to run anywhere WebAssembly is supported, including web browsers and server environments.
 
