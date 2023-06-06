@@ -419,6 +419,24 @@ pub const Export = struct {
     }
 };
 
+pub const Global = struct {
+    name: Interned,
+    type: Type,
+    value: Expression,
+
+    fn toString(self: Global, writer: anytype) !void {
+        try writer.print("(global ${} {} ", .{ self.name, self.type });
+        self.value.toString(writer, Indent{ .value = 1 }) catch unreachable;
+        try writer.writeAll(")");
+    }
+
+    pub fn format(self: Global, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        try self.toString(writer);
+    }
+};
+
 pub const Offset = u32;
 
 pub const Data = struct {
@@ -470,6 +488,7 @@ pub const DataSegment = struct {
 pub const IR = struct {
     functions: []const Function,
     imports: []const Import,
+    globals: []const Global,
     data_segment: DataSegment,
     exports: []const Export,
 
@@ -479,6 +498,7 @@ pub const IR = struct {
         try writer.writeAll("(module");
         for (self.imports) |i| try writer.print("\n{}{}", .{ Indent{ .value = 1 }, i });
         try writer.print("{}", .{self.data_segment});
+        for (self.globals) |g| try writer.print("\n{}{}", .{ Indent{ .value = 1 }, g });
         for (self.functions) |f| try writer.print("\n{}{}", .{ Indent{ .value = 1 }, f });
         for (self.exports) |e| try writer.print("\n{}{}", .{ Indent{ .value = 1 }, e });
         try writer.writeAll(")");

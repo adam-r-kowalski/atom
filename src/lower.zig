@@ -14,6 +14,7 @@ const Expression = ir.Expression;
 const Local = ir.Local;
 const Function = ir.Function;
 const Import = ir.Import;
+const Global = ir.Global;
 const DataSegment = ir.DataSegment;
 const Export = ir.Export;
 const Parameter = ir.Parameter;
@@ -201,7 +202,10 @@ fn binaryOp(context: Context, b: typed_ast.BinaryOp) !Expression {
 }
 
 fn symbol(s: typed_ast.Symbol) Expression {
-    return Expression{ .local_get = .{ .name = s.value } };
+    return switch (s.type) {
+        .global => Expression{ .global_get = .{ .name = s.value } },
+        else => Expression{ .local_get = .{ .name = s.value } },
+    };
 }
 
 fn call(context: Context, c: typed_ast.Call) !Expression {
@@ -410,6 +414,7 @@ pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
     var functions = std.ArrayList(Function).init(allocator);
     var imports = std.ArrayList(Import).init(allocator);
     var data_segment = DataSegment.init(allocator);
+    var globals = std.ArrayList(Global).init(allocator);
     var exports = std.ArrayList(Export).init(allocator);
     for (module.order) |name| {
         if (module.typed.get(name)) |top_level| {
@@ -424,6 +429,10 @@ pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
                         .foreign_import => |i| {
                             const lowered = try foreignImport(allocator, name_symbol, i);
                             try imports.append(lowered);
+                        },
+                        .int => |i| {
+                            const lowered = try int(i);
+                            try globals.append(.{ .name = name_symbol, .type = mapType(d.name.type), .value = lowered });
                         },
                         else => |e| std.debug.panic("\nTop level kind {} no yet supported", .{e}),
                     }
@@ -448,6 +457,7 @@ pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
     return IR{
         .functions = try functions.toOwnedSlice(),
         .imports = try imports.toOwnedSlice(),
+        .globals = try globals.toOwnedSlice(),
         .data_segment = data_segment,
         .exports = try exports.toOwnedSlice(),
     };

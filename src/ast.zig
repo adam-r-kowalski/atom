@@ -48,7 +48,7 @@ pub const Define = struct {
         try writer.writeAll(")");
     }
 
-    pub fn format(self: Parameter, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+    pub fn format(self: Define, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = fmt;
         _ = options;
         try self.toString(writer, Indent{ .value = 0 });

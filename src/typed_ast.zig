@@ -566,7 +566,7 @@ pub const Module = struct {
                     const name = d.name.value;
                     try order.append(name);
                     try untyped.putNoClobber(name, top_level);
-                    const monotype = try topLevelType(allocator, builtins, d.value.*);
+                    const monotype = try topLevelType(allocator, builtins, d);
                     try scope.put(name, monotype);
                 },
                 .call => |c| {
@@ -645,10 +645,20 @@ fn topLevelCall(allocator: Allocator, builtins: Builtins, c: untyped_ast.Call) !
     std.debug.panic("\nInvalid top level call {}", .{c.function});
 }
 
-fn topLevelType(allocator: Allocator, builtins: Builtins, e: untyped_ast.Expression) !MonoType {
-    return switch (e) {
+fn topLevelInt(allocator: Allocator, builtins: Builtins, d: untyped_ast.Define) !MonoType {
+    if (d.type) |t| {
+        const result = try allocator.create(MonoType);
+        result.* = try expressionToMonoType(allocator, builtins, t.*);
+        return .{ .global = result };
+    }
+    std.debug.panic("\nInvalid top level int {}", .{d});
+}
+
+fn topLevelType(allocator: Allocator, builtins: Builtins, d: untyped_ast.Define) !MonoType {
+    return switch (d.value.*) {
         .function => |f| try topLevelFunction(allocator, builtins, f),
         .call => |c| try topLevelCall(allocator, builtins, c),
+        .int => try topLevelInt(allocator, builtins, d),
         else => |k| std.debug.panic("\nInvalid top level value {}", .{k}),
     };
 }

@@ -61,9 +61,24 @@ pub const Equal = struct {
                 };
                 try constraint.solve(s, compile_errors);
             }
+            return;
         }
         if (left_tag == right_tag)
             return;
+        if (left_tag == .global) {
+            const constraint = Equal{
+                .left = .{ .type = self.left.type.global.*, .span = self.left.span },
+                .right = self.right,
+            };
+            return try constraint.solve(s, compile_errors);
+        }
+        if (right_tag == .global) {
+            const constraint = Equal{
+                .left = self.left,
+                .right = .{ .type = self.right.type.global.*, .span = self.right.span },
+            };
+            return try constraint.solve(s, compile_errors);
+        }
         try compile_errors.errors.append(.{
             .type_error = .{
                 .left = self.left,
