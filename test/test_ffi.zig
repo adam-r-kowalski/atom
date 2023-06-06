@@ -4,7 +4,7 @@ const mantis = @import("mantis");
 test "tokenize import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", fn(msg: str) void)
+        \\print = foreign_import("console", "log", fn(msg: []u8) void)
     ;
     const actual = try mantis.testing.tokenize(allocator, source);
     defer allocator.free(actual);
@@ -21,7 +21,9 @@ test "tokenize import" {
         \\(delimiter '(')
         \\(symbol msg)
         \\(operator :)
-        \\(symbol str)
+        \\(delimiter '[')
+        \\(delimiter ']')
+        \\(symbol u8)
         \\(delimiter ')')
         \\(symbol void)
         \\(delimiter ')')
@@ -32,12 +34,12 @@ test "tokenize import" {
 test "parse import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", fn(msg: str) void)
+        \\print = foreign_import("console", "log", fn(msg: []u8) void)
     ;
     const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def print (foreign_import "console" "log" (fn [(msg str)] void)))
+        \\(def print (foreign_import "console" "log" (fn [(msg []u8)] void)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -45,7 +47,7 @@ test "parse import" {
 test "type check import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", fn(msg: str) void)
+        \\print = foreign_import("console", "log", fn(msg: []u8) void)
         \\
         \\start = fn() void {
         \\    print("hello world")
@@ -55,13 +57,13 @@ test "type check import" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = print, type = fn(str) void }
+        \\    name = symbol{ value = print, type = fn([]u8) void }
         \\    type = void
         \\    value = 
         \\        foreign_import =
         \\            module = "console"
         \\            name = "log"
-        \\            type = fn(str) void
+        \\            type = fn([]u8) void
         \\
         \\define =
         \\    name = symbol{ value = start, type = fn() void }
@@ -71,9 +73,9 @@ test "type check import" {
         \\            return_type = void
         \\            body = 
         \\                call =
-        \\                    symbol{ value = print, type = fn(str) void }
+        \\                    symbol{ value = print, type = fn([]u8) void }
         \\                    arguments =
-        \\                        string{ value = "hello world", type = str }
+        \\                        string{ value = "hello world", type = []u8 }
         \\                    type = void
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -295,7 +297,7 @@ test "codegen named foreign export" {
 test "codegen hello world" {
     const allocator = std.testing.allocator;
     const source =
-        \\fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, text: str, count: i32, out: i32) i32)
+        \\fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, text: []u8, count: i32, out: i32) i32)
         \\
         \\start = fn() i32 {
         \\    stdout = 1

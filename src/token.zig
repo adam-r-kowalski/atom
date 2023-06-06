@@ -240,6 +240,28 @@ pub const RightBrace = struct {
     }
 };
 
+pub const LeftBracket = struct {
+    span: Span,
+
+    pub fn format(self: LeftBracket, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = self;
+        _ = options;
+        _ = fmt;
+        try writer.writeAll("(delimiter '[')");
+    }
+};
+
+pub const RightBracket = struct {
+    span: Span,
+
+    pub fn format(self: RightBracket, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = self;
+        _ = options;
+        _ = fmt;
+        try writer.writeAll("(delimiter ']')");
+    }
+};
+
 pub const If = struct {
     span: Span,
 
@@ -328,6 +350,8 @@ pub const Token = union(enum) {
     right_paren: RightParen,
     left_brace: LeftBrace,
     right_brace: RightBrace,
+    left_bracket: LeftBracket,
+    right_bracket: RightBracket,
     if_: If,
     else_: Else,
     or_: Or,
@@ -358,6 +382,8 @@ pub const Token = union(enum) {
             .right_paren => |t| t.span,
             .left_brace => |t| t.span,
             .right_brace => |t| t.span,
+            .left_bracket => |t| t.span,
+            .right_bracket => |t| t.span,
             .if_ => |t| t.span,
             .else_ => |t| t.span,
             .or_ => |t| t.span,
@@ -392,6 +418,8 @@ pub const Token = union(enum) {
             .right_paren => |r| try writer.print("{}", .{r}),
             .left_brace => |l| try writer.print("{}", .{l}),
             .right_brace => |r| try writer.print("{}", .{r}),
+            .left_bracket => |l| try writer.print("{}", .{l}),
+            .right_bracket => |r| try writer.print("{}", .{r}),
             .if_ => |i| try writer.print("{}", .{i}),
             .else_ => |e| try writer.print("{}", .{e}),
             .or_ => |o| try writer.print("{}", .{o}),
@@ -466,6 +494,8 @@ pub const Tokens = struct {
                 .right_paren => try writer.writeAll(")"),
                 .left_brace => try writer.writeAll("{"),
                 .right_brace => try writer.writeAll("}"),
+                .left_bracket => try writer.writeAll("["),
+                .right_bracket => try writer.writeAll("]"),
                 .if_ => try writer.writeAll("if"),
                 .else_ => try writer.writeAll("else"),
                 .or_ => try writer.writeAll("or"),

@@ -160,6 +160,8 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?Token {
         ')' => exact(cursor, .right_paren),
         '{' => exact(cursor, .left_brace),
         '}' => exact(cursor, .right_brace),
+        '[' => exact(cursor, .left_bracket),
+        ']' => exact(cursor, .right_bracket),
         ',' => exact(cursor, .comma),
         '\n' => newLine(cursor),
         else => try symbol(intern, builtins, cursor),

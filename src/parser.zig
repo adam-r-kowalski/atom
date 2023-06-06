@@ -17,6 +17,8 @@ const Tokens = token.Tokens;
 const ast = @import("ast.zig");
 const Expression = ast.Expression;
 const Block = ast.Block;
+const Array = ast.Array;
+const ArrayOf = ast.ArrayOf;
 const Group = ast.Group;
 const Arm = ast.Arm;
 const Branch = ast.Branch;
@@ -27,20 +29,12 @@ const Define = ast.Define;
 const BinaryOp = ast.BinaryOp;
 const Call = ast.Call;
 const Module = ast.Module;
-
-const Precedence = u32;
-
-const DELTA: Precedence = 10;
-const LOWEST: Precedence = 0;
-const DEFINE: Precedence = LOWEST + DELTA;
-const AND: Precedence = DEFINE + DELTA;
-const COMPARE: Precedence = AND + DELTA;
-const ADD: Precedence = COMPARE + DELTA;
-const MULTIPLY: Precedence = ADD + DELTA;
-const EXPONENTIATE: Precedence = MULTIPLY + DELTA;
-const CALL: Precedence = EXPONENTIATE + DELTA;
-const DOT: Precedence = CALL + DELTA;
-const HIGHEST: Precedence = DOT + DELTA;
+const Precedence = ast.Precedence;
+const LOWEST = ast.LOWEST;
+const DEFINE = ast.DEFINE;
+const CALL = ast.CALL;
+const ARRAY_OF = ast.ARRAY_OF;
+const Associativity = ast.Associativity;
 
 const Context = struct {
     allocator: Allocator,
@@ -102,6 +96,22 @@ fn block(context: Context, begin: Pos) !Block {
     }
     const end = consume(context.tokens, .right_brace).span().end;
     return Block{
+        .expressions = try exprs.toOwnedSlice(),
+        .span = .{ .begin = begin, .end = end },
+    };
+}
+
+fn array(context: Context, begin: Pos) !Array {
+    var exprs = List(Expression).init(context.allocator);
+    while (context.tokens.peek()) |t| {
+        switch (t) {
+            .right_bracket => break,
+            .new_line => context.tokens.advance(),
+            else => try exprs.append(try expression(withPrecedence(context, LOWEST))),
+        }
+    }
+    const end = consume(context.tokens, .right_bracket).span().end;
+    return Array{
         .expressions = try exprs.toOwnedSlice(),
         .span = .{ .begin = begin, .end = end },
     };
@@ -223,14 +233,10 @@ fn prefix(context: Context) !Expression {
         .if_ => |i| return .{ .branch = try branch(context, i) },
         .fn_ => |f| return try function(context, f),
         .left_brace => |l| return .{ .block = try block(context, l.span.begin) },
+        .left_bracket => |l| return .{ .array = try array(context, l.span.begin) },
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),
     }
 }
-
-const Asscociativity = enum {
-    left,
-    right,
-};
 
 fn define(context: Context, name: Symbol) !Define {
     context.tokens.advance();
@@ -296,59 +302,109 @@ fn call(context: Context, left: Expression) !Call {
     };
 }
 
-const Infix = struct {
-    precedence: Precedence,
-    associativity: Asscociativity,
-    kind: union(enum) {
-        define,
-        annotate,
-        call,
-        binary_op: BinaryOpKind,
-    },
+fn arrayOf(context: Context, left: Expression) !ArrayOf {
+    switch (left) {
+        .array => |a| {
+            const of = try expressionAlloc(context);
+            const span = Span{ .begin = of.span().begin, .end = of.span().end };
+            if (a.expressions.len == 0) {
+                return ArrayOf{
+                    .size = null,
+                    .of = of,
+                    .span = span,
+                };
+            }
+            if (a.expressions.len > 1) std.debug.panic("\nExpected array of size 1, found {}", .{a.expressions.len});
+            switch (a.expressions[0]) {
+                .int => |int| {
+                    return ArrayOf{
+                        .size = int,
+                        .of = of,
+                        .span = span,
+                    };
+                },
+                else => std.debug.panic("\nExpected array size to be int, found {}", .{a.expressions[0]}),
+            }
+        },
+        else => std.debug.panic("\nExpected array, found {}", .{left}),
+    }
+}
+
+const Infix = union(enum) {
+    define,
+    annotate,
+    call,
+    array_of,
+    binary_op: BinaryOpKind,
+
+    fn precedence(self: Infix) Precedence {
+        return switch (self) {
+            .define => DEFINE,
+            .annotate => DEFINE,
+            .call => CALL,
+            .array_of => ARRAY_OF,
+            .binary_op => |b| b.precedence(),
+        };
+    }
+
+    fn associativity(self: Infix) Associativity {
+        return switch (self) {
+            .define => .right,
+            .annotate => .right,
+            .call => .left,
+            .array_of => .right,
+            .binary_op => |b| b.associativity(),
+        };
+    }
 };
 
 fn infix(context: Context, left: Expression) ?Infix {
     if (context.tokens.peek()) |t| {
-        switch (t) {
-            .equal => return .{ .kind = .define, .precedence = DEFINE, .associativity = .right },
-            .colon => return .{ .kind = .annotate, .precedence = DEFINE, .associativity = .right },
-            .plus => return .{ .kind = .{ .binary_op = .add }, .precedence = ADD, .associativity = .left },
-            .minus => return .{ .kind = .{ .binary_op = .subtract }, .precedence = ADD, .associativity = .left },
-            .times => return .{ .kind = .{ .binary_op = .multiply }, .precedence = MULTIPLY, .associativity = .left },
-            .slash => return .{ .kind = .{ .binary_op = .divide }, .precedence = MULTIPLY, .associativity = .left },
-            .percent => return .{ .kind = .{ .binary_op = .modulo }, .precedence = MULTIPLY, .associativity = .left },
-            .caret => return .{ .kind = .{ .binary_op = .exponentiate }, .precedence = EXPONENTIATE, .associativity = .right },
-            .equal_equal => return .{ .kind = .{ .binary_op = .equal }, .precedence = COMPARE, .associativity = .left },
-            .greater => return .{ .kind = .{ .binary_op = .greater }, .precedence = COMPARE, .associativity = .left },
-            .less => return .{ .kind = .{ .binary_op = .less }, .precedence = COMPARE, .associativity = .left },
-            .or_ => return .{ .kind = .{ .binary_op = .or_ }, .precedence = AND, .associativity = .left },
-            .dot => return .{ .kind = .{ .binary_op = .dot }, .precedence = AND, .associativity = .left },
+        return switch (t) {
+            .equal => .define,
+            .colon => .annotate,
+            .plus => .{ .binary_op = .add },
+            .minus => .{ .binary_op = .subtract },
+            .times => .{ .binary_op = .multiply },
+            .slash => .{ .binary_op = .divide },
+            .percent => .{ .binary_op = .modulo },
+            .caret => .{ .binary_op = .exponentiate },
+            .equal_equal => .{ .binary_op = .equal },
+            .greater => .{ .binary_op = .greater },
+            .less => .{ .binary_op = .less },
+            .or_ => .{ .binary_op = .or_ },
+            .dot => .{ .binary_op = .dot },
             .left_paren => switch (left) {
-                .symbol => return .{ .kind = .call, .precedence = CALL, .associativity = .left },
-                else => return null,
+                .symbol => .call,
+                else => null,
             },
-            else => return null,
-        }
+            .symbol => |_| switch (left) {
+                .array => .array_of,
+                else => null,
+            },
+            else => null,
+        };
     }
     return null;
 }
 
 fn parseInfix(parser: Infix, context: Context, left: Expression) !Expression {
-    switch (parser.kind) {
-        .define => return .{ .define = try define(context, left.symbol) },
-        .annotate => return .{ .define = try annotate(context, left.symbol) },
-        .call => return .{ .call = try call(context, left) },
-        .binary_op => |kind| return .{ .binary_op = try binaryOp(context, left, kind) },
-    }
+    return switch (parser) {
+        .define => .{ .define = try define(context, left.symbol) },
+        .annotate => .{ .define = try annotate(context, left.symbol) },
+        .call => .{ .call = try call(context, left) },
+        .array_of => .{ .array_of = try arrayOf(context, left) },
+        .binary_op => |kind| .{ .binary_op = try binaryOp(context, left, kind) },
+    };
 }
 
 fn expression(context: Context) error{OutOfMemory}!Expression {
     var left = try prefix(context);
     while (true) {
         if (infix(context, left)) |parser| {
-            var next = parser.precedence;
+            var next = parser.precedence();
             if (context.precedence > next) return left;
-            if (parser.associativity == .left) next += 1;
+            if (parser.associativity() == .left) next += 1;
             left = try parseInfix(parser, withPrecedence(context, next), left);
         } else {
             return left;

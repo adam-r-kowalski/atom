@@ -1,0 +1,14 @@
+fd_read = foreign_import("wasi_unstable", "fd_read", fn(fd: i32, mut iovs: []u8, iovs_len: i32, mut nread: *i32) i32)
+fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, iovs: []u8, iovs_len: i32, mut nwritten: *i32) i32)
+
+stdin: i32 = 0
+stdout: i32 = 1
+
+start = fn() void {
+    mut iovs: [100]u8 = undefined
+    iovs_len = 1
+    mut nread: i32 = undefined
+    mut nwritten: i32 = undefined
+    _ = stdin.fd_read(mut iovs, iovs_len, mut &nread)
+    _ = stdout.fd_write(iovs, iovs_len, mut &nwritten)
+}
