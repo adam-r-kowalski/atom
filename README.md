@@ -376,7 +376,7 @@ Linear = struct {
     b: f64
 }
 
-predict = fn({m, b}: Linear, x: f64) -> f64 {
+predict = fn({m, b}: Linear, x: f64) f64 {
     m * x + b
 }
 
@@ -389,8 +389,8 @@ sse = fn[n: u64](model: Linear, x: [n]f64, y: [n]f64) f64 {
 
 update = fn(model: Linear, gradient: Linear, learning_rate: f64) Linear {
     Linear(
-        weight=model.weight - gradient.weight * learning_rate,
-        bias=model.bias - gradient.bias * learning_rate,
+        m=model.m - gradient.m * learning_rate,
+        b=model.b - gradient.b * learning_rate,
     )
 }
 
@@ -400,7 +400,7 @@ step = fn[n: u64](model: Linear, learning_rate: f64, x: [n]f64, y: [n]f64) Linea
 }
 
 test "gradient descent" {
-    model = Linear(weight=1.0, bias=0.0)
+    model = Linear(m=1.0, b=0.0)
     learning_rate = 0.01
     x = [1.0, 2.0, 3.0, 4.0]
     y = [2.0, 4.0, 6.0, 8.0]
