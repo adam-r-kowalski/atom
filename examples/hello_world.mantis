@@ -1,7 +1,8 @@
 fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, iovs: []u8, iovs_len: i32, nwritten: i32) i32)
 
+stdout: i32 = 1
+
 print = fn(text: []u8) void {
-    stdout = 1
     _ = stdout.fd_write(text, 1, 200)
 }
 
