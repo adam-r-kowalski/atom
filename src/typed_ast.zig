@@ -656,12 +656,12 @@ fn topLevelType(allocator: Allocator, builtins: Builtins, e: untyped_ast.Express
 pub fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: untyped_ast.Expression) !MonoType {
     switch (e) {
         .symbol => |s| {
+            if (s.value.eql(builtins.u8)) return .u8;
             if (s.value.eql(builtins.i32)) return .i32;
             if (s.value.eql(builtins.i64)) return .i64;
             if (s.value.eql(builtins.f32)) return .f32;
             if (s.value.eql(builtins.f64)) return .f64;
             if (s.value.eql(builtins.bool)) return .bool;
-            if (s.value.eql(builtins.str)) return .str;
             if (s.value.eql(builtins.void)) return .void;
             std.debug.panic("\nCannot convert symbol {} to mono type", .{s});
         },
@@ -672,6 +672,12 @@ pub fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: untyped
                 t.* = try expressionToMonoType(allocator, builtins, param.type);
             function_type[len] = try expressionToMonoType(allocator, builtins, p.return_type.*);
             return MonoType{ .function = function_type };
+        },
+        .array_of => |a| {
+            if (a.size) |_| std.debug.panic("\nSize of array currently not supported", .{});
+            const element_type = try allocator.create(MonoType);
+            element_type.* = try expressionToMonoType(allocator, builtins, a.element_type.*);
+            return MonoType{ .array = .{ .size = null, .element_type = element_type } };
         },
         else => std.debug.panic("\nCannot convert expression {} to mono type", .{e}),
     }

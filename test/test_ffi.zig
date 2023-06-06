@@ -53,7 +53,7 @@ test "type check import" {
         \\    print("hello world")
         \\}
     ;
-    const actual = try mantis.testing.typeInfer(allocator, source, "start");
+    const actual = try mantis.testing.typeInferVerbose(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =

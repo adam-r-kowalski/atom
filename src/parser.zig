@@ -305,12 +305,12 @@ fn call(context: Context, left: Expression) !Call {
 fn arrayOf(context: Context, left: Expression) !ArrayOf {
     switch (left) {
         .array => |a| {
-            const of = try expressionAlloc(context);
-            const span = Span{ .begin = of.span().begin, .end = of.span().end };
+            const element_type = try expressionAlloc(context);
+            const span = Span{ .begin = left.span().begin, .end = element_type.span().end };
             if (a.expressions.len == 0) {
                 return ArrayOf{
                     .size = null,
-                    .of = of,
+                    .element_type = element_type,
                     .span = span,
                 };
             }
@@ -319,7 +319,7 @@ fn arrayOf(context: Context, left: Expression) !ArrayOf {
                 .int => |int| {
                     return ArrayOf{
                         .size = int,
-                        .of = of,
+                        .element_type = element_type,
                         .span = span,
                     };
                 },

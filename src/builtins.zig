@@ -4,6 +4,7 @@ const Interned = interner.Interned;
 
 pub const Builtins = struct {
     fn_: Interned,
+    u8: Interned,
     i32: Interned,
     i64: Interned,
     f32: Interned,
@@ -26,6 +27,7 @@ pub const Builtins = struct {
     pub fn init(intern: *Intern) !Builtins {
         return Builtins{
             .fn_ = try intern.store("fn"),
+            .u8 = try intern.store("u8"),
             .i32 = try intern.store("i32"),
             .i64 = try intern.store("i64"),
             .f32 = try intern.store("f32"),

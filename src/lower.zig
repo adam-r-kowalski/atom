@@ -47,7 +47,7 @@ fn mapType(monotype: MonoType) Type {
         .f64 => return .f64,
         .bool => return .i32,
         .void => return .void,
-        .str => return .i32,
+        .array => return .i32,
         else => std.debug.panic("\nMonotype {} not yet supported", .{monotype}),
     }
 }

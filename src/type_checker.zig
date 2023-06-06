@@ -61,11 +61,13 @@ fn float(context: Context, f: ast.Float) Float {
     };
 }
 
-fn string(s: ast.String) String {
+fn string(context: Context, s: ast.String) !String {
+    const element_type = try context.allocator.create(MonoType);
+    element_type.* = .u8;
     return String{
         .value = s.value,
         .span = s.span,
-        .type = .str,
+        .type = .{ .array = .{ .size = null, .element_type = element_type } },
     };
 }
 
@@ -335,7 +337,7 @@ fn expression(context: Context, e: ast.Expression) error{ OutOfMemory, CompileEr
     switch (e) {
         .int => |i| return .{ .int = int(context, i) },
         .float => |f| return .{ .float = float(context, f) },
-        .string => |s| return .{ .string = string(s) },
+        .string => |s| return .{ .string = try string(context, s) },
         .symbol => |s| return .{ .symbol = try symbol(context.scopes.*, s) },
         .bool => |b| return .{ .bool = boolean(b) },
         .define => |d| return .{ .define = try define(context, d) },

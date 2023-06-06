@@ -17,15 +17,15 @@ pub const Precedence = u32;
 pub const DELTA: Precedence = 10;
 pub const LOWEST: Precedence = 0;
 pub const DEFINE: Precedence = LOWEST + DELTA;
-pub const AND: Precedence = DEFINE + DELTA;
+pub const DOT: Precedence = DEFINE + DELTA;
+pub const AND: Precedence = DOT + DELTA;
 pub const COMPARE: Precedence = AND + DELTA;
 pub const ADD: Precedence = COMPARE + DELTA;
 pub const MULTIPLY: Precedence = ADD + DELTA;
 pub const EXPONENTIATE: Precedence = MULTIPLY + DELTA;
 pub const CALL: Precedence = EXPONENTIATE + DELTA;
 pub const ARRAY_OF: Precedence = CALL + DELTA;
-pub const DOT: Precedence = ARRAY_OF + DELTA;
-pub const HIGHEST: Precedence = DOT + DELTA;
+pub const HIGHEST: Precedence = ARRAY_OF + DELTA;
 
 pub const Associativity = enum {
     left,
@@ -112,7 +112,7 @@ pub const Array = struct {
 
 pub const ArrayOf = struct {
     size: ?Int,
-    of: *const Expression,
+    element_type: *const Expression,
     span: Span,
 
     pub fn format(self: ArrayOf, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
@@ -123,7 +123,7 @@ pub const ArrayOf = struct {
         } else {
             try writer.writeAll("[]");
         }
-        self.of.toString(writer, Indent{ .value = 0 }) catch unreachable;
+        self.element_type.toString(writer, Indent{ .value = 0 }) catch unreachable;
     }
 };
 
@@ -319,6 +319,8 @@ pub const Call = struct {
     }
 };
 
+const Error = error{NoSpaceLeft};
+
 pub const Expression = union(enum) {
     int: Int,
     float: Float,
@@ -356,7 +358,7 @@ pub const Expression = union(enum) {
         };
     }
 
-    fn toString(self: Expression, writer: anytype, indent: Indent) error{NoSpaceLeft}!void {
+    fn toString(self: Expression, writer: anytype, indent: Indent) Error!void {
         switch (self) {
             .int => |i| try writer.print("{}", .{i.value}),
             .float => |f| try writer.print("{}", .{f.value}),

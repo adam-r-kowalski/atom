@@ -6,16 +6,33 @@ const Span = @import("span.zig").Span;
 
 pub const TypeVar = struct { value: u64 };
 
+const Array = struct {
+    size: ?u32,
+    element_type: *const MonoType,
+
+    pub fn format(self: Array, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
+        if (self.size) |size| {
+            try writer.print("[{}]", .{size});
+        } else {
+            try writer.writeAll("[]");
+        }
+        try writer.print("{}", .{self.element_type.*});
+    }
+};
+
 pub const MonoType = union(enum) {
     void,
+    u8,
     i32,
     i64,
     f32,
     f64,
     bool,
-    str,
     typevar: TypeVar,
     function: []MonoType,
+    array: Array,
 
     pub fn apply(self: *MonoType, s: Substitution) void {
         switch (self.*) {
@@ -31,11 +48,11 @@ pub const MonoType = union(enum) {
         _ = fmt;
         _ = options;
         switch (self) {
+            .u8 => try writer.writeAll("u8"),
             .i32 => try writer.writeAll("i32"),
             .i64 => try writer.writeAll("i64"),
             .f32 => try writer.writeAll("f32"),
             .f64 => try writer.writeAll("f64"),
-            .str => try writer.writeAll("str"),
             .bool => try writer.writeAll("bool"),
             .void => try writer.writeAll("void"),
             .typevar => |t| try writer.print("${}", .{t}),
@@ -50,6 +67,7 @@ pub const MonoType = union(enum) {
                     try writer.print("{}", .{a});
                 }
             },
+            .array => |a| try writer.print("{}", .{a}),
         }
     }
 };
@@ -117,8 +135,7 @@ pub const Substitution = struct {
         try writer.writeAll("\n\n=== Substitution ===");
         var iterator = self.map.iterator();
         while (iterator.next()) |t| {
-            try writer.print("\n${} = ", .{t.key_ptr.*});
-            try t.value_ptr.toString(writer);
+            try writer.print("\n${} = {}", .{ t.key_ptr.*, t.value_ptr.* });
         }
     }
 };
