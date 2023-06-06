@@ -100,7 +100,7 @@ square = fn(x: i32) i32 {
 
 # You can also place comments at the end of a line
 
-sum = fn(xs: i32[]) i32 { xs.fold(0, +) } # Here we calculate the sum of an array
+sum = fn(xs: []i32) i32 { xs.fold(0, +) } # Here we calculate the sum of an array
 ```
 
 ### Functions
@@ -178,7 +178,7 @@ Mantis supports pattern matching, which is a way of checking a given sequence of
 
 ```zig
 # pattern matching is done with `match expression`
-sum = fn(xs: i32[]) i32 {
+sum = fn(xs: []i32) i32 {
     match xs {
         [] { 0 }
         [x, ...xs] { x + sum(xs) }
@@ -218,7 +218,7 @@ implement Shape for Circle {
 }
 
 Square = struct {
-    width: f32
+    width: f32,
     height: f32
 }
 
@@ -245,7 +245,7 @@ For example, consider the `Square` struct and the implementation of `Shape` inte
 
 ```zig
 Square = struct {
-    width: f32
+    width: f32,
     height: f32
 }
 
@@ -262,7 +262,7 @@ Another example of destructuring can be found in array pattern matching:
 
 ```zig
 # pattern matching with destructuring
-sum = fn(xs: i32[]) i32 {
+sum = fn(xs: []i32) i32 {
     match xs {
         [] { 0 }
         [x, ...rest] { x + sum(rest) }
@@ -301,7 +301,7 @@ Mantis supports importing and exporting functions from the host environment.
 
 ```zig
 # Import a function from the host
-log = foreign_import("console", "log", fn(x: str) void)
+log = foreign_import("console", "log", fn(x: []u8) void)
 
 # Export a function to the host
 foreign_export("double", fn(x: i32) i32 { x * 2 })
@@ -323,7 +323,7 @@ It is a first class citizen in Mantis and by targeting this API you can ensure t
 ```zig
 fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, iovs: []u8, iovs_len: i32, mut nwritten: *i32) i32)
 
-stdout = 1
+stdout: i32 = 1
 
 print = fn(text: []u8) void {
     mut nwritten: i32 = undefined
@@ -345,7 +345,7 @@ Mantis includes built-in support for arrays and powerful operations over them.
 xs = [1, 2, 3, 4, 5]
 
 # Compute the sum of an array
-sum = fn(xs: i32[]) i32 { fold(xs, 0, +) }
+sum = fn(xs: []i32) i32 { fold(xs, 0, +) }
 ```
 
 Here, `xs` is an array of integers, and `sum` is a function that computes the sum of an array by folding over it.
@@ -356,12 +356,12 @@ Mantis provides powerful constructs for high-performance computing, like paralle
 
 ```zig
 # Compute the dot product of two vectors
-dot = fn[T: Num, n: u64](a: T[n], b: T[n]) T {
+dot = fn[T: Num, n: u64](a: [n]T, b: [n]T) T {
     sum(for i { a[i] * b[i] })
 }
 
 # Perform matrix multiplication
-matmul = fn[T: Num, m: u64, n: u64, p: u64](a: T[m][n], b: T[n][p]) T[m][p] {
+matmul = fn[T: Num, m: u64, n: u64, p: u64](a: [m][n]T, b: [n][p]T) [m][p]T {
     for i, j, k { sum(a[i][k] * b[k][j]) }
 }
 ```
@@ -372,7 +372,7 @@ Mantis is designed with machine learning in mind. For expressions allow you to e
 
 ```zig
 Linear = struct {
-    m: f64
+    m: f64,
     b: f64
 }
 
@@ -380,7 +380,7 @@ predict = fn({m, b}: Linear, x: f64) -> f64 {
     m * x + b
 }
 
-sse = fn[n: u64](model: Linear, x: f64[n], y: f64[n]) f64 {
+sse = fn[n: u64](model: Linear, x: [n]f64, y: [n]f64) f64 {
     sum(for i {
         y_hat = model.predict(x[i])
         (y_hat - y[i]) ^ 2
@@ -394,7 +394,7 @@ update = fn(model: Linear, gradient: Linear, learning_rate: f64) Linear {
     )
 }
 
-step = fn[n: u64](model: Linear, learning_rate: f64, x: f64[n], y: f64[n]) Linear {
+step = fn[n: u64](model: Linear, learning_rate: f64, x: [n]f64, y: [n]f64) Linear {
     gradient = grad(sse)(model, x, y)
     model.update(gradient, learning_rate)
 }
