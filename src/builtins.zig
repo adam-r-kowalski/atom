@@ -16,13 +16,13 @@ pub const Builtins = struct {
     true_: Interned,
     false_: Interned,
     or_: Interned,
-    one: Interned,
-    zero: Interned,
     foreign_import: Interned,
     foreign_export: Interned,
     convert: Interned,
     sqrt: Interned,
     arena: Interned,
+    mut: Interned,
+    undefined: Interned,
 
     pub fn init(intern: *Intern) !Builtins {
         return Builtins{
@@ -39,13 +39,13 @@ pub const Builtins = struct {
             .true_ = try intern.store("true"),
             .false_ = try intern.store("false"),
             .or_ = try intern.store("or"),
-            .one = try intern.store("1"),
-            .zero = try intern.store("0"),
             .foreign_import = try intern.store("foreign_import"),
             .foreign_export = try intern.store("foreign_export"),
             .convert = try intern.store("convert"),
             .sqrt = try intern.store("sqrt"),
             .arena = try intern.store("arena"),
+            .mut = try intern.store("mut"),
+            .undefined = try intern.store("undefined"),
         };
     }
 };

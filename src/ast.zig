@@ -11,6 +11,7 @@ pub const Float = token.Float;
 pub const Symbol = token.Symbol;
 pub const String = token.String;
 pub const Bool = token.Bool;
+pub const Undefined = token.Undefined;
 
 pub const Precedence = u32;
 
@@ -337,6 +338,7 @@ pub const Expression = union(enum) {
     array_of: ArrayOf,
     branch: Branch,
     call: Call,
+    undefined: Undefined,
 
     pub fn span(self: Expression) Span {
         return switch (self) {
@@ -355,6 +357,7 @@ pub const Expression = union(enum) {
             .array_of => |e| e.span,
             .branch => |e| e.span,
             .call => |e| e.span,
+            .undefined => |e| e.span,
         };
     }
 
@@ -375,6 +378,7 @@ pub const Expression = union(enum) {
             .array_of => |a| try writer.print("{}", .{a}),
             .branch => |b| try b.toString(writer, indent),
             .call => |c| try c.toString(writer, indent),
+            .undefined => |u| try writer.print("{}", .{u}),
         }
     }
 

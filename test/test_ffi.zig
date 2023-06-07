@@ -303,6 +303,7 @@ test "codegen hello world" {
         \\
         \\start = fn() i32 {
         \\    text = "Hello, World!"
+        \\    mut nwritten: i32 = undefined
         \\    fd_write(stdout, text, 1, 200)
         \\}
     ;
@@ -322,8 +323,9 @@ test "codegen hello world" {
         \\    (global $stdout i32 (i32.const 1))
         \\
         \\    (func $start (result i32)
-        \\        (local $0 i32)
         \\        (local $text i32)
+        \\        (local $0 i32)
+        \\        (local $nwritten i32)
         \\        (local.set $text
         \\            (block (result i32)
         \\                (local.set $0

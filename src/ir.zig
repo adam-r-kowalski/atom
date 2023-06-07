@@ -285,8 +285,13 @@ pub const Expressions = struct {
 
     pub fn toString(self: Expressions, writer: anytype, indent: Indent) !void {
         for (self.expressions) |expr| {
-            try writer.print("{}", .{indent});
-            expr.toString(writer, indent) catch unreachable;
+            switch (expr) {
+                .nop => {},
+                else => {
+                    try writer.print("{}", .{indent});
+                    expr.toString(writer, indent) catch unreachable;
+                },
+            }
         }
     }
 };
@@ -339,6 +344,7 @@ pub const Expression = union(enum) {
     binary_op: BinaryOp,
     expressions: Expressions,
     block: Block,
+    nop,
 
     pub fn toString(self: Expression, writer: anytype, indent: Indent) error{NoSpaceLeft}!void {
         switch (self) {
@@ -353,6 +359,7 @@ pub const Expression = union(enum) {
             .binary_op => |b| try b.toString(writer, indent),
             .expressions => |e| try e.toString(writer, indent),
             .block => |b| try b.toString(writer, indent),
+            .nop => try writer.writeAll("(nop)"),
         }
     }
 

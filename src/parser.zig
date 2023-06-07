@@ -222,6 +222,23 @@ fn function(context: Context, fn_: FnToken) !Expression {
     };
 }
 
+fn mutable(context: Context, begin: Pos) !Define {
+    const name = context.tokens.next().?.symbol;
+    _ = consume(context.tokens, .colon);
+    const type_ = try expressionAlloc(withPrecedence(context, DEFINE + 1));
+    _ = consume(context.tokens, .equal);
+    const value = try expressionAlloc(withPrecedence(context, DEFINE + 1));
+    return Define{
+        .name = name,
+        .type = type_,
+        .value = value,
+        .span = Span{
+            .begin = begin,
+            .end = value.span().end,
+        },
+    };
+}
+
 fn prefix(context: Context) !Expression {
     switch (context.tokens.next().?) {
         .int => |i| return .{ .int = i },
@@ -234,6 +251,8 @@ fn prefix(context: Context) !Expression {
         .fn_ => |f| return try function(context, f),
         .left_brace => |l| return .{ .block = try block(context, l.span.begin) },
         .left_bracket => |l| return .{ .array = try array(context, l.span.begin) },
+        .mut => |m| return .{ .define = try mutable(context, m.span.begin) },
+        .undefined => |u| return .{ .undefined = u },
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),
     }
 }

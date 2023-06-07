@@ -430,6 +430,7 @@ pub const ForeignExport = struct {
 
     pub fn apply(self: *ForeignExport, s: Substitution) void {
         self.value.apply(s);
+        self.type.apply(s);
     }
 };
 
@@ -446,6 +447,22 @@ pub const Convert = struct {
         try self.value.toString(writer, indent.add(1));
         try writer.print("{}", .{indent.add(1)});
         try writer.print("type = {}", .{self.type});
+    }
+};
+
+pub const Undefined = struct {
+    span: Span,
+    type: MonoType,
+
+    fn toString(self: Undefined, writer: anytype, indent: Indent) !void {
+        try writer.print("{}", .{indent});
+        try writer.writeAll("undefined =");
+        try writer.print("{}", .{indent.add(1)});
+        try writer.print("type = {}", .{self.type});
+    }
+
+    pub fn apply(self: *Undefined, s: Substitution) void {
+        self.type.apply(s);
     }
 };
 
@@ -466,6 +483,7 @@ pub const Expression = union(enum) {
     foreign_import: ForeignImport,
     foreign_export: ForeignExport,
     convert: Convert,
+    undefined: Undefined,
 
     pub fn span(self: Expression) Span {
         return switch (self) {
@@ -485,6 +503,7 @@ pub const Expression = union(enum) {
             .foreign_import => |f| f.span,
             .foreign_export => |f| f.span,
             .convert => |c| c.span,
+            .undefined => |u| u.span,
         };
     }
 
@@ -506,6 +525,7 @@ pub const Expression = union(enum) {
             .foreign_import => |f| f.type,
             .foreign_export => |f| f.type,
             .convert => |c| c.type,
+            .undefined => |u| u.type,
         };
     }
 
@@ -527,6 +547,7 @@ pub const Expression = union(enum) {
             .foreign_import => return,
             .foreign_export => |*f| f.apply(s),
             .convert => return,
+            .undefined => |*u| u.apply(s),
         }
     }
 
@@ -548,6 +569,7 @@ pub const Expression = union(enum) {
             .foreign_import => |f| try f.toString(writer, indent),
             .foreign_export => |f| try f.toString(writer, indent),
             .convert => |c| try c.toString(writer, indent),
+            .undefined => |u| try u.toString(writer, indent),
         }
     }
 };

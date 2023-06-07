@@ -317,6 +317,28 @@ pub const Fn = struct {
     }
 };
 
+pub const Mut = struct {
+    span: Span,
+
+    pub fn format(self: Mut, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = self;
+        _ = options;
+        _ = fmt;
+        try writer.writeAll("(keyword mut)");
+    }
+};
+
+pub const Undefined = struct {
+    span: Span,
+
+    pub fn format(self: Undefined, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = self;
+        _ = options;
+        _ = fmt;
+        try writer.writeAll("(keyword undefined)");
+    }
+};
+
 pub const NewLine = struct {
     span: Span,
 
@@ -357,6 +379,8 @@ pub const Token = union(enum) {
     or_: Or,
     comma: Comma,
     fn_: Fn,
+    mut: Mut,
+    undefined: Undefined,
     new_line: NewLine,
 
     pub fn span(self: Token) Span {
@@ -389,6 +413,8 @@ pub const Token = union(enum) {
             .or_ => |t| t.span,
             .comma => |t| t.span,
             .fn_ => |t| t.span,
+            .mut => |t| t.span,
+            .undefined => |t| t.span,
             .new_line => |t| t.span,
         };
     }
@@ -425,6 +451,8 @@ pub const Token = union(enum) {
             .or_ => |o| try writer.print("{}", .{o}),
             .comma => |c| try writer.print("{}", .{c}),
             .fn_ => |f| try writer.print("{}", .{f}),
+            .mut => |f| try writer.print("{}", .{f}),
+            .undefined => |f| try writer.print("{}", .{f}),
             .new_line => |n| try writer.print("{}", .{n}),
         }
     }
@@ -501,6 +529,8 @@ pub const Tokens = struct {
                 .or_ => try writer.writeAll("or"),
                 .comma => try writer.writeAll(","),
                 .fn_ => try writer.writeAll("fn"),
+                .mut => try writer.writeAll("mut"),
+                .undefined => try writer.writeAll("undefined"),
                 .new_line => {},
             }
         }

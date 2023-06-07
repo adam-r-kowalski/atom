@@ -266,9 +266,14 @@ fn branch(context: Context, b: typed_ast.Branch) !Expression {
 
 fn define(context: Context, d: typed_ast.Define) !Expression {
     const name = d.name.value;
-    const value = try expressionAlloc(context, d.value.*);
     try context.locals.append(Local{ .name = name, .type = mapType(d.name.type) });
-    return Expression{ .local_set = .{ .name = name, .value = value } };
+    switch (d.value.*) {
+        .undefined => return .nop,
+        else => {
+            const value = try expressionAlloc(context, d.value.*);
+            return Expression{ .local_set = .{ .name = name, .value = value } };
+        },
+    }
 }
 
 fn convert(context: Context, c: typed_ast.Convert) !Expression {

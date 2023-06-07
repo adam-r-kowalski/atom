@@ -116,6 +116,8 @@ fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !Token {
     if (interned.eql(builtins.true_)) return Token{ .bool = .{ .value = true, .span = span } };
     if (interned.eql(builtins.false_)) return Token{ .bool = .{ .value = false, .span = span } };
     if (interned.eql(builtins.or_)) return Token{ .or_ = .{ .span = span } };
+    if (interned.eql(builtins.mut)) return Token{ .mut = .{ .span = span } };
+    if (interned.eql(builtins.undefined)) return Token{ .undefined = .{ .span = span } };
     return Token{ .symbol = .{ .value = interned, .span = span } };
 }
 

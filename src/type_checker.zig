@@ -27,6 +27,7 @@ const Expression = typed_ast.Expression;
 const Block = typed_ast.Block;
 const Define = typed_ast.Define;
 const Function = typed_ast.Function;
+const Undefined = typed_ast.Undefined;
 const Module = typed_ast.Module;
 const Span = @import("span.zig").Span;
 const ast = @import("ast.zig");
@@ -79,6 +80,13 @@ fn boolean(b: ast.Bool) Bool {
         .value = b.value,
         .span = b.span,
         .type = .bool,
+    };
+}
+
+fn untypedUndefined(context: Context, u: ast.Undefined) Undefined {
+    return Undefined{
+        .span = u.span,
+        .type = context.constraints.freshTypeVar(),
     };
 }
 
@@ -363,6 +371,7 @@ fn expression(context: Context, e: ast.Expression) error{ OutOfMemory, CompileEr
         .block => |b| return .{ .block = try block(context, b) },
         .branch => |b| return .{ .branch = try branch(context, b) },
         .call => |c| return try call(context, c),
+        .undefined => |u| return .{ .undefined = untypedUndefined(context, u) },
         else => |k| std.debug.panic("\nUnsupported expression {}", .{k}),
     }
 }
