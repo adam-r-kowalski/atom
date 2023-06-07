@@ -299,8 +299,9 @@ test "codegen hello world" {
     const source =
         \\fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, text: []u8, count: i32, out: i32) i32)
         \\
+        \\stdout: i32 = 1
+        \\
         \\start = fn() i32 {
-        \\    stdout = 1
         \\    text = "Hello, World!"
         \\    fd_write(stdout, text, 1, 200)
         \\}
@@ -318,12 +319,11 @@ test "codegen hello world" {
         \\
         \\    (data (i32.const 0) "Hello, World!")
         \\
+        \\    (global $stdout i32 (i32.const 1))
+        \\
         \\    (func $start (result i32)
-        \\        (local $stdout i32)
         \\        (local $0 i32)
         \\        (local $text i32)
-        \\        (local.set $stdout
-        \\            (i32.const 1))
         \\        (local.set $text
         \\            (block (result i32)
         \\                (local.set $0
@@ -342,7 +342,7 @@ test "codegen hello world" {
         \\                        (i32.const 8)))
         \\                (local.get $0)))
         \\        (call $fd_write
-        \\            (local.get $stdout)
+        \\            (global.get $stdout)
         \\            (local.get $text)
         \\            (i32.const 1)
         \\            (i32.const 200)))
