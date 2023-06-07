@@ -61,12 +61,17 @@ pub const Scopes = struct {
         try self.scopes.items[self.scopes.items.len - 1].put(name, binding);
     }
 
-    pub fn find(self: Scopes, symbol: untyped_ast.Symbol) !Binding {
+    pub fn createBinding(self: *Scopes, name: Interned) !*Binding {
+        const result = try self.scopes.items[self.scopes.items.len - 1].getOrPut(name);
+        return result.value_ptr;
+    }
+
+    pub fn find(self: Scopes, symbol: untyped_ast.Symbol) !*Binding {
         var reverse_iterator = std.mem.reverseIterator(self.scopes.items);
         while (reverse_iterator.next()) |scope| {
-            if (scope.get(symbol.value)) |binding| return binding;
+            if (scope.getPtr(symbol.value)) |binding| return binding;
         }
-        if (self.base.get(symbol.value)) |binding| {
+        if (self.base.getPtr(symbol.value)) |binding| {
             try self.work_queue.append(symbol.value);
             return binding;
         }
@@ -124,9 +129,7 @@ pub const Symbol = struct {
     value: Interned,
     span: Span,
     type: MonoType,
-    global: bool,
-    mutable: bool,
-    in_memory: bool,
+    binding: *Binding,
 
     pub fn apply(self: *Symbol, s: Substitution) void {
         self.type.apply(s);

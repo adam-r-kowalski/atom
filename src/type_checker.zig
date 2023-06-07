@@ -44,9 +44,7 @@ fn symbol(scopes: Scopes, s: ast.Symbol) !Symbol {
         .value = s.value,
         .span = s.span,
         .type = binding.type,
-        .global = binding.global,
-        .mutable = binding.mutable,
-        .in_memory = binding.in_memory,
+        .binding = binding,
     };
 }
 
@@ -189,20 +187,19 @@ fn define(context: Context, d: ast.Define) !Define {
         });
         monotype = annotated_type;
     }
-    const name = Symbol{
-        .value = d.name.value,
-        .span = d.span,
+    const binding = try context.scopes.createBinding(d.name.value);
+    binding.* = Binding{
         .type = monotype,
         .global = false,
         .mutable = false,
         .in_memory = false,
     };
-    try context.scopes.put(d.name.value, Binding{
+    const name = Symbol{
+        .value = d.name.value,
+        .span = d.span,
         .type = monotype,
-        .global = false,
-        .mutable = false,
-        .in_memory = false,
-    });
+        .binding = binding,
+    };
     return Define{
         .name = name,
         .value = value,
@@ -309,21 +306,20 @@ fn function(context: Context, f: ast.Function) !Function {
             .begin = untyped_p.name.span.begin,
             .end = untyped_p.type.span().end,
         };
-        typed_p.* = Symbol{
-            .value = name_symbol,
-            .span = span,
+        const binding = try context.scopes.createBinding(name_symbol);
+        binding.* = Binding{
             .type = p_type,
             .global = false,
             .mutable = false,
             .in_memory = false,
         };
-        t.* = p_type;
-        try context.scopes.put(name_symbol, Binding{
+        typed_p.* = Symbol{
+            .value = name_symbol,
+            .span = span,
             .type = p_type,
-            .global = false,
-            .mutable = false,
-            .in_memory = false,
-        });
+            .binding = binding,
+        };
+        t.* = p_type;
     }
     const return_type = try expressionToMonoType(context.allocator, context.builtins, f.return_type.*);
     const body = try block(context, f.body);
