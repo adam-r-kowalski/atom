@@ -21,7 +21,14 @@ const CompileErrors = @import("compile_errors.zig").CompileErrors;
 
 pub const WorkQueue = List(Interned);
 
-pub const Scope = Map(Interned, MonoType);
+pub const Binding = struct {
+    type: MonoType,
+    global: bool,
+    mutable: bool,
+    in_memory: bool,
+};
+
+pub const Scope = Map(Interned, Binding);
 
 pub const Scopes = struct {
     allocator: Allocator,
@@ -50,18 +57,18 @@ pub const Scopes = struct {
         _ = self.scopes.pop();
     }
 
-    pub fn put(self: *Scopes, name: Interned, monotype: MonoType) !void {
-        try self.scopes.items[self.scopes.items.len - 1].put(name, monotype);
+    pub fn put(self: *Scopes, name: Interned, binding: Binding) !void {
+        try self.scopes.items[self.scopes.items.len - 1].put(name, binding);
     }
 
-    pub fn find(self: Scopes, symbol: untyped_ast.Symbol) !MonoType {
+    pub fn find(self: Scopes, symbol: untyped_ast.Symbol) !Binding {
         var reverse_iterator = std.mem.reverseIterator(self.scopes.items);
         while (reverse_iterator.next()) |scope| {
-            if (scope.get(symbol.value)) |monotype| return monotype;
+            if (scope.get(symbol.value)) |binding| return binding;
         }
-        if (self.base.get(symbol.value)) |monotype| {
+        if (self.base.get(symbol.value)) |binding| {
             try self.work_queue.append(symbol.value);
-            return monotype;
+            return binding;
         }
         var in_scope = List(Interned).init(self.allocator);
         var base_iterator = self.base.keyIterator();
@@ -117,6 +124,9 @@ pub const Symbol = struct {
     value: Interned,
     span: Span,
     type: MonoType,
+    global: bool,
+    mutable: bool,
+    in_memory: bool,
 
     pub fn apply(self: *Symbol, s: Substitution) void {
         self.type.apply(s);
@@ -567,7 +577,12 @@ pub const Module = struct {
                     try order.append(name);
                     try untyped.putNoClobber(name, top_level);
                     const monotype = try topLevelType(allocator, builtins, d);
-                    try scope.put(name, monotype);
+                    try scope.put(name, Binding{
+                        .type = monotype,
+                        .global = true,
+                        .mutable = false,
+                        .in_memory = false,
+                    });
                 },
                 .call => |c| {
                     switch (c.function.*) {
@@ -647,9 +662,7 @@ fn topLevelCall(allocator: Allocator, builtins: Builtins, c: untyped_ast.Call) !
 
 fn topLevelInt(allocator: Allocator, builtins: Builtins, d: untyped_ast.Define) !MonoType {
     if (d.type) |t| {
-        const result = try allocator.create(MonoType);
-        result.* = try expressionToMonoType(allocator, builtins, t.*);
-        return .{ .global = result };
+        return try expressionToMonoType(allocator, builtins, t.*);
     }
     std.debug.panic("\nInvalid top level int {}", .{d});
 }

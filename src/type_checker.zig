@@ -12,6 +12,7 @@ const MonoType = substitution.MonoType;
 const TypeVar = substitution.TypeVar;
 const typed_ast = @import("typed_ast.zig");
 const Scope = typed_ast.Scope;
+const Binding = typed_ast.Binding;
 const Scopes = typed_ast.Scopes;
 const WorkQueue = typed_ast.WorkQueue;
 const expressionToMonoType = typed_ast.expressionToMonoType;
@@ -38,10 +39,14 @@ const Context = struct {
 };
 
 fn symbol(scopes: Scopes, s: ast.Symbol) !Symbol {
+    const binding = try scopes.find(s);
     return Symbol{
         .value = s.value,
         .span = s.span,
-        .type = try scopes.find(s),
+        .type = binding.type,
+        .global = binding.global,
+        .mutable = binding.mutable,
+        .in_memory = binding.in_memory,
     };
 }
 
@@ -188,8 +193,16 @@ fn define(context: Context, d: ast.Define) !Define {
         .value = d.name.value,
         .span = d.span,
         .type = monotype,
+        .global = false,
+        .mutable = false,
+        .in_memory = false,
     };
-    try context.scopes.put(d.name.value, monotype);
+    try context.scopes.put(d.name.value, Binding{
+        .type = monotype,
+        .global = false,
+        .mutable = false,
+        .in_memory = false,
+    });
     return Define{
         .name = name,
         .value = value,
@@ -300,9 +313,17 @@ fn function(context: Context, f: ast.Function) !Function {
             .value = name_symbol,
             .span = span,
             .type = p_type,
+            .global = false,
+            .mutable = false,
+            .in_memory = false,
         };
         t.* = p_type;
-        try context.scopes.put(name_symbol, p_type);
+        try context.scopes.put(name_symbol, Binding{
+            .type = p_type,
+            .global = false,
+            .mutable = false,
+            .in_memory = false,
+        });
     }
     const return_type = try expressionToMonoType(context.allocator, context.builtins, f.return_type.*);
     const body = try block(context, f.body);

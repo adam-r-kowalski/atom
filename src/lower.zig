@@ -202,10 +202,8 @@ fn binaryOp(context: Context, b: typed_ast.BinaryOp) !Expression {
 }
 
 fn symbol(s: typed_ast.Symbol) Expression {
-    return switch (s.type) {
-        .global => Expression{ .global_get = .{ .name = s.value } },
-        else => Expression{ .local_get = .{ .name = s.value } },
-    };
+    if (s.global) return Expression{ .global_get = .{ .name = s.value } };
+    return Expression{ .local_get = .{ .name = s.value } };
 }
 
 fn call(context: Context, c: typed_ast.Call) !Expression {

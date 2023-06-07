@@ -33,7 +33,6 @@ pub const MonoType = union(enum) {
     typevar: TypeVar,
     function: []MonoType,
     array: Array,
-    global: *const MonoType,
 
     pub fn apply(self: *MonoType, s: Substitution) void {
         switch (self.*) {
@@ -69,7 +68,6 @@ pub const MonoType = union(enum) {
                 }
             },
             .array => |a| try writer.print("{}", .{a}),
-            .global => |g| try writer.print("(global {})", .{g.*}),
         }
     }
 };
