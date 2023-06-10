@@ -1,0 +1,5 @@
+start = fn() i32 {
+    mut x: i32 = 0
+    x += 5
+    x
+}
