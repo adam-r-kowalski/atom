@@ -116,6 +116,8 @@ fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !Token {
     if (interned.eql(builtins.true_)) return Token{ .bool = .{ .value = true, .span = span } };
     if (interned.eql(builtins.false_)) return Token{ .bool = .{ .value = false, .span = span } };
     if (interned.eql(builtins.or_)) return Token{ .or_ = .{ .span = span } };
+    if (interned.eql(builtins.mut)) return Token{ .mut = .{ .span = span } };
+    if (interned.eql(builtins.undefined)) return Token{ .undefined = .{ .span = span } };
     return Token{ .symbol = .{ .value = interned, .span = span } };
 }
 
@@ -149,7 +151,7 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?Token {
         '"' => try string(intern, cursor),
         '=' => either(cursor, .equal, '=', .equal_equal),
         ':' => exact(cursor, .colon),
-        '+' => exact(cursor, .plus),
+        '+' => either(cursor, .plus, '=', .plus_equal),
         '*' => exact(cursor, .times),
         '/' => exact(cursor, .slash),
         '^' => exact(cursor, .caret),
@@ -160,6 +162,8 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?Token {
         ')' => exact(cursor, .right_paren),
         '{' => exact(cursor, .left_brace),
         '}' => exact(cursor, .right_brace),
+        '[' => exact(cursor, .left_bracket),
+        ']' => exact(cursor, .right_bracket),
         ',' => exact(cursor, .comma),
         '\n' => newLine(cursor),
         else => try symbol(intern, builtins, cursor),

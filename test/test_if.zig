@@ -187,18 +187,22 @@ test "type infer if then else" {
         \\define =
         \\    name = symbol{ value = f, type = fn(bool, i32, i32) i32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            parameters =
         \\                symbol{ value = c, type = bool }
         \\                symbol{ value = x, type = i32 }
         \\                symbol{ value = y, type = i32 }
         \\            return_type = i32
-        \\            body = 
+        \\            body =
         \\                branch =
-        \\                    condition = symbol{ value = c, type = bool }
-        \\                    then = symbol{ value = x, type = i32 }
-        \\                    else = symbol{ value = y, type = i32 }
+        \\                    condition =
+        \\                        symbol{ value = c, type = bool }
+        \\                    then =
+        \\                        symbol{ value = x, type = i32 }
+        \\                    else =
+        \\                        symbol{ value = y, type = i32 }
         \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -373,30 +377,38 @@ test "type infer multi arm if" {
         \\define =
         \\    name = symbol{ value = clamp, type = fn(i32, i32, i32) i32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            parameters =
         \\                symbol{ value = x, type = i32 }
         \\                symbol{ value = lb, type = i32 }
         \\                symbol{ value = ub, type = i32 }
         \\            return_type = i32
-        \\            body = 
+        \\            body =
         \\                branch =
-        \\                    condition = 
+        \\                    condition =
         \\                        binary_op =
         \\                            kind = <
-        \\                            left = symbol{ value = x, type = i32 }
-        \\                            right = symbol{ value = lb, type = i32 }
+        \\                            left =
+        \\                                symbol{ value = x, type = i32 }
+        \\                            right =
+        \\                                symbol{ value = lb, type = i32 }
         \\                            type = bool
-        \\                    then = symbol{ value = lb, type = i32 }
-        \\                    condition = 
+        \\                    then =
+        \\                        symbol{ value = lb, type = i32 }
+        \\                    condition =
         \\                        binary_op =
         \\                            kind = >
-        \\                            left = symbol{ value = x, type = i32 }
-        \\                            right = symbol{ value = ub, type = i32 }
+        \\                            left =
+        \\                                symbol{ value = x, type = i32 }
+        \\                            right =
+        \\                                symbol{ value = ub, type = i32 }
         \\                            type = bool
-        \\                    then = symbol{ value = ub, type = i32 }
-        \\                    else = symbol{ value = x, type = i32 }
+        \\                    then =
+        \\                        symbol{ value = ub, type = i32 }
+        \\                    else =
+        \\                        symbol{ value = x, type = i32 }
         \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);

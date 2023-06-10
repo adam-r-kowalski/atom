@@ -70,11 +70,7 @@ pub fn typeInferVerbose(allocator: Allocator, source: []const u8, name: []const 
     try type_checker.infer(&ast, try intern.store(name));
     const substitution = try constraints.solve(arena.allocator());
     ast.apply(substitution);
-    return try std.fmt.allocPrint(allocator,
-        \\{}
-        \\{}
-        \\{}
-    , .{ ast, constraints, substitution, intern });
+    return try std.fmt.allocPrint(allocator, "{}", .{ast});
 }
 
 pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {

@@ -22,10 +22,12 @@ test "type infer int literal as i32" {
         \\define =
         \\    name = symbol{ value = f, type = fn() i32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            return_type = i32
-        \\            body = int{ value = 42, type = i32 }
+        \\            body =
+        \\                int{ value = 42, type = i32 }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -39,10 +41,12 @@ test "type infer bool literal true" {
         \\define =
         \\    name = symbol{ value = f, type = fn() bool }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            return_type = bool
-        \\            body = bool{ value = true, type = bool }
+        \\            body =
+        \\                bool{ value = true, type = bool }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -56,10 +60,12 @@ test "type infer bool literal false" {
         \\define =
         \\    name = symbol{ value = f, type = fn() bool }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            return_type = bool
-        \\            body = bool{ value = false, type = bool }
+        \\            body =
+        \\                bool{ value = false, type = bool }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -73,10 +79,12 @@ test "type infer int literal as f32" {
         \\define =
         \\    name = symbol{ value = f, type = fn() f32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            return_type = f32
-        \\            body = int{ value = 42, type = f32 }
+        \\            body =
+        \\                int{ value = 42, type = f32 }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -90,10 +98,12 @@ test "type infer float literal as f32" {
         \\define =
         \\    name = symbol{ value = f, type = fn() f32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            return_type = f32
-        \\            body = float{ value = 42.3, type = f32 }
+        \\            body =
+        \\                float{ value = 42.3, type = f32 }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -152,6 +162,32 @@ test "codegen f32 with float literal" {
         \\
         \\    (func $start (result f32)
         \\        (f32.const 4.25e+01))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen i32 global constant" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\i: i32 = 42
+        \\
+        \\start = fn() i32 { i }
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
+        \\    (global $i i32 (i32.const 42))
+        \\
+        \\    (func $start (result i32)
+        \\        (global.get $i))
         \\
         \\    (export "_start" (func $start)))
     ;

@@ -157,12 +157,14 @@ test "type infer function body" {
         \\define =
         \\    name = symbol{ value = id, type = fn(i32) i32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            parameters =
         \\                symbol{ value = x, type = i32 }
         \\            return_type = i32
-        \\            body = symbol{ value = x, type = i32 }
+        \\            body =
+        \\                symbol{ value = x, type = i32 }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

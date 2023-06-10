@@ -4,7 +4,7 @@ const mantis = @import("mantis");
 test "tokenize import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", fn(msg: str) void)
+        \\print = foreign_import("console", "log", fn(msg: []u8) void)
     ;
     const actual = try mantis.testing.tokenize(allocator, source);
     defer allocator.free(actual);
@@ -21,7 +21,9 @@ test "tokenize import" {
         \\(delimiter '(')
         \\(symbol msg)
         \\(operator :)
-        \\(symbol str)
+        \\(delimiter '[')
+        \\(delimiter ']')
+        \\(symbol u8)
         \\(delimiter ')')
         \\(symbol void)
         \\(delimiter ')')
@@ -32,12 +34,12 @@ test "tokenize import" {
 test "parse import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", fn(msg: str) void)
+        \\print = foreign_import("console", "log", fn(msg: []u8) void)
     ;
     const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def print (foreign_import "console" "log" (fn [(msg str)] void)))
+        \\(def print (foreign_import "console" "log" (fn [(msg []u8)] void)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -45,35 +47,37 @@ test "parse import" {
 test "type check import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", fn(msg: str) void)
+        \\print = foreign_import("console", "log", fn(msg: []u8) void)
         \\
         \\start = fn() void {
         \\    print("hello world")
         \\}
     ;
-    const actual = try mantis.testing.typeInfer(allocator, source, "start");
+    const actual = try mantis.testing.typeInferVerbose(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = print, type = fn(str) void }
+        \\    name = symbol{ value = print, type = fn([]u8) void }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        foreign_import =
         \\            module = "console"
         \\            name = "log"
-        \\            type = fn(str) void
+        \\            type = fn([]u8) void
         \\
         \\define =
         \\    name = symbol{ value = start, type = fn() void }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            return_type = void
-        \\            body = 
+        \\            body =
         \\                call =
-        \\                    symbol{ value = print, type = fn(str) void }
+        \\                    name = symbol{ value = print, type = fn([]u8) void }
         \\                    arguments =
-        \\                        string{ value = "hello world", type = str }
+        \\                        string{ value = "hello world", type = []u8 }
         \\                    type = void
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -187,16 +191,18 @@ test "type check export" {
     const expected =
         \\foreign_export =
         \\    name = "double"
-        \\    value = 
+        \\    value =
         \\        function =
         \\            parameters =
         \\                symbol{ value = x, type = i32 }
         \\            return_type = i32
-        \\            body = 
+        \\            body =
         \\                binary_op =
         \\                    kind = *
-        \\                    left = symbol{ value = x, type = i32 }
-        \\                    right = int{ value = 2, type = i32 }
+        \\                    left =
+        \\                        symbol{ value = x, type = i32 }
+        \\                    right =
+        \\                        int{ value = 2, type = i32 }
         \\                    type = i32
         \\    type = void
     ;
@@ -218,21 +224,25 @@ test "type check named export" {
         \\define =
         \\    name = symbol{ value = double, type = fn(i32) i32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            parameters =
         \\                symbol{ value = x, type = i32 }
         \\            return_type = i32
-        \\            body = 
+        \\            body =
         \\                binary_op =
         \\                    kind = *
-        \\                    left = symbol{ value = x, type = i32 }
-        \\                    right = int{ value = 2, type = i32 }
+        \\                    left =
+        \\                        symbol{ value = x, type = i32 }
+        \\                    right =
+        \\                        int{ value = 2, type = i32 }
         \\                    type = i32
         \\
         \\foreign_export =
         \\    name = "double"
-        \\    value = symbol{ value = double, type = fn(i32) i32 }
+        \\    value =
+        \\        symbol{ value = double, type = fn(i32) i32 }
         \\    type = void
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -295,11 +305,13 @@ test "codegen named foreign export" {
 test "codegen hello world" {
     const allocator = std.testing.allocator;
     const source =
-        \\fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, text: str, count: i32, out: i32) i32)
+        \\fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, text: []u8, count: i32, out: i32) i32)
+        \\
+        \\stdout: i32 = 1
         \\
         \\start = fn() i32 {
-        \\    stdout = 1
         \\    text = "Hello, World!"
+        \\    mut nwritten: i32 = undefined
         \\    fd_write(stdout, text, 1, 200)
         \\}
     ;
@@ -316,12 +328,12 @@ test "codegen hello world" {
         \\
         \\    (data (i32.const 0) "Hello, World!")
         \\
+        \\    (global $stdout i32 (i32.const 1))
+        \\
         \\    (func $start (result i32)
-        \\        (local $stdout i32)
-        \\        (local $0 i32)
         \\        (local $text i32)
-        \\        (local.set $stdout
-        \\            (i32.const 1))
+        \\        (local $0 i32)
+        \\        (local $nwritten i32)
         \\        (local.set $text
         \\            (block (result i32)
         \\                (local.set $0
@@ -340,7 +352,7 @@ test "codegen hello world" {
         \\                        (i32.const 8)))
         \\                (local.get $0)))
         \\        (call $fd_write
-        \\            (local.get $stdout)
+        \\            (global.get $stdout)
         \\            (local.get $text)
         \\            (i32.const 1)
         \\            (i32.const 200)))

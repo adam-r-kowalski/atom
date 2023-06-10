@@ -78,27 +78,31 @@ test "type infer define then call" {
         \\define =
         \\    name = symbol{ value = double, type = fn(i32) i32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            parameters =
         \\                symbol{ value = x, type = i32 }
         \\            return_type = i32
-        \\            body = 
+        \\            body =
         \\                binary_op =
         \\                    kind = *
-        \\                    left = symbol{ value = x, type = i32 }
-        \\                    right = int{ value = 2, type = i32 }
+        \\                    left =
+        \\                        symbol{ value = x, type = i32 }
+        \\                    right =
+        \\                        int{ value = 2, type = i32 }
         \\                    type = i32
         \\
         \\define =
         \\    name = symbol{ value = start, type = fn() i32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            return_type = i32
-        \\            body = 
+        \\            body =
         \\                call =
-        \\                    symbol{ value = double, type = fn(i32) i32 }
+        \\                    name = symbol{ value = double, type = fn(i32) i32 }
         \\                    arguments =
         \\                        int{ value = 2, type = i32 }
         \\                    type = i32
@@ -191,27 +195,31 @@ test "type infer dot call" {
         \\define =
         \\    name = symbol{ value = double, type = fn(i32) i32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            parameters =
         \\                symbol{ value = x, type = i32 }
         \\            return_type = i32
-        \\            body = 
+        \\            body =
         \\                binary_op =
         \\                    kind = *
-        \\                    left = symbol{ value = x, type = i32 }
-        \\                    right = int{ value = 2, type = i32 }
+        \\                    left =
+        \\                        symbol{ value = x, type = i32 }
+        \\                    right =
+        \\                        int{ value = 2, type = i32 }
         \\                    type = i32
         \\
         \\define =
         \\    name = symbol{ value = start, type = fn() i32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            return_type = i32
-        \\            body = 
+        \\            body =
         \\                call =
-        \\                    symbol{ value = double, type = fn(i32) i32 }
+        \\                    name = symbol{ value = double, type = fn(i32) i32 }
         \\                    arguments =
         \\                        int{ value = 2, type = i32 }
         \\                    type = i32

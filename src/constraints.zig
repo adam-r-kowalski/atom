@@ -55,11 +55,13 @@ pub const Equal = struct {
                 });
             for (self.left.type.function, 0..) |left, i| {
                 const right = self.right.type.function[i];
-                try (Equal{
+                const constraint = Equal{
                     .left = .{ .type = left, .span = null },
                     .right = .{ .type = right, .span = null },
-                }).solve(s, compile_errors);
+                };
+                try constraint.solve(s, compile_errors);
             }
+            return;
         }
         if (left_tag == right_tag)
             return;
@@ -75,13 +77,9 @@ pub const Equal = struct {
     pub fn format(self: Equal, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = fmt;
         _ = options;
-        try writer.writeAll("equal = ");
-        try (Indent{ .value = 1 }).toString(writer);
-        try writer.writeAll("left = ");
-        try self.left.toString(writer);
-        try (Indent{ .value = 1 }).toString(writer);
-        try writer.writeAll("right = ");
-        try self.right.toString(writer);
+        try writer.writeAll("equal = {}");
+        try writer.print("{}left = {}", .{ Indent{ .value = 1 }, self.left.type });
+        try writer.print("{}right = {}", .{ Indent{ .value = 1 }, self.right.type });
     }
 };
 

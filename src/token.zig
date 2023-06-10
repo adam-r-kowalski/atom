@@ -119,6 +119,17 @@ pub const Plus = struct {
     }
 };
 
+pub const PlusEqual = struct {
+    span: Span,
+
+    pub fn format(self: PlusEqual, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = self;
+        _ = options;
+        _ = fmt;
+        try writer.writeAll("(operator +=)");
+    }
+};
+
 pub const Minus = struct {
     span: Span,
 
@@ -240,6 +251,28 @@ pub const RightBrace = struct {
     }
 };
 
+pub const LeftBracket = struct {
+    span: Span,
+
+    pub fn format(self: LeftBracket, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = self;
+        _ = options;
+        _ = fmt;
+        try writer.writeAll("(delimiter '[')");
+    }
+};
+
+pub const RightBracket = struct {
+    span: Span,
+
+    pub fn format(self: RightBracket, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = self;
+        _ = options;
+        _ = fmt;
+        try writer.writeAll("(delimiter ']')");
+    }
+};
+
 pub const If = struct {
     span: Span,
 
@@ -295,6 +328,28 @@ pub const Fn = struct {
     }
 };
 
+pub const Mut = struct {
+    span: Span,
+
+    pub fn format(self: Mut, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = self;
+        _ = options;
+        _ = fmt;
+        try writer.writeAll("(keyword mut)");
+    }
+};
+
+pub const Undefined = struct {
+    span: Span,
+
+    pub fn format(self: Undefined, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = self;
+        _ = options;
+        _ = fmt;
+        try writer.writeAll("(keyword undefined)");
+    }
+};
+
 pub const NewLine = struct {
     span: Span,
 
@@ -317,6 +372,7 @@ pub const Token = union(enum) {
     dot: Dot,
     colon: Colon,
     plus: Plus,
+    plus_equal: PlusEqual,
     minus: Minus,
     times: Times,
     slash: Slash,
@@ -328,11 +384,15 @@ pub const Token = union(enum) {
     right_paren: RightParen,
     left_brace: LeftBrace,
     right_brace: RightBrace,
+    left_bracket: LeftBracket,
+    right_bracket: RightBracket,
     if_: If,
     else_: Else,
     or_: Or,
     comma: Comma,
     fn_: Fn,
+    mut: Mut,
+    undefined: Undefined,
     new_line: NewLine,
 
     pub fn span(self: Token) Span {
@@ -347,6 +407,7 @@ pub const Token = union(enum) {
             .dot => |t| t.span,
             .colon => |t| t.span,
             .plus => |t| t.span,
+            .plus_equal => |t| t.span,
             .minus => |t| t.span,
             .times => |t| t.span,
             .slash => |t| t.span,
@@ -358,11 +419,15 @@ pub const Token = union(enum) {
             .right_paren => |t| t.span,
             .left_brace => |t| t.span,
             .right_brace => |t| t.span,
+            .left_bracket => |t| t.span,
+            .right_bracket => |t| t.span,
             .if_ => |t| t.span,
             .else_ => |t| t.span,
             .or_ => |t| t.span,
             .comma => |t| t.span,
             .fn_ => |t| t.span,
+            .mut => |t| t.span,
+            .undefined => |t| t.span,
             .new_line => |t| t.span,
         };
     }
@@ -381,6 +446,7 @@ pub const Token = union(enum) {
             .dot => |d| try writer.print("{}", .{d}),
             .colon => |c| try writer.print("{}", .{c}),
             .plus => |p| try writer.print("{}", .{p}),
+            .plus_equal => |e| try writer.print("{}", .{e}),
             .minus => |m| try writer.print("{}", .{m}),
             .times => |t| try writer.print("{}", .{t}),
             .slash => |s| try writer.print("{}", .{s}),
@@ -392,11 +458,15 @@ pub const Token = union(enum) {
             .right_paren => |r| try writer.print("{}", .{r}),
             .left_brace => |l| try writer.print("{}", .{l}),
             .right_brace => |r| try writer.print("{}", .{r}),
+            .left_bracket => |l| try writer.print("{}", .{l}),
+            .right_bracket => |r| try writer.print("{}", .{r}),
             .if_ => |i| try writer.print("{}", .{i}),
             .else_ => |e| try writer.print("{}", .{e}),
             .or_ => |o| try writer.print("{}", .{o}),
             .comma => |c| try writer.print("{}", .{c}),
             .fn_ => |f| try writer.print("{}", .{f}),
+            .mut => |f| try writer.print("{}", .{f}),
+            .undefined => |f| try writer.print("{}", .{f}),
             .new_line => |n| try writer.print("{}", .{n}),
         }
     }
@@ -455,6 +525,7 @@ pub const Tokens = struct {
                 .dot => try writer.writeAll("."),
                 .colon => try writer.writeAll(":"),
                 .plus => try writer.writeAll("+"),
+                .plus_equal => try writer.writeAll("+="),
                 .minus => try writer.writeAll("-"),
                 .times => try writer.writeAll("*"),
                 .slash => try writer.writeAll("/"),
@@ -466,11 +537,15 @@ pub const Tokens = struct {
                 .right_paren => try writer.writeAll(")"),
                 .left_brace => try writer.writeAll("{"),
                 .right_brace => try writer.writeAll("}"),
+                .left_bracket => try writer.writeAll("["),
+                .right_bracket => try writer.writeAll("]"),
                 .if_ => try writer.writeAll("if"),
                 .else_ => try writer.writeAll("else"),
                 .or_ => try writer.writeAll("or"),
                 .comma => try writer.writeAll(","),
                 .fn_ => try writer.writeAll("fn"),
+                .mut => try writer.writeAll("mut"),
+                .undefined => try writer.writeAll("undefined"),
                 .new_line => {},
             }
         }

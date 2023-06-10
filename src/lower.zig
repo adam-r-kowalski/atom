@@ -14,6 +14,7 @@ const Expression = ir.Expression;
 const Local = ir.Local;
 const Function = ir.Function;
 const Import = ir.Import;
+const Global = ir.Global;
 const DataSegment = ir.DataSegment;
 const Export = ir.Export;
 const Parameter = ir.Parameter;
@@ -47,7 +48,7 @@ fn mapType(monotype: MonoType) Type {
         .f64 => return .f64,
         .bool => return .i32,
         .void => return .void,
-        .str => return .i32,
+        .array => return .i32,
         else => std.debug.panic("\nMonotype {} not yet supported", .{monotype}),
     }
 }
@@ -201,6 +202,7 @@ fn binaryOp(context: Context, b: typed_ast.BinaryOp) !Expression {
 }
 
 fn symbol(s: typed_ast.Symbol) Expression {
+    if (s.global) return Expression{ .global_get = .{ .name = s.value } };
     return Expression{ .local_get = .{ .name = s.value } };
 }
 
@@ -264,9 +266,14 @@ fn branch(context: Context, b: typed_ast.Branch) !Expression {
 
 fn define(context: Context, d: typed_ast.Define) !Expression {
     const name = d.name.value;
-    const value = try expressionAlloc(context, d.value.*);
     try context.locals.append(Local{ .name = name, .type = mapType(d.name.type) });
-    return Expression{ .local_set = .{ .name = name, .value = value } };
+    switch (d.value.*) {
+        .undefined => return .nop,
+        else => {
+            const value = try expressionAlloc(context, d.value.*);
+            return Expression{ .local_set = .{ .name = name, .value = value } };
+        },
+    }
 }
 
 fn convert(context: Context, c: typed_ast.Convert) !Expression {
@@ -410,6 +417,7 @@ pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
     var functions = std.ArrayList(Function).init(allocator);
     var imports = std.ArrayList(Import).init(allocator);
     var data_segment = DataSegment.init(allocator);
+    var globals = std.ArrayList(Global).init(allocator);
     var exports = std.ArrayList(Export).init(allocator);
     for (module.order) |name| {
         if (module.typed.get(name)) |top_level| {
@@ -424,6 +432,10 @@ pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
                         .foreign_import => |i| {
                             const lowered = try foreignImport(allocator, name_symbol, i);
                             try imports.append(lowered);
+                        },
+                        .int => |i| {
+                            const lowered = try int(i);
+                            try globals.append(.{ .name = name_symbol, .type = mapType(d.name.type), .value = lowered });
                         },
                         else => |e| std.debug.panic("\nTop level kind {} no yet supported", .{e}),
                     }
@@ -448,6 +460,7 @@ pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
     return IR{
         .functions = try functions.toOwnedSlice(),
         .imports = try imports.toOwnedSlice(),
+        .globals = try globals.toOwnedSlice(),
         .data_segment = data_segment,
         .exports = try exports.toOwnedSlice(),
     };

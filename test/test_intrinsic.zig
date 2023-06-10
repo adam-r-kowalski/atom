@@ -14,12 +14,13 @@ test "type infer sqrt f32" {
         \\define =
         \\    name = symbol{ value = start, type = fn(f32) f32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            parameters =
         \\                symbol{ value = x, type = f32 }
         \\            return_type = f32
-        \\            body = 
+        \\            body =
         \\                intrinsic =
         \\                    sqrt
         \\                    arguments =
