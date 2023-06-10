@@ -276,6 +276,20 @@ fn define(context: Context, d: typed_ast.Define) !Expression {
     }
 }
 
+fn addAssign(context: Context, a: typed_ast.AddAssign) !Expression {
+    var left = typed_ast.Expression{ .symbol = a.name };
+    const binary_op = typed_ast.BinaryOp{
+        .kind = .add,
+        .left = &left,
+        .right = a.value,
+        .span = a.span,
+        .type = a.value.typeOf(),
+    };
+    const value = try context.allocator.create(Expression);
+    value.* = try binaryOp(context, binary_op);
+    return Expression{ .local_set = .{ .name = a.name.value, .value = value } };
+}
+
 fn convert(context: Context, c: typed_ast.Convert) !Expression {
     const value = try expressionAlloc(context, c.value.*);
     switch (c.value.typeOf()) {
@@ -357,6 +371,7 @@ fn expression(context: Context, e: typed_ast.Expression) error{ OutOfMemory, Inv
         .intrinsic => |i| return try intrinsic(context, i),
         .branch => |b| return try branch(context, b),
         .define => |d| return try define(context, d),
+        .add_assign => |a| return try addAssign(context, a),
         .convert => |c| return try convert(context, c),
         .string => |s| return try string(context, s),
         else => |k| std.debug.panic("\nExpression {} not yet supported", .{k}),
