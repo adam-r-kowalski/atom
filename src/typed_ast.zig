@@ -83,7 +83,6 @@ pub const Scopes = struct {
                 .in_scope = try in_scope.toOwnedSlice(),
             },
         });
-        std.debug.panic("\n{}\n", .{symbol.value});
         return error.CompileError;
     }
 };
@@ -123,6 +122,8 @@ pub const Float = struct {
 pub const Symbol = struct {
     value: Interned,
     span: Span,
+    global: bool,
+    mutable: bool,
     type: MonoType,
 
     pub fn apply(self: *Symbol, s: Substitution) void {
@@ -174,7 +175,7 @@ pub const Define = struct {
     }
 
     fn toString(self: Define, writer: anytype, indent: Indent) !void {
-        try writer.print("define ={}name = {}{}type = {}{}mutable = {}{}value = ", .{
+        try writer.print("define ={}name = {}{}type = {}{}mutable = {}{}value ={}", .{
             indent.add(1),
             self.name,
             indent.add(1),
@@ -182,6 +183,7 @@ pub const Define = struct {
             indent.add(1),
             self.mutable,
             indent.add(1),
+            indent.add(2),
         });
         try self.value.toString(writer, indent.add(2));
     }
@@ -206,7 +208,7 @@ pub const AddAssign = struct {
     }
 
     fn toString(self: AddAssign, writer: anytype, indent: Indent) !void {
-        try writer.print("add_assign ={}name = {}{}type = {}{}value = ", .{
+        try writer.print("add_assign ={}name = {}{}type = {}{}value =", .{
             indent.add(1),
             self.name,
             indent.add(1),
@@ -216,7 +218,7 @@ pub const AddAssign = struct {
         try self.value.toString(writer, indent.add(2));
     }
 
-    pub fn format(self: Define, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+    pub fn format(self: AddAssign, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = options;
         _ = fmt;
         try self.toString(writer, Indent{ .value = 0 });
@@ -234,8 +236,10 @@ pub const Block = struct {
     }
 
     fn toString(self: Block, writer: anytype, indent: Indent) !void {
-        for (self.expressions) |expr| {
-            try writer.print("{}", .{indent});
+        for (self.expressions, 0..) |expr, i| {
+            if (i != 0) {
+                try writer.print("{}", .{indent});
+            }
             try expr.toString(writer, indent);
         }
     }
@@ -262,13 +266,14 @@ pub const Function = struct {
     }
 
     fn toString(self: Function, writer: anytype, indent: Indent) !void {
-        try writer.print("{}function =", .{indent});
+        try writer.print("function =", .{});
         if (self.parameters.len != 0) try writer.print("{}parameters =", .{indent.add(1)});
         for (self.parameters) |p| try writer.print("{}{}", .{ indent.add(2), p });
-        try writer.print("{}return_type = {}{}body = ", .{
+        try writer.print("{}return_type = {}{}body ={}", .{
             indent.add(1),
             self.return_type,
             indent.add(1),
+            indent.add(2),
         });
         try self.body.toString(writer, indent.add(2));
     }
@@ -294,15 +299,16 @@ pub const BinaryOp = struct {
     }
 
     fn toString(self: BinaryOp, writer: anytype, indent: Indent) !void {
-        try writer.print("{}", .{indent});
         try writer.writeAll("binary_op =");
         try writer.print("{}", .{indent.add(1)});
         try writer.print("kind = {}", .{self.kind});
         try writer.print("{}", .{indent.add(1)});
-        try writer.writeAll("left = ");
+        try writer.writeAll("left =");
+        try writer.print("{}", .{indent.add(2)});
         try self.left.toString(writer, indent.add(2));
         try writer.print("{}", .{indent.add(1)});
-        try writer.writeAll("right = ");
+        try writer.writeAll("right =");
+        try writer.print("{}", .{indent.add(2)});
         try self.right.toString(writer, indent.add(2));
         try writer.print("{}", .{indent.add(1)});
         try writer.print("type = {}", .{self.type});
@@ -319,9 +325,9 @@ pub const Arm = struct {
     }
 
     fn toString(self: Arm, writer: anytype, indent: Indent) !void {
-        try writer.print("{}condition = ", .{indent});
+        try writer.print("{}condition ={}", .{ indent, indent.add(1) });
         try self.condition.toString(writer, indent.add(1));
-        try writer.print("{}then = ", .{indent});
+        try writer.print("{}then ={}", .{ indent, indent.add(1) });
         try self.then.toString(writer, indent.add(1));
     }
 };
@@ -339,10 +345,9 @@ pub const Branch = struct {
     }
 
     fn toString(self: Branch, writer: anytype, indent: Indent) !void {
-        try writer.print("{}", .{indent});
         try writer.writeAll("branch =");
         for (self.arms) |arm| try arm.toString(writer, indent.add(1));
-        try writer.print("{}else = ", .{indent.add(1)});
+        try writer.print("{}else ={}", .{ indent.add(1), indent.add(2) });
         try self.else_.toString(writer, indent.add(2));
         try writer.print("{}type = {}", .{ indent.add(1), self.type });
     }
@@ -361,7 +366,7 @@ pub const Call = struct {
     }
 
     fn toString(self: Call, writer: anytype, indent: Indent) !void {
-        try writer.print("{}call ={}", .{ indent, indent.add(1) });
+        try writer.print("call ={}name = ", .{indent.add(1)});
         try self.function.toString(writer, indent.add(2));
         try writer.print("{}arguments =", .{indent.add(1)});
         for (self.arguments) |a| {
@@ -384,8 +389,7 @@ pub const Intrinsic = struct {
     }
 
     fn toString(self: Intrinsic, writer: anytype, indent: Indent) !void {
-        try writer.print("{}intrinsic ={}{}{}arguments =", .{
-            indent,
+        try writer.print("intrinsic ={}{}{}arguments =", .{
             indent.add(1),
             self.function,
             indent.add(1),
@@ -429,7 +433,6 @@ pub const ForeignImport = struct {
     type: MonoType,
 
     fn toString(self: ForeignImport, writer: anytype, indent: Indent) !void {
-        try writer.print("{}", .{indent});
         try writer.writeAll("foreign_import =");
         try writer.print("{}", .{indent.add(1)});
         try writer.print("module = {}", .{self.module});
@@ -451,7 +454,7 @@ pub const ForeignExport = struct {
         try writer.writeAll("foreign_export =");
         try writer.print("{}", .{indent.add(1)});
         try writer.print("name = {}", .{self.name});
-        try writer.print("{}value = ", .{indent.add(1)});
+        try writer.print("{}value ={}", .{ indent.add(1), indent.add(2) });
         try self.value.toString(writer, indent.add(2));
         try writer.print("{}", .{indent.add(1)});
         try writer.print("type = {}", .{self.type});
@@ -469,7 +472,6 @@ pub const Convert = struct {
     type: MonoType,
 
     fn toString(self: Convert, writer: anytype, indent: Indent) !void {
-        try writer.print("{}", .{indent});
         try writer.writeAll("convert =");
         try writer.print("{}", .{indent.add(1)});
         try writer.print("value = ", .{});

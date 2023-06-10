@@ -97,7 +97,7 @@ test "parse grouped greater" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "type infer add i32 boo" {
+test "type infer add i32" {
     const allocator = std.testing.allocator;
     const source = "add = fn(x: i32, y: i32) i32 { x + y }";
     const actual = try mantis.testing.typeInfer(allocator, source, "add");
@@ -106,17 +106,20 @@ test "type infer add i32 boo" {
         \\define =
         \\    name = symbol{ value = add, type = fn(i32, i32) i32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            parameters =
         \\                symbol{ value = x, type = i32 }
         \\                symbol{ value = y, type = i32 }
         \\            return_type = i32
-        \\            body = 
+        \\            body =
         \\                binary_op =
         \\                    kind = +
-        \\                    left = symbol{ value = x, type = i32 }
-        \\                    right = symbol{ value = y, type = i32 }
+        \\                    left =
+        \\                        symbol{ value = x, type = i32 }
+        \\                    right =
+        \\                        symbol{ value = y, type = i32 }
         \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -131,17 +134,20 @@ test "type infer binary op multiply" {
         \\define =
         \\    name = symbol{ value = multiply, type = fn(i32, i32) i32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            parameters =
         \\                symbol{ value = x, type = i32 }
         \\                symbol{ value = y, type = i32 }
         \\            return_type = i32
-        \\            body = 
+        \\            body =
         \\                binary_op =
         \\                    kind = *
-        \\                    left = symbol{ value = x, type = i32 }
-        \\                    right = symbol{ value = y, type = i32 }
+        \\                    left =
+        \\                        symbol{ value = x, type = i32 }
+        \\                    right =
+        \\                        symbol{ value = y, type = i32 }
         \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -156,17 +162,20 @@ test "type infer divide i32" {
         \\define =
         \\    name = symbol{ value = div, type = fn(i32, i32) i32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            parameters =
         \\                symbol{ value = x, type = i32 }
         \\                symbol{ value = y, type = i32 }
         \\            return_type = i32
-        \\            body = 
+        \\            body =
         \\                binary_op =
         \\                    kind = /
-        \\                    left = symbol{ value = x, type = i32 }
-        \\                    right = symbol{ value = y, type = i32 }
+        \\                    left =
+        \\                        symbol{ value = x, type = i32 }
+        \\                    right =
+        \\                        symbol{ value = y, type = i32 }
         \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -181,23 +190,27 @@ test "type infer binary op multiply then add" {
         \\define =
         \\    name = symbol{ value = f, type = fn(i32, i32, i32) i32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            parameters =
         \\                symbol{ value = x, type = i32 }
         \\                symbol{ value = y, type = i32 }
         \\                symbol{ value = z, type = i32 }
         \\            return_type = i32
-        \\            body = 
+        \\            body =
         \\                binary_op =
         \\                    kind = +
-        \\                    left = 
+        \\                    left =
         \\                        binary_op =
         \\                            kind = *
-        \\                            left = symbol{ value = x, type = i32 }
-        \\                            right = symbol{ value = y, type = i32 }
+        \\                            left =
+        \\                                symbol{ value = x, type = i32 }
+        \\                            right =
+        \\                                symbol{ value = y, type = i32 }
         \\                            type = i32
-        \\                    right = symbol{ value = z, type = i32 }
+        \\                    right =
+        \\                        symbol{ value = z, type = i32 }
         \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);

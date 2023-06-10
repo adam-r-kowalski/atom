@@ -14,12 +14,13 @@ test "type infer convert i32 to f32" {
         \\define =
         \\    name = symbol{ value = start, type = fn(i32) f32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            parameters =
         \\                symbol{ value = x, type = i32 }
         \\            return_type = f32
-        \\            body = 
+        \\            body =
         \\                convert =
         \\                    value = symbol{ value = x, type = i32 }
         \\                    type = f32

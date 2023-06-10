@@ -134,35 +134,44 @@ test "infer type of define based on body" {
         \\define =
         \\    name = symbol{ value = sum_of_squares, type = fn(i32, i32) i32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            parameters =
         \\                symbol{ value = x, type = i32 }
         \\                symbol{ value = y, type = i32 }
         \\            return_type = i32
-        \\            body = 
+        \\            body =
         \\                define =
         \\                    name = symbol{ value = a, type = i32 }
         \\                    type = void
-        \\                    value = 
+        \\                    mutable = false
+        \\                    value =
         \\                        binary_op =
         \\                            kind = *
-        \\                            left = symbol{ value = x, type = i32 }
-        \\                            right = symbol{ value = x, type = i32 }
+        \\                            left =
+        \\                                symbol{ value = x, type = i32 }
+        \\                            right =
+        \\                                symbol{ value = x, type = i32 }
         \\                            type = i32
         \\                define =
         \\                    name = symbol{ value = b, type = i32 }
         \\                    type = void
-        \\                    value = 
+        \\                    mutable = false
+        \\                    value =
         \\                        binary_op =
         \\                            kind = *
-        \\                            left = symbol{ value = y, type = i32 }
-        \\                            right = symbol{ value = y, type = i32 }
+        \\                            left =
+        \\                                symbol{ value = y, type = i32 }
+        \\                            right =
+        \\                                symbol{ value = y, type = i32 }
         \\                            type = i32
         \\                binary_op =
         \\                    kind = +
-        \\                    left = symbol{ value = a, type = i32 }
-        \\                    right = symbol{ value = b, type = i32 }
+        \\                    left =
+        \\                        symbol{ value = a, type = i32 }
+        \\                    right =
+        \\                        symbol{ value = b, type = i32 }
         \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -210,35 +219,44 @@ test "type infer nested define" {
         \\define =
         \\    name = symbol{ value = f, type = fn(i32, i32) i32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            parameters =
         \\                symbol{ value = x, type = i32 }
         \\                symbol{ value = y, type = i32 }
         \\            return_type = i32
-        \\            body = 
+        \\            body =
         \\                define =
         \\                    name = symbol{ value = a, type = i32 }
         \\                    type = void
-        \\                    value = 
+        \\                    mutable = false
+        \\                    value =
         \\                        define =
         \\                            name = symbol{ value = b, type = i32 }
         \\                            type = void
-        \\                            value = 
+        \\                            mutable = false
+        \\                            value =
         \\                                binary_op =
         \\                                    kind = *
-        \\                                    left = symbol{ value = y, type = i32 }
-        \\                                    right = symbol{ value = y, type = i32 }
+        \\                                    left =
+        \\                                        symbol{ value = y, type = i32 }
+        \\                                    right =
+        \\                                        symbol{ value = y, type = i32 }
         \\                                    type = i32
         \\                        binary_op =
         \\                            kind = +
-        \\                            left = symbol{ value = b, type = i32 }
-        \\                            right = symbol{ value = x, type = i32 }
+        \\                            left =
+        \\                                symbol{ value = b, type = i32 }
+        \\                            right =
+        \\                                symbol{ value = x, type = i32 }
         \\                            type = i32
         \\                binary_op =
         \\                    kind = +
-        \\                    left = symbol{ value = a, type = i32 }
-        \\                    right = symbol{ value = x, type = i32 }
+        \\                    left =
+        \\                        symbol{ value = a, type = i32 }
+        \\                    right =
+        \\                        symbol{ value = x, type = i32 }
         \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);

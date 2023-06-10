@@ -59,7 +59,8 @@ test "type check import" {
         \\define =
         \\    name = symbol{ value = print, type = fn([]u8) void }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        foreign_import =
         \\            module = "console"
         \\            name = "log"
@@ -68,12 +69,13 @@ test "type check import" {
         \\define =
         \\    name = symbol{ value = start, type = fn() void }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            return_type = void
-        \\            body = 
+        \\            body =
         \\                call =
-        \\                    symbol{ value = print, type = fn([]u8) void }
+        \\                    name = symbol{ value = print, type = fn([]u8) void }
         \\                    arguments =
         \\                        string{ value = "hello world", type = []u8 }
         \\                    type = void
@@ -189,16 +191,18 @@ test "type check export" {
     const expected =
         \\foreign_export =
         \\    name = "double"
-        \\    value = 
+        \\    value =
         \\        function =
         \\            parameters =
         \\                symbol{ value = x, type = i32 }
         \\            return_type = i32
-        \\            body = 
+        \\            body =
         \\                binary_op =
         \\                    kind = *
-        \\                    left = symbol{ value = x, type = i32 }
-        \\                    right = int{ value = 2, type = i32 }
+        \\                    left =
+        \\                        symbol{ value = x, type = i32 }
+        \\                    right =
+        \\                        int{ value = 2, type = i32 }
         \\                    type = i32
         \\    type = void
     ;
@@ -220,21 +224,25 @@ test "type check named export" {
         \\define =
         \\    name = symbol{ value = double, type = fn(i32) i32 }
         \\    type = void
-        \\    value = 
+        \\    mutable = false
+        \\    value =
         \\        function =
         \\            parameters =
         \\                symbol{ value = x, type = i32 }
         \\            return_type = i32
-        \\            body = 
+        \\            body =
         \\                binary_op =
         \\                    kind = *
-        \\                    left = symbol{ value = x, type = i32 }
-        \\                    right = int{ value = 2, type = i32 }
+        \\                    left =
+        \\                        symbol{ value = x, type = i32 }
+        \\                    right =
+        \\                        int{ value = 2, type = i32 }
         \\                    type = i32
         \\
         \\foreign_export =
         \\    name = "double"
-        \\    value = symbol{ value = double, type = fn(i32) i32 }
+        \\    value =
+        \\        symbol{ value = double, type = fn(i32) i32 }
         \\    type = void
     ;
     try std.testing.expectEqualStrings(expected, actual);

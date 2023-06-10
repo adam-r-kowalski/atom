@@ -46,6 +46,8 @@ fn symbol(scopes: Scopes, s: ast.Symbol) !Symbol {
         .value = s.value,
         .span = s.span,
         .type = binding.type,
+        .mutable = binding.mutable,
+        .global = binding.global,
     };
 }
 
@@ -204,6 +206,8 @@ fn define(context: Context, d: ast.Define) !Define {
         .value = d.name.value,
         .span = d.span,
         .type = monotype,
+        .global = false,
+        .mutable = false,
     };
     try context.scopes.put(name.value, binding);
     return Define{
@@ -227,6 +231,8 @@ fn addAssign(context: Context, d: ast.AddAssign) !AddAssign {
         .value = d.name.value,
         .span = d.span,
         .type = monotype,
+        .global = false,
+        .mutable = false,
     };
     try context.scopes.put(name.value, binding);
     return AddAssign{
@@ -344,6 +350,8 @@ fn function(context: Context, f: ast.Function) !Function {
             .value = name_symbol,
             .span = span,
             .type = p_type,
+            .global = false,
+            .mutable = false,
         };
         try context.scopes.put(name_symbol, binding);
         t.* = p_type;
