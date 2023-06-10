@@ -26,6 +26,7 @@ const Parameter = ast.Parameter;
 const Symbol = ast.Symbol;
 const BinaryOpKind = ast.BinaryOpKind;
 const Define = ast.Define;
+const AddAssign = ast.AddAssign;
 const BinaryOp = ast.BinaryOp;
 const Call = ast.Call;
 const Module = ast.Module;
@@ -232,6 +233,7 @@ fn mutable(context: Context, begin: Pos) !Define {
         .name = name,
         .type = type_,
         .value = value,
+        .mutable = true,
         .span = Span{
             .begin = begin,
             .end = value.span().end,
@@ -264,6 +266,20 @@ fn define(context: Context, name: Symbol) !Define {
         .name = name,
         .type = null,
         .value = value,
+        .mutable = false,
+        .span = Span{
+            .begin = name.span.begin,
+            .end = value.span().end,
+        },
+    };
+}
+
+fn addAssign(context: Context, name: Symbol) !AddAssign {
+    context.tokens.advance();
+    const value = try expressionAlloc(withPrecedence(context, DEFINE + 1));
+    return AddAssign{
+        .name = name,
+        .value = value,
         .span = Span{
             .begin = name.span.begin,
             .end = value.span().end,
@@ -280,6 +296,7 @@ fn annotate(context: Context, name: Symbol) !Define {
         .name = name,
         .type = type_,
         .value = value,
+        .mutable = false,
         .span = Span{
             .begin = name.span.begin,
             .end = value.span().end,
@@ -351,6 +368,7 @@ fn arrayOf(context: Context, left: Expression) !ArrayOf {
 
 const Infix = union(enum) {
     define,
+    add_assign,
     annotate,
     call,
     array_of,
@@ -359,6 +377,7 @@ const Infix = union(enum) {
     fn precedence(self: Infix) Precedence {
         return switch (self) {
             .define => DEFINE,
+            .add_assign => DEFINE,
             .annotate => DEFINE,
             .call => CALL,
             .array_of => ARRAY_OF,
@@ -369,6 +388,7 @@ const Infix = union(enum) {
     fn associativity(self: Infix) Associativity {
         return switch (self) {
             .define => .right,
+            .add_assign => .right,
             .annotate => .right,
             .call => .left,
             .array_of => .right,
@@ -381,6 +401,7 @@ fn infix(context: Context, left: Expression) ?Infix {
     if (context.tokens.peek()) |t| {
         return switch (t) {
             .equal => .define,
+            .plus_equal => .add_assign,
             .colon => .annotate,
             .plus => .{ .binary_op = .add },
             .minus => .{ .binary_op = .subtract },
@@ -410,6 +431,7 @@ fn infix(context: Context, left: Expression) ?Infix {
 fn parseInfix(parser: Infix, context: Context, left: Expression) !Expression {
     return switch (parser) {
         .define => .{ .define = try define(context, left.symbol) },
+        .add_assign => .{ .add_assign = try addAssign(context, left.symbol) },
         .annotate => .{ .define = try annotate(context, left.symbol) },
         .call => .{ .call = try call(context, left) },
         .array_of => .{ .array_of = try arrayOf(context, left) },

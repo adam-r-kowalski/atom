@@ -37,10 +37,13 @@ pub const Define = struct {
     name: Symbol,
     type: ?*const Expression,
     value: *const Expression,
+    mutable: bool,
     span: Span,
 
     fn toString(self: Define, writer: anytype, indent: Indent) !void {
-        try writer.print("(def {}", .{self.name.value});
+        try writer.writeAll("(def ");
+        if (self.mutable) try writer.writeAll("mut ");
+        try writer.print("{}", .{self.name.value});
         if (self.type) |t| {
             try writer.print(" {}", .{t});
         }
@@ -50,6 +53,24 @@ pub const Define = struct {
     }
 
     pub fn format(self: Define, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = fmt;
+        _ = options;
+        try self.toString(writer, Indent{ .value = 0 });
+    }
+};
+
+pub const AddAssign = struct {
+    name: Symbol,
+    value: *const Expression,
+    span: Span,
+
+    fn toString(self: AddAssign, writer: anytype, indent: Indent) !void {
+        try writer.print("(+= {} ", .{self.name.value});
+        try self.value.toString(writer, indent.add(1));
+        try writer.writeAll(")");
+    }
+
+    pub fn format(self: AddAssign, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = fmt;
         _ = options;
         try self.toString(writer, Indent{ .value = 0 });
@@ -329,6 +350,7 @@ pub const Expression = union(enum) {
     string: String,
     bool: Bool,
     define: Define,
+    add_assign: AddAssign,
     function: Function,
     prototype: Prototype,
     binary_op: BinaryOp,
@@ -348,6 +370,7 @@ pub const Expression = union(enum) {
             .string => |e| e.span,
             .bool => |e| e.span,
             .define => |e| e.span,
+            .add_assign => |e| e.span,
             .function => |e| e.span,
             .prototype => |e| e.span,
             .binary_op => |e| e.span,
@@ -361,7 +384,7 @@ pub const Expression = union(enum) {
         };
     }
 
-    fn toString(self: Expression, writer: anytype, indent: Indent) Error!void {
+    pub fn toString(self: Expression, writer: anytype, indent: Indent) Error!void {
         switch (self) {
             .int => |i| try writer.print("{}", .{i.value}),
             .float => |f| try writer.print("{}", .{f.value}),
@@ -369,6 +392,7 @@ pub const Expression = union(enum) {
             .string => |s| try writer.print("{}", .{s.value}),
             .bool => |b| try writer.print("{}", .{b.value}),
             .define => |d| try d.toString(writer, indent),
+            .add_assign => |a| try a.toString(writer, indent),
             .function => |f| try f.toString(writer, indent),
             .prototype => |p| try writer.print("{}", .{p}),
             .binary_op => |b| try b.toString(writer, indent),

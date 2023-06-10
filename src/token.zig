@@ -119,6 +119,17 @@ pub const Plus = struct {
     }
 };
 
+pub const PlusEqual = struct {
+    span: Span,
+
+    pub fn format(self: PlusEqual, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = self;
+        _ = options;
+        _ = fmt;
+        try writer.writeAll("(operator +=)");
+    }
+};
+
 pub const Minus = struct {
     span: Span,
 
@@ -361,6 +372,7 @@ pub const Token = union(enum) {
     dot: Dot,
     colon: Colon,
     plus: Plus,
+    plus_equal: PlusEqual,
     minus: Minus,
     times: Times,
     slash: Slash,
@@ -395,6 +407,7 @@ pub const Token = union(enum) {
             .dot => |t| t.span,
             .colon => |t| t.span,
             .plus => |t| t.span,
+            .plus_equal => |t| t.span,
             .minus => |t| t.span,
             .times => |t| t.span,
             .slash => |t| t.span,
@@ -433,6 +446,7 @@ pub const Token = union(enum) {
             .dot => |d| try writer.print("{}", .{d}),
             .colon => |c| try writer.print("{}", .{c}),
             .plus => |p| try writer.print("{}", .{p}),
+            .plus_equal => |e| try writer.print("{}", .{e}),
             .minus => |m| try writer.print("{}", .{m}),
             .times => |t| try writer.print("{}", .{t}),
             .slash => |s| try writer.print("{}", .{s}),
@@ -511,6 +525,7 @@ pub const Tokens = struct {
                 .dot => try writer.writeAll("."),
                 .colon => try writer.writeAll(":"),
                 .plus => try writer.writeAll("+"),
+                .plus_equal => try writer.writeAll("+="),
                 .minus => try writer.writeAll("-"),
                 .times => try writer.writeAll("*"),
                 .slash => try writer.writeAll("/"),

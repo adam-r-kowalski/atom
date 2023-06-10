@@ -100,7 +100,6 @@ pub const Substitution = struct {
                 .typevar => |t1| try self.set(t1, result.value_ptr.*),
                 else => switch (result.value_ptr.*) {
                     .typevar => |t1| try self.set(t1, m),
-                    // else => std.debug.panic("\nType mismatch: {} != {}\n", .{ result.value_ptr.*, m }),
                     else => return error.CompileError,
                 },
             }

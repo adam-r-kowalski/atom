@@ -151,7 +151,7 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?Token {
         '"' => try string(intern, cursor),
         '=' => either(cursor, .equal, '=', .equal_equal),
         ':' => exact(cursor, .colon),
-        '+' => exact(cursor, .plus),
+        '+' => either(cursor, .plus, '=', .plus_equal),
         '*' => exact(cursor, .times),
         '/' => exact(cursor, .slash),
         '^' => exact(cursor, .caret),

@@ -26,6 +26,7 @@ const Branch = typed_ast.Branch;
 const Expression = typed_ast.Expression;
 const Block = typed_ast.Block;
 const Define = typed_ast.Define;
+const AddAssign = typed_ast.AddAssign;
 const Function = typed_ast.Function;
 const Undefined = typed_ast.Undefined;
 const Module = typed_ast.Module;
@@ -45,7 +46,6 @@ fn symbol(scopes: Scopes, s: ast.Symbol) !Symbol {
         .value = s.value,
         .span = s.span,
         .type = binding.type,
-        .binding = binding,
     };
 }
 
@@ -195,20 +195,41 @@ fn define(context: Context, d: ast.Define) !Define {
         });
         monotype = annotated_type;
     }
-    const binding = try context.scopes.createBinding(d.name.value);
-    binding.* = Binding{
+    const binding = Binding{
         .type = monotype,
         .global = false,
         .mutable = false,
-        .in_memory = false,
     };
     const name = Symbol{
         .value = d.name.value,
         .span = d.span,
         .type = monotype,
-        .binding = binding,
     };
+    try context.scopes.put(name.value, binding);
     return Define{
+        .name = name,
+        .value = value,
+        .span = d.span,
+        .mutable = d.mutable,
+        .type = .void,
+    };
+}
+
+fn addAssign(context: Context, d: ast.AddAssign) !AddAssign {
+    const value = try expressionAlloc(context, d.value.*);
+    var monotype = value.typeOf();
+    const binding = Binding{
+        .type = monotype,
+        .global = false,
+        .mutable = false,
+    };
+    const name = Symbol{
+        .value = d.name.value,
+        .span = d.span,
+        .type = monotype,
+    };
+    try context.scopes.put(name.value, binding);
+    return AddAssign{
         .name = name,
         .value = value,
         .span = d.span,
@@ -314,19 +335,17 @@ fn function(context: Context, f: ast.Function) !Function {
             .begin = untyped_p.name.span.begin,
             .end = untyped_p.type.span().end,
         };
-        const binding = try context.scopes.createBinding(name_symbol);
-        binding.* = Binding{
+        const binding = Binding{
             .type = p_type,
             .global = false,
             .mutable = false,
-            .in_memory = false,
         };
         typed_p.* = Symbol{
             .value = name_symbol,
             .span = span,
             .type = p_type,
-            .binding = binding,
         };
+        try context.scopes.put(name_symbol, binding);
         t.* = p_type;
     }
     const return_type = try expressionToMonoType(context.allocator, context.builtins, f.return_type.*);
@@ -348,8 +367,9 @@ fn function(context: Context, f: ast.Function) !Function {
 fn block(context: Context, b: ast.Block) !Block {
     const len = b.expressions.len;
     const expressions = try context.allocator.alloc(Expression, len);
-    for (b.expressions, expressions) |untyped_e, *typed_e|
+    for (b.expressions, expressions) |untyped_e, *typed_e| {
         typed_e.* = try expression(context, untyped_e);
+    }
     const monotype = if (len == 0) .void else expressions[len - 1].typeOf();
     return Block{
         .expressions = expressions,
@@ -366,6 +386,7 @@ fn expression(context: Context, e: ast.Expression) error{ OutOfMemory, CompileEr
         .symbol => |s| return .{ .symbol = try symbol(context.scopes.*, s) },
         .bool => |b| return .{ .bool = boolean(b) },
         .define => |d| return .{ .define = try define(context, d) },
+        .add_assign => |a| return .{ .add_assign = try addAssign(context, a) },
         .function => |f| return .{ .function = try function(context, f) },
         .binary_op => |b| return try binaryOp(context, b),
         .block => |b| return .{ .block = try block(context, b) },

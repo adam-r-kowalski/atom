@@ -25,7 +25,6 @@ pub const Binding = struct {
     type: MonoType,
     global: bool,
     mutable: bool,
-    in_memory: bool,
 };
 
 pub const Scope = Map(Interned, Binding);
@@ -61,17 +60,12 @@ pub const Scopes = struct {
         try self.scopes.items[self.scopes.items.len - 1].put(name, binding);
     }
 
-    pub fn createBinding(self: *Scopes, name: Interned) !*Binding {
-        const result = try self.scopes.items[self.scopes.items.len - 1].getOrPut(name);
-        return result.value_ptr;
-    }
-
-    pub fn find(self: Scopes, symbol: untyped_ast.Symbol) !*Binding {
+    pub fn find(self: Scopes, symbol: untyped_ast.Symbol) !Binding {
         var reverse_iterator = std.mem.reverseIterator(self.scopes.items);
         while (reverse_iterator.next()) |scope| {
-            if (scope.getPtr(symbol.value)) |binding| return binding;
+            if (scope.get(symbol.value)) |binding| return binding;
         }
-        if (self.base.getPtr(symbol.value)) |binding| {
+        if (self.base.get(symbol.value)) |binding| {
             try self.work_queue.append(symbol.value);
             return binding;
         }
@@ -89,6 +83,7 @@ pub const Scopes = struct {
                 .in_scope = try in_scope.toOwnedSlice(),
             },
         });
+        std.debug.panic("\n{}\n", .{symbol.value});
         return error.CompileError;
     }
 };
@@ -129,7 +124,6 @@ pub const Symbol = struct {
     value: Interned,
     span: Span,
     type: MonoType,
-    binding: *Binding,
 
     pub fn apply(self: *Symbol, s: Substitution) void {
         self.type.apply(s);
@@ -170,6 +164,7 @@ pub const Define = struct {
     name: Symbol,
     value: *Expression,
     span: Span,
+    mutable: bool,
     type: MonoType,
 
     pub fn apply(self: *Define, s: Substitution) void {
@@ -179,8 +174,39 @@ pub const Define = struct {
     }
 
     fn toString(self: Define, writer: anytype, indent: Indent) !void {
-        try writer.print("{}define ={}name = {}{}type = {}{}value = ", .{
-            indent,
+        try writer.print("define ={}name = {}{}type = {}{}mutable = {}{}value = ", .{
+            indent.add(1),
+            self.name,
+            indent.add(1),
+            self.type,
+            indent.add(1),
+            self.mutable,
+            indent.add(1),
+        });
+        try self.value.toString(writer, indent.add(2));
+    }
+
+    pub fn format(self: Define, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        try self.toString(writer, Indent{ .value = 0 });
+    }
+};
+
+pub const AddAssign = struct {
+    name: Symbol,
+    value: *Expression,
+    span: Span,
+    type: MonoType,
+
+    pub fn apply(self: *AddAssign, s: Substitution) void {
+        self.name.apply(s);
+        self.value.apply(s);
+        self.type.apply(s);
+    }
+
+    fn toString(self: AddAssign, writer: anytype, indent: Indent) !void {
+        try writer.print("add_assign ={}name = {}{}type = {}{}value = ", .{
             indent.add(1),
             self.name,
             indent.add(1),
@@ -208,7 +234,10 @@ pub const Block = struct {
     }
 
     fn toString(self: Block, writer: anytype, indent: Indent) !void {
-        for (self.expressions) |expr| try expr.toString(writer, indent);
+        for (self.expressions) |expr| {
+            try writer.print("{}", .{indent});
+            try expr.toString(writer, indent);
+        }
     }
 
     pub fn format(self: Block, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
@@ -473,6 +502,7 @@ pub const Expression = union(enum) {
     bool: Bool,
     string: String,
     define: Define,
+    add_assign: AddAssign,
     function: Function,
     binary_op: BinaryOp,
     group: Group,
@@ -493,6 +523,7 @@ pub const Expression = union(enum) {
             .bool => |b| b.span,
             .string => |s| s.span,
             .define => |d| d.span,
+            .add_assign => |a| a.span,
             .function => |f| f.span,
             .binary_op => |b| b.span,
             .group => |g| g.span,
@@ -515,6 +546,7 @@ pub const Expression = union(enum) {
             .bool => |b| b.type,
             .string => |s| s.type,
             .define => |d| d.type,
+            .add_assign => |a| a.type,
             .function => |f| f.type,
             .binary_op => |b| b.type,
             .group => |g| g.type,
@@ -539,6 +571,7 @@ pub const Expression = union(enum) {
             .branch => |*b| b.apply(s),
             .binary_op => |*b| b.apply(s),
             .define => |*d| d.apply(s),
+            .add_assign => |*a| a.apply(s),
             .call => |*c| c.apply(s),
             .intrinsic => |*i| i.apply(s),
             .function => |*f| f.apply(s),
@@ -563,6 +596,7 @@ pub const Expression = union(enum) {
             .call => |c| try c.toString(writer, indent),
             .intrinsic => |i| try i.toString(writer, indent),
             .define => |d| try d.toString(writer, indent),
+            .add_assign => |a| try a.toString(writer, indent),
             .function => |f| try f.toString(writer, indent),
             .block => |b| try b.toString(writer, indent),
             .group => |g| try g.toString(writer, indent),
@@ -606,7 +640,6 @@ pub const Module = struct {
                         .type = monotype,
                         .global = true,
                         .mutable = false,
-                        .in_memory = false,
                     });
                 },
                 .call => |c| {
