@@ -7,8 +7,6 @@ const LeftParen = tokenizer.types.LeftParen;
 const IfToken = tokenizer.types.If;
 const FnToken = tokenizer.types.Fn;
 const Token = tokenizer.types.Token;
-const Span = @import("../span.zig").Span;
-const Pos = @import("../span.zig").Pos;
 const types = @import("types.zig");
 const pretty_print = @import("pretty_print.zig");
 const spanOf = @import("span.zig").expression;
@@ -59,7 +57,7 @@ fn expressionAlloc(context: Context) !*const types.Expression {
     return ptr;
 }
 
-fn block(context: Context, begin: Pos) !types.Block {
+fn block(context: Context, begin: tokenizer.types.Pos) !types.Block {
     var exprs = List(types.Expression).init(context.allocator);
     while (context.tokens.peek()) |t| {
         switch (t) {
@@ -75,7 +73,7 @@ fn block(context: Context, begin: Pos) !types.Block {
     };
 }
 
-fn array(context: Context, begin: Pos) !types.Array {
+fn array(context: Context, begin: tokenizer.types.Pos) !types.Array {
     var exprs = List(types.Expression).init(context.allocator);
     while (context.tokens.peek()) |t| {
         switch (t) {
@@ -181,7 +179,7 @@ fn function(context: Context, fn_: FnToken) !types.Expression {
                     .parameters = parameters,
                     .return_type = return_type,
                     .body = body,
-                    .span = Span{ .begin = begin, .end = end },
+                    .span = types.Span{ .begin = begin, .end = end },
                 },
             };
         }
@@ -191,12 +189,12 @@ fn function(context: Context, fn_: FnToken) !types.Expression {
         .prototype = .{
             .parameters = parameters,
             .return_type = return_type,
-            .span = Span{ .begin = begin, .end = end },
+            .span = types.Span{ .begin = begin, .end = end },
         },
     };
 }
 
-fn mutable(context: Context, begin: Pos) !types.Define {
+fn mutable(context: Context, begin: tokenizer.types.Pos) !types.Define {
     const name = context.tokens.next().?.symbol;
     _ = context.tokens.consume(.colon);
     const type_ = try expressionAlloc(withPrecedence(context, DEFINE + 1));
@@ -207,7 +205,7 @@ fn mutable(context: Context, begin: Pos) !types.Define {
         .type = type_,
         .value = value,
         .mutable = true,
-        .span = Span{
+        .span = types.Span{
             .begin = begin,
             .end = spanOf(value.*).end,
         },
@@ -240,7 +238,7 @@ fn define(context: Context, name: types.Symbol) !types.Define {
         .type = null,
         .value = value,
         .mutable = false,
-        .span = Span{
+        .span = types.Span{
             .begin = name.span.begin,
             .end = spanOf(value.*).end,
         },
@@ -253,7 +251,7 @@ fn addAssign(context: Context, name: types.Symbol) !types.AddAssign {
     return types.AddAssign{
         .name = name,
         .value = value,
-        .span = Span{
+        .span = types.Span{
             .begin = name.span.begin,
             .end = spanOf(value.*).end,
         },
@@ -270,7 +268,7 @@ fn annotate(context: Context, name: types.Symbol) !types.Define {
         .type = type_,
         .value = value,
         .mutable = false,
-        .span = Span{
+        .span = types.Span{
             .begin = name.span.begin,
             .end = spanOf(value.*).end,
         },
@@ -284,7 +282,7 @@ fn binaryOp(context: Context, left: types.Expression, kind: types.BinaryOpKind) 
         .kind = kind,
         .left = try alloc(context, left),
         .right = right,
-        .span = Span{
+        .span = types.Span{
             .begin = spanOf(left).begin,
             .end = spanOf(right.*).end,
         },
@@ -307,7 +305,7 @@ fn call(context: Context, left: types.Expression) !types.Call {
     return types.Call{
         .function = try alloc(context, left),
         .arguments = try arguments.toOwnedSlice(),
-        .span = Span{ .begin = spanOf(left).begin, .end = end },
+        .span = types.Span{ .begin = spanOf(left).begin, .end = end },
     };
 }
 
@@ -315,7 +313,7 @@ fn arrayOf(context: Context, left: types.Expression) !types.ArrayOf {
     switch (left) {
         .array => |a| {
             const element_type = try expressionAlloc(context);
-            const span = Span{ .begin = spanOf(left).begin, .end = spanOf(element_type.*).end };
+            const span = types.Span{ .begin = spanOf(left).begin, .end = spanOf(element_type.*).end };
             if (a.expressions.len == 0) {
                 return types.ArrayOf{
                     .size = null,

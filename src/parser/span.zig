@@ -1,7 +1,6 @@
 const types = @import("types.zig");
-const Span = @import("../span.zig").Span;
 
-pub fn expression(e: types.Expression) Span {
+pub fn expression(e: types.Expression) types.Span {
     return switch (e) {
         .int => |i| i.span,
         .float => |f| f.span,

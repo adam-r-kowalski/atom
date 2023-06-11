@@ -7,7 +7,6 @@ const Builtins = @import("builtins.zig").Builtins;
 const Indent = @import("indent.zig").Indent;
 const interner = @import("interner.zig");
 const Interned = interner.Interned;
-const Span = @import("span.zig").Span;
 const parser = @import("parser.zig");
 const substitution = @import("substitution.zig");
 const MonoType = substitution.MonoType;
@@ -15,6 +14,7 @@ const Substitution = substitution.Substitution;
 const TypeVar = substitution.TypeVar;
 const Constraints = @import("constraints.zig").Constraints;
 const CompileErrors = @import("compile_errors.zig").CompileErrors;
+const Span = parser.types.Span;
 
 pub const WorkQueue = List(Interned);
 
@@ -298,7 +298,20 @@ pub const BinaryOp = struct {
     fn toString(self: BinaryOp, writer: anytype, indent: Indent) !void {
         try writer.writeAll("binary_op =");
         try writer.print("{}", .{indent.add(1)});
-        try writer.print("kind = {}", .{self.kind});
+        try writer.writeAll("kind = ");
+        switch (self.kind) {
+            .add => try writer.writeAll("+"),
+            .subtract => try writer.writeAll("-"),
+            .multiply => try writer.writeAll("*"),
+            .divide => try writer.writeAll("/"),
+            .modulo => try writer.writeAll("%"),
+            .exponentiate => try writer.writeAll("^"),
+            .equal => try writer.writeAll("=="),
+            .greater => try writer.writeAll(">"),
+            .less => try writer.writeAll("<"),
+            .or_ => try writer.writeAll("or"),
+            .dot => try writer.writeAll("."),
+        }
         try writer.print("{}", .{indent.add(1)});
         try writer.writeAll("left =");
         try writer.print("{}", .{indent.add(2)});

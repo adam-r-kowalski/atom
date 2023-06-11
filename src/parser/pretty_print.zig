@@ -16,6 +16,7 @@ pub fn define(d: types.Define, i: Indent, writer: Writer) !void {
     if (d.mutable) try writer.writeAll("mut ");
     try writer.print("{}", .{d.name.value});
     if (d.type) |t| {
+        try writer.writeAll(" ");
         try expression(t.*, i, writer);
     }
     try writer.writeAll(" ");

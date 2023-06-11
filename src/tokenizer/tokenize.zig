@@ -7,12 +7,10 @@ const Interned = interner.Interned;
 const Intern = interner.Intern;
 const Builtins = @import("../builtins.zig").Builtins;
 const types = @import("types.zig");
-const Span = @import("../span.zig").Span;
-const Pos = @import("../span.zig").Pos;
 
 const Cursor = struct {
     source: []const u8,
-    pos: Pos,
+    pos: types.Pos,
 };
 
 fn trim(cursor: *Cursor) void {
@@ -68,7 +66,7 @@ fn number(intern: *Intern, cursor: *Cursor) !types.Token {
         }
     }
     _ = advance(cursor, i);
-    const span = Span{ .begin = begin, .end = cursor.pos };
+    const span = types.Span{ .begin = begin, .end = cursor.pos };
     const interned = try intern.store(contents);
     if (decimals == 0) return .{ .int = .{ .value = interned, .span = span } };
     return .{ .float = .{ .value = interned, .span = span } };
@@ -85,7 +83,7 @@ fn string(intern: *Intern, cursor: *Cursor) !types.Token {
     }
     const contents = cursor.source[0..i];
     _ = advance(cursor, i);
-    const span = Span{ .begin = begin, .end = cursor.pos };
+    const span = types.Span{ .begin = begin, .end = cursor.pos };
     const interned = try intern.store(contents);
     return .{ .string = .{ .value = interned, .span = span } };
 }
@@ -95,7 +93,7 @@ const Tag = std.meta.Tag(types.Token);
 fn exact(cursor: *Cursor, comptime tag: Tag) types.Token {
     const begin = cursor.pos;
     _ = advance(cursor, 1);
-    const span = Span{ .begin = begin, .end = cursor.pos };
+    const span = types.Span{ .begin = begin, .end = cursor.pos };
     return @unionInit(types.Token, @tagName(tag), .{ .span = span });
 }
 
@@ -105,7 +103,7 @@ fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !types.Token {
     while (i < cursor.source.len and !reserved(cursor.source[i])) : (i += 1) {}
     const contents = advance(cursor, i);
     const end = cursor.pos;
-    const span = Span{ .begin = begin, .end = end };
+    const span = types.Span{ .begin = begin, .end = end };
     const interned = try intern.store(contents);
     if (interned.eql(builtins.fn_)) return .{ .fn_ = .{ .span = span } };
     if (interned.eql(builtins.if_)) return .{ .if_ = .{ .span = span } };
@@ -132,11 +130,11 @@ fn either(cursor: *Cursor, comptime tag: Tag, comptime char: u8, comptime other:
     const begin = cursor.pos;
     if (cursor.source.len > 1 and cursor.source[1] == char) {
         _ = advance(cursor, 2);
-        const span = Span{ .begin = begin, .end = cursor.pos };
+        const span = types.Span{ .begin = begin, .end = cursor.pos };
         return @unionInit(types.Token, @tagName(other), .{ .span = span });
     }
     _ = advance(cursor, 1);
-    const span = Span{ .begin = begin, .end = cursor.pos };
+    const span = types.Span{ .begin = begin, .end = cursor.pos };
     return @unionInit(types.Token, @tagName(tag), .{ .span = span });
 }
 

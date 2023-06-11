@@ -1,6 +1,6 @@
 const tokenizer = @import("../tokenizer.zig");
 
-const Span = @import("../span.zig").Span;
+pub const Span = tokenizer.types.Span;
 pub const Int = tokenizer.types.Int;
 pub const Float = tokenizer.types.Float;
 pub const Symbol = tokenizer.types.Symbol;

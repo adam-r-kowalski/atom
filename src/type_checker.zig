@@ -30,7 +30,6 @@ const AddAssign = typed_ast.AddAssign;
 const Function = typed_ast.Function;
 const Undefined = typed_ast.Undefined;
 const Module = typed_ast.Module;
-const Span = @import("span.zig").Span;
 const parser = @import("parser.zig");
 
 const Context = struct {
@@ -147,8 +146,8 @@ fn binaryOp(context: Context, b: parser.types.BinaryOp) !Expression {
             const left = try expressionAlloc(context, b.left.*);
             const right = try expressionAlloc(context, b.right.*);
             try context.constraints.equal.append(.{
-                .left = .{ .type = left.typeOf(), .span = b.left.span() },
-                .right = .{ .type = right.typeOf(), .span = b.right.span() },
+                .left = .{ .type = left.typeOf(), .span = parser.span.expression(b.left.*) },
+                .right = .{ .type = right.typeOf(), .span = parser.span.expression(b.right.*) },
             });
             return Expression{
                 .binary_op = .{
@@ -163,10 +162,10 @@ fn binaryOp(context: Context, b: parser.types.BinaryOp) !Expression {
         else => {
             const left = try expressionAlloc(context, b.left.*);
             const right = try expressionAlloc(context, b.right.*);
-            const left_typed_span = .{ .type = left.typeOf(), .span = b.left.span() };
+            const left_typed_span = .{ .type = left.typeOf(), .span = parser.span.expression(b.left.*) };
             try context.constraints.equal.append(.{
                 .left = left_typed_span,
-                .right = .{ .type = right.typeOf(), .span = b.right.span() },
+                .right = .{ .type = right.typeOf(), .span = parser.span.expression(b.right.*) },
             });
             const tvar = context.constraints.freshTypeVar();
             try context.constraints.equal.append(.{
@@ -192,8 +191,8 @@ fn define(context: Context, d: parser.types.Define) !Define {
     if (d.type) |t| {
         const annotated_type = try expressionToMonoType(context.allocator, context.builtins, t.*);
         try context.constraints.equal.append(.{
-            .left = .{ .type = annotated_type, .span = t.span() },
-            .right = .{ .type = monotype, .span = d.value.span() },
+            .left = .{ .type = annotated_type, .span = parser.span.expression(t.*) },
+            .right = .{ .type = monotype, .span = parser.span.expression(d.value.*) },
         });
         monotype = annotated_type;
     }
@@ -337,9 +336,9 @@ fn function(context: Context, f: parser.types.Function) !Function {
     for (f.parameters, parameters, function_type[0..len]) |untyped_p, *typed_p, *t| {
         const name_symbol = untyped_p.name.value;
         const p_type = try expressionToMonoType(context.allocator, context.builtins, untyped_p.type);
-        const span = Span{
+        const span = parser.types.Span{
             .begin = untyped_p.name.span.begin,
-            .end = untyped_p.type.span().end,
+            .end = parser.span.expression(untyped_p.type).end,
         };
         const binding = Binding{
             .type = p_type,
@@ -359,7 +358,7 @@ fn function(context: Context, f: parser.types.Function) !Function {
     const return_type = try expressionToMonoType(context.allocator, context.builtins, f.return_type.*);
     const body = try block(context, f.body);
     try context.constraints.equal.append(.{
-        .left = .{ .type = return_type, .span = f.return_type.span() },
+        .left = .{ .type = return_type, .span = parser.span.expression(f.return_type.*) },
         .right = .{ .type = body.type, .span = body.span },
     });
     function_type[len] = return_type;

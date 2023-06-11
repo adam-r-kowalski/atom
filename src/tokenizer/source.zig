@@ -4,7 +4,6 @@ const Writer = List(u8).Writer;
 
 const types = @import("types.zig");
 const spanOf = @import("span.zig").token;
-const Pos = @import("../span.zig").Pos;
 
 pub fn token(t: types.Token, writer: Writer) !void {
     switch (t) {
@@ -44,7 +43,7 @@ pub fn token(t: types.Token, writer: Writer) !void {
 }
 
 pub fn tokens(ts: []const types.Token, writer: Writer) !void {
-    var pos = Pos{ .line = 1, .column = 1 };
+    var pos = types.Pos{ .line = 1, .column = 1 };
     for (ts) |t| {
         const current_span = spanOf(t);
         const delta_lines = current_span.end.line - pos.line;
