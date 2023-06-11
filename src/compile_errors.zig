@@ -3,7 +3,7 @@ const List = std.ArrayList;
 const Allocator = std.mem.Allocator;
 
 const Interned = @import("interner.zig").Interned;
-const Span = @import("span.zig").Span;
+const Span = @import("tokenizer.zig").types.Span;
 const substitution = @import("substitution.zig");
 const Monotype = substitution.Monotype;
 const TypedSpan = substitution.TypedSpan;

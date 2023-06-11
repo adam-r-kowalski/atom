@@ -10,7 +10,7 @@ const TypeVar = substitution.TypeVar;
 const Indent = @import("indent.zig").Indent;
 const errors = @import("compile_errors.zig");
 const CompileErrors = errors.CompileErrors;
-const Span = @import("span.zig").Span;
+const Span = @import("tokenizer.zig").types.Span;
 
 pub const Equal = struct {
     left: TypedSpan,

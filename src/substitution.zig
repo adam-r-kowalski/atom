@@ -2,7 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Map = std.AutoHashMap;
 
-const Span = @import("span.zig").Span;
+const Span = @import("tokenizer.zig").types.Span;
 
 pub const TypeVar = struct { value: u64 };
 

@@ -1,5 +1,7 @@
 const Interned = @import("../interner.zig").Interned;
-const Span = @import("../span.zig").Span;
+
+pub const Pos = struct { line: u64, column: u64 };
+pub const Span = struct { begin: Pos, end: Pos };
 
 pub const Symbol = struct { value: Interned, span: Span };
 pub const Int = struct { value: Interned, span: Span };

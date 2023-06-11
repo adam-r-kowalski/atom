@@ -133,17 +133,17 @@ const WasmModule = struct {
 
 fn compileAndRun(allocator: Allocator, intern: *mantis.Intern, compile_errors: *mantis.CompileErrors, flags: Flags, source: []const u8) !void {
     const builtins = try mantis.Builtins.init(intern);
-    var tokens = try mantis.tokenize(allocator, intern, compile_errors, builtins, source);
-    const untyped_ast = try mantis.parse(allocator, &tokens);
+    const tokens = try mantis.tokenize(allocator, intern, builtins, source);
+    const untyped_ast = try mantis.parse(allocator, tokens);
     var constraints = mantis.Constraints.init(allocator, compile_errors);
-    var ast = try mantis.Module.init(allocator, &constraints, builtins, untyped_ast);
+    var ast = try mantis.Module.init(allocator, &constraints, builtins, compile_errors, untyped_ast);
     const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
     if (export_count == 0) ast.foreign_exports = &.{start};
     for (ast.foreign_exports) |foreign_export| try mantis.type_checker.infer(&ast, foreign_export);
     const substitution = try constraints.solve(allocator);
     ast.apply(substitution);
-    var ir = try mantis.lower.buildIr(allocator, builtins, ast);
+    var ir = try mantis.lower.buildIr(allocator, builtins, ast, intern);
     if (export_count == 0) {
         const alias = try intern.store("_start");
         ir.exports = &.{.{ .name = start, .alias = alias }};

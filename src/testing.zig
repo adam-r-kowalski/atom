@@ -37,8 +37,10 @@ pub fn parse(allocator: Allocator, source: []const u8) ![]const u8 {
     var intern = Intern.init(arena.allocator());
     const builtins = try Builtins.init(&intern);
     const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
-    const ast = try parser.parse(arena.allocator(), tokens);
-    return try std.fmt.allocPrint(allocator, "{indent 3}", .{ast});
+    const module = try parser.parse(arena.allocator(), tokens);
+    var result = List(u8).init(allocator);
+    try parser.pretty_print.module(module, result.writer());
+    return try result.toOwnedSlice();
 }
 
 pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]const u8 {
