@@ -415,8 +415,6 @@ pub const Expression = union(enum) {
 
 pub const Module = struct {
     expressions: []const Expression,
-    compile_errors: *CompileErrors,
-    intern: *Intern,
 
     pub fn format(self: Module, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = fmt;

@@ -2,9 +2,6 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const List = std.ArrayList;
 
-const interner = @import("interner.zig");
-const Intern = interner.Intern;
-const Interned = interner.Interned;
 const Indent = @import("indent.zig").Indent;
 const tokenizer = @import("tokenizer.zig");
 const Span = @import("span.zig").Span;
@@ -13,7 +10,6 @@ const LeftParen = tokenizer.types.LeftParen;
 const IfToken = tokenizer.types.If;
 const FnToken = tokenizer.types.Fn;
 const Token = tokenizer.types.Token;
-const Tokens = tokenizer.types.Tokens;
 const ast = @import("ast.zig");
 const Expression = ast.Expression;
 const Block = ast.Block;
@@ -39,7 +35,7 @@ const Associativity = ast.Associativity;
 
 const Context = struct {
     allocator: Allocator,
-    tokens: *Tokens,
+    tokens: *tokenizer.Iterator,
     precedence: Precedence,
 };
 
@@ -49,29 +45,6 @@ fn withPrecedence(context: Context, precedence: Precedence) Context {
         .tokens = context.tokens,
         .precedence = precedence,
     };
-}
-
-fn consume(tokens: *Tokens, tag: std.meta.Tag(Token)) Token {
-    const t = tokens.next().?;
-    if (std.meta.activeTag(t) != tag)
-        std.debug.panic("\nExpected token {} found {}", .{ tag, t });
-    return t;
-}
-
-fn maybeConsume(tokens: *Tokens, tag: std.meta.Tag(Token)) void {
-    if (tokens.peek()) |t| {
-        if (std.meta.activeTag(t) == tag)
-            tokens.advance();
-    }
-}
-
-fn consumeNewLines(context: Context) void {
-    while (context.tokens.peek()) |t| {
-        switch (t) {
-            .new_line => context.tokens.advance(),
-            else => return,
-        }
-    }
 }
 
 fn alloc(context: Context, expr: Expression) !*const Expression {
@@ -95,7 +68,7 @@ fn block(context: Context, begin: Pos) !Block {
             else => try exprs.append(try expression(withPrecedence(context, LOWEST))),
         }
     }
-    const end = consume(context.tokens, .right_brace).span().end;
+    const end = tokenizer.span.token(context.tokens.consume(.right_brace)).end;
     return Block{
         .expressions = try exprs.toOwnedSlice(),
         .span = .{ .begin = begin, .end = end },
@@ -111,7 +84,7 @@ fn array(context: Context, begin: Pos) !Array {
             else => try exprs.append(try expression(withPrecedence(context, LOWEST))),
         }
     }
-    const end = consume(context.tokens, .right_bracket).span().end;
+    const end = tokenizer.span.token(context.tokens.consume(.right_bracket)).end;
     return Array{
         .expressions = try exprs.toOwnedSlice(),
         .span = .{ .begin = begin, .end = end },
@@ -121,7 +94,7 @@ fn array(context: Context, begin: Pos) !Array {
 fn group(context: Context, left_paren: LeftParen) !Group {
     const begin = left_paren.span.begin;
     const expr = try expressionAlloc(withPrecedence(context, LOWEST));
-    const end = consume(context.tokens, .right_paren).span().end;
+    const end = tokenizer.span.token(context.tokens.consume(.right_paren)).end;
     return Group{
         .expression = expr,
         .span = .{ .begin = begin, .end = end },
@@ -134,9 +107,9 @@ fn branch(context: Context, if_token: IfToken) !Branch {
     var arms = List(Arm).init(context.allocator);
     try arms.append(Arm{
         .condition = try expression(lowest),
-        .then = try block(lowest, consume(context.tokens, .left_brace).span().begin),
+        .then = try block(lowest, tokenizer.span.token(context.tokens.consume(.left_brace)).begin),
     });
-    consumeNewLines(context);
+    context.tokens.consumeNewLines();
     while (context.tokens.peek()) |t| {
         switch (t) {
             .else_ => {
@@ -154,9 +127,9 @@ fn branch(context: Context, if_token: IfToken) !Branch {
                     .if_ => {
                         try arms.append(Arm{
                             .condition = try expression(lowest),
-                            .then = try block(lowest, consume(context.tokens, .left_brace).span().begin),
+                            .then = try block(lowest, tokenizer.span.token(context.tokens.consume(.left_brace)).begin),
                         });
-                        consumeNewLines(context);
+                        context.tokens.consumeNewLines();
                     },
                     else => |k| std.debug.panic("\nExpected (delimiter '{{') found {}", .{k}),
                 }
@@ -182,26 +155,26 @@ fn functionParameters(context: Context) ![]const Parameter {
             .right_paren => break,
             .symbol => |name| {
                 context.tokens.advance();
-                _ = consume(context.tokens, .colon);
+                _ = context.tokens.consume(.colon);
                 const type_ = try expression(withPrecedence(context, DEFINE + 1));
-                maybeConsume(context.tokens, .comma);
+                context.tokens.maybeConsume(.comma);
                 try parameters.append(Parameter{ .name = name, .type = type_ });
             },
             else => |k| std.debug.panic("\nExpected symbol or right paren, found {}", .{k}),
         }
     }
-    _ = consume(context.tokens, .right_paren);
+    _ = context.tokens.consume(.right_paren);
     return parameters.toOwnedSlice();
 }
 
 fn function(context: Context, fn_: FnToken) !Expression {
     const begin = fn_.span.begin;
-    _ = consume(context.tokens, .left_paren);
+    _ = context.tokens.consume(.left_paren);
     const parameters = try functionParameters(context);
     const return_type = try expressionAlloc(withPrecedence(context, DEFINE + 1));
     if (context.tokens.peek()) |t| {
         if (t == .left_brace) {
-            const body = try block(withPrecedence(context, LOWEST), consume(context.tokens, .left_brace).span().begin);
+            const body = try block(withPrecedence(context, LOWEST), tokenizer.span.token(context.tokens.consume(.left_brace)).begin);
             const end = body.span.end;
             return Expression{
                 .function = .{
@@ -225,9 +198,9 @@ fn function(context: Context, fn_: FnToken) !Expression {
 
 fn mutable(context: Context, begin: Pos) !Define {
     const name = context.tokens.next().?.symbol;
-    _ = consume(context.tokens, .colon);
+    _ = context.tokens.consume(.colon);
     const type_ = try expressionAlloc(withPrecedence(context, DEFINE + 1));
-    _ = consume(context.tokens, .equal);
+    _ = context.tokens.consume(.equal);
     const value = try expressionAlloc(withPrecedence(context, DEFINE + 1));
     return Define{
         .name = name,
@@ -290,7 +263,7 @@ fn addAssign(context: Context, name: Symbol) !AddAssign {
 fn annotate(context: Context, name: Symbol) !Define {
     context.tokens.advance();
     const type_ = try expressionAlloc(withPrecedence(context, DEFINE + 1));
-    _ = consume(context.tokens, .equal);
+    _ = context.tokens.consume(.equal);
     const value = try expressionAlloc(withPrecedence(context, DEFINE + 1));
     return Define{
         .name = name,
@@ -326,7 +299,7 @@ fn call(context: Context, left: Expression) !Call {
             .right_paren => break,
             else => {
                 try arguments.append(try expression(withPrecedence(context, DEFINE + 1)));
-                maybeConsume(context.tokens, .comma);
+                context.tokens.maybeConsume(.comma);
             },
         }
     }
@@ -453,14 +426,15 @@ fn expression(context: Context) error{OutOfMemory}!Expression {
     }
 }
 
-pub fn parse(allocator: Allocator, tokens: *Tokens) !Module {
+pub fn parse(allocator: Allocator, tokens: []const tokenizer.types.Token) !Module {
+    var iterator = tokenizer.Iterator.init(tokens);
     const context = Context{
         .allocator = allocator,
-        .tokens = tokens,
+        .tokens = &iterator,
         .precedence = LOWEST,
     };
     var expressions = List(Expression).init(allocator);
-    while (tokens.peek()) |t| {
+    while (iterator.peek()) |t| {
         switch (t) {
             .new_line => context.tokens.advance(),
             else => try expressions.append(try expression(context)),
@@ -468,7 +442,5 @@ pub fn parse(allocator: Allocator, tokens: *Tokens) !Module {
     }
     return Module{
         .expressions = try expressions.toOwnedSlice(),
-        .compile_errors = tokens.compile_errors,
-        .intern = tokens.intern,
     };
 }

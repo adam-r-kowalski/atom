@@ -7,7 +7,6 @@ const Builtins = @import("builtins.zig").Builtins;
 const Indent = @import("indent.zig").Indent;
 const interner = @import("interner.zig");
 const Interned = interner.Interned;
-const Intern = interner.Intern;
 const Span = @import("span.zig").Span;
 const untyped_ast = @import("ast.zig");
 const BinaryOpKind = untyped_ast.BinaryOpKind;
@@ -623,9 +622,8 @@ pub const Module = struct {
     scope: Scope,
     foreign_exports: []const Interned,
     compile_errors: *CompileErrors,
-    intern: *Intern,
 
-    pub fn init(allocator: Allocator, constraints: *Constraints, builtins: Builtins, ast: untyped_ast.Module) !Module {
+    pub fn init(allocator: Allocator, constraints: *Constraints, builtins: Builtins, compile_errors: *CompileErrors, ast: untyped_ast.Module) !Module {
         var order = List(Interned).init(allocator);
         var untyped = Untyped.init(allocator);
         var typed = Typed.init(allocator);
@@ -676,8 +674,7 @@ pub const Module = struct {
             .typed = typed,
             .scope = scope,
             .foreign_exports = try foreign_exports.toOwnedSlice(),
-            .compile_errors = ast.compile_errors,
-            .intern = ast.intern,
+            .compile_errors = compile_errors,
         };
     }
 

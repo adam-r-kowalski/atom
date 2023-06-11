@@ -428,7 +428,7 @@ fn foreignImport(allocator: Allocator, name: Interned, i: typed_ast.ForeignImpor
     }
 }
 
-pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
+pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module, intern: *Intern) !IR {
     var functions = std.ArrayList(Function).init(allocator);
     var imports = std.ArrayList(Import).init(allocator);
     var data_segment = DataSegment.init(allocator);
@@ -441,7 +441,7 @@ pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
                     const name_symbol = d.name.value;
                     switch (d.value.*) {
                         .function => |f| {
-                            const lowered = try function(allocator, builtins, &data_segment, module.intern, name_symbol, f);
+                            const lowered = try function(allocator, builtins, &data_segment, intern, name_symbol, f);
                             try functions.append(lowered);
                         },
                         .foreign_import => |i| {
@@ -457,10 +457,10 @@ pub fn buildIr(allocator: Allocator, builtins: Builtins, module: Module) !IR {
                 },
                 .foreign_export => |e| {
                     const name_string = e.name.string();
-                    const trimmed = try module.intern.store(name_string[1 .. name_string.len - 1]);
+                    const trimmed = try intern.store(name_string[1 .. name_string.len - 1]);
                     switch (e.value.*) {
                         .function => |f| {
-                            const lowered = try function(allocator, builtins, &data_segment, module.intern, trimmed, f);
+                            const lowered = try function(allocator, builtins, &data_segment, intern, trimmed, f);
                             try functions.append(lowered);
                         },
                         .symbol => {},
