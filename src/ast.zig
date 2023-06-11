@@ -2,16 +2,16 @@ const std = @import("std");
 
 const Intern = @import("interner.zig").Intern;
 const Indent = @import("indent.zig").Indent;
-const token = @import("token.zig");
+const tokenizer = @import("tokenizer.zig");
 const CompileErrors = @import("compile_errors.zig").CompileErrors;
 
 const Span = @import("span.zig").Span;
-pub const Int = token.Int;
-pub const Float = token.Float;
-pub const Symbol = token.Symbol;
-pub const String = token.String;
-pub const Bool = token.Bool;
-pub const Undefined = token.Undefined;
+pub const Int = tokenizer.types.Int;
+pub const Float = tokenizer.types.Float;
+pub const Symbol = tokenizer.types.Symbol;
+pub const String = tokenizer.types.String;
+pub const Bool = tokenizer.types.Bool;
+pub const Undefined = tokenizer.types.Undefined;
 
 pub const Precedence = u32;
 
@@ -415,8 +415,6 @@ pub const Expression = union(enum) {
 
 pub const Module = struct {
     expressions: []const Expression,
-    compile_errors: *CompileErrors,
-    intern: *Intern,
 
     pub fn format(self: Module, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = fmt;
