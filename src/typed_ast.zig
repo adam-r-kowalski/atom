@@ -8,9 +8,7 @@ const Indent = @import("indent.zig").Indent;
 const interner = @import("interner.zig");
 const Interned = interner.Interned;
 const Span = @import("span.zig").Span;
-const untyped_ast = @import("ast.zig");
-const BinaryOpKind = untyped_ast.BinaryOpKind;
-const UntypedExpression = untyped_ast.Expression;
+const parser = @import("parser.zig");
 const substitution = @import("substitution.zig");
 const MonoType = substitution.MonoType;
 const Substitution = substitution.Substitution;
@@ -59,7 +57,7 @@ pub const Scopes = struct {
         try self.scopes.items[self.scopes.items.len - 1].put(name, binding);
     }
 
-    pub fn find(self: Scopes, symbol: untyped_ast.Symbol) !Binding {
+    pub fn find(self: Scopes, symbol: parser.types.Symbol) !Binding {
         var reverse_iterator = std.mem.reverseIterator(self.scopes.items);
         while (reverse_iterator.next()) |scope| {
             if (scope.get(symbol.value)) |binding| return binding;
@@ -285,7 +283,7 @@ pub const Function = struct {
 };
 
 pub const BinaryOp = struct {
-    kind: BinaryOpKind,
+    kind: parser.types.BinaryOpKind,
     left: *Expression,
     right: *Expression,
     span: Span,
@@ -609,7 +607,7 @@ pub const Expression = union(enum) {
     }
 };
 
-pub const Untyped = Map(Interned, UntypedExpression);
+pub const Untyped = Map(Interned, parser.types.Expression);
 pub const Typed = Map(Interned, Expression);
 
 pub const Module = struct {
@@ -623,7 +621,7 @@ pub const Module = struct {
     foreign_exports: []const Interned,
     compile_errors: *CompileErrors,
 
-    pub fn init(allocator: Allocator, constraints: *Constraints, builtins: Builtins, compile_errors: *CompileErrors, ast: untyped_ast.Module) !Module {
+    pub fn init(allocator: Allocator, constraints: *Constraints, builtins: Builtins, compile_errors: *CompileErrors, ast: parser.types.Module) !Module {
         var order = List(Interned).init(allocator);
         var untyped = Untyped.init(allocator);
         var typed = Typed.init(allocator);
@@ -695,7 +693,7 @@ pub const Module = struct {
     }
 };
 
-fn topLevelFunction(allocator: Allocator, builtins: Builtins, f: untyped_ast.Function) !MonoType {
+fn topLevelFunction(allocator: Allocator, builtins: Builtins, f: parser.types.Function) !MonoType {
     const len = f.parameters.len;
     const function_type = try allocator.alloc(MonoType, len + 1);
     for (f.parameters, function_type[0..len]) |p, *t|
@@ -704,7 +702,7 @@ fn topLevelFunction(allocator: Allocator, builtins: Builtins, f: untyped_ast.Fun
     return MonoType{ .function = function_type };
 }
 
-fn topLevelCall(allocator: Allocator, builtins: Builtins, c: untyped_ast.Call) !MonoType {
+fn topLevelCall(allocator: Allocator, builtins: Builtins, c: parser.types.Call) !MonoType {
     switch (c.function.*) {
         .symbol => |s| {
             if (s.value.eql(builtins.foreign_import)) {
@@ -717,14 +715,14 @@ fn topLevelCall(allocator: Allocator, builtins: Builtins, c: untyped_ast.Call) !
     std.debug.panic("\nInvalid top level call {}", .{c.function});
 }
 
-fn topLevelInt(allocator: Allocator, builtins: Builtins, d: untyped_ast.Define) !MonoType {
+fn topLevelInt(allocator: Allocator, builtins: Builtins, d: parser.types.Define) !MonoType {
     if (d.type) |t| {
         return try expressionToMonoType(allocator, builtins, t.*);
     }
     std.debug.panic("\nInvalid top level int {}", .{d});
 }
 
-fn topLevelType(allocator: Allocator, builtins: Builtins, d: untyped_ast.Define) !MonoType {
+fn topLevelType(allocator: Allocator, builtins: Builtins, d: parser.types.Define) !MonoType {
     return switch (d.value.*) {
         .function => |f| try topLevelFunction(allocator, builtins, f),
         .call => |c| try topLevelCall(allocator, builtins, c),
@@ -733,7 +731,7 @@ fn topLevelType(allocator: Allocator, builtins: Builtins, d: untyped_ast.Define)
     };
 }
 
-pub fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: untyped_ast.Expression) !MonoType {
+pub fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: parser.types.Expression) !MonoType {
     switch (e) {
         .symbol => |s| {
             if (s.value.eql(builtins.u8)) return .u8;

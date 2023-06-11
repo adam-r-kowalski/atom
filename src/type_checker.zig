@@ -31,7 +31,7 @@ const Function = typed_ast.Function;
 const Undefined = typed_ast.Undefined;
 const Module = typed_ast.Module;
 const Span = @import("span.zig").Span;
-const ast = @import("ast.zig");
+const parser = @import("parser.zig");
 
 const Context = struct {
     allocator: Allocator,
@@ -40,7 +40,7 @@ const Context = struct {
     scopes: *Scopes,
 };
 
-fn symbol(scopes: Scopes, s: ast.Symbol) !Symbol {
+fn symbol(scopes: Scopes, s: parser.types.Symbol) !Symbol {
     const binding = try scopes.find(s);
     return Symbol{
         .value = s.value,
@@ -51,7 +51,7 @@ fn symbol(scopes: Scopes, s: ast.Symbol) !Symbol {
     };
 }
 
-fn int(context: Context, i: ast.Int) Int {
+fn int(context: Context, i: parser.types.Int) Int {
     return Int{
         .value = i.value,
         .span = i.span,
@@ -59,7 +59,7 @@ fn int(context: Context, i: ast.Int) Int {
     };
 }
 
-fn float(context: Context, f: ast.Float) Float {
+fn float(context: Context, f: parser.types.Float) Float {
     return Float{
         .value = f.value,
         .span = f.span,
@@ -67,7 +67,7 @@ fn float(context: Context, f: ast.Float) Float {
     };
 }
 
-fn string(context: Context, s: ast.String) !String {
+fn string(context: Context, s: parser.types.String) !String {
     const element_type = try context.allocator.create(MonoType);
     element_type.* = .u8;
     return String{
@@ -77,7 +77,7 @@ fn string(context: Context, s: ast.String) !String {
     };
 }
 
-fn boolean(b: ast.Bool) Bool {
+fn boolean(b: parser.types.Bool) Bool {
     return Bool{
         .value = b.value,
         .span = b.span,
@@ -85,14 +85,14 @@ fn boolean(b: ast.Bool) Bool {
     };
 }
 
-fn untypedUndefined(context: Context, u: ast.Undefined) Undefined {
+fn untypedUndefined(context: Context, u: parser.types.Undefined) Undefined {
     return Undefined{
         .span = u.span,
         .type = context.constraints.freshTypeVar(),
     };
 }
 
-fn branch(context: Context, b: ast.Branch) !Branch {
+fn branch(context: Context, b: parser.types.Branch) !Branch {
     const arms = try context.allocator.alloc(Arm, b.arms.len);
     const result_type = context.constraints.freshTypeVar();
     for (arms, b.arms) |*typed_arm, untyped_arm| {
@@ -123,13 +123,13 @@ fn branch(context: Context, b: ast.Branch) !Branch {
     };
 }
 
-fn dotCall(context: Context, b: ast.BinaryOp) !Expression {
+fn dotCall(context: Context, b: parser.types.BinaryOp) !Expression {
     switch (b.right.*) {
         .call => |c| {
-            const arguments = try context.allocator.alloc(ast.Expression, c.arguments.len + 1);
+            const arguments = try context.allocator.alloc(parser.types.Expression, c.arguments.len + 1);
             arguments[0] = b.left.*;
             @memcpy(arguments[1..], c.arguments);
-            const new_call = ast.Call{
+            const new_call = parser.types.Call{
                 .function = c.function,
                 .arguments = arguments,
                 .span = b.span,
@@ -140,7 +140,7 @@ fn dotCall(context: Context, b: ast.BinaryOp) !Expression {
     }
 }
 
-fn binaryOp(context: Context, b: ast.BinaryOp) !Expression {
+fn binaryOp(context: Context, b: parser.types.BinaryOp) !Expression {
     switch (b.kind) {
         .dot => return dotCall(context, b),
         .equal, .greater, .less => {
@@ -186,7 +186,7 @@ fn binaryOp(context: Context, b: ast.BinaryOp) !Expression {
     }
 }
 
-fn define(context: Context, d: ast.Define) !Define {
+fn define(context: Context, d: parser.types.Define) !Define {
     const value = try expressionAlloc(context, d.value.*);
     var monotype = value.typeOf();
     if (d.type) |t| {
@@ -219,7 +219,7 @@ fn define(context: Context, d: ast.Define) !Define {
     };
 }
 
-fn addAssign(context: Context, d: ast.AddAssign) !AddAssign {
+fn addAssign(context: Context, d: parser.types.AddAssign) !AddAssign {
     const value = try expressionAlloc(context, d.value.*);
     var monotype = value.typeOf();
     const binding = Binding{
@@ -243,7 +243,7 @@ fn addAssign(context: Context, d: ast.AddAssign) !AddAssign {
     };
 }
 
-fn callForeignImport(context: Context, c: ast.Call) !Expression {
+fn callForeignImport(context: Context, c: parser.types.Call) !Expression {
     if (c.arguments.len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
     const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[2]);
     return Expression{
@@ -256,7 +256,7 @@ fn callForeignImport(context: Context, c: ast.Call) !Expression {
     };
 }
 
-fn callForeignExport(context: Context, c: ast.Call) !Expression {
+fn callForeignExport(context: Context, c: parser.types.Call) !Expression {
     if (c.arguments.len != 2) std.debug.panic("foreign_export takes 2 arguments", .{});
     return Expression{
         .foreign_export = .{
@@ -268,7 +268,7 @@ fn callForeignExport(context: Context, c: ast.Call) !Expression {
     };
 }
 
-fn callConvert(context: Context, c: ast.Call) !Expression {
+fn callConvert(context: Context, c: parser.types.Call) !Expression {
     if (c.arguments.len != 2) std.debug.panic("convert takes 2 arguments", .{});
     const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[1]);
     return Expression{
@@ -280,7 +280,7 @@ fn callConvert(context: Context, c: ast.Call) !Expression {
     };
 }
 
-fn callSqrt(context: Context, c: ast.Call) !Expression {
+fn callSqrt(context: Context, c: parser.types.Call) !Expression {
     if (c.arguments.len != 1) std.debug.panic("sqrt takes 1 arguments", .{});
     const arguments = try context.allocator.alloc(Expression, 1);
     arguments[0] = try expression(context, c.arguments[0]);
@@ -294,7 +294,7 @@ fn callSqrt(context: Context, c: ast.Call) !Expression {
     };
 }
 
-fn call(context: Context, c: ast.Call) !Expression {
+fn call(context: Context, c: parser.types.Call) !Expression {
     switch (c.function.*) {
         .symbol => |s| {
             const len = c.arguments.len;
@@ -328,7 +328,7 @@ fn call(context: Context, c: ast.Call) !Expression {
     }
 }
 
-fn function(context: Context, f: ast.Function) !Function {
+fn function(context: Context, f: parser.types.Function) !Function {
     try context.scopes.push();
     defer context.scopes.pop();
     const len = f.parameters.len;
@@ -372,7 +372,7 @@ fn function(context: Context, f: ast.Function) !Function {
     };
 }
 
-fn block(context: Context, b: ast.Block) !Block {
+fn block(context: Context, b: parser.types.Block) !Block {
     const len = b.expressions.len;
     const expressions = try context.allocator.alloc(Expression, len);
     for (b.expressions, expressions) |untyped_e, *typed_e| {
@@ -386,7 +386,7 @@ fn block(context: Context, b: ast.Block) !Block {
     };
 }
 
-fn expression(context: Context, e: ast.Expression) error{ OutOfMemory, CompileError }!Expression {
+fn expression(context: Context, e: parser.types.Expression) error{ OutOfMemory, CompileError }!Expression {
     switch (e) {
         .int => |i| return .{ .int = int(context, i) },
         .float => |f| return .{ .float = float(context, f) },
@@ -411,7 +411,7 @@ fn alloc(allocator: Allocator, expr: Expression) !*Expression {
     return result;
 }
 
-fn expressionAlloc(context: Context, expr: ast.Expression) !*Expression {
+fn expressionAlloc(context: Context, expr: parser.types.Expression) !*Expression {
     return try alloc(context.allocator, try expression(context, expr));
 }
 
