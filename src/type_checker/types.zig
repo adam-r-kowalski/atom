@@ -3,17 +3,17 @@ const Allocator = std.mem.Allocator;
 const Map = std.AutoHashMap;
 const List = std.ArrayList;
 
-const Builtins = @import("builtins.zig").Builtins;
-const Indent = @import("indent.zig").Indent;
-const interner = @import("interner.zig");
+const Builtins = @import("../builtins.zig").Builtins;
+const Indent = @import("../indent.zig").Indent;
+const interner = @import("../interner.zig");
 const Interned = interner.Interned;
-const parser = @import("parser.zig");
-const substitution = @import("substitution.zig");
+const parser = @import("../parser.zig");
+const substitution = @import("../substitution.zig");
 const MonoType = substitution.MonoType;
 const Substitution = substitution.Substitution;
 const TypeVar = substitution.TypeVar;
-const Constraints = @import("constraints.zig").Constraints;
-const CompileErrors = @import("compile_errors.zig").CompileErrors;
+const Constraints = @import("../constraints.zig").Constraints;
+const CompileErrors = @import("../compile_errors.zig").CompileErrors;
 const Span = parser.types.Span;
 
 pub const WorkQueue = List(Interned);

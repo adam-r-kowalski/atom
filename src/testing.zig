@@ -11,7 +11,6 @@ const type_checker = @import("type_checker.zig");
 const lower = @import("lower.zig");
 const Constraints = @import("constraints.zig").Constraints;
 const TypeVar = @import("substitution.zig").TypeVar;
-const Module = @import("typed_ast.zig").Module;
 const CompileErrors = @import("compile_errors.zig").CompileErrors;
 
 pub fn tokenize(allocator: Allocator, source: []const u8) ![]const u8 {
@@ -52,8 +51,8 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
     const untyped_ast = try parser.parse(arena.allocator(), tokens);
     var constraints = Constraints.init(arena.allocator(), &compile_errors);
-    var ast = try Module.init(arena.allocator(), &constraints, builtins, &compile_errors, untyped_ast);
-    try type_checker.infer(&ast, try intern.store(name));
+    var ast = try type_checker.types.Module.init(arena.allocator(), &constraints, builtins, &compile_errors, untyped_ast);
+    try type_checker.infer.topLevel(&ast, try intern.store(name));
     const substitution = try constraints.solve(arena.allocator());
     ast.apply(substitution);
     return try std.fmt.allocPrint(allocator, "{}", .{ast});
@@ -68,8 +67,8 @@ pub fn typeInferVerbose(allocator: Allocator, source: []const u8, name: []const 
     const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
     const untyped_ast = try parser.parse(arena.allocator(), tokens);
     var constraints = Constraints.init(arena.allocator(), &compile_errors);
-    var ast = try Module.init(arena.allocator(), &constraints, builtins, &compile_errors, untyped_ast);
-    try type_checker.infer(&ast, try intern.store(name));
+    var ast = try type_checker.types.Module.init(arena.allocator(), &constraints, builtins, &compile_errors, untyped_ast);
+    try type_checker.infer.topLevel(&ast, try intern.store(name));
     const substitution = try constraints.solve(arena.allocator());
     ast.apply(substitution);
     return try std.fmt.allocPrint(allocator, "{}", .{ast});
@@ -84,11 +83,11 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
     const untyped_ast = try parser.parse(arena.allocator(), tokens);
     var constraints = Constraints.init(arena.allocator(), &compile_errors);
-    var ast = try Module.init(arena.allocator(), &constraints, builtins, &compile_errors, untyped_ast);
+    var ast = try type_checker.types.Module.init(arena.allocator(), &constraints, builtins, &compile_errors, untyped_ast);
     const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
     if (export_count == 0) ast.foreign_exports = &.{start};
-    for (ast.foreign_exports) |foreign_export| try type_checker.infer(&ast, foreign_export);
+    for (ast.foreign_exports) |foreign_export| try type_checker.infer.topLevel(&ast, foreign_export);
     const substitution = try constraints.solve(arena.allocator());
     ast.apply(substitution);
     var ir = try lower.buildIr(arena.allocator(), builtins, ast, &intern);
@@ -104,11 +103,11 @@ fn endToEnd(allocator: Allocator, intern: *Intern, compile_errors: *CompileError
     const tokens = try tokenizer.tokenize(allocator, intern, builtins, source);
     const untyped_ast = try parser.parse(allocator, tokens);
     var constraints = Constraints.init(allocator, compile_errors);
-    var ast = try Module.init(allocator, &constraints, builtins, compile_errors, untyped_ast);
+    var ast = try type_checker.types.Module.init(allocator, &constraints, builtins, compile_errors, untyped_ast);
     const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
     if (export_count == 0) ast.foreign_exports = &.{start};
-    for (ast.foreign_exports) |foreign_export| try type_checker.infer(&ast, foreign_export);
+    for (ast.foreign_exports) |foreign_export| try type_checker.infer.topLevel(&ast, foreign_export);
     const substitution = try constraints.solve(allocator);
     ast.apply(substitution);
     var ir = try lower.buildIr(allocator, builtins, ast, intern);

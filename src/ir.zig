@@ -4,8 +4,7 @@ const List = std.ArrayList;
 const interner = @import("interner.zig");
 const Intern = interner.Intern;
 const Interned = interner.Interned;
-const typed_ast = @import("typed_ast.zig");
-const Module = typed_ast.Module;
+const type_checker = @import("type_checker.zig");
 const MonoType = @import("substitution.zig").MonoType;
 const Builtins = @import("builtins.zig").Builtins;
 const Indent = @import("indent.zig").Indent;
@@ -468,7 +467,7 @@ pub const DataSegment = struct {
         };
     }
 
-    pub fn string(self: *DataSegment, s: typed_ast.String) !Offset {
+    pub fn string(self: *DataSegment, s: type_checker.types.String) !Offset {
         const bytes = s.value.string();
         const offset = self.offset;
         try self.data.append(Data{ .offset = offset, .bytes = bytes });
