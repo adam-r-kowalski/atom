@@ -102,7 +102,7 @@ test "type infer define then call" {
         \\            return_type = i32
         \\            body =
         \\                call =
-        \\                    name = symbol{ value = double, type = fn(i32) i32 }
+        \\                    function = symbol{ value = double, type = fn(i32) i32 }
         \\                    arguments =
         \\                        int{ value = 2, type = i32 }
         \\                    type = i32
@@ -219,7 +219,7 @@ test "type infer dot call" {
         \\            return_type = i32
         \\            body =
         \\                call =
-        \\                    name = symbol{ value = double, type = fn(i32) i32 }
+        \\                    function = symbol{ value = double, type = fn(i32) i32 }
         \\                    arguments =
         \\                        int{ value = 2, type = i32 }
         \\                    type = i32

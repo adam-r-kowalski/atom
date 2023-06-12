@@ -22,7 +22,8 @@ test "type infer convert i32 to f32" {
         \\            return_type = f32
         \\            body =
         \\                convert =
-        \\                    value = symbol{ value = x, type = i32 }
+        \\                    value =
+        \\                        symbol{ value = x, type = i32 }
         \\                    type = f32
     ;
     try std.testing.expectEqualStrings(expected, actual);

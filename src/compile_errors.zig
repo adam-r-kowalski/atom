@@ -7,11 +7,13 @@ const Span = @import("tokenizer.zig").types.Span;
 const substitution = @import("substitution.zig");
 const Monotype = substitution.Monotype;
 const TypedSpan = substitution.TypedSpan;
+const type_checker = @import("type_checker.zig");
 const colors = @import("colors.zig");
 const RED = colors.RED;
 const CLEAR = colors.CLEAR;
+const Writer = List(u8).Writer;
 
-fn writeSource(lines: [][]const u8, span: Span, writer: anytype) !void {
+fn writeSource(lines: [][]const u8, span: Span, writer: Writer) !void {
     var index = span.begin.line - 1;
     if (index > 0) try writer.print("{} | {s}\n", .{ span.begin.line - 1, lines[index - 1] });
     const line = lines[index];
@@ -37,7 +39,7 @@ pub const UndefinedVariable = struct {
     span: Span,
     in_scope: []const Interned,
 
-    fn toString(self: UndefinedVariable, lines: [][]const u8, writer: anytype) !void {
+    fn toString(self: UndefinedVariable, lines: [][]const u8, writer: Writer) !void {
         try writer.print(
             \\--- UNDEFINED VARIABLE ---------------------------------------------------
             \\
@@ -64,34 +66,30 @@ pub const TypeError = struct {
     left: TypedSpan,
     right: TypedSpan,
 
-    fn toString(self: TypeError, lines: [][]const u8, writer: anytype) !void {
-        try writer.print(
+    fn toString(self: TypeError, lines: [][]const u8, writer: Writer) !void {
+        try writer.writeAll(
             \\--- TYPE ERROR ---------------------------------------------------
             \\
-            \\Here the inferred type is {}
+            \\Here the inferred type is 
+        );
+        try type_checker.pretty_print.monotype(self.left.type, writer);
+        try writer.writeAll("\n\n");
+        if (self.left.span) |span| try writeSource(lines, span, writer);
+        try writer.writeAll(
             \\
             \\
-        , .{self.left.type});
-        if (self.left.span) |span| {
-            try writeSource(lines, span, writer);
-        }
-        try writer.print(
-            \\
-            \\
-            \\Here the inferred type is {}
-            \\
-            \\
-        , .{self.right.type});
-        if (self.right.span) |span| {
-            try writeSource(lines, span, writer);
-        }
-        try writer.print(
+            \\Here the inferred type is 
+        );
+        try type_checker.pretty_print.monotype(self.right.type, writer);
+        try writer.writeAll("\n\n");
+        if (self.right.span) |span| try writeSource(lines, span, writer);
+        try writer.writeAll(
             \\
             \\
             \\Expected these two types to be the same.
             \\
             \\
-        , .{});
+        );
     }
 };
 
@@ -99,7 +97,7 @@ pub const CompileError = union(enum) {
     undefined_variable: UndefinedVariable,
     type_error: TypeError,
 
-    fn toString(self: CompileError, lines: [][]const u8, writer: anytype) !void {
+    fn toString(self: CompileError, lines: [][]const u8, writer: Writer) !void {
         switch (self) {
             .undefined_variable => try self.undefined_variable.toString(lines, writer),
             .type_error => try self.type_error.toString(lines, writer),
@@ -120,9 +118,7 @@ pub const CompileErrors = struct {
         };
     }
 
-    pub fn format(self: CompileErrors, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = options;
-        _ = fmt;
+    pub fn pretty_print(self: CompileErrors, writer: Writer) !void {
         var lines = List([]const u8).init(self.allocator);
         var iterator = std.mem.split(u8, self.source, "\n");
         while (iterator.next()) |line| lines.append(line) catch unreachable;

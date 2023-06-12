@@ -230,8 +230,8 @@ implement Shape for Square {
 }
 
 test "area of shapes" {
-    assert(area(Circle(10)) == 314)
-    assert(area(Square(5, 10)) == 50)
+    assert(area(Circle{radius: 10}) == 314)
+    assert(area(Square{width: 5, height: 10})) == 50)
 }
 ```
 
@@ -387,11 +387,11 @@ sse = fn[n: u64](model: Linear, x: [n]f64, y: [n]f64) f64 {
     })
 }
 
-update = fn(model: Linear, gradient: Linear, learning_rate: f64) Linear {
-    Linear(
-        m=model.m - gradient.m * learning_rate,
-        b=model.b - gradient.b * learning_rate,
-    )
+update = fn({m, b}: Linear, {m: dm, b: db}: Linear, learning_rate: f64) Linear {
+    {
+        m: m - dm * learning_rate,
+        b: b - db * learning_rate,
+    }
 }
 
 step = fn[n: u64](model: Linear, learning_rate: f64, x: [n]f64, y: [n]f64) Linear {
@@ -400,7 +400,7 @@ step = fn[n: u64](model: Linear, learning_rate: f64, x: [n]f64, y: [n]f64) Linea
 }
 
 test "gradient descent" {
-    model = Linear(m=1.0, b=0.0)
+    model: Linear = {m: 1.0, b: 0.0}
     learning_rate = 0.01
     x = [1.0, 2.0, 3.0, 4.0]
     y = [2.0, 4.0, 6.0, 8.0]

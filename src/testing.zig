@@ -55,7 +55,9 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     try type_checker.infer.topLevel(&ast, try intern.store(name));
     const substitution = try constraints.solve(arena.allocator());
     ast.apply(substitution);
-    return try std.fmt.allocPrint(allocator, "{}", .{ast});
+    var result = List(u8).init(allocator);
+    try type_checker.pretty_print.module(ast, result.writer());
+    return try result.toOwnedSlice();
 }
 
 pub fn typeInferVerbose(allocator: Allocator, source: []const u8, name: []const u8) ![]const u8 {
@@ -125,7 +127,9 @@ pub fn compileErrors(allocator: Allocator, source: []const u8) ![]const u8 {
     var compile_errors = CompileErrors.init(arena.allocator(), source);
     _ = endToEnd(arena.allocator(), &intern, &compile_errors, source) catch |e| {
         std.debug.assert(e == error.CompileError);
-        return try std.fmt.allocPrint(allocator, "{}", .{compile_errors});
+        var result = List(u8).init(allocator);
+        try compile_errors.pretty_print(result.writer());
+        return try result.toOwnedSlice();
     };
     std.debug.panic("\nexpected compile error", .{});
 }

@@ -9,17 +9,6 @@ pub const TypeVar = struct { value: u64 };
 const Array = struct {
     size: ?u32,
     element_type: *const MonoType,
-
-    pub fn format(self: Array, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = fmt;
-        _ = options;
-        if (self.size) |size| {
-            try writer.print("[{}]", .{size});
-        } else {
-            try writer.writeAll("[]");
-        }
-        try writer.print("{}", .{self.element_type.*});
-    }
 };
 
 pub const MonoType = union(enum) {
@@ -41,33 +30,6 @@ pub const MonoType = union(enum) {
                 if (s.get(t)) |mono| self.* = mono;
             },
             else => return,
-        }
-    }
-
-    pub fn format(self: MonoType, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = fmt;
-        _ = options;
-        switch (self) {
-            .u8 => try writer.writeAll("u8"),
-            .i32 => try writer.writeAll("i32"),
-            .i64 => try writer.writeAll("i64"),
-            .f32 => try writer.writeAll("f32"),
-            .f64 => try writer.writeAll("f64"),
-            .bool => try writer.writeAll("bool"),
-            .void => try writer.writeAll("void"),
-            .typevar => |t| try writer.print("${}", .{t}),
-            .function => |f| {
-                try writer.writeAll("fn(");
-                for (f, 0..) |a, i| {
-                    if (i == f.len - 1) {
-                        try writer.writeAll(") ");
-                    } else if (i > 0) {
-                        try writer.writeAll(", ");
-                    }
-                    try writer.print("{}", .{a});
-                }
-            },
-            .array => |a| try writer.print("{}", .{a}),
         }
     }
 };
