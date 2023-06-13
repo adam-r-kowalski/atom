@@ -1,12 +1,12 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const List = std.ArrayList;
-const interner = @import("interner.zig");
+const interner = @import("../interner.zig");
 const Intern = interner.Intern;
 const Interned = interner.Interned;
-const type_checker = @import("type_checker.zig");
-const Builtins = @import("builtins.zig").Builtins;
-const Indent = @import("indent.zig").Indent;
+const type_checker = @import("../type_checker.zig");
+const Builtins = @import("../builtins.zig").Builtins;
+const Indent = @import("../indent.zig").Indent;
 
 pub const Type = union(enum) {
     i32,
