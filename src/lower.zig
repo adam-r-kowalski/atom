@@ -5,7 +5,6 @@ const interner = @import("interner.zig");
 const Intern = interner.Intern;
 const Interned = interner.Interned;
 const type_checker = @import("type_checker.zig");
-const MonoType = @import("substitution.zig").MonoType;
 const Builtins = @import("builtins.zig").Builtins;
 const ir = @import("ir.zig");
 const Type = ir.Type;
@@ -39,7 +38,7 @@ const Context = struct {
     }
 };
 
-fn mapType(monotype: MonoType) Type {
+fn mapType(monotype: type_checker.types.MonoType) Type {
     switch (monotype) {
         .i32 => return .i32,
         .i64 => return .i64,

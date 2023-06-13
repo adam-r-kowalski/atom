@@ -4,9 +4,6 @@ const Allocator = std.mem.Allocator;
 
 const Interned = @import("interner.zig").Interned;
 const Span = @import("tokenizer.zig").types.Span;
-const substitution = @import("substitution.zig");
-const Monotype = substitution.Monotype;
-const TypedSpan = substitution.TypedSpan;
 const type_checker = @import("type_checker.zig");
 const colors = @import("colors.zig");
 const RED = colors.RED;
@@ -63,8 +60,8 @@ pub const UndefinedVariable = struct {
 };
 
 pub const TypeError = struct {
-    left: TypedSpan,
-    right: TypedSpan,
+    left: type_checker.types.TypedSpan,
+    right: type_checker.types.TypedSpan,
 
     fn toString(self: TypeError, lines: [][]const u8, writer: Writer) !void {
         try writer.writeAll(

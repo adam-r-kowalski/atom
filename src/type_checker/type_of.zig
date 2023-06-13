@@ -1,7 +1,6 @@
-const MonoType = @import("../substitution.zig").MonoType;
 const types = @import("types.zig");
 
-pub fn expression(e: types.Expression) MonoType {
+pub fn expression(e: types.Expression) types.MonoType {
     return switch (e) {
         .int => |i| i.type,
         .float => |f| f.type,

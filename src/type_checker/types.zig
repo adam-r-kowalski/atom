@@ -8,13 +8,46 @@ const Indent = @import("../indent.zig").Indent;
 const interner = @import("../interner.zig");
 const Interned = interner.Interned;
 const parser = @import("../parser.zig");
-const substitution = @import("../substitution.zig");
-const MonoType = substitution.MonoType;
-const Substitution = substitution.Substitution;
-const TypeVar = substitution.TypeVar;
-const Constraints = @import("../constraints.zig").Constraints;
-const CompileErrors = @import("../compile_errors.zig").CompileErrors;
 pub const Span = parser.types.Span;
+
+pub const TypeVar = struct { value: u64 };
+
+const ArrayMonoType = struct {
+    size: ?u32,
+    element_type: *const MonoType,
+};
+
+pub const MonoType = union(enum) {
+    void,
+    u8,
+    i32,
+    i64,
+    f32,
+    f64,
+    bool,
+    typevar: TypeVar,
+    function: []MonoType,
+    array: ArrayMonoType,
+};
+
+pub const Substitution = struct {
+    map: Map(TypeVar, MonoType),
+};
+
+pub const TypedSpan = struct {
+    span: ?Span,
+    type: MonoType,
+};
+
+pub const EqualConstraint = struct {
+    left: TypedSpan,
+    right: TypedSpan,
+};
+
+pub const Constraints = struct {
+    equal: List(EqualConstraint),
+    next_type_var: TypeVar,
+};
 
 pub const Binding = struct {
     type: MonoType,
@@ -183,5 +216,4 @@ pub const Module = struct {
     typed: Typed,
     scope: Scope,
     foreign_exports: []const Interned,
-    compile_errors: *CompileErrors,
 };

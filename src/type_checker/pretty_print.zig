@@ -3,7 +3,6 @@ const List = std.ArrayList;
 const Writer = List(u8).Writer;
 
 const types = @import("types.zig");
-const substitution = @import("../substitution.zig");
 
 const Indent = u64;
 
@@ -12,7 +11,7 @@ fn newlineAndIndent(indent: Indent, writer: Writer) !void {
     for (0..indent) |_| try writer.writeAll("    ");
 }
 
-pub fn monotype(m: substitution.MonoType, writer: Writer) !void {
+pub fn monotype(m: types.MonoType, writer: Writer) !void {
     switch (m) {
         .u8 => try writer.writeAll("u8"),
         .i32 => try writer.writeAll("i32"),

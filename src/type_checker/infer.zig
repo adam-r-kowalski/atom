@@ -4,12 +4,6 @@ const List = std.ArrayList;
 
 const Interned = @import("../interner.zig").Interned;
 const Builtins = @import("../builtins.zig").Builtins;
-const constraints = @import("../constraints.zig");
-const Constraints = constraints.Constraints;
-const Equal = constraints.Equal;
-const substitution = @import("../substitution.zig");
-const MonoType = substitution.MonoType;
-const TypeVar = substitution.TypeVar;
 const types = @import("types.zig");
 const spanOf = @import("span.zig").expression;
 const typeOf = @import("type_of.zig").expression;
@@ -64,7 +58,7 @@ pub fn findInScope(scopes: Scopes, s: parser.types.Symbol) !types.Binding {
     return error.CompileError;
 }
 
-pub fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: parser.types.Expression) !MonoType {
+pub fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: parser.types.Expression) !types.MonoType {
     switch (e) {
         .symbol => |s| {
             if (s.value.eql(builtins.u8)) return .u8;
@@ -78,17 +72,17 @@ pub fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: parser.
         },
         .prototype => |p| {
             const len = p.parameters.len;
-            const function_type = try allocator.alloc(MonoType, len + 1);
+            const function_type = try allocator.alloc(types.MonoType, len + 1);
             for (p.parameters, function_type[0..len]) |param, *t|
                 t.* = try expressionToMonoType(allocator, builtins, param.type);
             function_type[len] = try expressionToMonoType(allocator, builtins, p.return_type.*);
-            return MonoType{ .function = function_type };
+            return types.MonoType{ .function = function_type };
         },
         .array_of => |a| {
             if (a.size) |_| std.debug.panic("\nSize of array currently not supported", .{});
-            const element_type = try allocator.create(MonoType);
+            const element_type = try allocator.create(types.MonoType);
             element_type.* = try expressionToMonoType(allocator, builtins, a.element_type.*);
-            return MonoType{ .array = .{ .size = null, .element_type = element_type } };
+            return types.MonoType{ .array = .{ .size = null, .element_type = element_type } };
         },
         else => std.debug.panic("\nCannot convert expression {} to mono type", .{e}),
     }
@@ -97,7 +91,7 @@ pub fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: parser.
 const Context = struct {
     allocator: Allocator,
     builtins: Builtins,
-    constraints: *Constraints,
+    constraints: *types.Constraints,
     scopes: *Scopes,
 };
 
@@ -112,11 +106,17 @@ fn symbol(scopes: Scopes, s: parser.types.Symbol) !types.Symbol {
     };
 }
 
+fn freshTypeVar(cs: *types.Constraints) types.MonoType {
+    const typevar = cs.next_type_var;
+    cs.next_type_var = types.TypeVar{ .value = cs.next_type_var.value + 1 };
+    return .{ .typevar = typevar };
+}
+
 fn int(context: Context, i: parser.types.Int) types.Int {
     return types.Int{
         .value = i.value,
         .span = i.span,
-        .type = context.constraints.freshTypeVar(),
+        .type = freshTypeVar(context.constraints),
     };
 }
 
@@ -124,12 +124,12 @@ fn float(context: Context, f: parser.types.Float) types.Float {
     return types.Float{
         .value = f.value,
         .span = f.span,
-        .type = context.constraints.freshTypeVar(),
+        .type = freshTypeVar(context.constraints),
     };
 }
 
 fn string(context: Context, s: parser.types.String) !types.String {
-    const element_type = try context.allocator.create(MonoType);
+    const element_type = try context.allocator.create(types.MonoType);
     element_type.* = .u8;
     return types.String{
         .value = s.value,
@@ -149,18 +149,18 @@ fn boolean(b: parser.types.Bool) types.Bool {
 fn untypedUndefined(context: Context, u: parser.types.Undefined) types.Undefined {
     return types.Undefined{
         .span = u.span,
-        .type = context.constraints.freshTypeVar(),
+        .type = freshTypeVar(context.constraints),
     };
 }
 
 fn branch(context: Context, b: parser.types.Branch) !types.Branch {
     const arms = try context.allocator.alloc(types.Arm, b.arms.len);
-    const result_type = context.constraints.freshTypeVar();
+    const result_type = freshTypeVar(context.constraints);
     for (arms, b.arms) |*typed_arm, untyped_arm| {
         const condition = try expression(context, untyped_arm.condition);
         const then = try block(context, untyped_arm.then);
         typed_arm.* = types.Arm{ .condition = condition, .then = then };
-        try context.constraints.equal.appendSlice(&[_]Equal{
+        try context.constraints.equal.appendSlice(&[_]types.EqualConstraint{
             .{
                 .left = .{ .type = typeOf(condition), .span = spanOf(condition) },
                 .right = .{ .type = .bool, .span = null },
@@ -229,7 +229,7 @@ fn binaryOp(context: Context, b: parser.types.BinaryOp) !types.Expression {
                 .left = left_typed_span,
                 .right = .{ .type = typeOf(right.*), .span = parser.span.expression(b.right.*) },
             });
-            const tvar = context.constraints.freshTypeVar();
+            const tvar = freshTypeVar(context.constraints);
             try context.constraints.equal.append(.{
                 .left = left_typed_span,
                 .right = .{ .type = tvar, .span = null },
@@ -359,7 +359,7 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
     switch (c.function.*) {
         .symbol => |s| {
             const len = c.arguments.len;
-            const function_type = try context.allocator.alloc(MonoType, len + 1);
+            const function_type = try context.allocator.alloc(types.MonoType, len + 1);
             if (s.value.eql(context.builtins.foreign_import)) return try callForeignImport(context, c);
             if (s.value.eql(context.builtins.foreign_export)) return try callForeignExport(context, c);
             if (s.value.eql(context.builtins.convert)) return try callConvert(context, c);
@@ -370,7 +370,7 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
                 typed_arg.* = try expression(context, untyped_arg);
                 t.* = typeOf(typed_arg.*);
             }
-            const return_type = context.constraints.freshTypeVar();
+            const return_type = freshTypeVar(context.constraints);
             function_type[len] = return_type;
             try context.constraints.equal.append(.{
                 .left = .{ .type = f.type, .span = f.span },
@@ -394,7 +394,7 @@ fn function(context: Context, f: parser.types.Function) !types.Function {
     defer popScope(context.scopes);
     const len = f.parameters.len;
     const parameters = try context.allocator.alloc(types.Symbol, len);
-    const function_type = try context.allocator.alloc(MonoType, len + 1);
+    const function_type = try context.allocator.alloc(types.MonoType, len + 1);
     for (f.parameters, parameters, function_type[0..len]) |untyped_p, *typed_p, *t| {
         const name_symbol = untyped_p.name.value;
         const p_type = try expressionToMonoType(context.allocator, context.builtins, untyped_p.type);
@@ -476,7 +476,7 @@ fn expressionAlloc(context: Context, expr: parser.types.Expression) !*types.Expr
     return try alloc(context.allocator, try expression(context, expr));
 }
 
-pub fn topLevel(m: *types.Module, name: Interned) !void {
+pub fn topLevel(m: *types.Module, name: Interned, compile_errors: *CompileErrors) !void {
     var work_queue = WorkQueue.init(m.allocator);
     try work_queue.append(name);
     while (work_queue.items.len != 0) {
@@ -489,7 +489,7 @@ pub fn topLevel(m: *types.Module, name: Interned) !void {
                 .work_queue = &work_queue,
                 .active = &active,
                 .base = m.scope,
-                .compile_errors = m.compile_errors,
+                .compile_errors = compile_errors,
             };
             const context = Context{
                 .allocator = m.allocator,
@@ -503,16 +503,16 @@ pub fn topLevel(m: *types.Module, name: Interned) !void {
     }
 }
 
-fn topLevelFunction(allocator: Allocator, builtins: Builtins, f: parser.types.Function) !MonoType {
+fn topLevelFunction(allocator: Allocator, builtins: Builtins, f: parser.types.Function) !types.MonoType {
     const len = f.parameters.len;
-    const function_type = try allocator.alloc(MonoType, len + 1);
+    const function_type = try allocator.alloc(types.MonoType, len + 1);
     for (f.parameters, function_type[0..len]) |p, *t|
         t.* = try expressionToMonoType(allocator, builtins, p.type);
     function_type[len] = try expressionToMonoType(allocator, builtins, f.return_type.*);
-    return MonoType{ .function = function_type };
+    return types.MonoType{ .function = function_type };
 }
 
-fn topLevelCall(allocator: Allocator, builtins: Builtins, c: parser.types.Call) !MonoType {
+fn topLevelCall(allocator: Allocator, builtins: Builtins, c: parser.types.Call) !types.MonoType {
     switch (c.function.*) {
         .symbol => |s| {
             if (s.value.eql(builtins.foreign_import)) {
@@ -525,14 +525,14 @@ fn topLevelCall(allocator: Allocator, builtins: Builtins, c: parser.types.Call) 
     std.debug.panic("\nInvalid top level call {}", .{c.function});
 }
 
-fn topLevelInt(allocator: Allocator, builtins: Builtins, d: parser.types.Define) !MonoType {
+fn topLevelInt(allocator: Allocator, builtins: Builtins, d: parser.types.Define) !types.MonoType {
     if (d.type) |t| {
         return try expressionToMonoType(allocator, builtins, t.*);
     }
     std.debug.panic("\nInvalid top level int {}", .{d});
 }
 
-fn topLevelType(allocator: Allocator, builtins: Builtins, d: parser.types.Define) !MonoType {
+fn topLevelType(allocator: Allocator, builtins: Builtins, d: parser.types.Define) !types.MonoType {
     return switch (d.value.*) {
         .function => |f| try topLevelFunction(allocator, builtins, f),
         .call => |c| try topLevelCall(allocator, builtins, c),
@@ -541,7 +541,7 @@ fn topLevelType(allocator: Allocator, builtins: Builtins, d: parser.types.Define
     };
 }
 
-pub fn module(allocator: Allocator, cs: *Constraints, builtins: Builtins, compile_errors: *CompileErrors, ast: parser.types.Module) !types.Module {
+pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, ast: parser.types.Module) !types.Module {
     var order = List(Interned).init(allocator);
     var untyped = types.Untyped.init(allocator);
     var typed = types.Typed.init(allocator);
@@ -592,6 +592,5 @@ pub fn module(allocator: Allocator, cs: *Constraints, builtins: Builtins, compil
         .typed = typed,
         .scope = scope,
         .foreign_exports = try foreign_exports.toOwnedSlice(),
-        .compile_errors = compile_errors,
     };
 }

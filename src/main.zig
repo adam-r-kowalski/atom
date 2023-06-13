@@ -135,14 +135,17 @@ fn compileAndRun(allocator: Allocator, intern: *mantis.interner.Intern, compile_
     const builtins = try mantis.Builtins.init(intern);
     const tokens = try mantis.tokenizer.tokenize(allocator, intern, builtins, source);
     const untyped_ast = try mantis.parser.parse(allocator, tokens);
-    var constraints = mantis.Constraints.init(allocator, compile_errors);
-    var ast = try mantis.type_checker.types.Module.init(allocator, &constraints, builtins, compile_errors, untyped_ast);
+    var constraints = mantis.type_checker.types.Constraints{
+        .equal = List(mantis.type_checker.types.EqualConstraint).init(allocator),
+        .next_type_var = .{ .value = 0 },
+    };
+    var ast = try mantis.type_checker.infer.module(allocator, &constraints, builtins, untyped_ast);
     const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
     if (export_count == 0) ast.foreign_exports = &.{start};
-    for (ast.foreign_exports) |foreign_export| try mantis.type_checker.infer.topLevel(&ast, foreign_export);
-    const substitution = try constraints.solve(allocator);
-    ast.apply(substitution);
+    for (ast.foreign_exports) |foreign_export| try mantis.type_checker.infer.topLevel(&ast, foreign_export, compile_errors);
+    const substitution = try mantis.type_checker.solve_constraints.constraints(allocator, constraints, compile_errors);
+    mantis.type_checker.apply_substitution.module(substitution, &ast);
     var ir = try mantis.lower.buildIr(allocator, builtins, ast, intern);
     if (export_count == 0) {
         const alias = try intern.store("_start");

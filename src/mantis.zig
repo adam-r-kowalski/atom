@@ -5,7 +5,5 @@ pub const parser = @import("parser.zig");
 pub const type_checker = @import("type_checker.zig");
 pub const lower = @import("lower.zig");
 pub const testing = @import("testing.zig");
-pub const Constraints = @import("constraints.zig").Constraints;
-pub const TypeVar = @import("substitution.zig").TypeVar;
 pub const CompileErrors = @import("compile_errors.zig").CompileErrors;
 pub const colors = @import("colors.zig");
