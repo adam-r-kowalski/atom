@@ -85,7 +85,7 @@ fn expressions(context: Context, b: type_checker.types.Block) !Expressions {
 fn add(context: Context, b: type_checker.types.BinaryOp) !Expression {
     const left = try expressionAlloc(context, b.left.*);
     const right = try expressionAlloc(context, b.right.*);
-    switch (b.left.typeOf()) {
+    switch (type_checker.type_of.expression(b.left.*)) {
         .i32 => return Expression{ .binary_op = .{ .kind = .i32_add, .left = left, .right = right } },
         .i64 => return Expression{ .binary_op = .{ .kind = .i64_add, .left = left, .right = right } },
         .f32 => return Expression{ .binary_op = .{ .kind = .f32_add, .left = left, .right = right } },
@@ -97,7 +97,7 @@ fn add(context: Context, b: type_checker.types.BinaryOp) !Expression {
 fn subtract(context: Context, b: type_checker.types.BinaryOp) !Expression {
     const left = try expressionAlloc(context, b.left.*);
     const right = try expressionAlloc(context, b.right.*);
-    switch (b.left.typeOf()) {
+    switch (type_checker.type_of.expression(b.left.*)) {
         .i32 => return Expression{ .binary_op = .{ .kind = .i32_sub, .left = left, .right = right } },
         .i64 => return Expression{ .binary_op = .{ .kind = .i64_sub, .left = left, .right = right } },
         .f32 => return Expression{ .binary_op = .{ .kind = .f32_sub, .left = left, .right = right } },
@@ -109,7 +109,7 @@ fn subtract(context: Context, b: type_checker.types.BinaryOp) !Expression {
 fn multiply(context: Context, b: type_checker.types.BinaryOp) !Expression {
     const left = try expressionAlloc(context, b.left.*);
     const right = try expressionAlloc(context, b.right.*);
-    switch (b.left.typeOf()) {
+    switch (type_checker.type_of.expression(b.left.*)) {
         .i32 => return Expression{ .binary_op = .{ .kind = .i32_mul, .left = left, .right = right } },
         .i64 => return Expression{ .binary_op = .{ .kind = .i64_mul, .left = left, .right = right } },
         .f32 => return Expression{ .binary_op = .{ .kind = .f32_mul, .left = left, .right = right } },
@@ -121,7 +121,7 @@ fn multiply(context: Context, b: type_checker.types.BinaryOp) !Expression {
 fn divide(context: Context, b: type_checker.types.BinaryOp) !Expression {
     const left = try expressionAlloc(context, b.left.*);
     const right = try expressionAlloc(context, b.right.*);
-    switch (b.left.typeOf()) {
+    switch (type_checker.type_of.expression(b.left.*)) {
         .i32 => return Expression{ .binary_op = .{ .kind = .i32_div_s, .left = left, .right = right } },
         .i64 => return Expression{ .binary_op = .{ .kind = .i64_div_s, .left = left, .right = right } },
         .f32 => return Expression{ .binary_op = .{ .kind = .f32_div, .left = left, .right = right } },
@@ -133,7 +133,7 @@ fn divide(context: Context, b: type_checker.types.BinaryOp) !Expression {
 fn modulo(context: Context, b: type_checker.types.BinaryOp) !Expression {
     const left = try expressionAlloc(context, b.left.*);
     const right = try expressionAlloc(context, b.right.*);
-    switch (b.left.typeOf()) {
+    switch (type_checker.type_of.expression(b.left.*)) {
         .i32 => return Expression{ .binary_op = .{ .kind = .i32_rem_s, .left = left, .right = right } },
         .i64 => return Expression{ .binary_op = .{ .kind = .i64_rem_s, .left = left, .right = right } },
         else => |k| std.debug.panic("\nModulo type {} not yet supported", .{k}),
@@ -143,7 +143,7 @@ fn modulo(context: Context, b: type_checker.types.BinaryOp) !Expression {
 fn equal(context: Context, b: type_checker.types.BinaryOp) !Expression {
     const left = try expressionAlloc(context, b.left.*);
     const right = try expressionAlloc(context, b.right.*);
-    switch (b.left.typeOf()) {
+    switch (type_checker.type_of.expression(b.left.*)) {
         .i32 => return Expression{ .binary_op = .{ .kind = .i32_eq, .left = left, .right = right } },
         .i64 => return Expression{ .binary_op = .{ .kind = .i64_eq, .left = left, .right = right } },
         .f32 => return Expression{ .binary_op = .{ .kind = .f32_eq, .left = left, .right = right } },
@@ -155,7 +155,7 @@ fn equal(context: Context, b: type_checker.types.BinaryOp) !Expression {
 fn binaryOr(context: Context, b: type_checker.types.BinaryOp) !Expression {
     const left = try expressionAlloc(context, b.left.*);
     const right = try expressionAlloc(context, b.right.*);
-    switch (b.left.typeOf()) {
+    switch (type_checker.type_of.expression(b.left.*)) {
         .bool => return Expression{ .binary_op = .{ .kind = .i32_or, .left = left, .right = right } },
         else => |k| std.debug.panic("\nOr type {} not yet supported", .{k}),
     }
@@ -164,7 +164,7 @@ fn binaryOr(context: Context, b: type_checker.types.BinaryOp) !Expression {
 fn greater(context: Context, b: type_checker.types.BinaryOp) !Expression {
     const left = try expressionAlloc(context, b.left.*);
     const right = try expressionAlloc(context, b.right.*);
-    switch (b.left.typeOf()) {
+    switch (type_checker.type_of.expression(b.left.*)) {
         .i32 => return Expression{ .binary_op = .{ .kind = .i32_gt_s, .left = left, .right = right } },
         .i64 => return Expression{ .binary_op = .{ .kind = .i64_gt_s, .left = left, .right = right } },
         .f32 => return Expression{ .binary_op = .{ .kind = .f32_gt, .left = left, .right = right } },
@@ -176,7 +176,7 @@ fn greater(context: Context, b: type_checker.types.BinaryOp) !Expression {
 fn less(context: Context, b: type_checker.types.BinaryOp) !Expression {
     const left = try expressionAlloc(context, b.left.*);
     const right = try expressionAlloc(context, b.right.*);
-    switch (b.left.typeOf()) {
+    switch (type_checker.type_of.expression(b.left.*)) {
         .i32 => return Expression{ .binary_op = .{ .kind = .i32_lt_s, .left = left, .right = right } },
         .i64 => return Expression{ .binary_op = .{ .kind = .i64_lt_s, .left = left, .right = right } },
         .f32 => return Expression{ .binary_op = .{ .kind = .f32_lt, .left = left, .right = right } },
@@ -282,7 +282,7 @@ fn addAssign(context: Context, a: type_checker.types.AddAssign) !Expression {
         .left = &left,
         .right = a.value,
         .span = a.span,
-        .type = a.value.typeOf(),
+        .type = type_checker.type_of.expression(a.value.*),
     };
     const value = try context.allocator.create(Expression);
     value.* = try binaryOp(context, binary_op);
@@ -291,7 +291,7 @@ fn addAssign(context: Context, a: type_checker.types.AddAssign) !Expression {
 
 fn convert(context: Context, c: type_checker.types.Convert) !Expression {
     const value = try expressionAlloc(context, c.value.*);
-    switch (c.value.typeOf()) {
+    switch (type_checker.type_of.expression(c.value.*)) {
         .i32 => switch (c.type) {
             .f32 => return Expression{ .unary_op = .{ .kind = .f32_convert_i32_s, .expression = value } },
             else => |k| std.debug.panic("\nConvert type i32 to {} not yet supported", .{k}),

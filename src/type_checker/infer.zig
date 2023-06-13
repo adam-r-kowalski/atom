@@ -11,6 +11,8 @@ const substitution = @import("../substitution.zig");
 const MonoType = substitution.MonoType;
 const TypeVar = substitution.TypeVar;
 const types = @import("types.zig");
+const spanOf = @import("span.zig").expression;
+const typeOf = @import("type_of.zig").expression;
 const parser = @import("../parser.zig");
 
 const Context = struct {
@@ -81,7 +83,7 @@ fn branch(context: Context, b: parser.types.Branch) !types.Branch {
         typed_arm.* = types.Arm{ .condition = condition, .then = then };
         try context.constraints.equal.appendSlice(&[_]Equal{
             .{
-                .left = .{ .type = condition.typeOf(), .span = condition.span() },
+                .left = .{ .type = typeOf(condition), .span = spanOf(condition) },
                 .right = .{ .type = .bool, .span = null },
             },
             .{
@@ -127,8 +129,8 @@ fn binaryOp(context: Context, b: parser.types.BinaryOp) !types.Expression {
             const left = try expressionAlloc(context, b.left.*);
             const right = try expressionAlloc(context, b.right.*);
             try context.constraints.equal.append(.{
-                .left = .{ .type = left.typeOf(), .span = parser.span.expression(b.left.*) },
-                .right = .{ .type = right.typeOf(), .span = parser.span.expression(b.right.*) },
+                .left = .{ .type = typeOf(left.*), .span = parser.span.expression(b.left.*) },
+                .right = .{ .type = typeOf(right.*), .span = parser.span.expression(b.right.*) },
             });
             return types.Expression{
                 .binary_op = .{
@@ -143,10 +145,10 @@ fn binaryOp(context: Context, b: parser.types.BinaryOp) !types.Expression {
         else => {
             const left = try expressionAlloc(context, b.left.*);
             const right = try expressionAlloc(context, b.right.*);
-            const left_typed_span = .{ .type = left.typeOf(), .span = parser.span.expression(b.left.*) };
+            const left_typed_span = .{ .type = typeOf(left.*), .span = parser.span.expression(b.left.*) };
             try context.constraints.equal.append(.{
                 .left = left_typed_span,
-                .right = .{ .type = right.typeOf(), .span = parser.span.expression(b.right.*) },
+                .right = .{ .type = typeOf(right.*), .span = parser.span.expression(b.right.*) },
             });
             const tvar = context.constraints.freshTypeVar();
             try context.constraints.equal.append(.{
@@ -168,7 +170,7 @@ fn binaryOp(context: Context, b: parser.types.BinaryOp) !types.Expression {
 
 fn define(context: Context, d: parser.types.Define) !types.Define {
     const value = try expressionAlloc(context, d.value.*);
-    var monotype = value.typeOf();
+    var monotype = typeOf(value.*);
     if (d.type) |t| {
         const annotated_type = try types.expressionToMonoType(context.allocator, context.builtins, t.*);
         try context.constraints.equal.append(.{
@@ -201,7 +203,7 @@ fn define(context: Context, d: parser.types.Define) !types.Define {
 
 fn addAssign(context: Context, d: parser.types.AddAssign) !types.AddAssign {
     const value = try expressionAlloc(context, d.value.*);
-    var monotype = value.typeOf();
+    var monotype = typeOf(value.*);
     const binding = types.Binding{
         .type = monotype,
         .global = false,
@@ -269,7 +271,7 @@ fn callSqrt(context: Context, c: parser.types.Call) !types.Expression {
             .function = context.builtins.sqrt,
             .arguments = arguments,
             .span = c.span,
-            .type = arguments[0].typeOf(),
+            .type = typeOf(arguments[0]),
         },
     };
 }
@@ -287,7 +289,7 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
             const arguments = try context.allocator.alloc(types.Expression, len);
             for (c.arguments, arguments, function_type[0..len]) |untyped_arg, *typed_arg, *t| {
                 typed_arg.* = try expression(context, untyped_arg);
-                t.* = typed_arg.typeOf();
+                t.* = typeOf(typed_arg.*);
             }
             const return_type = context.constraints.freshTypeVar();
             function_type[len] = return_type;
@@ -358,7 +360,7 @@ fn block(context: Context, b: parser.types.Block) !types.Block {
     for (b.expressions, expressions) |untyped_e, *typed_e| {
         typed_e.* = try expression(context, untyped_e);
     }
-    const monotype = if (len == 0) .void else expressions[len - 1].typeOf();
+    const monotype = if (len == 0) .void else typeOf(expressions[len - 1]);
     return types.Block{
         .expressions = expressions,
         .span = b.span,

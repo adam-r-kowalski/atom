@@ -14,7 +14,7 @@ const Substitution = substitution.Substitution;
 const TypeVar = substitution.TypeVar;
 const Constraints = @import("../constraints.zig").Constraints;
 const CompileErrors = @import("../compile_errors.zig").CompileErrors;
-const Span = parser.types.Span;
+pub const Span = parser.types.Span;
 
 pub const WorkQueue = List(Interned);
 
@@ -229,52 +229,6 @@ pub const Expression = union(enum) {
     foreign_export: ForeignExport,
     convert: Convert,
     undefined: Undefined,
-
-    pub fn span(self: Expression) Span {
-        return switch (self) {
-            .int => |i| i.span,
-            .float => |f| f.span,
-            .symbol => |s| s.span,
-            .bool => |b| b.span,
-            .string => |s| s.span,
-            .define => |d| d.span,
-            .add_assign => |a| a.span,
-            .function => |f| f.span,
-            .binary_op => |b| b.span,
-            .group => |g| g.span,
-            .block => |b| b.span,
-            .branch => |b| b.span,
-            .call => |c| c.span,
-            .intrinsic => |i| i.span,
-            .foreign_import => |f| f.span,
-            .foreign_export => |f| f.span,
-            .convert => |c| c.span,
-            .undefined => |u| u.span,
-        };
-    }
-
-    pub fn typeOf(self: Expression) MonoType {
-        return switch (self) {
-            .int => |i| i.type,
-            .float => |f| f.type,
-            .symbol => |s| s.type,
-            .bool => |b| b.type,
-            .string => |s| s.type,
-            .define => |d| d.type,
-            .add_assign => |a| a.type,
-            .function => |f| f.type,
-            .binary_op => |b| b.type,
-            .group => |g| g.type,
-            .block => |b| b.type,
-            .branch => |b| b.type,
-            .call => |c| c.type,
-            .intrinsic => |i| i.type,
-            .foreign_import => |f| f.type,
-            .foreign_export => |f| f.type,
-            .convert => |c| c.type,
-            .undefined => |u| u.type,
-        };
-    }
 };
 
 pub const Untyped = Map(Interned, parser.types.Expression);
