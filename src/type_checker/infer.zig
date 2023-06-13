@@ -14,16 +14,95 @@ const types = @import("types.zig");
 const spanOf = @import("span.zig").expression;
 const typeOf = @import("type_of.zig").expression;
 const parser = @import("../parser.zig");
+const CompileErrors = @import("../compile_errors.zig").CompileErrors;
+
+pub const WorkQueue = List(Interned);
+
+pub const Scopes = struct {
+    allocator: Allocator,
+    base: types.Scope,
+    active: *List(types.Scope),
+    work_queue: *WorkQueue,
+    compile_errors: *CompileErrors,
+};
+
+fn pushScope(scopes: *Scopes) !void {
+    try scopes.active.append(types.Scope.init(scopes.allocator));
+}
+
+fn popScope(scopes: *Scopes) void {
+    _ = scopes.active.pop();
+}
+
+fn putInScope(scopes: *Scopes, name: Interned, binding: types.Binding) !void {
+    try scopes.active.items[scopes.active.items.len - 1].put(name, binding);
+}
+
+pub fn findInScope(scopes: Scopes, s: parser.types.Symbol) !types.Binding {
+    var reverse_iterator = std.mem.reverseIterator(scopes.active.items);
+    while (reverse_iterator.next()) |scope| {
+        if (scope.get(s.value)) |binding| return binding;
+    }
+    if (scopes.base.get(s.value)) |binding| {
+        try scopes.work_queue.append(s.value);
+        return binding;
+    }
+    var in_scope = List(Interned).init(scopes.allocator);
+    var base_iterator = scopes.base.keyIterator();
+    while (base_iterator.next()) |key| try in_scope.append(key.*);
+    for (scopes.active.items) |scope| {
+        var scope_iterator = scope.keyIterator();
+        while (scope_iterator.next()) |key| try in_scope.append(key.*);
+    }
+    try scopes.compile_errors.errors.append(.{
+        .undefined_variable = .{
+            .symbol = s.value,
+            .span = s.span,
+            .in_scope = try in_scope.toOwnedSlice(),
+        },
+    });
+    return error.CompileError;
+}
+
+pub fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: parser.types.Expression) !MonoType {
+    switch (e) {
+        .symbol => |s| {
+            if (s.value.eql(builtins.u8)) return .u8;
+            if (s.value.eql(builtins.i32)) return .i32;
+            if (s.value.eql(builtins.i64)) return .i64;
+            if (s.value.eql(builtins.f32)) return .f32;
+            if (s.value.eql(builtins.f64)) return .f64;
+            if (s.value.eql(builtins.bool)) return .bool;
+            if (s.value.eql(builtins.void)) return .void;
+            std.debug.panic("\nCannot convert symbol {} to mono type", .{s});
+        },
+        .prototype => |p| {
+            const len = p.parameters.len;
+            const function_type = try allocator.alloc(MonoType, len + 1);
+            for (p.parameters, function_type[0..len]) |param, *t|
+                t.* = try expressionToMonoType(allocator, builtins, param.type);
+            function_type[len] = try expressionToMonoType(allocator, builtins, p.return_type.*);
+            return MonoType{ .function = function_type };
+        },
+        .array_of => |a| {
+            if (a.size) |_| std.debug.panic("\nSize of array currently not supported", .{});
+            const element_type = try allocator.create(MonoType);
+            element_type.* = try expressionToMonoType(allocator, builtins, a.element_type.*);
+            return MonoType{ .array = .{ .size = null, .element_type = element_type } };
+        },
+        else => std.debug.panic("\nCannot convert expression {} to mono type", .{e}),
+    }
+}
 
 const Context = struct {
     allocator: Allocator,
     builtins: Builtins,
     constraints: *Constraints,
-    scopes: *types.Scopes,
+    scopes: *Scopes,
 };
 
-fn symbol(scopes: types.Scopes, s: parser.types.Symbol) !types.Symbol {
-    const binding = try scopes.find(s);
+fn symbol(scopes: Scopes, s: parser.types.Symbol) !types.Symbol {
+    const binding = try findInScope(scopes, s);
     return types.Symbol{
         .value = s.value,
         .span = s.span,
@@ -172,7 +251,7 @@ fn define(context: Context, d: parser.types.Define) !types.Define {
     const value = try expressionAlloc(context, d.value.*);
     var monotype = typeOf(value.*);
     if (d.type) |t| {
-        const annotated_type = try types.expressionToMonoType(context.allocator, context.builtins, t.*);
+        const annotated_type = try expressionToMonoType(context.allocator, context.builtins, t.*);
         try context.constraints.equal.append(.{
             .left = .{ .type = annotated_type, .span = parser.span.expression(t.*) },
             .right = .{ .type = monotype, .span = parser.span.expression(d.value.*) },
@@ -191,7 +270,7 @@ fn define(context: Context, d: parser.types.Define) !types.Define {
         .global = false,
         .mutable = false,
     };
-    try context.scopes.put(name.value, binding);
+    try putInScope(context.scopes, name.value, binding);
     return types.Define{
         .name = name,
         .value = value,
@@ -216,7 +295,7 @@ fn addAssign(context: Context, d: parser.types.AddAssign) !types.AddAssign {
         .global = false,
         .mutable = false,
     };
-    try context.scopes.put(name.value, binding);
+    try putInScope(context.scopes, name.value, binding);
     return types.AddAssign{
         .name = name,
         .value = value,
@@ -227,7 +306,7 @@ fn addAssign(context: Context, d: parser.types.AddAssign) !types.AddAssign {
 
 fn callForeignImport(context: Context, c: parser.types.Call) !types.Expression {
     if (c.arguments.len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
-    const monotype = try types.expressionToMonoType(context.allocator, context.builtins, c.arguments[2]);
+    const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[2]);
     return types.Expression{
         .foreign_import = .{
             .module = c.arguments[0].string.value,
@@ -252,7 +331,7 @@ fn callForeignExport(context: Context, c: parser.types.Call) !types.Expression {
 
 fn callConvert(context: Context, c: parser.types.Call) !types.Expression {
     if (c.arguments.len != 2) std.debug.panic("convert takes 2 arguments", .{});
-    const monotype = try types.expressionToMonoType(context.allocator, context.builtins, c.arguments[1]);
+    const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[1]);
     return types.Expression{
         .convert = .{
             .value = try expressionAlloc(context, c.arguments[0]),
@@ -311,14 +390,14 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
 }
 
 fn function(context: Context, f: parser.types.Function) !types.Function {
-    try context.scopes.push();
-    defer context.scopes.pop();
+    try pushScope(context.scopes);
+    defer popScope(context.scopes);
     const len = f.parameters.len;
     const parameters = try context.allocator.alloc(types.Symbol, len);
     const function_type = try context.allocator.alloc(MonoType, len + 1);
     for (f.parameters, parameters, function_type[0..len]) |untyped_p, *typed_p, *t| {
         const name_symbol = untyped_p.name.value;
-        const p_type = try types.expressionToMonoType(context.allocator, context.builtins, untyped_p.type);
+        const p_type = try expressionToMonoType(context.allocator, context.builtins, untyped_p.type);
         const span = parser.types.Span{
             .begin = untyped_p.name.span.begin,
             .end = parser.span.expression(untyped_p.type).end,
@@ -335,10 +414,10 @@ fn function(context: Context, f: parser.types.Function) !types.Function {
             .global = false,
             .mutable = false,
         };
-        try context.scopes.put(name_symbol, binding);
+        try putInScope(context.scopes, name_symbol, binding);
         t.* = p_type;
     }
-    const return_type = try types.expressionToMonoType(context.allocator, context.builtins, f.return_type.*);
+    const return_type = try expressionToMonoType(context.allocator, context.builtins, f.return_type.*);
     const body = try block(context, f.body);
     try context.constraints.equal.append(.{
         .left = .{ .type = return_type, .span = parser.span.expression(f.return_type.*) },
@@ -397,21 +476,122 @@ fn expressionAlloc(context: Context, expr: parser.types.Expression) !*types.Expr
     return try alloc(context.allocator, try expression(context, expr));
 }
 
-pub fn topLevel(module: *types.Module, name: Interned) !void {
-    var work_queue = types.WorkQueue.init(module.allocator);
+pub fn topLevel(m: *types.Module, name: Interned) !void {
+    var work_queue = WorkQueue.init(m.allocator);
     try work_queue.append(name);
     while (work_queue.items.len != 0) {
         const current = work_queue.pop();
-        if (module.untyped.fetchRemove(current)) |entry| {
-            var scopes = try types.Scopes.init(module.allocator, module.scope, &work_queue, module.compile_errors);
+        if (m.untyped.fetchRemove(current)) |entry| {
+            var active = List(types.Scope).init(m.allocator);
+            try active.append(types.Scope.init(m.allocator));
+            var scopes = Scopes{
+                .allocator = m.allocator,
+                .work_queue = &work_queue,
+                .active = &active,
+                .base = m.scope,
+                .compile_errors = m.compile_errors,
+            };
             const context = Context{
-                .allocator = module.allocator,
-                .builtins = module.builtins,
-                .constraints = module.constraints,
+                .allocator = m.allocator,
+                .builtins = m.builtins,
+                .constraints = m.constraints,
                 .scopes = &scopes,
             };
             const expr = try expression(context, entry.value);
-            try module.typed.putNoClobber(current, expr);
+            try m.typed.putNoClobber(current, expr);
         }
     }
+}
+
+fn topLevelFunction(allocator: Allocator, builtins: Builtins, f: parser.types.Function) !MonoType {
+    const len = f.parameters.len;
+    const function_type = try allocator.alloc(MonoType, len + 1);
+    for (f.parameters, function_type[0..len]) |p, *t|
+        t.* = try expressionToMonoType(allocator, builtins, p.type);
+    function_type[len] = try expressionToMonoType(allocator, builtins, f.return_type.*);
+    return MonoType{ .function = function_type };
+}
+
+fn topLevelCall(allocator: Allocator, builtins: Builtins, c: parser.types.Call) !MonoType {
+    switch (c.function.*) {
+        .symbol => |s| {
+            if (s.value.eql(builtins.foreign_import)) {
+                if (c.arguments.len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
+                return try expressionToMonoType(allocator, builtins, c.arguments[2]);
+            }
+        },
+        else => |k| std.debug.panic("\nInvalid top level call function {}", .{k}),
+    }
+    std.debug.panic("\nInvalid top level call {}", .{c.function});
+}
+
+fn topLevelInt(allocator: Allocator, builtins: Builtins, d: parser.types.Define) !MonoType {
+    if (d.type) |t| {
+        return try expressionToMonoType(allocator, builtins, t.*);
+    }
+    std.debug.panic("\nInvalid top level int {}", .{d});
+}
+
+fn topLevelType(allocator: Allocator, builtins: Builtins, d: parser.types.Define) !MonoType {
+    return switch (d.value.*) {
+        .function => |f| try topLevelFunction(allocator, builtins, f),
+        .call => |c| try topLevelCall(allocator, builtins, c),
+        .int => try topLevelInt(allocator, builtins, d),
+        else => |k| std.debug.panic("\nInvalid top level value {}", .{k}),
+    };
+}
+
+pub fn module(allocator: Allocator, cs: *Constraints, builtins: Builtins, compile_errors: *CompileErrors, ast: parser.types.Module) !types.Module {
+    var order = List(Interned).init(allocator);
+    var untyped = types.Untyped.init(allocator);
+    var typed = types.Typed.init(allocator);
+    var scope = types.Scope.init(allocator);
+    var foreign_exports = List(Interned).init(allocator);
+    for (ast.expressions) |top_level| {
+        switch (top_level) {
+            .define => |d| {
+                const name = d.name.value;
+                try order.append(name);
+                try untyped.putNoClobber(name, top_level);
+                const monotype = try topLevelType(allocator, builtins, d);
+                try scope.put(name, types.Binding{
+                    .type = monotype,
+                    .global = true,
+                    .mutable = false,
+                });
+            },
+            .call => |c| {
+                switch (c.function.*) {
+                    .symbol => |sym| {
+                        if (sym.value.eql(builtins.foreign_export)) {
+                            if (c.arguments.len != 2) std.debug.panic("\nInvalid foreign export call {}", .{c});
+                            switch (c.arguments[0]) {
+                                .string => |str| {
+                                    try order.append(str.value);
+                                    try untyped.putNoClobber(str.value, top_level);
+                                    try foreign_exports.append(str.value);
+                                },
+                                else => |k| std.debug.panic("\nInvalid foreign export call {}", .{k}),
+                            }
+                        } else {
+                            std.debug.panic("\nInvalid top level call to {}", .{sym});
+                        }
+                    },
+                    else => |k| std.debug.panic("\nInvalid top level call {}", .{k}),
+                }
+            },
+            else => |k| std.debug.panic("\nInvalid top level expression {}", .{k}),
+        }
+    }
+    return types.Module{
+        .allocator = allocator,
+        .constraints = cs,
+        .builtins = builtins,
+        .order = try order.toOwnedSlice(),
+        .untyped = untyped,
+        .typed = typed,
+        .scope = scope,
+        .foreign_exports = try foreign_exports.toOwnedSlice(),
+        .compile_errors = compile_errors,
+    };
 }
