@@ -22,16 +22,6 @@ pub const MonoType = union(enum) {
     typevar: TypeVar,
     function: []MonoType,
     array: Array,
-
-    pub fn apply(self: *MonoType, s: Substitution) void {
-        switch (self.*) {
-            .function => |f| for (f) |*t| t.apply(s),
-            .typevar => |t| {
-                if (s.get(t)) |mono| self.* = mono;
-            },
-            else => return,
-        }
-    }
 };
 
 pub const TypedSpan = struct {

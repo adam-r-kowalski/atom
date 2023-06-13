@@ -54,7 +54,7 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     var ast = try type_checker.types.Module.init(arena.allocator(), &constraints, builtins, &compile_errors, untyped_ast);
     try type_checker.infer.topLevel(&ast, try intern.store(name));
     const substitution = try constraints.solve(arena.allocator());
-    ast.apply(substitution);
+    type_checker.apply_substitution.module(substitution, &ast);
     var result = List(u8).init(allocator);
     try type_checker.pretty_print.module(ast, result.writer());
     return try result.toOwnedSlice();
@@ -72,7 +72,7 @@ pub fn typeInferVerbose(allocator: Allocator, source: []const u8, name: []const 
     var ast = try type_checker.types.Module.init(arena.allocator(), &constraints, builtins, &compile_errors, untyped_ast);
     try type_checker.infer.topLevel(&ast, try intern.store(name));
     const substitution = try constraints.solve(arena.allocator());
-    ast.apply(substitution);
+    type_checker.apply_substitution.module(substitution, &ast);
     return try std.fmt.allocPrint(allocator, "{}", .{ast});
 }
 
@@ -91,7 +91,7 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     if (export_count == 0) ast.foreign_exports = &.{start};
     for (ast.foreign_exports) |foreign_export| try type_checker.infer.topLevel(&ast, foreign_export);
     const substitution = try constraints.solve(arena.allocator());
-    ast.apply(substitution);
+    type_checker.apply_substitution.module(substitution, &ast);
     var ir = try lower.buildIr(arena.allocator(), builtins, ast, &intern);
     if (export_count == 0) {
         const alias = try intern.store("_start");
@@ -111,7 +111,7 @@ fn endToEnd(allocator: Allocator, intern: *Intern, compile_errors: *CompileError
     if (export_count == 0) ast.foreign_exports = &.{start};
     for (ast.foreign_exports) |foreign_export| try type_checker.infer.topLevel(&ast, foreign_export);
     const substitution = try constraints.solve(allocator);
-    ast.apply(substitution);
+    type_checker.apply_substitution.module(substitution, &ast);
     var ir = try lower.buildIr(allocator, builtins, ast, intern);
     if (export_count == 0) {
         const alias = try intern.store("_start");

@@ -88,20 +88,12 @@ pub const Int = struct {
     value: Interned,
     span: Span,
     type: MonoType,
-
-    pub fn apply(self: *Int, s: Substitution) void {
-        self.type.apply(s);
-    }
 };
 
 pub const Float = struct {
     value: Interned,
     span: Span,
     type: MonoType,
-
-    pub fn apply(self: *Float, s: Substitution) void {
-        self.type.apply(s);
-    }
 };
 
 pub const Symbol = struct {
@@ -110,10 +102,6 @@ pub const Symbol = struct {
     global: bool,
     mutable: bool,
     type: MonoType,
-
-    pub fn apply(self: *Symbol, s: Substitution) void {
-        self.type.apply(s);
-    }
 };
 
 pub const Bool = struct {
@@ -134,12 +122,6 @@ pub const Define = struct {
     span: Span,
     mutable: bool,
     type: MonoType,
-
-    pub fn apply(self: *Define, s: Substitution) void {
-        self.name.apply(s);
-        self.value.apply(s);
-        self.type.apply(s);
-    }
 };
 
 pub const AddAssign = struct {
@@ -147,23 +129,12 @@ pub const AddAssign = struct {
     value: *Expression,
     span: Span,
     type: MonoType,
-
-    pub fn apply(self: *AddAssign, s: Substitution) void {
-        self.name.apply(s);
-        self.value.apply(s);
-        self.type.apply(s);
-    }
 };
 
 pub const Block = struct {
     expressions: []Expression,
     span: Span,
     type: MonoType,
-
-    pub fn apply(self: *Block, s: Substitution) void {
-        for (self.expressions) |*e| e.apply(s);
-        self.type.apply(s);
-    }
 };
 
 pub const Function = struct {
@@ -172,13 +143,6 @@ pub const Function = struct {
     body: Block,
     span: Span,
     type: MonoType,
-
-    pub fn apply(self: *Function, s: Substitution) void {
-        for (self.parameters) |*p| p.apply(s);
-        self.return_type.apply(s);
-        self.body.apply(s);
-        self.type.apply(s);
-    }
 };
 
 pub const BinaryOp = struct {
@@ -187,22 +151,11 @@ pub const BinaryOp = struct {
     right: *Expression,
     span: Span,
     type: MonoType,
-
-    pub fn apply(self: *BinaryOp, s: Substitution) void {
-        self.left.apply(s);
-        self.right.apply(s);
-        self.type.apply(s);
-    }
 };
 
 pub const Arm = struct {
     condition: Expression,
     then: Block,
-
-    pub fn apply(self: *Arm, s: Substitution) void {
-        self.condition.apply(s);
-        self.then.apply(s);
-    }
 };
 
 pub const Branch = struct {
@@ -210,12 +163,6 @@ pub const Branch = struct {
     else_: Block,
     span: Span,
     type: MonoType,
-
-    pub fn apply(self: *Branch, s: Substitution) void {
-        for (self.arms) |*arm| arm.apply(s);
-        self.else_.apply(s);
-        self.type.apply(s);
-    }
 };
 
 pub const Call = struct {
@@ -223,12 +170,6 @@ pub const Call = struct {
     arguments: []Expression,
     span: Span,
     type: MonoType,
-
-    pub fn apply(self: *Call, s: Substitution) void {
-        self.function.apply(s);
-        for (self.arguments) |*a| a.apply(s);
-        self.type.apply(s);
-    }
 };
 
 pub const Intrinsic = struct {
@@ -236,22 +177,12 @@ pub const Intrinsic = struct {
     arguments: []Expression,
     span: Span,
     type: MonoType,
-
-    pub fn apply(self: *Intrinsic, s: Substitution) void {
-        for (self.arguments) |*a| a.apply(s);
-        self.type.apply(s);
-    }
 };
 
 pub const Group = struct {
     expressions: []Expression,
     span: Span,
     type: MonoType,
-
-    pub fn apply(self: *Group, s: Substitution) void {
-        for (self.expressions) |*e| e.apply(s);
-        self.type.apply(s);
-    }
 };
 
 pub const ForeignImport = struct {
@@ -266,11 +197,6 @@ pub const ForeignExport = struct {
     value: *Expression,
     span: Span,
     type: MonoType,
-
-    pub fn apply(self: *ForeignExport, s: Substitution) void {
-        self.value.apply(s);
-        self.type.apply(s);
-    }
 };
 
 pub const Convert = struct {
@@ -282,10 +208,6 @@ pub const Convert = struct {
 pub const Undefined = struct {
     span: Span,
     type: MonoType,
-
-    pub fn apply(self: *Undefined, s: Substitution) void {
-        self.type.apply(s);
-    }
 };
 
 pub const Expression = union(enum) {
@@ -352,29 +274,6 @@ pub const Expression = union(enum) {
             .convert => |c| c.type,
             .undefined => |u| u.type,
         };
-    }
-
-    pub fn apply(self: *Expression, s: Substitution) void {
-        switch (self.*) {
-            .symbol => |*sym| sym.apply(s),
-            .int => |*i| i.apply(s),
-            .float => |*f| f.apply(s),
-            .bool => return,
-            .string => return,
-            .branch => |*b| b.apply(s),
-            .binary_op => |*b| b.apply(s),
-            .define => |*d| d.apply(s),
-            .add_assign => |*a| a.apply(s),
-            .call => |*c| c.apply(s),
-            .intrinsic => |*i| i.apply(s),
-            .function => |*f| f.apply(s),
-            .block => |*b| b.apply(s),
-            .group => |*g| g.apply(s),
-            .foreign_import => return,
-            .foreign_export => |*f| f.apply(s),
-            .convert => return,
-            .undefined => |*u| u.apply(s),
-        }
     }
 };
 
@@ -445,11 +344,6 @@ pub const Module = struct {
             .foreign_exports = try foreign_exports.toOwnedSlice(),
             .compile_errors = compile_errors,
         };
-    }
-
-    pub fn apply(self: *Module, s: Substitution) void {
-        var iterator = self.typed.valueIterator();
-        while (iterator.next()) |value_ptr| value_ptr.apply(s);
     }
 };
 
