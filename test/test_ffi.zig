@@ -53,7 +53,7 @@ test "type check import" {
         \\    print("hello world")
         \\}
     ;
-    const actual = try mantis.testing.typeInferVerbose(allocator, source, "start");
+    const actual = try mantis.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -75,7 +75,7 @@ test "type check import" {
         \\            return_type = void
         \\            body =
         \\                call =
-        \\                    name = symbol{ value = print, type = fn([]u8) void }
+        \\                    function = symbol{ value = print, type = fn([]u8) void }
         \\                    arguments =
         \\                        string{ value = "hello world", type = []u8 }
         \\                    type = void

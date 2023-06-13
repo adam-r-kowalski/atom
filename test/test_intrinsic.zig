@@ -22,7 +22,7 @@ test "type infer sqrt f32" {
         \\            return_type = f32
         \\            body =
         \\                intrinsic =
-        \\                    sqrt
+        \\                    function = sqrt
         \\                    arguments =
         \\                        symbol{ value = x, type = f32 }
         \\                    type = f32
