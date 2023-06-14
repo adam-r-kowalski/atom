@@ -188,6 +188,62 @@ test "parse mutable parameter" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
+test "type check mutable parameter" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\double = fn(mut x: i32) void {
+        \\    x *= 2
+        \\}
+        \\
+        \\start = fn() i32 {
+        \\    mut x: i32 = 5
+        \\    double(mut x)
+        \\    x
+        \\}
+    ;
+    const actual = try mantis.testing.typeInfer(allocator, source, "start");
+    defer allocator.free(actual);
+    const expected =
+        \\define =
+        \\    name = symbol{ value = double, type = fn(i32) void }
+        \\    type = void
+        \\    mutable = false
+        \\    value =
+        \\        function =
+        \\            parameters =
+        \\                symbol{ value = x, type = i32 }
+        \\            return_type = void
+        \\            body =
+        \\                times_equal =
+        \\                    name = x
+        \\                    type = void
+        \\                    value =
+        \\                        int{ value = 2, type = i32 }
+        \\
+        \\define =
+        \\    name = symbol{ value = start, type = fn() i32 }
+        \\    type = void
+        \\    mutable = false
+        \\    value =
+        \\        function =
+        \\            return_type = i32
+        \\            body =
+        \\                define =
+        \\                    name = symbol{ value = x, type = i32 }
+        \\                    type = void
+        \\                    mutable = true
+        \\                    value =
+        \\                        int{ value = 5, type = i32 }
+        \\                call =
+        \\                    function = symbol{ value = double, type = fn(i32) void }
+        \\                    arguments =
+        \\                        symbol{ value = x, type = i32 }
+        \\                    type = void
+        \\                symbol{ value = x, type = i32 }
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
 test "codegen mutable parameter" {
     const allocator = std.testing.allocator;
     const source =

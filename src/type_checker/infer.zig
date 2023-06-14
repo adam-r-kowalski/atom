@@ -278,50 +278,50 @@ fn define(context: Context, d: parser.types.Define) !types.Define {
     };
 }
 
-fn plusEqual(context: Context, d: parser.types.PlusEqual) !types.PlusEqual {
-    const value = try expressionAlloc(context, d.value.*);
-    var monotype = typeOf(value.*);
-    const binding = types.Binding{
-        .type = monotype,
-        .global = false,
-        .mutable = false,
-    };
+fn plusEqual(context: Context, p: parser.types.PlusEqual) !types.PlusEqual {
+    const value = try expressionAlloc(context, p.value.*);
+    const binding = try findInScope(context.scopes.*, p.name);
+    if (binding.global) std.debug.panic("Cannot reassign global variable {s}", .{p.name.value.string()});
+    if (binding.mutable) std.debug.panic("Cannot reassign immutable variable {s}", .{p.name.value.string()});
+    try context.constraints.equal.append(.{
+        .left = .{ .type = typeOf(value.*), .span = spanOf(value.*) },
+        .right = .{ .type = binding.type, .span = p.name.span },
+    });
     const name = types.Symbol{
-        .value = d.name.value,
-        .span = d.span,
-        .type = monotype,
-        .global = false,
-        .mutable = false,
+        .value = p.name.value,
+        .span = p.span,
+        .type = binding.type,
+        .global = binding.global,
+        .mutable = binding.mutable,
     };
-    try putInScope(context.scopes, name.value, binding);
     return types.PlusEqual{
         .name = name,
         .value = value,
-        .span = d.span,
+        .span = p.span,
         .type = .void,
     };
 }
 
-fn timesEqual(context: Context, d: parser.types.TimesEqual) !types.TimesEqual {
-    const value = try expressionAlloc(context, d.value.*);
-    var monotype = typeOf(value.*);
-    const binding = types.Binding{
-        .type = monotype,
-        .global = false,
-        .mutable = false,
-    };
+fn timesEqual(context: Context, t: parser.types.TimesEqual) !types.TimesEqual {
+    const value = try expressionAlloc(context, t.value.*);
+    const binding = try findInScope(context.scopes.*, t.name);
+    if (binding.global) std.debug.panic("Cannot reassign global variable {s}", .{t.name.value.string()});
+    if (binding.mutable) std.debug.panic("Cannot reassign immutable variable {s}", .{t.name.value.string()});
+    try context.constraints.equal.append(.{
+        .left = .{ .type = typeOf(value.*), .span = spanOf(value.*) },
+        .right = .{ .type = binding.type, .span = t.name.span },
+    });
     const name = types.Symbol{
-        .value = d.name.value,
-        .span = d.span,
-        .type = monotype,
-        .global = false,
-        .mutable = false,
+        .value = t.name.value,
+        .span = t.span,
+        .type = binding.type,
+        .global = binding.global,
+        .mutable = binding.mutable,
     };
-    try putInScope(context.scopes, name.value, binding);
     return types.TimesEqual{
         .name = name,
         .value = value,
-        .span = d.span,
+        .span = t.span,
         .type = .void,
     };
 }
