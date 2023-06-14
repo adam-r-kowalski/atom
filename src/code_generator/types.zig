@@ -179,21 +179,6 @@ pub const Data = struct {
 pub const DataSegment = struct {
     offset: Offset,
     data: List(Data),
-
-    pub fn init(allocator: Allocator) DataSegment {
-        return DataSegment{
-            .offset = 0,
-            .data = List(Data).init(allocator),
-        };
-    }
-
-    pub fn string(self: *DataSegment, s: type_checker.types.String) !Offset {
-        const bytes = s.value.string();
-        const offset = self.offset;
-        try self.data.append(Data{ .offset = offset, .bytes = bytes });
-        self.offset += @intCast(u32, bytes.len - 2);
-        return offset;
-    }
 };
 
 pub const Module = struct {

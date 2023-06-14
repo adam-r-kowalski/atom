@@ -131,7 +131,7 @@ const WasmModule = struct {
     }
 };
 
-fn compileAndRun(allocator: Allocator, intern: *mantis.interner.Intern, compile_errors: *mantis.CompileErrors, flags: Flags, source: []const u8) !void {
+fn compileAndRun(allocator: Allocator, intern: *mantis.interner.Intern, errors: *mantis.error_reporter.types.Errors, flags: Flags, source: []const u8) !void {
     const builtins = try mantis.Builtins.init(intern);
     const tokens = try mantis.tokenizer.tokenize(allocator, intern, builtins, source);
     const untyped_ast = try mantis.parser.parse(allocator, tokens);
@@ -143,8 +143,8 @@ fn compileAndRun(allocator: Allocator, intern: *mantis.interner.Intern, compile_
     const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
     if (export_count == 0) ast.foreign_exports = &.{start};
-    for (ast.foreign_exports) |foreign_export| try mantis.type_checker.infer.topLevel(&ast, foreign_export, compile_errors);
-    const substitution = try mantis.type_checker.solve_constraints.constraints(allocator, constraints, compile_errors);
+    for (ast.foreign_exports) |foreign_export| try mantis.type_checker.infer.topLevel(&ast, foreign_export, errors);
+    const substitution = try mantis.type_checker.solve_constraints.constraints(allocator, constraints, errors);
     mantis.type_checker.apply_substitution.module(substitution, &ast);
     var ir = try mantis.code_generator.lower.module(allocator, builtins, ast, intern);
     if (export_count == 0) {
@@ -171,12 +171,17 @@ pub fn main() !void {
     const flags = try Flags.init(allocator);
     const source = try std.fs.cwd().readFileAlloc(allocator, flags.file_name, std.math.maxInt(usize));
     var intern = mantis.interner.Intern.init(allocator);
-    var compile_errors = mantis.CompileErrors.init(allocator, source);
-    compileAndRun(allocator, &intern, &compile_errors, flags, source) catch |e| switch (e) {
+    var errors = mantis.error_reporter.types.Errors{
+        .allocator = arena.allocator(),
+        .undefined_variables = List(mantis.error_reporter.types.UndefinedVariable).init(arena.allocator()),
+        .type_mismatches = List(mantis.error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .source = source,
+    };
+    compileAndRun(allocator, &intern, &errors, flags, source) catch |e| switch (e) {
         error.CompileError => {
             const stderr = std.io.getStdErr();
             const writer = stderr.writer();
-            try writer.print("{}", .{compile_errors});
+            try writer.print("{}", .{errors});
         },
         else => return e,
     };
