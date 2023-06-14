@@ -160,7 +160,7 @@ test "codegen times equal" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "parse mutable pointer" {
+test "parse mutable parameter" {
     const allocator = std.testing.allocator;
     const source =
         \\double = fn(mut x: i32) void {
@@ -176,39 +176,19 @@ test "parse mutable pointer" {
     const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(module
+        \\(def double (fn [(mut x i32)] void
+        \\    (+= x 2)))
         \\
-        \\    (memory 1)
-        \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
-        \\
-        \\    (func $double (param $x$ptr i32)
-        \\        (local $x i32)
-        \\            (local.set $x (i32.load (local.get $x$ptr)))
-        \\        (local.set $x
-        \\            (i32.mul
-        \\                (i32.load (local.get $x$ptr))
-        \\                (i32.const 2)))
-        \\        (i32.store (local.get $x$ptr) (local.get $x)))
-        \\
-        \\    (func $start (result i32)
-        \\        (local $x i32)
-        \\        (local $x$ptr i32)
-        \\        (local.set $x
-        \\            (i32.const 20))
-        \\        (local.set $x$ptr
-        \\            (i32.const 0))
-        \\        (i32.store (local.get $x$ptr) (local.get $x))
-        \\        (call $double
-        \\            (local.get $x$ptr))
-        \\        (i32.load (local.get $x$ptr)))
-        \\
-        \\    (export "_start" (func $start)))
+        \\(def start (fn [] i32
+        \\    (block
+        \\        (def mut x i32 5)
+        \\        (double (mut x))
+        \\        x)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "codegen mutable pointer" {
+test "codegen mutable parameter" {
     const allocator = std.testing.allocator;
     const source =
         \\double = fn(x: mut i32) void {

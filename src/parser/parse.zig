@@ -156,7 +156,7 @@ fn functionParameters(context: Context) ![]const types.Parameter {
                 _ = context.tokens.consume(.colon);
                 const type_ = try expression(withPrecedence(context, DEFINE + 1));
                 context.tokens.maybeConsume(.comma);
-                try parameters.append(types.Parameter{ .name = name, .type = type_, .mut = false });
+                try parameters.append(types.Parameter{ .name = name, .type = type_, .mutable = false });
             },
             .mut => {
                 context.tokens.advance();
@@ -164,7 +164,7 @@ fn functionParameters(context: Context) ![]const types.Parameter {
                 _ = context.tokens.consume(.colon);
                 const type_ = try expression(withPrecedence(context, DEFINE + 1));
                 context.tokens.maybeConsume(.comma);
-                try parameters.append(types.Parameter{ .name = name, .type = type_, .mut = true });
+                try parameters.append(types.Parameter{ .name = name, .type = type_, .mutable = true });
             },
             else => |k| std.debug.panic("\nExpected symbol or right paren, found {}", .{k}),
         }
@@ -312,15 +312,19 @@ fn binaryOp(context: Context, left: types.Expression, kind: types.BinaryOpKind) 
 
 fn call(context: Context, left: types.Expression) !types.Call {
     context.tokens.advance();
-    var arguments = List(types.Expression).init(context.allocator);
+    var arguments = List(types.Argument).init(context.allocator);
     while (context.tokens.peek()) |t| {
         switch (t) {
             .right_paren => break,
             .mut => {
-                std.debug.panic("\nMutability not supported in function calls\n", .{});
+                context.tokens.advance();
+                const value = try expression(withPrecedence(context, DEFINE + 1));
+                try arguments.append(.{ .value = value, .mutable = true });
+                context.tokens.maybeConsume(.comma);
             },
             else => {
-                try arguments.append(try expression(withPrecedence(context, DEFINE + 1)));
+                const value = try expression(withPrecedence(context, DEFINE + 1));
+                try arguments.append(.{ .value = value, .mutable = false });
                 context.tokens.maybeConsume(.comma);
             },
         }

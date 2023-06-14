@@ -31,7 +31,7 @@ pub const TimesEqual = struct {
 pub const Parameter = struct {
     name: Symbol,
     type: Expression,
-    mut: bool,
+    mutable: bool,
 };
 
 pub const Block = struct {
@@ -100,9 +100,14 @@ pub const Branch = struct {
     span: Span,
 };
 
+pub const Argument = struct {
+    value: Expression,
+    mutable: bool,
+};
+
 pub const Call = struct {
     function: *const Expression,
-    arguments: []const Expression,
+    arguments: []const Argument,
     span: Span,
 };
 

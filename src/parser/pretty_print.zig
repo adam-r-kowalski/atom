@@ -24,9 +24,15 @@ pub fn define(d: types.Define, indent: Indent, writer: Writer) !void {
     try writer.writeAll(")");
 }
 
-pub fn addAssign(a: types.AddAssign, indent: Indent, writer: Writer) !void {
-    try writer.print("(+= {} ", .{a.name.value});
-    try expression(a.value.*, indent + 1, writer);
+pub fn plusEqual(p: types.PlusEqual, indent: Indent, writer: Writer) !void {
+    try writer.print("(+= {} ", .{p.name.value});
+    try expression(p.value.*, indent + 1, writer);
+    try writer.writeAll(")");
+}
+
+pub fn timesEqual(t: types.TimesEqual, indent: Indent, writer: Writer) !void {
+    try writer.print("(+= {} ", .{t.name.value});
+    try expression(t.value.*, indent + 1, writer);
     try writer.writeAll(")");
 }
 
@@ -34,7 +40,9 @@ pub fn function(f: types.Function, indent: Indent, writer: Writer) !void {
     try writer.writeAll("(fn [");
     for (f.parameters, 0..) |param, j| {
         if (j > 0) try writer.writeAll(" ");
-        try writer.print("({} ", .{param.name.value});
+        try writer.writeAll("(");
+        if (param.mutable) try writer.writeAll("mut ");
+        try writer.print("{} ", .{param.name.value});
         try expression(param.type, indent, writer);
         try writer.writeAll(")");
     }
@@ -128,7 +136,13 @@ pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
     try expression(c.function.*, indent, writer);
     for (c.arguments) |a| {
         try writer.writeAll(" ");
-        try expression(a, indent + 1, writer);
+        if (a.mutable) {
+            try writer.writeAll("(mut ");
+            try expression(a.value, indent + 1, writer);
+            try writer.writeAll(")");
+        } else {
+            try expression(a.value, indent + 1, writer);
+        }
     }
     try writer.writeAll(")");
 }
@@ -141,7 +155,8 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .string => |s| try writer.print("{}", .{s.value}),
         .bool => |b| try writer.print("{}", .{b.value}),
         .define => |d| try define(d, indent, writer),
-        .add_assign => |a| try addAssign(a, indent, writer),
+        .plus_equal => |p| try plusEqual(p, indent, writer),
+        .times_equal => |t| try timesEqual(t, indent, writer),
         .function => |f| try function(f, indent, writer),
         .prototype => |p| try prototype(p, indent, writer),
         .binary_op => |b| try binaryOp(b, indent, writer),
