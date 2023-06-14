@@ -191,7 +191,7 @@ test "parse mutable parameter" {
 test "codegen mutable parameter" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = fn(x: mut i32) void {
+        \\double = fn(mut x: i32) void {
         \\    x *= 2
         \\}
         \\

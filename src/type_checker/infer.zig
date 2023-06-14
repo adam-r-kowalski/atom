@@ -185,8 +185,8 @@ fn branch(context: Context, b: parser.types.Branch) !types.Branch {
 fn dotCall(context: Context, b: parser.types.BinaryOp) !types.Expression {
     switch (b.right.*) {
         .call => |c| {
-            const arguments = try context.allocator.alloc(parser.types.Expression, c.arguments.len + 1);
-            arguments[0] = b.left.*;
+            const arguments = try context.allocator.alloc(parser.types.Argument, c.arguments.len + 1);
+            arguments[0] = .{ .value = b.left.*, .mutable = false };
             @memcpy(arguments[1..], c.arguments);
             const new_call = parser.types.Call{
                 .function = c.function,
@@ -328,11 +328,11 @@ fn timesEqual(context: Context, d: parser.types.TimesEqual) !types.TimesEqual {
 
 fn callForeignImport(context: Context, c: parser.types.Call) !types.Expression {
     if (c.arguments.len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
-    const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[2]);
+    const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[2].value);
     return types.Expression{
         .foreign_import = .{
-            .module = c.arguments[0].string.value,
-            .name = c.arguments[1].string.value,
+            .module = c.arguments[0].value.string.value,
+            .name = c.arguments[1].value.string.value,
             .span = c.span,
             .type = monotype,
         },
@@ -343,8 +343,8 @@ fn callForeignExport(context: Context, c: parser.types.Call) !types.Expression {
     if (c.arguments.len != 2) std.debug.panic("foreign_export takes 2 arguments", .{});
     return types.Expression{
         .foreign_export = .{
-            .name = c.arguments[0].string.value,
-            .value = try expressionAlloc(context, c.arguments[1]),
+            .name = c.arguments[0].value.string.value,
+            .value = try expressionAlloc(context, c.arguments[1].value),
             .span = c.span,
             .type = .void,
         },
@@ -353,10 +353,10 @@ fn callForeignExport(context: Context, c: parser.types.Call) !types.Expression {
 
 fn callConvert(context: Context, c: parser.types.Call) !types.Expression {
     if (c.arguments.len != 2) std.debug.panic("convert takes 2 arguments", .{});
-    const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[1]);
+    const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[1].value);
     return types.Expression{
         .convert = .{
-            .value = try expressionAlloc(context, c.arguments[0]),
+            .value = try expressionAlloc(context, c.arguments[0].value),
             .span = c.span,
             .type = monotype,
         },
@@ -366,7 +366,7 @@ fn callConvert(context: Context, c: parser.types.Call) !types.Expression {
 fn callSqrt(context: Context, c: parser.types.Call) !types.Expression {
     if (c.arguments.len != 1) std.debug.panic("sqrt takes 1 arguments", .{});
     const arguments = try context.allocator.alloc(types.Expression, 1);
-    arguments[0] = try expression(context, c.arguments[0]);
+    arguments[0] = try expression(context, c.arguments[0].value);
     return types.Expression{
         .intrinsic = .{
             .function = context.builtins.sqrt,
@@ -389,7 +389,7 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
             const f = try symbol(context.scopes.*, s);
             const arguments = try context.allocator.alloc(types.Expression, len);
             for (c.arguments, arguments, function_type[0..len]) |untyped_arg, *typed_arg, *t| {
-                typed_arg.* = try expression(context, untyped_arg);
+                typed_arg.* = try expression(context, untyped_arg.value);
                 t.* = typeOf(typed_arg.*);
             }
             const return_type = freshTypeVar(context.constraints);
@@ -540,7 +540,7 @@ fn topLevelCall(allocator: Allocator, builtins: Builtins, c: parser.types.Call) 
         .symbol => |s| {
             if (s.value.eql(builtins.foreign_import)) {
                 if (c.arguments.len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
-                return try expressionToMonoType(allocator, builtins, c.arguments[2]);
+                return try expressionToMonoType(allocator, builtins, c.arguments[2].value);
             }
         },
         else => |k| std.debug.panic("\nInvalid top level call function {}", .{k}),
@@ -588,7 +588,7 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
                     .symbol => |sym| {
                         if (sym.value.eql(builtins.foreign_export)) {
                             if (c.arguments.len != 2) std.debug.panic("\nInvalid foreign export call {}", .{c});
-                            switch (c.arguments[0]) {
+                            switch (c.arguments[0].value) {
                                 .string => |str| {
                                     try order.append(str.value);
                                     try untyped.putNoClobber(str.value, top_level);
