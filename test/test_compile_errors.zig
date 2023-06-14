@@ -1,7 +1,7 @@
 const std = @import("std");
 const mantis = @import("mantis");
-const RED = mantis.colors.RED;
-const CLEAR = mantis.colors.CLEAR;
+const RED = mantis.error_reporter.types.RED;
+const CLEAR = mantis.error_reporter.types.CLEAR;
 
 test "use of undefined variable" {
     const allocator = std.testing.allocator;

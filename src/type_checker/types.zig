@@ -4,7 +4,6 @@ const Map = std.AutoHashMap;
 const List = std.ArrayList;
 
 const Builtins = @import("../builtins.zig").Builtins;
-const Indent = @import("../indent.zig").Indent;
 const interner = @import("../interner.zig");
 const Interned = interner.Interned;
 const parser = @import("../parser.zig");

@@ -9,7 +9,7 @@ const tokenizer = @import("tokenizer.zig");
 const parser = @import("parser.zig");
 const type_checker = @import("type_checker.zig");
 const code_generator = @import("code_generator.zig");
-const CompileErrors = @import("compile_errors.zig").CompileErrors;
+const error_reporter = @import("error_reporter.zig");
 
 pub fn tokenize(allocator: Allocator, source: []const u8) ![]const u8 {
     var arena = std.heap.ArenaAllocator.init(allocator);
@@ -44,7 +44,7 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
     var intern = Intern.init(arena.allocator());
-    var compile_errors = CompileErrors.init(arena.allocator(), source);
+    var compile_errors = error_reporter.types.Errors.init(arena.allocator(), source);
     const builtins = try Builtins.init(&intern);
     const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
     const untyped_ast = try parser.parse(arena.allocator(), tokens);
@@ -65,7 +65,7 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
     var intern = Intern.init(arena.allocator());
-    var compile_errors = CompileErrors.init(arena.allocator(), source);
+    var compile_errors = error_reporter.types.Errors.init(arena.allocator(), source);
     const builtins = try Builtins.init(&intern);
     const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
     const untyped_ast = try parser.parse(arena.allocator(), tokens);
@@ -90,7 +90,7 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     return try result.toOwnedSlice();
 }
 
-fn endToEnd(allocator: Allocator, intern: *Intern, compile_errors: *CompileErrors, source: []const u8) ![]const u8 {
+fn endToEnd(allocator: Allocator, intern: *Intern, errors: *error_reporter.types.Errors, source: []const u8) ![]const u8 {
     const builtins = try Builtins.init(intern);
     const tokens = try tokenizer.tokenize(allocator, intern, builtins, source);
     const untyped_ast = try parser.parse(allocator, tokens);
@@ -102,8 +102,8 @@ fn endToEnd(allocator: Allocator, intern: *Intern, compile_errors: *CompileError
     const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
     if (export_count == 0) ast.foreign_exports = &.{start};
-    for (ast.foreign_exports) |foreign_export| try type_checker.infer.topLevel(&ast, foreign_export, compile_errors);
-    const substitution = try type_checker.solve_constraints.constraints(allocator, constraints, compile_errors);
+    for (ast.foreign_exports) |foreign_export| try type_checker.infer.topLevel(&ast, foreign_export, errors);
+    const substitution = try type_checker.solve_constraints.constraints(allocator, constraints, errors);
     type_checker.apply_substitution.module(substitution, &ast);
     var ir = try code_generator.lower.module(allocator, builtins, ast, intern);
     if (export_count == 0) {
@@ -117,7 +117,7 @@ pub fn compileErrors(allocator: Allocator, source: []const u8) ![]const u8 {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
     var intern = Intern.init(arena.allocator());
-    var compile_errors = CompileErrors.init(arena.allocator(), source);
+    var compile_errors = error_reporter.types.Errors.init(arena.allocator(), source);
     _ = endToEnd(arena.allocator(), &intern, &compile_errors, source) catch |e| {
         std.debug.assert(e == error.CompileError);
         var result = List(u8).init(allocator);

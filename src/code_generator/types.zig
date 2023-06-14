@@ -6,7 +6,6 @@ const Intern = interner.Intern;
 const Interned = interner.Interned;
 const type_checker = @import("../type_checker.zig");
 const Builtins = @import("../builtins.zig").Builtins;
-const Indent = @import("../indent.zig").Indent;
 
 pub const Type = union(enum) {
     i32,

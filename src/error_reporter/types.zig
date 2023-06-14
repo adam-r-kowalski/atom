@@ -2,12 +2,11 @@ const std = @import("std");
 const List = std.ArrayList;
 const Allocator = std.mem.Allocator;
 
-const Interned = @import("interner.zig").Interned;
-const Span = @import("tokenizer.zig").types.Span;
-const type_checker = @import("type_checker.zig");
-const colors = @import("colors.zig");
-const RED = colors.RED;
-const CLEAR = colors.CLEAR;
+const Interned = @import("../interner.zig").Interned;
+const Span = @import("../tokenizer.zig").types.Span;
+const type_checker = @import("../type_checker.zig");
+pub const RED = "\x1b[31m";
+pub const CLEAR = "\x1b[0m";
 const Writer = List(u8).Writer;
 
 fn writeSource(lines: [][]const u8, span: Span, writer: Writer) !void {
@@ -90,11 +89,11 @@ pub const TypeError = struct {
     }
 };
 
-pub const CompileError = union(enum) {
+pub const Error = union(enum) {
     undefined_variable: UndefinedVariable,
     type_error: TypeError,
 
-    fn toString(self: CompileError, lines: [][]const u8, writer: Writer) !void {
+    fn toString(self: Error, lines: [][]const u8, writer: Writer) !void {
         switch (self) {
             .undefined_variable => try self.undefined_variable.toString(lines, writer),
             .type_error => try self.type_error.toString(lines, writer),
@@ -102,20 +101,20 @@ pub const CompileError = union(enum) {
     }
 };
 
-pub const CompileErrors = struct {
+pub const Errors = struct {
     allocator: Allocator,
-    errors: List(CompileError),
+    errors: List(Error),
     source: []const u8,
 
-    pub fn init(allocator: Allocator, source: []const u8) CompileErrors {
-        return CompileErrors{
+    pub fn init(allocator: Allocator, source: []const u8) Errors {
+        return Errors{
             .allocator = allocator,
-            .errors = List(CompileError).init(allocator),
+            .errors = List(Error).init(allocator),
             .source = source,
         };
     }
 
-    pub fn pretty_print(self: CompileErrors, writer: Writer) !void {
+    pub fn pretty_print(self: Errors, writer: Writer) !void {
         var lines = List([]const u8).init(self.allocator);
         var iterator = std.mem.split(u8, self.source, "\n");
         while (iterator.next()) |line| lines.append(line) catch unreachable;

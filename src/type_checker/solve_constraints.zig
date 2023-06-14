@@ -1,7 +1,7 @@
 const std = @import("std");
 const Map = std.AutoHashMap;
 const types = @import("types.zig");
-const CompileErrors = @import("../compile_errors.zig").CompileErrors;
+const Errors = @import("../error_reporter.zig").types.Errors;
 
 pub fn set(s: *types.Substitution, t: types.TypeVar, m: types.MonoType) !void {
     const result = try s.map.getOrPut(t);
@@ -18,7 +18,7 @@ pub fn set(s: *types.Substitution, t: types.TypeVar, m: types.MonoType) !void {
     result.value_ptr.* = m;
 }
 
-pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, compile_errors: *CompileErrors) !void {
+pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, errors: *Errors) !void {
     const left_tag = std.meta.activeTag(equal.left.type);
     const right_tag = std.meta.activeTag(equal.right.type);
     if (left_tag == .typevar)
@@ -28,7 +28,7 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, com
                     types.TypedSpan{ .type = t, .span = equal.left.span }
                 else
                     equal.left;
-                try compile_errors.errors.append(.{
+                try errors.errors.append(.{
                     .type_error = .{
                         .left = left,
                         .right = equal.right,
@@ -45,7 +45,7 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, com
                     types.TypedSpan{ .type = t, .span = equal.right.span }
                 else
                     equal.right;
-                try compile_errors.errors.append(.{
+                try errors.errors.append(.{
                     .type_error = .{
                         .left = equal.left,
                         .right = right,
@@ -67,13 +67,13 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, com
                 .left = .{ .type = left, .span = null },
                 .right = .{ .type = right, .span = null },
             };
-            try equalConstraint(constraint, s, compile_errors);
+            try equalConstraint(constraint, s, errors);
         }
         return;
     }
     if (left_tag == right_tag)
         return;
-    try compile_errors.errors.append(.{
+    try errors.errors.append(.{
         .type_error = .{
             .left = equal.left,
             .right = equal.right,
@@ -99,11 +99,11 @@ pub fn simplify(s: *types.Substitution) u64 {
     return count;
 }
 
-pub fn constraints(allocator: std.mem.Allocator, cs: types.Constraints, compile_errors: *CompileErrors) !types.Substitution {
+pub fn constraints(allocator: std.mem.Allocator, cs: types.Constraints, errors: *Errors) !types.Substitution {
     var s = types.Substitution{
         .map = Map(types.TypeVar, types.MonoType).init(allocator),
     };
-    for (cs.equal.items) |e| try equalConstraint(e, &s, compile_errors);
+    for (cs.equal.items) |e| try equalConstraint(e, &s, errors);
     var max_attemps: u64 = 3;
     while (simplify(&s) > 0 and max_attemps != 0) : (max_attemps -= 1) {}
     return s;
