@@ -177,7 +177,7 @@ test "parse mutable parameter" {
     defer allocator.free(actual);
     const expected =
         \\(def double (fn [(mut x i32)] void
-        \\    (+= x 2)))
+        \\    (*= x 2)))
         \\
         \\(def start (fn [] i32
         \\    (block

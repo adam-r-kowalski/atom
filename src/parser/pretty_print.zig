@@ -31,7 +31,7 @@ pub fn plusEqual(p: types.PlusEqual, indent: Indent, writer: Writer) !void {
 }
 
 pub fn timesEqual(t: types.TimesEqual, indent: Indent, writer: Writer) !void {
-    try writer.print("(+= {} ", .{t.name.value});
+    try writer.print("(*= {} ", .{t.name.value});
     try expression(t.value.*, indent + 1, writer);
     try writer.writeAll(")");
 }
