@@ -9,7 +9,6 @@ const tokenizer = @import("tokenizer.zig");
 const parser = @import("parser.zig");
 const type_checker = @import("type_checker.zig");
 const code_generator = @import("code_generator.zig");
-const lower = @import("lower.zig");
 const CompileErrors = @import("compile_errors.zig").CompileErrors;
 
 pub fn tokenize(allocator: Allocator, source: []const u8) ![]const u8 {
@@ -81,7 +80,7 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     for (ast.foreign_exports) |foreign_export| try type_checker.infer.topLevel(&ast, foreign_export, &compile_errors);
     const substitution = try type_checker.solve_constraints.constraints(arena.allocator(), constraints, &compile_errors);
     type_checker.apply_substitution.module(substitution, &ast);
-    var ir = try lower.buildIr(arena.allocator(), builtins, ast, &intern);
+    var ir = try code_generator.lower.module(arena.allocator(), builtins, ast, &intern);
     if (export_count == 0) {
         const alias = try intern.store("_start");
         ir.foreign_exports = &.{.{ .name = start, .alias = alias }};
@@ -106,7 +105,7 @@ fn endToEnd(allocator: Allocator, intern: *Intern, compile_errors: *CompileError
     for (ast.foreign_exports) |foreign_export| try type_checker.infer.topLevel(&ast, foreign_export, compile_errors);
     const substitution = try type_checker.solve_constraints.constraints(allocator, constraints, compile_errors);
     type_checker.apply_substitution.module(substitution, &ast);
-    var ir = try lower.buildIr(allocator, builtins, ast, intern);
+    var ir = try code_generator.lower.module(allocator, builtins, ast, intern);
     if (export_count == 0) {
         const alias = try intern.store("_start");
         ir.foreign_exports = &.{.{ .name = start, .alias = alias }};

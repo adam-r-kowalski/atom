@@ -146,10 +146,10 @@ fn compileAndRun(allocator: Allocator, intern: *mantis.interner.Intern, compile_
     for (ast.foreign_exports) |foreign_export| try mantis.type_checker.infer.topLevel(&ast, foreign_export, compile_errors);
     const substitution = try mantis.type_checker.solve_constraints.constraints(allocator, constraints, compile_errors);
     mantis.type_checker.apply_substitution.module(substitution, &ast);
-    var ir = try mantis.lower.buildIr(allocator, builtins, ast, intern);
+    var ir = try mantis.code_generator.lower.module(allocator, builtins, ast, intern);
     if (export_count == 0) {
         const alias = try intern.store("_start");
-        ir.exports = &.{.{ .name = start, .alias = alias }};
+        ir.foreign_exports = &.{.{ .name = start, .alias = alias }};
     }
     const wat_string = try std.fmt.allocPrint(allocator, "{}", .{ir});
     if (flags.contains("--wat")) try writeWat(allocator, flags, wat_string);

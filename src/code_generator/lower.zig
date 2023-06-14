@@ -1,12 +1,12 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const List = std.ArrayList;
-const interner = @import("interner.zig");
+const interner = @import("../interner.zig");
 const Intern = interner.Intern;
 const Interned = interner.Interned;
-const type_checker = @import("type_checker.zig");
-const Builtins = @import("builtins.zig").Builtins;
-const types = @import("code_generator/types.zig");
+const type_checker = @import("../type_checker.zig");
+const Builtins = @import("../builtins.zig").Builtins;
+const types = @import("types.zig");
 
 const Context = struct {
     allocator: Allocator,
@@ -413,14 +413,14 @@ fn foreignImport(allocator: Allocator, name: Interned, i: type_checker.types.For
     }
 }
 
-pub fn buildIr(allocator: Allocator, builtins: Builtins, module: type_checker.types.Module, intern: *Intern) !types.Module {
+pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Module, intern: *Intern) !types.Module {
     var functions = std.ArrayList(types.Function).init(allocator);
     var imports = std.ArrayList(types.ForeignImport).init(allocator);
     var data_segment = types.DataSegment.init(allocator);
     var globals = std.ArrayList(types.Global).init(allocator);
     var exports = std.ArrayList(types.ForeignExport).init(allocator);
-    for (module.order) |name| {
-        if (module.typed.get(name)) |top_level| {
+    for (m.order) |name| {
+        if (m.typed.get(name)) |top_level| {
             switch (top_level) {
                 .define => |d| {
                     const name_symbol = d.name.value;
