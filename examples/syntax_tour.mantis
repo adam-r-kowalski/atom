@@ -23,7 +23,7 @@ clamp = fn(value: i32, lower: i32, upper: i32) i32 {
 	else { value }
 }
 
-inc = fn(mut x: i32) i32 {
+inc = fn(mut x: i32) void {
 	x += 1
 }
 

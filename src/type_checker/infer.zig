@@ -8,7 +8,7 @@ const types = @import("types.zig");
 const spanOf = @import("span.zig").expression;
 const typeOf = @import("type_of.zig").expression;
 const parser = @import("../parser.zig");
-const CompileErrors = @import("../compile_errors.zig").CompileErrors;
+const Errors = @import("../error_reporter.zig").types.Errors;
 
 pub const WorkQueue = List(Interned);
 
@@ -17,7 +17,7 @@ pub const Scopes = struct {
     base: types.Scope,
     active: *List(types.Scope),
     work_queue: *WorkQueue,
-    compile_errors: *CompileErrors,
+    errors: *Errors,
 };
 
 fn pushScope(scopes: *Scopes) !void {
@@ -48,12 +48,10 @@ pub fn findInScope(scopes: Scopes, s: parser.types.Symbol) !types.Binding {
         var scope_iterator = scope.keyIterator();
         while (scope_iterator.next()) |key| try in_scope.append(key.*);
     }
-    try scopes.compile_errors.errors.append(.{
-        .undefined_variable = .{
-            .symbol = s.value,
-            .span = s.span,
-            .in_scope = try in_scope.toOwnedSlice(),
-        },
+    try scopes.errors.undefined_variables.append(.{
+        .symbol = s.value,
+        .span = s.span,
+        .in_scope = try in_scope.toOwnedSlice(),
     });
     return error.CompileError;
 }
@@ -476,7 +474,7 @@ fn expressionAlloc(context: Context, expr: parser.types.Expression) !*types.Expr
     return try alloc(context.allocator, try expression(context, expr));
 }
 
-pub fn topLevel(m: *types.Module, name: Interned, compile_errors: *CompileErrors) !void {
+pub fn topLevel(m: *types.Module, name: Interned, errors: *Errors) !void {
     var work_queue = WorkQueue.init(m.allocator);
     try work_queue.append(name);
     while (work_queue.items.len != 0) {
@@ -489,7 +487,7 @@ pub fn topLevel(m: *types.Module, name: Interned, compile_errors: *CompileErrors
                 .work_queue = &work_queue,
                 .active = &active,
                 .base = m.scope,
-                .compile_errors = compile_errors,
+                .errors = errors,
             };
             const context = Context{
                 .allocator = m.allocator,
