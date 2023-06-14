@@ -120,7 +120,9 @@ fn endToEnd(allocator: Allocator, intern: *Intern, errors: *error_reporter.types
         const alias = try intern.store("_start");
         ir.foreign_exports = &.{.{ .name = start, .alias = alias }};
     }
-    return try std.fmt.allocPrint(allocator, "{}", .{ir});
+    var result = List(u8).init(allocator);
+    try code_generator.pretty_print.module(ir, result.writer());
+    return try result.toOwnedSlice();
 }
 
 pub fn compileErrors(allocator: Allocator, source: []const u8) ![]const u8 {

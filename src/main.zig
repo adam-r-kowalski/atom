@@ -151,7 +151,9 @@ fn compileAndRun(allocator: Allocator, intern: *mantis.interner.Intern, errors: 
         const alias = try intern.store("_start");
         ir.foreign_exports = &.{.{ .name = start, .alias = alias }};
     }
-    const wat_string = try std.fmt.allocPrint(allocator, "{}", .{ir});
+    var result = List(u8).init(allocator);
+    try mantis.code_generator.pretty_print.module(ir, result.writer());
+    const wat_string = try result.toOwnedSlice();
     if (flags.contains("--wat")) try writeWat(allocator, flags, wat_string);
     if (export_count > 0) {
         try writeWat(allocator, flags, wat_string);
