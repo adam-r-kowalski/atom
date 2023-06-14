@@ -397,13 +397,13 @@ fn function(allocator: Allocator, builtins: Builtins, data_segment: *types.DataS
     };
 }
 
-fn foreignImport(allocator: Allocator, name: Interned, i: type_checker.types.ForeignImport) !types.Import {
+fn foreignImport(allocator: Allocator, name: Interned, i: type_checker.types.ForeignImport) !types.ForeignImport {
     switch (i.type) {
         .function => |f| {
             const path = [2]Interned{ i.module, i.name };
             const function_type = try allocator.alloc(types.Type, f.len);
             for (f, function_type) |t, *ir_t| ir_t.* = mapType(t);
-            return types.Import{
+            return types.ForeignImport{
                 .name = name,
                 .path = path,
                 .type = .{ .function = function_type },
@@ -413,12 +413,12 @@ fn foreignImport(allocator: Allocator, name: Interned, i: type_checker.types.For
     }
 }
 
-pub fn buildIr(allocator: Allocator, builtins: Builtins, module: type_checker.types.Module, intern: *Intern) !types.IR {
+pub fn buildIr(allocator: Allocator, builtins: Builtins, module: type_checker.types.Module, intern: *Intern) !types.Module {
     var functions = std.ArrayList(types.Function).init(allocator);
-    var imports = std.ArrayList(types.Import).init(allocator);
+    var imports = std.ArrayList(types.ForeignImport).init(allocator);
     var data_segment = types.DataSegment.init(allocator);
     var globals = std.ArrayList(types.Global).init(allocator);
-    var exports = std.ArrayList(types.Export).init(allocator);
+    var exports = std.ArrayList(types.ForeignExport).init(allocator);
     for (module.order) |name| {
         if (module.typed.get(name)) |top_level| {
             switch (top_level) {
@@ -457,11 +457,11 @@ pub fn buildIr(allocator: Allocator, builtins: Builtins, module: type_checker.ty
             }
         }
     }
-    return types.IR{
+    return types.Module{
         .functions = try functions.toOwnedSlice(),
-        .imports = try imports.toOwnedSlice(),
+        .foreign_imports = try imports.toOwnedSlice(),
         .globals = try globals.toOwnedSlice(),
         .data_segment = data_segment,
-        .exports = try exports.toOwnedSlice(),
+        .foreign_exports = try exports.toOwnedSlice(),
     };
 }

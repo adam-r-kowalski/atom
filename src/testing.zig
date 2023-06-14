@@ -8,6 +8,7 @@ const Builtins = @import("builtins.zig").Builtins;
 const tokenizer = @import("tokenizer.zig");
 const parser = @import("parser.zig");
 const type_checker = @import("type_checker.zig");
+const code_generator = @import("code_generator.zig");
 const lower = @import("lower.zig");
 const CompileErrors = @import("compile_errors.zig").CompileErrors;
 
@@ -83,9 +84,11 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     var ir = try lower.buildIr(arena.allocator(), builtins, ast, &intern);
     if (export_count == 0) {
         const alias = try intern.store("_start");
-        ir.exports = &.{.{ .name = start, .alias = alias }};
+        ir.foreign_exports = &.{.{ .name = start, .alias = alias }};
     }
-    return try std.fmt.allocPrint(allocator, "{}", .{ir});
+    var result = List(u8).init(allocator);
+    try code_generator.pretty_print.module(ir, result.writer());
+    return try result.toOwnedSlice();
 }
 
 fn endToEnd(allocator: Allocator, intern: *Intern, compile_errors: *CompileErrors, source: []const u8) ![]const u8 {
@@ -106,7 +109,7 @@ fn endToEnd(allocator: Allocator, intern: *Intern, compile_errors: *CompileError
     var ir = try lower.buildIr(allocator, builtins, ast, intern);
     if (export_count == 0) {
         const alias = try intern.store("_start");
-        ir.exports = &.{.{ .name = start, .alias = alias }};
+        ir.foreign_exports = &.{.{ .name = start, .alias = alias }};
     }
     return try std.fmt.allocPrint(allocator, "{}", .{ir});
 }
