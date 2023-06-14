@@ -48,12 +48,10 @@ pub fn findInScope(scopes: Scopes, s: parser.types.Symbol) !types.Binding {
         var scope_iterator = scope.keyIterator();
         while (scope_iterator.next()) |key| try in_scope.append(key.*);
     }
-    try scopes.errors.errors.append(.{
-        .undefined_variable = .{
-            .symbol = s.value,
-            .span = s.span,
-            .in_scope = try in_scope.toOwnedSlice(),
-        },
+    try scopes.errors.undefined_variables.append(.{
+        .symbol = s.value,
+        .span = s.span,
+        .in_scope = try in_scope.toOwnedSlice(),
     });
     return error.CompileError;
 }

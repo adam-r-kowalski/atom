@@ -1,7 +1,7 @@
 const std = @import("std");
 const mantis = @import("mantis");
-const RED = mantis.error_reporter.types.RED;
-const CLEAR = mantis.error_reporter.types.CLEAR;
+const RED = mantis.error_reporter.pretty_print.RED;
+const CLEAR = mantis.error_reporter.pretty_print.CLEAR;
 
 test "use of undefined variable" {
     const allocator = std.testing.allocator;
@@ -44,7 +44,7 @@ test "type error of if" {
     const actual = try mantis.testing.compileErrors(allocator, source);
     defer allocator.free(actual);
     const expected = try std.fmt.allocPrint(allocator,
-        \\--- TYPE ERROR ---------------------------------------------------
+        \\--- TYPE MISMATCH ---------------------------------------------------
         \\
         \\Here the inferred type is i32
         \\
@@ -77,7 +77,7 @@ test "type error of define" {
     const actual = try mantis.testing.compileErrors(allocator, source);
     defer allocator.free(actual);
     const expected = try std.fmt.allocPrint(allocator,
-        \\--- TYPE ERROR ---------------------------------------------------
+        \\--- TYPE MISMATCH ---------------------------------------------------
         \\
         \\Here the inferred type is f32
         \\

@@ -28,12 +28,7 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
                     types.TypedSpan{ .type = t, .span = equal.left.span }
                 else
                     equal.left;
-                try errors.errors.append(.{
-                    .type_error = .{
-                        .left = left,
-                        .right = equal.right,
-                    },
-                });
+                try errors.type_mismatches.append(.{ .left = left, .right = equal.right });
                 return error.CompileError;
             },
             else => return e,
@@ -45,12 +40,7 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
                     types.TypedSpan{ .type = t, .span = equal.right.span }
                 else
                     equal.right;
-                try errors.errors.append(.{
-                    .type_error = .{
-                        .left = equal.left,
-                        .right = right,
-                    },
-                });
+                try errors.type_mismatches.append(.{ .left = equal.left, .right = right });
                 return error.CompileError;
             },
             else => return e,
@@ -73,12 +63,7 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
     }
     if (left_tag == right_tag)
         return;
-    try errors.errors.append(.{
-        .type_error = .{
-            .left = equal.left,
-            .right = equal.right,
-        },
-    });
+    try errors.type_mismatches.append(.{ .left = equal.left, .right = equal.right });
     return error.CompileError;
 }
 
