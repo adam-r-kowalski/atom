@@ -16,6 +16,7 @@ pub const Plus = struct { span: Span };
 pub const PlusEqual = struct { span: Span };
 pub const Minus = struct { span: Span };
 pub const Times = struct { span: Span };
+pub const TimesEqual = struct { span: Span };
 pub const Slash = struct { span: Span };
 pub const Caret = struct { span: Span };
 pub const Greater = struct { span: Span };
@@ -50,6 +51,7 @@ pub const Token = union(enum) {
     plus_equal: PlusEqual,
     minus: Minus,
     times: Times,
+    times_equal: TimesEqual,
     slash: Slash,
     caret: Caret,
     greater: Greater,

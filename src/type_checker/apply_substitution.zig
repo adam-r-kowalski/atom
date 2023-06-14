@@ -31,10 +31,16 @@ fn define(s: types.Substitution, d: *types.Define) void {
     monotype(s, &d.type);
 }
 
-fn addAssign(s: types.Substitution, a: *types.AddAssign) void {
-    monotype(s, &a.name.type);
-    expression(s, a.value);
-    monotype(s, &a.type);
+fn plusEqual(s: types.Substitution, p: *types.PlusEqual) void {
+    monotype(s, &p.name.type);
+    expression(s, p.value);
+    monotype(s, &p.type);
+}
+
+fn timesEqual(s: types.Substitution, t: *types.TimesEqual) void {
+    monotype(s, &t.name.type);
+    expression(s, t.value);
+    monotype(s, &t.type);
 }
 
 fn call(s: types.Substitution, c: *types.Call) void {
@@ -80,7 +86,8 @@ pub fn expression(s: types.Substitution, e: *types.Expression) void {
         .branch => |*b| branch(s, b),
         .binary_op => |*b| binaryOp(s, b),
         .define => |*d| define(s, d),
-        .add_assign => |*a| addAssign(s, a),
+        .plus_equal => |*p| plusEqual(s, p),
+        .times_equal => |*t| timesEqual(s, t),
         .call => |*c| call(s, c),
         .intrinsic => |*i| intrinsic(s, i),
         .function => |*f| function(s, f),

@@ -261,10 +261,24 @@ fn define(context: Context, d: type_checker.types.Define) !types.Expression {
     }
 }
 
-fn addAssign(context: Context, a: type_checker.types.AddAssign) !types.Expression {
+fn plusEqual(context: Context, a: type_checker.types.PlusEqual) !types.Expression {
     var left = type_checker.types.Expression{ .symbol = a.name };
     const binary_op = type_checker.types.BinaryOp{
         .kind = .add,
+        .left = &left,
+        .right = a.value,
+        .span = a.span,
+        .type = type_checker.type_of.expression(a.value.*),
+    };
+    const value = try context.allocator.create(types.Expression);
+    value.* = try binaryOp(context, binary_op);
+    return .{ .local_set = .{ .name = a.name.value, .value = value } };
+}
+
+fn timesEqual(context: Context, a: type_checker.types.TimesEqual) !types.Expression {
+    var left = type_checker.types.Expression{ .symbol = a.name };
+    const binary_op = type_checker.types.BinaryOp{
+        .kind = .multiply,
         .left = &left,
         .right = a.value,
         .span = a.span,
@@ -364,7 +378,8 @@ fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMe
         .intrinsic => |i| return try intrinsic(context, i),
         .branch => |b| return try branch(context, b),
         .define => |d| return try define(context, d),
-        .add_assign => |a| return try addAssign(context, a),
+        .plus_equal => |a| return try plusEqual(context, a),
+        .times_equal => |a| return try timesEqual(context, a),
         .convert => |c| return try convert(context, c),
         .string => |s| return try string(context, s),
         else => |k| std.debug.panic("\ntypes.Expression {} not yet supported", .{k}),

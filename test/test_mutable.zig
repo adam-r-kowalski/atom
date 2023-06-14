@@ -94,7 +94,7 @@ test "type infer mutable binding" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "codegen mutable binding" {
+test "codegen plus equal" {
     const allocator = std.testing.allocator;
     const source =
         \\start = fn() i32 {
@@ -121,6 +121,135 @@ test "codegen mutable binding" {
         \\                (local.get $x)
         \\                (i32.const 1)))
         \\        (local.get $x))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen times equal" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = fn() i32 {
+        \\    mut x: i32 = 5
+        \\    x *= 2
+        \\    x
+        \\}
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
+        \\    (func $start (result i32)
+        \\        (local $x i32)
+        \\        (local.set $x
+        \\            (i32.const 5))
+        \\        (local.set $x
+        \\            (i32.mul
+        \\                (local.get $x)
+        \\                (i32.const 2)))
+        \\        (local.get $x))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse mutable pointer" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\double = fn(mut x: i32) void {
+        \\    x *= 2
+        \\}
+        \\
+        \\start = fn() i32 {
+        \\    mut x: i32 = 5
+        \\    double(mut x)
+        \\    x
+        \\}
+    ;
+    const actual = try mantis.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
+        \\    (func $double (param $x$ptr i32)
+        \\        (local $x i32)
+        \\            (local.set $x (i32.load (local.get $x$ptr)))
+        \\        (local.set $x
+        \\            (i32.mul
+        \\                (i32.load (local.get $x$ptr))
+        \\                (i32.const 2)))
+        \\        (i32.store (local.get $x$ptr) (local.get $x)))
+        \\
+        \\    (func $start (result i32)
+        \\        (local $x i32)
+        \\        (local $x$ptr i32)
+        \\        (local.set $x
+        \\            (i32.const 20))
+        \\        (local.set $x$ptr
+        \\            (i32.const 0))
+        \\        (i32.store (local.get $x$ptr) (local.get $x))
+        \\        (call $double
+        \\            (local.get $x$ptr))
+        \\        (i32.load (local.get $x$ptr)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen mutable pointer" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\double = fn(x: mut i32) void {
+        \\    x *= 2
+        \\}
+        \\
+        \\start = fn() i32 {
+        \\    mut x: i32 = 5
+        \\    double(mut x)
+        \\    x
+        \\}
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\    (global $arena (mut i32) (i32.const 0))
+        \\
+        \\    (func $double (param $x$ptr i32)
+        \\        (local $x i32)
+        \\            (local.set $x (i32.load (local.get $x$ptr)))
+        \\        (local.set $x
+        \\            (i32.mul
+        \\                (i32.load (local.get $x$ptr))
+        \\                (i32.const 2)))
+        \\        (i32.store (local.get $x$ptr) (local.get $x)))
+        \\
+        \\    (func $start (result i32)
+        \\        (local $x i32)
+        \\        (local $x$ptr i32)
+        \\        (local.set $x
+        \\            (i32.const 20))
+        \\        (local.set $x$ptr
+        \\            (i32.const 0))
+        \\        (i32.store (local.get $x$ptr) (local.get $x))
+        \\        (call $double
+        \\            (local.get $x$ptr))
+        \\        (i32.load (local.get $x$ptr)))
         \\
         \\    (export "_start" (func $start)))
     ;

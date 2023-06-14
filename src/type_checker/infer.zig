@@ -278,7 +278,7 @@ fn define(context: Context, d: parser.types.Define) !types.Define {
     };
 }
 
-fn addAssign(context: Context, d: parser.types.AddAssign) !types.AddAssign {
+fn plusEqual(context: Context, d: parser.types.PlusEqual) !types.PlusEqual {
     const value = try expressionAlloc(context, d.value.*);
     var monotype = typeOf(value.*);
     const binding = types.Binding{
@@ -294,7 +294,31 @@ fn addAssign(context: Context, d: parser.types.AddAssign) !types.AddAssign {
         .mutable = false,
     };
     try putInScope(context.scopes, name.value, binding);
-    return types.AddAssign{
+    return types.PlusEqual{
+        .name = name,
+        .value = value,
+        .span = d.span,
+        .type = .void,
+    };
+}
+
+fn timesEqual(context: Context, d: parser.types.TimesEqual) !types.TimesEqual {
+    const value = try expressionAlloc(context, d.value.*);
+    var monotype = typeOf(value.*);
+    const binding = types.Binding{
+        .type = monotype,
+        .global = false,
+        .mutable = false,
+    };
+    const name = types.Symbol{
+        .value = d.name.value,
+        .span = d.span,
+        .type = monotype,
+        .global = false,
+        .mutable = false,
+    };
+    try putInScope(context.scopes, name.value, binding);
+    return types.TimesEqual{
         .name = name,
         .value = value,
         .span = d.span,
@@ -453,7 +477,8 @@ fn expression(context: Context, e: parser.types.Expression) error{ OutOfMemory, 
         .symbol => |s| return .{ .symbol = try symbol(context.scopes.*, s) },
         .bool => |b| return .{ .bool = boolean(b) },
         .define => |d| return .{ .define = try define(context, d) },
-        .add_assign => |a| return .{ .add_assign = try addAssign(context, a) },
+        .plus_equal => |a| return .{ .plus_equal = try plusEqual(context, a) },
+        .times_equal => |a| return .{ .times_equal = try timesEqual(context, a) },
         .function => |f| return .{ .function = try function(context, f) },
         .binary_op => |b| return try binaryOp(context, b),
         .block => |b| return .{ .block = try block(context, b) },

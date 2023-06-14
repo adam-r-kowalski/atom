@@ -96,7 +96,14 @@ pub const Define = struct {
     type: MonoType,
 };
 
-pub const AddAssign = struct {
+pub const PlusEqual = struct {
+    name: Symbol,
+    value: *Expression,
+    span: Span,
+    type: MonoType,
+};
+
+pub const TimesEqual = struct {
     name: Symbol,
     value: *Expression,
     span: Span,
@@ -189,7 +196,8 @@ pub const Expression = union(enum) {
     bool: Bool,
     string: String,
     define: Define,
-    add_assign: AddAssign,
+    plus_equal: PlusEqual,
+    times_equal: TimesEqual,
     function: Function,
     binary_op: BinaryOp,
     group: Group,
