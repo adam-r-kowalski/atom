@@ -366,6 +366,10 @@ matmul = fn[T: Num, m: u64, n: u64, p: u64](a: [m][n]T, b: [n][p]T) [m][p]T {
 }
 ```
 
+### Optimization
+
+[stub]
+
 ### Machine Learning
 
 Mantis is designed with machine learning in mind. For expressions allow you to express how models work across a single example rather than dealing with batches. Here is a simple linear model implemented in Mantis:
