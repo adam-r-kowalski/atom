@@ -86,11 +86,13 @@ pub fn conditional(i: types.If, indent: Indent, writer: Writer) !void {
     try expression(i.condition.*, indent + 1, writer);
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("(then");
+    try newlineAndIndent(indent + 2, writer);
     try expressions(i.then, indent + 2, writer);
     try writer.writeAll(")");
     if (i.else_.expressions.len > 0) {
         try newlineAndIndent(indent + 1, writer);
         try writer.writeAll("(else");
+        try newlineAndIndent(indent + 2, writer);
         try expressions(i.else_, indent + 2, writer);
         try writer.writeAll(")");
     }

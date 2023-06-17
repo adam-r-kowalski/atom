@@ -104,7 +104,9 @@ test "type infer define then call" {
         \\                call =
         \\                    function = symbol{ value = double, type = fn(i32) i32 }
         \\                    arguments =
-        \\                        int{ value = 2, type = i32 }
+        \\                        argument =
+        \\                            mutable = false
+        \\                            value = int{ value = 2, type = i32 }
         \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -124,7 +126,6 @@ test "codegen define then call" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $double (param $x i32) (result i32)
         \\        (i32.mul
@@ -156,7 +157,6 @@ test "codegen recursive function" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $factorial (param $n i32) (result i32)
         \\        (if (result i32)
@@ -221,7 +221,9 @@ test "type infer dot call" {
         \\                call =
         \\                    function = symbol{ value = double, type = fn(i32) i32 }
         \\                    arguments =
-        \\                        int{ value = 2, type = i32 }
+        \\                        argument =
+        \\                            mutable = false
+        \\                            value = int{ value = 2, type = i32 }
         \\                    type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);

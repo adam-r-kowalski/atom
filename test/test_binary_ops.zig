@@ -226,7 +226,6 @@ test "codegen i32.add" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result i32)
         \\        (i32.add
@@ -248,7 +247,6 @@ test "codegen i64.add" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result i64)
         \\        (i64.add
@@ -270,7 +268,6 @@ test "codegen binary op i32.sub" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result i32)
         \\        (i32.sub
@@ -292,7 +289,6 @@ test "codegen binary op f32.add" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result f32)
         \\        (f32.add
@@ -314,7 +310,6 @@ test "codegen binary op f64.add" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result f64)
         \\        (f64.add
@@ -336,7 +331,6 @@ test "codegen binary op f32.sub" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result f32)
         \\        (f32.sub
@@ -358,7 +352,6 @@ test "codegen binary op i32.mul" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result i32)
         \\        (i32.mul
@@ -380,7 +373,6 @@ test "codegen binary op f32.mul" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result f32)
         \\        (f32.mul
@@ -402,7 +394,6 @@ test "codegen nested binary op f32.add and f32.mul" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result f32)
         \\        (f32.add
@@ -426,7 +417,6 @@ test "codegen i32.eq" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x i32) (param $y i32) (result i32)
         \\        (i32.eq
@@ -448,7 +438,6 @@ test "codegen f32.eq" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x f32) (param $y f32) (result i32)
         \\        (f32.eq
@@ -470,7 +459,6 @@ test "codegen i32.rem_s" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x i32) (result i32)
         \\        (i32.eq
@@ -494,7 +482,6 @@ test "codegen i32.or" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x i32) (param $y i32) (result i32)
         \\        (i32.or
@@ -516,7 +503,6 @@ test "codegen i32.gt_s" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x i32) (param $y i32) (result i32)
         \\        (i32.gt_s
@@ -538,7 +524,6 @@ test "codegen f32.gt" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x f32) (param $y f32) (result i32)
         \\        (f32.gt
@@ -560,7 +545,6 @@ test "codegen i32.div_s" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x i32) (param $y i32) (result i32)
         \\        (i32.div_s
