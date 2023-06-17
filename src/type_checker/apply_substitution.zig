@@ -45,7 +45,7 @@ fn timesEqual(s: types.Substitution, t: *types.TimesEqual) void {
 
 fn call(s: types.Substitution, c: *types.Call) void {
     expression(s, c.function);
-    for (c.arguments) |*a| expression(s, a);
+    for (c.arguments) |*a| expression(s, &a.value);
     monotype(s, &c.type);
 }
 
@@ -65,7 +65,7 @@ fn group(s: types.Substitution, g: *types.Group) void {
 }
 
 fn function(s: types.Substitution, f: *types.Function) void {
-    for (f.parameters) |*p| monotype(s, &p.type);
+    for (f.parameters) |*p| monotype(s, &p.name.type);
     monotype(s, &f.return_type);
     block(s, &f.body);
     monotype(s, &f.type);

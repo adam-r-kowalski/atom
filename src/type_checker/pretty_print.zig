@@ -135,7 +135,12 @@ pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
     try writer.writeAll("arguments =");
     for (c.arguments) |a| {
         try newlineAndIndent(indent + 2, writer);
-        try expression(a, indent + 3, writer);
+        try writer.writeAll("argument =");
+        try newlineAndIndent(indent + 3, writer);
+        try writer.print("mutable = {}", .{a.mutable});
+        try newlineAndIndent(indent + 3, writer);
+        try writer.writeAll("value = ");
+        try expression(a.value, indent + 4, writer);
     }
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("type = ");
@@ -178,7 +183,7 @@ pub fn plusEqual(p: types.PlusEqual, indent: Indent, writer: Writer) !void {
     try writer.writeAll("plus_equal =");
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("name = ");
-    try writer.writeAll(p.name.value.string());
+    try symbol(p.name, writer);
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("type = ");
     try monotype(p.type, writer);
@@ -192,7 +197,7 @@ pub fn timesEqual(t: types.TimesEqual, indent: Indent, writer: Writer) !void {
     try writer.writeAll("times_equal =");
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("name = ");
-    try writer.writeAll(t.name.value.string());
+    try symbol(t.name, writer);
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("type = ");
     try monotype(t.type, writer);
@@ -210,7 +215,8 @@ pub fn function(f: types.Function, indent: Indent, writer: Writer) !void {
     }
     for (f.parameters) |p| {
         try newlineAndIndent(indent + 2, writer);
-        try symbol(p, writer);
+        if (p.mutable) try writer.writeAll("mut ");
+        try symbol(p.name, writer);
     }
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("return_type = ");

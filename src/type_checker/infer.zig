@@ -99,7 +99,6 @@ fn symbol(scopes: Scopes, s: parser.types.Symbol) !types.Symbol {
         .value = s.value,
         .span = s.span,
         .type = binding.type,
-        .mutable = binding.mutable,
         .global = binding.global,
     };
 }
@@ -259,14 +258,13 @@ fn define(context: Context, d: parser.types.Define) !types.Define {
     const binding = types.Binding{
         .type = monotype,
         .global = false,
-        .mutable = false,
+        .mutable = d.mutable,
     };
     const name = types.Symbol{
         .value = d.name.value,
         .span = d.span,
         .type = monotype,
         .global = false,
-        .mutable = false,
     };
     try putInScope(context.scopes, name.value, binding);
     return types.Define{
@@ -292,7 +290,6 @@ fn plusEqual(context: Context, p: parser.types.PlusEqual) !types.PlusEqual {
         .span = p.span,
         .type = binding.type,
         .global = binding.global,
-        .mutable = binding.mutable,
     };
     return types.PlusEqual{
         .name = name,
@@ -316,7 +313,6 @@ fn timesEqual(context: Context, t: parser.types.TimesEqual) !types.TimesEqual {
         .span = t.span,
         .type = binding.type,
         .global = binding.global,
-        .mutable = binding.mutable,
     };
     return types.TimesEqual{
         .name = name,
@@ -387,10 +383,11 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
             if (s.value.eql(context.builtins.convert)) return try callConvert(context, c);
             if (s.value.eql(context.builtins.sqrt)) return try callSqrt(context, c);
             const f = try symbol(context.scopes.*, s);
-            const arguments = try context.allocator.alloc(types.Expression, len);
+            const arguments = try context.allocator.alloc(types.Argument, len);
             for (c.arguments, arguments, function_type[0..len]) |untyped_arg, *typed_arg, *t| {
-                typed_arg.* = try expression(context, untyped_arg.value);
-                t.* = typeOf(typed_arg.*);
+                typed_arg.value = try expression(context, untyped_arg.value);
+                typed_arg.mutable = untyped_arg.mutable;
+                t.* = typeOf(typed_arg.value);
             }
             const return_type = freshTypeVar(context.constraints);
             function_type[len] = return_type;
@@ -415,7 +412,7 @@ fn function(context: Context, f: parser.types.Function) !types.Function {
     try pushScope(context.scopes);
     defer popScope(context.scopes);
     const len = f.parameters.len;
-    const parameters = try context.allocator.alloc(types.Symbol, len);
+    const parameters = try context.allocator.alloc(types.Parameter, len);
     const function_type = try context.allocator.alloc(types.MonoType, len + 1);
     for (f.parameters, parameters, function_type[0..len]) |untyped_p, *typed_p, *t| {
         const name_symbol = untyped_p.name.value;
@@ -429,12 +426,14 @@ fn function(context: Context, f: parser.types.Function) !types.Function {
             .global = false,
             .mutable = untyped_p.mutable,
         };
-        typed_p.* = types.Symbol{
-            .value = name_symbol,
-            .span = span,
-            .type = p_type,
-            .global = false,
-            .mutable = untyped_p.mutable,
+        typed_p.* = types.Parameter{
+            .name = types.Symbol{
+                .value = name_symbol,
+                .span = span,
+                .type = p_type,
+                .global = false,
+            },
+            .mutable = binding.mutable,
         };
         try putInScope(context.scopes, name_symbol, binding);
         t.* = p_type;

@@ -1,6 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const List = std.ArrayList;
+const Map = std.AutoHashMap;
 const interner = @import("../interner.zig");
 const Intern = interner.Intern;
 const Interned = interner.Interned;
@@ -8,10 +9,15 @@ const type_checker = @import("../type_checker.zig");
 const Builtins = @import("../builtins.zig").Builtins;
 const types = @import("types.zig");
 
+const LocalName = Interned;
+const PointerName = Interned;
+
 const Context = struct {
     allocator: Allocator,
     builtins: Builtins,
     locals: *List(types.Local),
+    pointers: *List(types.LocalPointer),
+    pointer_map: *Map(LocalName, PointerName),
     next_local: *u32,
     data_segment: *types.DataSegment,
     intern: *Intern,
@@ -191,19 +197,53 @@ fn symbol(s: type_checker.types.Symbol) types.Expression {
     return .{ .local_get = .{ .name = s.value } };
 }
 
+fn getOrCreatePointer(context: Context, s: type_checker.types.Symbol) !Interned {
+    const result = try context.pointer_map.getOrPut(s.value);
+    if (result.found_existing) return result.value_ptr.*;
+    const name = try std.fmt.allocPrint(context.allocator, "{s}/ptr", .{s.value.string()});
+    const interned = try context.intern.store(name);
+    try context.pointers.append(.{ .name = interned, .size = 4 });
+    result.value_ptr.* = interned;
+    return interned;
+}
+
 fn call(context: Context, c: type_checker.types.Call) !types.Expression {
     switch (c.function.*) {
         .symbol => |s| {
+            var exprs = List(types.Expression).init(context.allocator);
+            var deferred = List(types.Expression).init(context.allocator);
             const arguments = try context.allocator.alloc(types.Expression, c.arguments.len);
             for (c.arguments, arguments) |arg, *ir_arg| {
-                ir_arg.* = try expression(context, arg);
+                if (arg.mutable) {
+                    switch (arg.value) {
+                        .symbol => |symbol_arg| {
+                            const pointer = try getOrCreatePointer(context, symbol_arg);
+                            const local_get_ptr = try context.allocator.create(types.Expression);
+                            local_get_ptr.* = .{ .local_get = .{ .name = pointer } };
+                            const local_get = try context.allocator.create(types.Expression);
+                            local_get.* = .{ .local_get = .{ .name = symbol_arg.value } };
+                            try exprs.append(.{ .binary_op = .{ .kind = .i32_store, .left = local_get_ptr, .right = local_get } });
+                            const i32_load = try context.allocator.create(types.Expression);
+                            i32_load.* = .{ .unary_op = .{ .kind = .i32_load, .expression = local_get_ptr } };
+                            try deferred.append(.{ .local_set = .{ .name = symbol_arg.value, .value = i32_load } });
+                            ir_arg.* = .{ .local_get = .{ .name = pointer } };
+                        },
+                        else => |k| std.debug.panic("\nMutable argument type {} not yet supported", .{k}),
+                    }
+                } else {
+                    ir_arg.* = try expression(context, arg.value);
+                }
             }
-            return .{
+            try exprs.append(.{
                 .call = .{
                     .function = s.value,
                     .arguments = arguments,
                 },
-            };
+            });
+            for (deferred.items) |expr| {
+                try exprs.append(expr);
+            }
+            return .{ .expressions = .{ .expressions = try exprs.toOwnedSlice() } };
         },
         else => |k| std.debug.panic("\nCall function type {} not yet supported", .{k}),
     }
@@ -392,45 +432,50 @@ fn expressionAlloc(context: Context, e: type_checker.types.Expression) !*const t
     return ptr;
 }
 
-fn function(allocator: Allocator, builtins: Builtins, data_segment: *types.DataSegment, intern: *Intern, name: Interned, f: type_checker.types.Function) !types.Function {
+fn function(allocator: Allocator, builtins: Builtins, data_segment: *types.DataSegment, uses_memory: *bool, intern: *Intern, name: Interned, f: type_checker.types.Function) !types.Function {
     var locals = List(types.Local).init(allocator);
     const parameters = try allocator.alloc(types.Parameter, f.parameters.len);
     var body = List(types.Expression).init(allocator);
     var deferred = List(types.Expression).init(allocator);
     for (f.parameters, parameters) |typed_p, *ir_p| {
         if (typed_p.mutable) {
-            const parameter_name = try std.fmt.allocPrint(allocator, "{s}/ptr", .{typed_p.value.string()});
+            const parameter_name = try std.fmt.allocPrint(allocator, "{s}/ptr", .{typed_p.name.value.string()});
             const interned = try intern.store(parameter_name);
             ir_p.* = types.Parameter{
                 .name = interned,
                 .type = .i32,
             };
-            try locals.append(.{ .name = typed_p.value, .type = mapType(typed_p.type) });
-            const local_get_x_ptr = try allocator.create(types.Expression);
-            local_get_x_ptr.* = .{ .local_get = .{ .name = interned } };
+            try locals.append(.{ .name = typed_p.name.value, .type = mapType(typed_p.name.type) });
+            const local_get_ptr = try allocator.create(types.Expression);
+            local_get_ptr.* = .{ .local_get = .{ .name = interned } };
             const i32_load = try allocator.create(types.Expression);
-            i32_load.* = .{ .unary_op = .{ .kind = .i32_load, .expression = local_get_x_ptr } };
-            try body.append(.{ .local_set = .{ .name = typed_p.value, .value = i32_load } });
-            const local_get_x = try allocator.create(types.Expression);
-            local_get_x.* = .{ .local_get = .{ .name = typed_p.value } };
+            i32_load.* = .{ .unary_op = .{ .kind = .i32_load, .expression = local_get_ptr } };
+            try body.append(.{ .local_set = .{ .name = typed_p.name.value, .value = i32_load } });
+            const local_get = try allocator.create(types.Expression);
+            local_get.* = .{ .local_get = .{ .name = typed_p.name.value } };
             try deferred.append(.{ .binary_op = .{
                 .kind = .i32_store,
-                .left = local_get_x_ptr,
-                .right = local_get_x,
+                .left = local_get_ptr,
+                .right = local_get,
             } });
+            uses_memory.* = true;
         } else {
             ir_p.* = types.Parameter{
-                .name = typed_p.value,
-                .type = mapType(typed_p.type),
+                .name = typed_p.name.value,
+                .type = mapType(typed_p.name.type),
             };
         }
     }
     var next_local: u32 = 0;
+    var pointers = List(types.LocalPointer).init(allocator);
+    var pointer_map = Map(LocalName, PointerName).init(allocator);
     const context = Context{
         .allocator = allocator,
         .builtins = builtins,
         .locals = &locals,
         .next_local = &next_local,
+        .pointers = &pointers,
+        .pointer_map = &pointer_map,
         .data_segment = data_segment,
         .intern = intern,
     };
@@ -445,6 +490,7 @@ fn function(allocator: Allocator, builtins: Builtins, data_segment: *types.DataS
         .parameters = parameters,
         .return_type = mapType(f.return_type),
         .locals = try locals.toOwnedSlice(),
+        .pointers = try pointers.toOwnedSlice(),
         .body = .{ .expressions = try body.toOwnedSlice() },
     };
 }
@@ -474,6 +520,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
     };
     var globals = std.ArrayList(types.Global).init(allocator);
     var exports = std.ArrayList(types.ForeignExport).init(allocator);
+    var uses_memory = false;
     for (m.order) |name| {
         if (m.typed.get(name)) |top_level| {
             switch (top_level) {
@@ -481,7 +528,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                     const name_symbol = d.name.value;
                     switch (d.value.*) {
                         .function => |f| {
-                            const lowered = try function(allocator, builtins, &data_segment, intern, name_symbol, f);
+                            const lowered = try function(allocator, builtins, &data_segment, &uses_memory, intern, name_symbol, f);
                             try functions.append(lowered);
                         },
                         .foreign_import => |i| {
@@ -500,7 +547,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                     const trimmed = try intern.store(name_string[1 .. name_string.len - 1]);
                     switch (e.value.*) {
                         .function => |f| {
-                            const lowered = try function(allocator, builtins, &data_segment, intern, trimmed, f);
+                            const lowered = try function(allocator, builtins, &data_segment, &uses_memory, intern, trimmed, f);
                             try functions.append(lowered);
                         },
                         .symbol => {},
@@ -517,6 +564,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
         .foreign_imports = try imports.toOwnedSlice(),
         .globals = try globals.toOwnedSlice(),
         .data_segment = data_segment,
+        .uses_memory = uses_memory,
         .foreign_exports = try exports.toOwnedSlice(),
     };
 }

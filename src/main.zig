@@ -181,9 +181,11 @@ pub fn main() !void {
     };
     compileAndRun(allocator, &intern, &errors, flags, source) catch |e| switch (e) {
         error.CompileError => {
-            const stderr = std.io.getStdErr();
-            const writer = stderr.writer();
-            try writer.print("{}", .{errors});
+            const stdout = std.io.getStdOut();
+            const writer = stdout.writer();
+            var result = List(u8).init(allocator);
+            try mantis.error_reporter.pretty_print.errors(errors, result.writer());
+            try writer.print("{s}", .{result.items});
         },
         else => return e,
     };

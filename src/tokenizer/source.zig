@@ -20,6 +20,7 @@ pub fn token(t: types.Token, writer: Writer) !void {
         .plus_equal => try writer.writeAll("+="),
         .minus => try writer.writeAll("-"),
         .times => try writer.writeAll("*"),
+        .times_equal => try writer.writeAll("*="),
         .slash => try writer.writeAll("/"),
         .percent => try writer.writeAll("%"),
         .caret => try writer.writeAll("^"),

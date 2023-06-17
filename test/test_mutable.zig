@@ -76,19 +76,21 @@ test "type infer mutable binding" {
         \\    name = symbol{ value = start, type = fn() i32 }
         \\    type = void
         \\    mutable = false
-        \\    value = 
+        \\    value =
         \\        function =
         \\            return_type = i32
-        \\            body = 
+        \\            body =
         \\                define =
         \\                    name = symbol{ value = x, type = i32 }
         \\                    type = void
         \\                    mutable = true
-        \\                    value = int{ value = 0, type = i32 }
-        \\                add_assign =
+        \\                    value =
+        \\                        int{ value = 0, type = i32 }
+        \\                plus_equal =
         \\                    name = symbol{ value = x, type = i32 }
         \\                    type = void
-        \\                    value = int{ value = 1, type = i32 }
+        \\                    value =
+        \\                        int{ value = 1, type = i32 }
         \\                symbol{ value = x, type = i32 }
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -110,7 +112,6 @@ test "codegen plus equal" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result i32)
         \\        (local $x i32)
@@ -143,7 +144,6 @@ test "codegen times equal" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result i32)
         \\        (local $x i32)
@@ -211,11 +211,11 @@ test "type check mutable parameter" {
         \\    value =
         \\        function =
         \\            parameters =
-        \\                symbol{ value = x, type = i32 }
+        \\                mut symbol{ value = x, type = i32 }
         \\            return_type = void
         \\            body =
         \\                times_equal =
-        \\                    name = x
+        \\                    name = symbol{ value = x, type = i32 }
         \\                    type = void
         \\                    value =
         \\                        int{ value = 2, type = i32 }
@@ -237,7 +237,9 @@ test "type check mutable parameter" {
         \\                call =
         \\                    function = symbol{ value = double, type = fn(i32) void }
         \\                    arguments =
-        \\                        symbol{ value = x, type = i32 }
+        \\                        argument =
+        \\                            mutable = true
+        \\                            value = symbol{ value = x, type = i32 }
         \\                    type = void
         \\                symbol{ value = x, type = i32 }
     ;
@@ -264,28 +266,48 @@ test "codegen mutable parameter" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
-        \\    (func $double (param $x$ptr i32)
+        \\    (global $core/arena (mut i32) (i32.const 0))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (global.get $core/arena)
+        \\                (local.get $size))))
+        \\
+        \\    (func $double (param $x/ptr i32)
         \\        (local $x i32)
-        \\            (local.set $x (i32.load (local.get $x$ptr)))
+        \\        (local.set $x
+        \\            (i32.load
+        \\                (local.get $x/ptr)))
         \\        (local.set $x
         \\            (i32.mul
         \\                (local.get $x)
         \\                (i32.const 2)))
-        \\        (i32.store (local.get $x$ptr) (local.get $x)))
+        \\        (i32.store
+        \\            (local.get $x/ptr)
+        \\            (local.get $x)))
         \\
         \\    (func $start (result i32)
         \\        (local $x i32)
-        \\        (local $x$ptr i32)
+        \\        (local $x/ptr i32)
+        \\        (local.set $x/ptr
+        \\            (call $core/alloc
+        \\                (i32.const 4)))
         \\        (local.set $x
-        \\            (i32.const 20))
-        \\        (local.set $x$ptr
-        \\            (i32.const 0))
-        \\        (i32.store (local.get $x$ptr) (local.get $x))
+        \\            (i32.const 5))
+        \\        (i32.store
+        \\            (local.get $x/ptr)
+        \\            (local.get $x))
         \\        (call $double
-        \\            (local.get $x$ptr))
-        \\        (i32.load (local.get $x$ptr)))
+        \\            (local.get $x/ptr))
+        \\        (local.set $x
+        \\            (i32.load
+        \\                (local.get $x/ptr)))
+        \\        (local.get $x))
         \\
         \\    (export "_start" (func $start)))
     ;

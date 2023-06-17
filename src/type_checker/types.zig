@@ -71,9 +71,8 @@ pub const Float = struct {
 pub const Symbol = struct {
     value: Interned,
     span: Span,
-    global: bool,
-    mutable: bool,
     type: MonoType,
+    global: bool,
 };
 
 pub const Bool = struct {
@@ -116,8 +115,13 @@ pub const Block = struct {
     type: MonoType,
 };
 
+pub const Parameter = struct {
+    name: Symbol,
+    mutable: bool,
+};
+
 pub const Function = struct {
-    parameters: []Symbol,
+    parameters: []Parameter,
     return_type: MonoType,
     body: Block,
     span: Span,
@@ -144,9 +148,14 @@ pub const Branch = struct {
     type: MonoType,
 };
 
+pub const Argument = struct {
+    value: Expression,
+    mutable: bool,
+};
+
 pub const Call = struct {
     function: *Expression,
-    arguments: []Expression,
+    arguments: []Argument,
     span: Span,
     type: MonoType,
 };
