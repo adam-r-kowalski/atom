@@ -106,6 +106,7 @@ pub fn unaryOp(u: types.UnaryOp, indent: Indent, writer: Writer) !void {
         .f32_convert_i32_s => try writer.writeAll("f32.convert_i32_s"),
         .f64_sqrt => try writer.writeAll("f64.sqrt"),
         .f64_convert_i64_s => try writer.writeAll("f64.convert_i64_s"),
+        .i32_load => try writer.writeAll("i32.load"),
     }
     try newlineAndIndent(indent + 1, writer);
     try expression(u.expression.*, indent + 1, writer);

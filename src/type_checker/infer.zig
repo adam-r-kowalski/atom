@@ -282,7 +282,7 @@ fn plusEqual(context: Context, p: parser.types.PlusEqual) !types.PlusEqual {
     const value = try expressionAlloc(context, p.value.*);
     const binding = try findInScope(context.scopes.*, p.name);
     if (binding.global) std.debug.panic("Cannot reassign global variable {s}", .{p.name.value.string()});
-    if (binding.mutable) std.debug.panic("Cannot reassign immutable variable {s}", .{p.name.value.string()});
+    if (!binding.mutable) std.debug.panic("Cannot reassign immutable variable {s}", .{p.name.value.string()});
     try context.constraints.equal.append(.{
         .left = .{ .type = typeOf(value.*), .span = spanOf(value.*) },
         .right = .{ .type = binding.type, .span = p.name.span },
@@ -306,7 +306,7 @@ fn timesEqual(context: Context, t: parser.types.TimesEqual) !types.TimesEqual {
     const value = try expressionAlloc(context, t.value.*);
     const binding = try findInScope(context.scopes.*, t.name);
     if (binding.global) std.debug.panic("Cannot reassign global variable {s}", .{t.name.value.string()});
-    if (binding.mutable) std.debug.panic("Cannot reassign immutable variable {s}", .{t.name.value.string()});
+    if (!binding.mutable) std.debug.panic("Cannot reassign immutable variable {s}", .{t.name.value.string()});
     try context.constraints.equal.append(.{
         .left = .{ .type = typeOf(value.*), .span = spanOf(value.*) },
         .right = .{ .type = binding.type, .span = t.name.span },
@@ -427,14 +427,14 @@ fn function(context: Context, f: parser.types.Function) !types.Function {
         const binding = types.Binding{
             .type = p_type,
             .global = false,
-            .mutable = false,
+            .mutable = untyped_p.mutable,
         };
         typed_p.* = types.Symbol{
             .value = name_symbol,
             .span = span,
             .type = p_type,
             .global = false,
-            .mutable = false,
+            .mutable = untyped_p.mutable,
         };
         try putInScope(context.scopes, name_symbol, binding);
         t.* = p_type;

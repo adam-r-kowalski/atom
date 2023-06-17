@@ -271,7 +271,7 @@ test "codegen mutable parameter" {
         \\            (local.set $x (i32.load (local.get $x$ptr)))
         \\        (local.set $x
         \\            (i32.mul
-        \\                (i32.load (local.get $x$ptr))
+        \\                (local.get $x)
         \\                (i32.const 2)))
         \\        (i32.store (local.get $x$ptr) (local.get $x)))
         \\
