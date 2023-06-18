@@ -1,6 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const List = std.ArrayList;
+const Map = std.AutoHashMap;
 const interner = @import("../interner.zig");
 const Intern = interner.Intern;
 const Interned = interner.Interned;
@@ -8,20 +9,35 @@ const type_checker = @import("../type_checker.zig");
 const Builtins = @import("../builtins.zig").Builtins;
 const types = @import("types.zig");
 
+const LocalName = Interned;
+const PointerName = Interned;
+
 const Context = struct {
     allocator: Allocator,
     builtins: Builtins,
     locals: *List(types.Local),
+    pointers: *List(types.LocalPointer),
+    pointer_map: *Map(LocalName, PointerName),
     next_local: *u32,
+    uses_memory: *bool,
     data_segment: *types.DataSegment,
     intern: *Intern,
 };
 
-fn fresh_local(context: Context, t: types.Type) !Interned {
+fn freshLocal(context: Context, t: types.Type) !Interned {
     const text = try std.fmt.allocPrint(context.allocator, "{}", .{context.next_local.*});
     const interned = try context.intern.store(text);
     context.next_local.* += 1;
     try context.locals.append(.{ .name = interned, .type = t });
+    return interned;
+}
+
+fn freshLocalPointer(context: Context, size: u32) !Interned {
+    const text = try std.fmt.allocPrint(context.allocator, "{}", .{context.next_local.*});
+    const interned = try context.intern.store(text);
+    context.next_local.* += 1;
+    try context.pointers.append(.{ .name = interned, .size = size });
+    context.uses_memory.* = true;
     return interned;
 }
 
@@ -191,19 +207,54 @@ fn symbol(s: type_checker.types.Symbol) types.Expression {
     return .{ .local_get = .{ .name = s.value } };
 }
 
+fn getOrCreatePointer(context: Context, s: type_checker.types.Symbol) !Interned {
+    const result = try context.pointer_map.getOrPut(s.value);
+    if (result.found_existing) return result.value_ptr.*;
+    const name = try std.fmt.allocPrint(context.allocator, "{s}/ptr", .{s.value.string()});
+    const interned = try context.intern.store(name);
+    try context.pointers.append(.{ .name = interned, .size = 4 });
+    result.value_ptr.* = interned;
+    context.uses_memory.* = true;
+    return interned;
+}
+
 fn call(context: Context, c: type_checker.types.Call) !types.Expression {
     switch (c.function.*) {
         .symbol => |s| {
+            var exprs = List(types.Expression).init(context.allocator);
+            var deferred = List(types.Expression).init(context.allocator);
             const arguments = try context.allocator.alloc(types.Expression, c.arguments.len);
             for (c.arguments, arguments) |arg, *ir_arg| {
-                ir_arg.* = try expression(context, arg);
+                if (arg.mutable) {
+                    switch (arg.value) {
+                        .symbol => |symbol_arg| {
+                            const pointer = try getOrCreatePointer(context, symbol_arg);
+                            const local_get_ptr = try context.allocator.create(types.Expression);
+                            local_get_ptr.* = .{ .local_get = .{ .name = pointer } };
+                            const local_get = try context.allocator.create(types.Expression);
+                            local_get.* = .{ .local_get = .{ .name = symbol_arg.value } };
+                            try exprs.append(.{ .binary_op = .{ .kind = .i32_store, .left = local_get_ptr, .right = local_get } });
+                            const i32_load = try context.allocator.create(types.Expression);
+                            i32_load.* = .{ .unary_op = .{ .kind = .i32_load, .expression = local_get_ptr } };
+                            try deferred.append(.{ .local_set = .{ .name = symbol_arg.value, .value = i32_load } });
+                            ir_arg.* = .{ .local_get = .{ .name = pointer } };
+                        },
+                        else => |k| std.debug.panic("\nMutable argument type {} not yet supported", .{k}),
+                    }
+                } else {
+                    ir_arg.* = try expression(context, arg.value);
+                }
             }
-            return .{
+            try exprs.append(.{
                 .call = .{
                     .function = s.value,
                     .arguments = arguments,
                 },
-            };
+            });
+            for (deferred.items) |expr| {
+                try exprs.append(expr);
+            }
+            return .{ .expressions = .{ .expressions = try exprs.toOwnedSlice() } };
         },
         else => |k| std.debug.panic("\nCall function type {} not yet supported", .{k}),
     }
@@ -261,10 +312,24 @@ fn define(context: Context, d: type_checker.types.Define) !types.Expression {
     }
 }
 
-fn addAssign(context: Context, a: type_checker.types.AddAssign) !types.Expression {
+fn plusEqual(context: Context, a: type_checker.types.PlusEqual) !types.Expression {
     var left = type_checker.types.Expression{ .symbol = a.name };
     const binary_op = type_checker.types.BinaryOp{
         .kind = .add,
+        .left = &left,
+        .right = a.value,
+        .span = a.span,
+        .type = type_checker.type_of.expression(a.value.*),
+    };
+    const value = try context.allocator.create(types.Expression);
+    value.* = try binaryOp(context, binary_op);
+    return .{ .local_set = .{ .name = a.name.value, .value = value } };
+}
+
+fn timesEqual(context: Context, a: type_checker.types.TimesEqual) !types.Expression {
+    var left = type_checker.types.Expression{ .symbol = a.name };
+    const binary_op = type_checker.types.BinaryOp{
+        .kind = .multiply,
         .left = &left,
         .right = a.value,
         .span = a.span,
@@ -298,57 +363,26 @@ fn convert(context: Context, c: type_checker.types.Convert) !types.Expression {
     }
 }
 
-fn storeArenaInLocal(context: Context, local: Interned) !types.Expression {
-    const global_get = try context.allocator.create(types.Expression);
-    global_get.* = .{ .global_get = .{ .name = context.builtins.arena } };
-    return .{ .local_set = .{ .name = local, .value = global_get } };
-}
-
-fn storeStringOffsetInArena(context: Context, local: Interned, offset: u32) !types.Expression {
-    const left = try context.allocator.create(types.Expression);
-    left.* = .{ .local_get = .{ .name = local } };
-    const right = try context.allocator.create(types.Expression);
-    right.* = .{ .literal = .{ .u32 = offset } };
-    return .{ .binary_op = .{ .kind = .i32_store, .left = left, .right = right } };
-}
-
-fn addLocalAndU32(context: Context, local: Interned, value: u32) !*const types.Expression {
-    const left = try context.allocator.create(types.Expression);
-    left.* = .{ .local_get = .{ .name = local } };
-    const right = try context.allocator.create(types.Expression);
-    right.* = .{ .literal = .{ .u32 = value } };
-    const result = try context.allocator.create(types.Expression);
-    result.* = .{ .binary_op = .{ .kind = .i32_add, .left = left, .right = right } };
-    return result;
-}
-
-fn storeStringLengthInArena(context: Context, local: Interned, offset: u32) !types.Expression {
-    const left = try addLocalAndU32(context, local, 4);
-    const right = try context.allocator.create(types.Expression);
-    right.* = .{ .literal = .{ .u32 = context.data_segment.offset - offset } };
-    return .{ .binary_op = .{ .kind = .i32_store, .left = left, .right = right } };
-}
-
-pub fn putStringInDataSegment(data_segment: *types.DataSegment, s: type_checker.types.String) !types.Offset {
-    const bytes = s.value.string();
-    const offset = data_segment.offset;
-    try data_segment.data.append(.{ .offset = offset, .bytes = bytes });
-    data_segment.offset += @intCast(u32, bytes.len - 2);
-    return offset;
-}
-
 fn string(context: Context, s: type_checker.types.String) !types.Expression {
-    const local = try fresh_local(context, .i32);
-    const exprs = try context.allocator.alloc(types.Expression, 5);
-    const offset = try putStringInDataSegment(context.data_segment, s);
-    exprs[0] = try storeArenaInLocal(context, local);
-    exprs[1] = try storeStringOffsetInArena(context, local, offset);
-    exprs[2] = try storeStringLengthInArena(context, local, offset);
-    exprs[3] = .{ .global_set = .{
-        .name = context.builtins.arena,
-        .value = try addLocalAndU32(context, local, 8),
-    } };
-    exprs[4] = .{ .local_get = .{ .name = local } };
+    const local = try freshLocalPointer(context, 8);
+    const bytes = s.value.string();
+    const offset = context.data_segment.offset;
+    try context.data_segment.data.append(.{ .offset = offset, .bytes = bytes });
+    context.data_segment.offset += @intCast(u32, bytes.len - 2);
+    const exprs = try context.allocator.alloc(types.Expression, 3);
+    const local_get = try context.allocator.create(types.Expression);
+    local_get.* = .{ .local_get = .{ .name = local } };
+    const literal_offset = try context.allocator.create(types.Expression);
+    literal_offset.* = .{ .literal = .{ .u32 = offset } };
+    exprs[0] = .{ .binary_op = .{ .kind = .i32_store, .left = local_get, .right = literal_offset } };
+    const literal_4 = try context.allocator.create(types.Expression);
+    literal_4.* = .{ .literal = .{ .u32 = 4 } };
+    const binary_add = try context.allocator.create(types.Expression);
+    binary_add.* = .{ .binary_op = .{ .kind = .i32_add, .left = local_get, .right = literal_4 } };
+    const literal_length = try context.allocator.create(types.Expression);
+    literal_length.* = .{ .literal = .{ .u32 = context.data_segment.offset - offset } };
+    exprs[1] = .{ .binary_op = .{ .kind = .i32_store, .left = binary_add, .right = literal_length } };
+    exprs[2] = .{ .local_get = .{ .name = local } };
     return .{ .block = types.Block{ .result = .i32, .expressions = exprs } };
 }
 
@@ -364,7 +398,8 @@ fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMe
         .intrinsic => |i| return try intrinsic(context, i),
         .branch => |b| return try branch(context, b),
         .define => |d| return try define(context, d),
-        .add_assign => |a| return try addAssign(context, a),
+        .plus_equal => |a| return try plusEqual(context, a),
+        .times_equal => |a| return try timesEqual(context, a),
         .convert => |c| return try convert(context, c),
         .string => |s| return try string(context, s),
         else => |k| std.debug.panic("\ntypes.Expression {} not yet supported", .{k}),
@@ -377,31 +412,67 @@ fn expressionAlloc(context: Context, e: type_checker.types.Expression) !*const t
     return ptr;
 }
 
-fn function(allocator: Allocator, builtins: Builtins, data_segment: *types.DataSegment, intern: *Intern, name: Interned, f: type_checker.types.Function) !types.Function {
-    const parameters = try allocator.alloc(types.Parameter, f.parameters.len);
-    for (f.parameters, parameters) |typed_p, *ir_p| {
-        ir_p.* = types.Parameter{
-            .name = typed_p.value,
-            .type = mapType(typed_p.type),
-        };
-    }
+fn function(allocator: Allocator, builtins: Builtins, data_segment: *types.DataSegment, uses_memory: *bool, intern: *Intern, name: Interned, f: type_checker.types.Function) !types.Function {
     var locals = List(types.Local).init(allocator);
+    const parameters = try allocator.alloc(types.Parameter, f.parameters.len);
+    var body = List(types.Expression).init(allocator);
+    var deferred = List(types.Expression).init(allocator);
+    for (f.parameters, parameters) |typed_p, *ir_p| {
+        if (typed_p.mutable) {
+            const parameter_name = try std.fmt.allocPrint(allocator, "{s}/ptr", .{typed_p.name.value.string()});
+            const interned = try intern.store(parameter_name);
+            ir_p.* = types.Parameter{
+                .name = interned,
+                .type = .i32,
+            };
+            try locals.append(.{ .name = typed_p.name.value, .type = mapType(typed_p.name.type) });
+            const local_get_ptr = try allocator.create(types.Expression);
+            local_get_ptr.* = .{ .local_get = .{ .name = interned } };
+            const i32_load = try allocator.create(types.Expression);
+            i32_load.* = .{ .unary_op = .{ .kind = .i32_load, .expression = local_get_ptr } };
+            try body.append(.{ .local_set = .{ .name = typed_p.name.value, .value = i32_load } });
+            const local_get = try allocator.create(types.Expression);
+            local_get.* = .{ .local_get = .{ .name = typed_p.name.value } };
+            try deferred.append(.{ .binary_op = .{
+                .kind = .i32_store,
+                .left = local_get_ptr,
+                .right = local_get,
+            } });
+            uses_memory.* = true;
+        } else {
+            ir_p.* = types.Parameter{
+                .name = typed_p.name.value,
+                .type = mapType(typed_p.name.type),
+            };
+        }
+    }
     var next_local: u32 = 0;
+    var pointers = List(types.LocalPointer).init(allocator);
+    var pointer_map = Map(LocalName, PointerName).init(allocator);
     const context = Context{
         .allocator = allocator,
         .builtins = builtins,
         .locals = &locals,
         .next_local = &next_local,
+        .pointers = &pointers,
+        .pointer_map = &pointer_map,
+        .uses_memory = uses_memory,
         .data_segment = data_segment,
         .intern = intern,
     };
-    const body = try expressions(context, f.body);
+    for (f.body.expressions) |expr| {
+        try body.append(try expression(context, expr));
+    }
+    for (deferred.items) |expr| {
+        try body.append(expr);
+    }
     return types.Function{
         .name = name,
         .parameters = parameters,
         .return_type = mapType(f.return_type),
         .locals = try locals.toOwnedSlice(),
-        .body = body,
+        .pointers = try pointers.toOwnedSlice(),
+        .body = .{ .expressions = try body.toOwnedSlice() },
     };
 }
 
@@ -430,6 +501,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
     };
     var globals = std.ArrayList(types.Global).init(allocator);
     var exports = std.ArrayList(types.ForeignExport).init(allocator);
+    var uses_memory = false;
     for (m.order) |name| {
         if (m.typed.get(name)) |top_level| {
             switch (top_level) {
@@ -437,7 +509,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                     const name_symbol = d.name.value;
                     switch (d.value.*) {
                         .function => |f| {
-                            const lowered = try function(allocator, builtins, &data_segment, intern, name_symbol, f);
+                            const lowered = try function(allocator, builtins, &data_segment, &uses_memory, intern, name_symbol, f);
                             try functions.append(lowered);
                         },
                         .foreign_import => |i| {
@@ -456,7 +528,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                     const trimmed = try intern.store(name_string[1 .. name_string.len - 1]);
                     switch (e.value.*) {
                         .function => |f| {
-                            const lowered = try function(allocator, builtins, &data_segment, intern, trimmed, f);
+                            const lowered = try function(allocator, builtins, &data_segment, &uses_memory, intern, trimmed, f);
                             try functions.append(lowered);
                         },
                         .symbol => {},
@@ -473,6 +545,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
         .foreign_imports = try imports.toOwnedSlice(),
         .globals = try globals.toOwnedSlice(),
         .data_segment = data_segment,
+        .uses_memory = uses_memory,
         .foreign_exports = try exports.toOwnedSlice(),
     };
 }

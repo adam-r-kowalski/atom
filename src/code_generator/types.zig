@@ -69,6 +69,7 @@ const UnaryOpKind = enum {
     f32_convert_i32_s,
     f64_sqrt,
     f64_convert_i64_s,
+    i32_load,
 };
 
 pub const UnaryOp = struct {
@@ -144,11 +145,17 @@ pub const Local = struct {
     type: Type,
 };
 
+pub const LocalPointer = struct {
+    name: Interned,
+    size: u32,
+};
+
 pub const Function = struct {
     name: Interned,
     parameters: []const Parameter,
     return_type: Type,
     locals: []const Local,
+    pointers: []const LocalPointer,
     body: Expressions,
 };
 
@@ -185,6 +192,7 @@ pub const Module = struct {
     functions: []const Function,
     foreign_imports: []const ForeignImport,
     globals: []const Global,
+    uses_memory: bool,
     data_segment: DataSegment,
     foreign_exports: []const ForeignExport,
 };

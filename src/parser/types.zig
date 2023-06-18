@@ -16,7 +16,13 @@ pub const Define = struct {
     span: Span,
 };
 
-pub const AddAssign = struct {
+pub const PlusEqual = struct {
+    name: Symbol,
+    value: *const Expression,
+    span: Span,
+};
+
+pub const TimesEqual = struct {
     name: Symbol,
     value: *const Expression,
     span: Span,
@@ -25,6 +31,7 @@ pub const AddAssign = struct {
 pub const Parameter = struct {
     name: Symbol,
     type: Expression,
+    mutable: bool,
 };
 
 pub const Block = struct {
@@ -93,9 +100,14 @@ pub const Branch = struct {
     span: Span,
 };
 
+pub const Argument = struct {
+    value: Expression,
+    mutable: bool,
+};
+
 pub const Call = struct {
     function: *const Expression,
-    arguments: []const Expression,
+    arguments: []const Argument,
     span: Span,
 };
 
@@ -106,7 +118,8 @@ pub const Expression = union(enum) {
     string: String,
     bool: Bool,
     define: Define,
-    add_assign: AddAssign,
+    plus_equal: PlusEqual,
+    times_equal: TimesEqual,
     function: Function,
     prototype: Prototype,
     binary_op: BinaryOp,

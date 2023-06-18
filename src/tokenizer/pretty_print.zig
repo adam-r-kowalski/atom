@@ -19,6 +19,7 @@ pub fn token(t: types.Token, writer: Writer) !void {
         .plus_equal => try writer.writeAll("(operator +=)"),
         .minus => try writer.writeAll("(operator -)"),
         .times => try writer.writeAll("(operator *)"),
+        .times_equal => try writer.writeAll("(operator *=)"),
         .slash => try writer.writeAll("(operator /)"),
         .percent => try writer.writeAll("(operator %)"),
         .caret => try writer.writeAll("(operator ^)"),

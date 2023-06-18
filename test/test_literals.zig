@@ -118,7 +118,6 @@ test "codegen i32 with int literal" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result i32)
         \\        (i32.const 42))
@@ -138,7 +137,6 @@ test "codegen f32 with int literal" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result f32)
         \\        (f32.const 4.2e+01))
@@ -158,7 +156,6 @@ test "codegen f32 with float literal" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result f32)
         \\        (f32.const 4.25e+01))
@@ -182,7 +179,6 @@ test "codegen i32 global constant" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (global $i i32 (i32.const 42))
         \\

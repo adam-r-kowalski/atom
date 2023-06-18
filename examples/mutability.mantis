@@ -1,5 +1,11 @@
+double = fn(mut x: i32) void {
+    x *= 2
+}
+
 start = fn() i32 {
-    mut x: i32 = 0
+    mut x: i32 = 5
     x += 5
+    x *= 5
+    double(mut x)
     x
 }

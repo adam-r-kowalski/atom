@@ -86,11 +86,13 @@ pub fn conditional(i: types.If, indent: Indent, writer: Writer) !void {
     try expression(i.condition.*, indent + 1, writer);
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("(then");
+    try newlineAndIndent(indent + 2, writer);
     try expressions(i.then, indent + 2, writer);
     try writer.writeAll(")");
     if (i.else_.expressions.len > 0) {
         try newlineAndIndent(indent + 1, writer);
         try writer.writeAll("(else");
+        try newlineAndIndent(indent + 2, writer);
         try expressions(i.else_, indent + 2, writer);
         try writer.writeAll(")");
     }
@@ -106,6 +108,7 @@ pub fn unaryOp(u: types.UnaryOp, indent: Indent, writer: Writer) !void {
         .f32_convert_i32_s => try writer.writeAll("f32.convert_i32_s"),
         .f64_sqrt => try writer.writeAll("f64.sqrt"),
         .f64_convert_i64_s => try writer.writeAll("f64.convert_i64_s"),
+        .i32_load => try writer.writeAll("i32.load"),
     }
     try newlineAndIndent(indent + 1, writer);
     try expression(u.expression.*, indent + 1, writer);
@@ -156,11 +159,13 @@ pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
 }
 
 pub fn expressions(es: types.Expressions, indent: Indent, writer: Writer) !void {
-    for (es.expressions) |e| {
+    for (es.expressions, 0..) |e, i| {
         switch (e) {
             .nop => {},
             else => {
-                try newlineAndIndent(indent, writer);
+                if (i > 0) {
+                    try newlineAndIndent(indent, writer);
+                }
                 try expression(e, indent, writer);
             },
         }
@@ -204,13 +209,6 @@ pub fn foreignImport(i: types.ForeignImport, writer: Writer) !void {
 }
 
 pub fn dataSegment(d: types.DataSegment, writer: Writer) !void {
-    try writer.print(
-        \\
-        \\
-        \\    (memory 1)
-        \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const {}))
-    , .{d.offset});
     if (d.data.items.len == 0) return;
     try writer.writeAll("\n");
     for (d.data.items) |i|
@@ -250,6 +248,19 @@ pub fn function(f: types.Function, writer: Writer) !void {
         try typeOf(l.type, writer);
         try writer.writeAll(")");
     }
+    for (f.pointers) |l| {
+        try newlineAndIndent(2, writer);
+        try writer.print("(local ${s} i32)", .{l.name.string()});
+    }
+    for (f.pointers) |l| {
+        try writer.print(
+            \\
+            \\        (local.set ${s}
+            \\            (call $core/alloc
+            \\                (i32.const {})))
+        , .{ l.name.string(), l.size });
+    }
+    try newlineAndIndent(2, writer);
     try expressions(f.body, 2, writer);
     try writer.writeAll(")");
 }
@@ -263,7 +274,29 @@ pub fn foreignExport(e: types.ForeignExport, writer: Writer) !void {
 pub fn module(m: types.Module, writer: Writer) !void {
     try writer.writeAll("(module");
     for (m.foreign_imports) |i| try foreignImport(i, writer);
+    try writer.writeAll(
+        \\
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+    );
     try dataSegment(m.data_segment, writer);
+    if (m.uses_memory) {
+        try writer.print(
+            \\
+            \\
+            \\    (global $core/arena (mut i32) (i32.const {}))
+            \\
+            \\    (func $core/alloc (param $size i32) (result i32)
+            \\        (local $ptr i32)
+            \\        (local.tee $ptr
+            \\            (global.get $core/arena))
+            \\        (global.set $core/arena
+            \\            (i32.add
+            \\                (global.get $core/arena)
+            \\                (local.get $size))))
+        , .{m.data_segment.offset});
+    }
     for (m.globals) |g| try global(g, writer);
     for (m.functions) |f| try function(f, writer);
     for (m.foreign_exports) |e| try foreignExport(e, writer);

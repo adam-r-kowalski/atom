@@ -13,7 +13,7 @@ test "use of undefined variable" {
     const actual = try mantis.testing.compileErrors(allocator, source);
     defer allocator.free(actual);
     const expected = try std.fmt.allocPrint(allocator,
-        \\--- UNDEFINED VARIABLE ---------------------------------------------------
+        \\---- {s}UNDEFINED VARIABLE{s} ---------------------------------------------------
         \\
         \\Cannot find variable `fib`.
         \\
@@ -25,7 +25,7 @@ test "use of undefined variable" {
         \\
         \\    start
         \\
-    , .{ RED, CLEAR });
+    , .{ RED, CLEAR, RED, CLEAR });
     defer allocator.free(expected);
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -44,7 +44,7 @@ test "type error of if" {
     const actual = try mantis.testing.compileErrors(allocator, source);
     defer allocator.free(actual);
     const expected = try std.fmt.allocPrint(allocator,
-        \\--- TYPE MISMATCH ---------------------------------------------------
+        \\---- {s}TYPE MISMATCH{s} ---------------------------------------------------
         \\
         \\Here the inferred type is i32
         \\
@@ -61,7 +61,7 @@ test "type error of if" {
         \\Expected these two types to be the same.
         \\
         \\
-    , .{ RED, CLEAR, RED, CLEAR });
+    , .{ RED, CLEAR, RED, CLEAR, RED, CLEAR });
     defer allocator.free(expected);
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -77,7 +77,7 @@ test "type error of define" {
     const actual = try mantis.testing.compileErrors(allocator, source);
     defer allocator.free(actual);
     const expected = try std.fmt.allocPrint(allocator,
-        \\--- TYPE MISMATCH ---------------------------------------------------
+        \\---- {s}TYPE MISMATCH{s} ---------------------------------------------------
         \\
         \\Here the inferred type is f32
         \\
@@ -94,7 +94,7 @@ test "type error of define" {
         \\Expected these two types to be the same.
         \\
         \\
-    , .{ RED, CLEAR, RED, CLEAR, RED, CLEAR, RED, CLEAR, RED, CLEAR });
+    , .{ RED, CLEAR, RED, CLEAR, RED, CLEAR, RED, CLEAR, RED, CLEAR, RED, CLEAR });
     defer allocator.free(expected);
     try std.testing.expectEqualStrings(expected, actual);
 }

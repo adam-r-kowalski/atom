@@ -30,12 +30,12 @@ fn source(lines: [][]const u8, span: type_checker.types.Span, writer: Writer) !v
 
 pub fn undefinedVariable(u: types.UndefinedVariable, lines: [][]const u8, writer: Writer) !void {
     try writer.print(
-        \\--- UNDEFINED VARIABLE ---------------------------------------------------
+        \\---- {s}UNDEFINED VARIABLE{s} ---------------------------------------------------
         \\
         \\Cannot find variable `{}`.
         \\
         \\
-    , .{u.symbol});
+    , .{ RED, CLEAR, u.symbol });
     try source(lines, u.span, writer);
     try writer.writeAll(
         \\
@@ -51,11 +51,11 @@ pub fn undefinedVariable(u: types.UndefinedVariable, lines: [][]const u8, writer
 }
 
 fn typeMismatch(t: types.TypeMismatch, lines: [][]const u8, writer: Writer) !void {
-    try writer.writeAll(
-        \\--- TYPE MISMATCH ---------------------------------------------------
+    try writer.print(
+        \\---- {s}TYPE MISMATCH{s} ---------------------------------------------------
         \\
         \\Here the inferred type is 
-    );
+    , .{ RED, CLEAR });
     try type_checker.pretty_print.monotype(t.left.type, writer);
     try writer.writeAll("\n\n");
     if (t.left.span) |span| try source(lines, span, writer);

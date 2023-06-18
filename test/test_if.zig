@@ -222,7 +222,6 @@ test "codegen if" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (result i32)
         \\        (if (result i32)
@@ -255,7 +254,6 @@ test "codegen if with void result" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start
         \\        (if 
@@ -290,7 +288,6 @@ test "codegen if with empty else block" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start
         \\        (if 
@@ -324,7 +321,6 @@ test "codegen if with no else block" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start
         \\        (if 
@@ -434,7 +430,6 @@ test "codegen multi arm if" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $clamp (param $x i32) (param $lb i32) (param $ub i32) (result i32)
         \\        (if (result i32)

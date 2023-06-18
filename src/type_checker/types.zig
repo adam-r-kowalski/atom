@@ -71,9 +71,8 @@ pub const Float = struct {
 pub const Symbol = struct {
     value: Interned,
     span: Span,
-    global: bool,
-    mutable: bool,
     type: MonoType,
+    global: bool,
 };
 
 pub const Bool = struct {
@@ -96,7 +95,14 @@ pub const Define = struct {
     type: MonoType,
 };
 
-pub const AddAssign = struct {
+pub const PlusEqual = struct {
+    name: Symbol,
+    value: *Expression,
+    span: Span,
+    type: MonoType,
+};
+
+pub const TimesEqual = struct {
     name: Symbol,
     value: *Expression,
     span: Span,
@@ -109,8 +115,13 @@ pub const Block = struct {
     type: MonoType,
 };
 
+pub const Parameter = struct {
+    name: Symbol,
+    mutable: bool,
+};
+
 pub const Function = struct {
-    parameters: []Symbol,
+    parameters: []Parameter,
     return_type: MonoType,
     body: Block,
     span: Span,
@@ -137,9 +148,14 @@ pub const Branch = struct {
     type: MonoType,
 };
 
+pub const Argument = struct {
+    value: Expression,
+    mutable: bool,
+};
+
 pub const Call = struct {
     function: *Expression,
-    arguments: []Expression,
+    arguments: []Argument,
     span: Span,
     type: MonoType,
 };
@@ -189,7 +205,8 @@ pub const Expression = union(enum) {
     bool: Bool,
     string: String,
     define: Define,
-    add_assign: AddAssign,
+    plus_equal: PlusEqual,
+    times_equal: TimesEqual,
     function: Function,
     binary_op: BinaryOp,
     group: Group,

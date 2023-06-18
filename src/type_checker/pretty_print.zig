@@ -135,7 +135,12 @@ pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
     try writer.writeAll("arguments =");
     for (c.arguments) |a| {
         try newlineAndIndent(indent + 2, writer);
-        try expression(a, indent + 3, writer);
+        try writer.writeAll("argument =");
+        try newlineAndIndent(indent + 3, writer);
+        try writer.print("mutable = {}", .{a.mutable});
+        try newlineAndIndent(indent + 3, writer);
+        try writer.writeAll("value = ");
+        try expression(a.value, indent + 4, writer);
     }
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("type = ");
@@ -174,18 +179,32 @@ pub fn define(d: types.Define, indent: Indent, writer: Writer) !void {
     try expression(d.value.*, indent + 2, writer);
 }
 
-pub fn addAssign(a: types.AddAssign, indent: Indent, writer: Writer) !void {
-    try writer.writeAll("add_assign =");
+pub fn plusEqual(p: types.PlusEqual, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("plus_equal =");
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("name = ");
-    try writer.writeAll(a.name.value.string());
+    try symbol(p.name, writer);
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("type = ");
-    try monotype(a.type, writer);
+    try monotype(p.type, writer);
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("value =");
     try newlineAndIndent(indent + 2, writer);
-    try expression(a.value.*, indent + 2, writer);
+    try expression(p.value.*, indent + 2, writer);
+}
+
+pub fn timesEqual(t: types.TimesEqual, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("times_equal =");
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("name = ");
+    try symbol(t.name, writer);
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("type = ");
+    try monotype(t.type, writer);
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("value =");
+    try newlineAndIndent(indent + 2, writer);
+    try expression(t.value.*, indent + 2, writer);
 }
 
 pub fn function(f: types.Function, indent: Indent, writer: Writer) !void {
@@ -196,7 +215,8 @@ pub fn function(f: types.Function, indent: Indent, writer: Writer) !void {
     }
     for (f.parameters) |p| {
         try newlineAndIndent(indent + 2, writer);
-        try symbol(p, writer);
+        if (p.mutable) try writer.writeAll("mut ");
+        try symbol(p.name, writer);
     }
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("return_type = ");
@@ -286,7 +306,8 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .call => |c| try call(c, indent, writer),
         .intrinsic => |i| try intrinsic(i, indent, writer),
         .define => |d| try define(d, indent, writer),
-        .add_assign => |a| try addAssign(a, indent, writer),
+        .plus_equal => |p| try plusEqual(p, indent, writer),
+        .times_equal => |t| try timesEqual(t, indent, writer),
         .function => |f| try function(f, indent, writer),
         .block => |b| try block(b, indent, writer),
         .group => |g| try group(g, indent, writer),

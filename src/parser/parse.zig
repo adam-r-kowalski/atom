@@ -156,7 +156,15 @@ fn functionParameters(context: Context) ![]const types.Parameter {
                 _ = context.tokens.consume(.colon);
                 const type_ = try expression(withPrecedence(context, DEFINE + 1));
                 context.tokens.maybeConsume(.comma);
-                try parameters.append(types.Parameter{ .name = name, .type = type_ });
+                try parameters.append(types.Parameter{ .name = name, .type = type_, .mutable = false });
+            },
+            .mut => {
+                context.tokens.advance();
+                const name = context.tokens.consume(.symbol).symbol;
+                _ = context.tokens.consume(.colon);
+                const type_ = try expression(withPrecedence(context, DEFINE + 1));
+                context.tokens.maybeConsume(.comma);
+                try parameters.append(types.Parameter{ .name = name, .type = type_, .mutable = true });
             },
             else => |k| std.debug.panic("\nExpected symbol or right paren, found {}", .{k}),
         }
@@ -245,10 +253,23 @@ fn define(context: Context, name: types.Symbol) !types.Define {
     };
 }
 
-fn addAssign(context: Context, name: types.Symbol) !types.AddAssign {
+fn plusEqual(context: Context, name: types.Symbol) !types.PlusEqual {
     context.tokens.advance();
     const value = try expressionAlloc(withPrecedence(context, DEFINE + 1));
-    return types.AddAssign{
+    return types.PlusEqual{
+        .name = name,
+        .value = value,
+        .span = types.Span{
+            .begin = name.span.begin,
+            .end = spanOf(value.*).end,
+        },
+    };
+}
+
+fn timesEqual(context: Context, name: types.Symbol) !types.TimesEqual {
+    context.tokens.advance();
+    const value = try expressionAlloc(withPrecedence(context, DEFINE + 1));
+    return types.TimesEqual{
         .name = name,
         .value = value,
         .span = types.Span{
@@ -291,12 +312,19 @@ fn binaryOp(context: Context, left: types.Expression, kind: types.BinaryOpKind) 
 
 fn call(context: Context, left: types.Expression) !types.Call {
     context.tokens.advance();
-    var arguments = List(types.Expression).init(context.allocator);
+    var arguments = List(types.Argument).init(context.allocator);
     while (context.tokens.peek()) |t| {
         switch (t) {
             .right_paren => break,
+            .mut => {
+                context.tokens.advance();
+                const value = try expression(withPrecedence(context, DEFINE + 1));
+                try arguments.append(.{ .value = value, .mutable = true });
+                context.tokens.maybeConsume(.comma);
+            },
             else => {
-                try arguments.append(try expression(withPrecedence(context, DEFINE + 1)));
+                const value = try expression(withPrecedence(context, DEFINE + 1));
+                try arguments.append(.{ .value = value, .mutable = false });
                 context.tokens.maybeConsume(.comma);
             },
         }
@@ -339,7 +367,8 @@ fn arrayOf(context: Context, left: types.Expression) !types.ArrayOf {
 
 const Infix = union(enum) {
     define,
-    add_assign,
+    plus_equal,
+    times_equal,
     annotate,
     call,
     array_of,
@@ -349,7 +378,8 @@ const Infix = union(enum) {
 fn precedence(i: Infix) Precedence {
     return switch (i) {
         .define => DEFINE,
-        .add_assign => DEFINE,
+        .plus_equal => DEFINE,
+        .times_equal => DEFINE,
         .annotate => DEFINE,
         .call => CALL,
         .array_of => ARRAY_OF,
@@ -372,7 +402,8 @@ fn precedence(i: Infix) Precedence {
 fn associativity(i: Infix) Associativity {
     return switch (i) {
         .define => .right,
-        .add_assign => .right,
+        .plus_equal => .right,
+        .times_equal => .right,
         .annotate => .right,
         .call => .left,
         .array_of => .right,
@@ -396,7 +427,8 @@ fn infix(context: Context, left: types.Expression) ?Infix {
     if (context.tokens.peek()) |t| {
         return switch (t) {
             .equal => .define,
-            .plus_equal => .add_assign,
+            .plus_equal => .plus_equal,
+            .times_equal => .times_equal,
             .colon => .annotate,
             .plus => .{ .binary_op = .add },
             .minus => .{ .binary_op = .subtract },
@@ -426,7 +458,8 @@ fn infix(context: Context, left: types.Expression) ?Infix {
 fn parseInfix(parser: Infix, context: Context, left: types.Expression) !types.Expression {
     return switch (parser) {
         .define => .{ .define = try define(context, left.symbol) },
-        .add_assign => .{ .add_assign = try addAssign(context, left.symbol) },
+        .plus_equal => .{ .plus_equal = try plusEqual(context, left.symbol) },
+        .times_equal => .{ .times_equal = try timesEqual(context, left.symbol) },
         .annotate => .{ .define = try annotate(context, left.symbol) },
         .call => .{ .call = try call(context, left) },
         .array_of => .{ .array_of = try arrayOf(context, left) },

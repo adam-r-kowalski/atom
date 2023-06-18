@@ -99,7 +99,6 @@ fn symbol(scopes: Scopes, s: parser.types.Symbol) !types.Symbol {
         .value = s.value,
         .span = s.span,
         .type = binding.type,
-        .mutable = binding.mutable,
         .global = binding.global,
     };
 }
@@ -185,8 +184,8 @@ fn branch(context: Context, b: parser.types.Branch) !types.Branch {
 fn dotCall(context: Context, b: parser.types.BinaryOp) !types.Expression {
     switch (b.right.*) {
         .call => |c| {
-            const arguments = try context.allocator.alloc(parser.types.Expression, c.arguments.len + 1);
-            arguments[0] = b.left.*;
+            const arguments = try context.allocator.alloc(parser.types.Argument, c.arguments.len + 1);
+            arguments[0] = .{ .value = b.left.*, .mutable = false };
             @memcpy(arguments[1..], c.arguments);
             const new_call = parser.types.Call{
                 .function = c.function,
@@ -259,14 +258,13 @@ fn define(context: Context, d: parser.types.Define) !types.Define {
     const binding = types.Binding{
         .type = monotype,
         .global = false,
-        .mutable = false,
+        .mutable = d.mutable,
     };
     const name = types.Symbol{
         .value = d.name.value,
         .span = d.span,
         .type = monotype,
         .global = false,
-        .mutable = false,
     };
     try putInScope(context.scopes, name.value, binding);
     return types.Define{
@@ -278,37 +276,59 @@ fn define(context: Context, d: parser.types.Define) !types.Define {
     };
 }
 
-fn addAssign(context: Context, d: parser.types.AddAssign) !types.AddAssign {
-    const value = try expressionAlloc(context, d.value.*);
-    var monotype = typeOf(value.*);
-    const binding = types.Binding{
-        .type = monotype,
-        .global = false,
-        .mutable = false,
-    };
+fn plusEqual(context: Context, p: parser.types.PlusEqual) !types.PlusEqual {
+    const value = try expressionAlloc(context, p.value.*);
+    const binding = try findInScope(context.scopes.*, p.name);
+    if (binding.global) std.debug.panic("Cannot reassign global variable {s}", .{p.name.value.string()});
+    if (!binding.mutable) std.debug.panic("Cannot reassign immutable variable {s}", .{p.name.value.string()});
+    try context.constraints.equal.append(.{
+        .left = .{ .type = typeOf(value.*), .span = spanOf(value.*) },
+        .right = .{ .type = binding.type, .span = p.name.span },
+    });
     const name = types.Symbol{
-        .value = d.name.value,
-        .span = d.span,
-        .type = monotype,
-        .global = false,
-        .mutable = false,
+        .value = p.name.value,
+        .span = p.span,
+        .type = binding.type,
+        .global = binding.global,
     };
-    try putInScope(context.scopes, name.value, binding);
-    return types.AddAssign{
+    return types.PlusEqual{
         .name = name,
         .value = value,
-        .span = d.span,
+        .span = p.span,
+        .type = .void,
+    };
+}
+
+fn timesEqual(context: Context, t: parser.types.TimesEqual) !types.TimesEqual {
+    const value = try expressionAlloc(context, t.value.*);
+    const binding = try findInScope(context.scopes.*, t.name);
+    if (binding.global) std.debug.panic("Cannot reassign global variable {s}", .{t.name.value.string()});
+    if (!binding.mutable) std.debug.panic("Cannot reassign immutable variable {s}", .{t.name.value.string()});
+    try context.constraints.equal.append(.{
+        .left = .{ .type = typeOf(value.*), .span = spanOf(value.*) },
+        .right = .{ .type = binding.type, .span = t.name.span },
+    });
+    const name = types.Symbol{
+        .value = t.name.value,
+        .span = t.span,
+        .type = binding.type,
+        .global = binding.global,
+    };
+    return types.TimesEqual{
+        .name = name,
+        .value = value,
+        .span = t.span,
         .type = .void,
     };
 }
 
 fn callForeignImport(context: Context, c: parser.types.Call) !types.Expression {
     if (c.arguments.len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
-    const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[2]);
+    const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[2].value);
     return types.Expression{
         .foreign_import = .{
-            .module = c.arguments[0].string.value,
-            .name = c.arguments[1].string.value,
+            .module = c.arguments[0].value.string.value,
+            .name = c.arguments[1].value.string.value,
             .span = c.span,
             .type = monotype,
         },
@@ -319,8 +339,8 @@ fn callForeignExport(context: Context, c: parser.types.Call) !types.Expression {
     if (c.arguments.len != 2) std.debug.panic("foreign_export takes 2 arguments", .{});
     return types.Expression{
         .foreign_export = .{
-            .name = c.arguments[0].string.value,
-            .value = try expressionAlloc(context, c.arguments[1]),
+            .name = c.arguments[0].value.string.value,
+            .value = try expressionAlloc(context, c.arguments[1].value),
             .span = c.span,
             .type = .void,
         },
@@ -329,10 +349,10 @@ fn callForeignExport(context: Context, c: parser.types.Call) !types.Expression {
 
 fn callConvert(context: Context, c: parser.types.Call) !types.Expression {
     if (c.arguments.len != 2) std.debug.panic("convert takes 2 arguments", .{});
-    const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[1]);
+    const monotype = try expressionToMonoType(context.allocator, context.builtins, c.arguments[1].value);
     return types.Expression{
         .convert = .{
-            .value = try expressionAlloc(context, c.arguments[0]),
+            .value = try expressionAlloc(context, c.arguments[0].value),
             .span = c.span,
             .type = monotype,
         },
@@ -342,7 +362,7 @@ fn callConvert(context: Context, c: parser.types.Call) !types.Expression {
 fn callSqrt(context: Context, c: parser.types.Call) !types.Expression {
     if (c.arguments.len != 1) std.debug.panic("sqrt takes 1 arguments", .{});
     const arguments = try context.allocator.alloc(types.Expression, 1);
-    arguments[0] = try expression(context, c.arguments[0]);
+    arguments[0] = try expression(context, c.arguments[0].value);
     return types.Expression{
         .intrinsic = .{
             .function = context.builtins.sqrt,
@@ -363,10 +383,11 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
             if (s.value.eql(context.builtins.convert)) return try callConvert(context, c);
             if (s.value.eql(context.builtins.sqrt)) return try callSqrt(context, c);
             const f = try symbol(context.scopes.*, s);
-            const arguments = try context.allocator.alloc(types.Expression, len);
+            const arguments = try context.allocator.alloc(types.Argument, len);
             for (c.arguments, arguments, function_type[0..len]) |untyped_arg, *typed_arg, *t| {
-                typed_arg.* = try expression(context, untyped_arg);
-                t.* = typeOf(typed_arg.*);
+                typed_arg.value = try expression(context, untyped_arg.value);
+                typed_arg.mutable = untyped_arg.mutable;
+                t.* = typeOf(typed_arg.value);
             }
             const return_type = freshTypeVar(context.constraints);
             function_type[len] = return_type;
@@ -391,7 +412,7 @@ fn function(context: Context, f: parser.types.Function) !types.Function {
     try pushScope(context.scopes);
     defer popScope(context.scopes);
     const len = f.parameters.len;
-    const parameters = try context.allocator.alloc(types.Symbol, len);
+    const parameters = try context.allocator.alloc(types.Parameter, len);
     const function_type = try context.allocator.alloc(types.MonoType, len + 1);
     for (f.parameters, parameters, function_type[0..len]) |untyped_p, *typed_p, *t| {
         const name_symbol = untyped_p.name.value;
@@ -403,14 +424,16 @@ fn function(context: Context, f: parser.types.Function) !types.Function {
         const binding = types.Binding{
             .type = p_type,
             .global = false,
-            .mutable = false,
+            .mutable = untyped_p.mutable,
         };
-        typed_p.* = types.Symbol{
-            .value = name_symbol,
-            .span = span,
-            .type = p_type,
-            .global = false,
-            .mutable = false,
+        typed_p.* = types.Parameter{
+            .name = types.Symbol{
+                .value = name_symbol,
+                .span = span,
+                .type = p_type,
+                .global = false,
+            },
+            .mutable = binding.mutable,
         };
         try putInScope(context.scopes, name_symbol, binding);
         t.* = p_type;
@@ -453,7 +476,8 @@ fn expression(context: Context, e: parser.types.Expression) error{ OutOfMemory, 
         .symbol => |s| return .{ .symbol = try symbol(context.scopes.*, s) },
         .bool => |b| return .{ .bool = boolean(b) },
         .define => |d| return .{ .define = try define(context, d) },
-        .add_assign => |a| return .{ .add_assign = try addAssign(context, a) },
+        .plus_equal => |a| return .{ .plus_equal = try plusEqual(context, a) },
+        .times_equal => |a| return .{ .times_equal = try timesEqual(context, a) },
         .function => |f| return .{ .function = try function(context, f) },
         .binary_op => |b| return try binaryOp(context, b),
         .block => |b| return .{ .block = try block(context, b) },
@@ -515,7 +539,7 @@ fn topLevelCall(allocator: Allocator, builtins: Builtins, c: parser.types.Call) 
         .symbol => |s| {
             if (s.value.eql(builtins.foreign_import)) {
                 if (c.arguments.len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
-                return try expressionToMonoType(allocator, builtins, c.arguments[2]);
+                return try expressionToMonoType(allocator, builtins, c.arguments[2].value);
             }
         },
         else => |k| std.debug.panic("\nInvalid top level call function {}", .{k}),
@@ -563,7 +587,7 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
                     .symbol => |sym| {
                         if (sym.value.eql(builtins.foreign_export)) {
                             if (c.arguments.len != 2) std.debug.panic("\nInvalid foreign export call {}", .{c});
-                            switch (c.arguments[0]) {
+                            switch (c.arguments[0].value) {
                                 .string => |str| {
                                     try order.append(str.value);
                                     try untyped.putNoClobber(str.value, top_level);
