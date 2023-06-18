@@ -272,13 +272,14 @@ pub fn foreignExport(e: types.ForeignExport, writer: Writer) !void {
 }
 
 pub fn module(m: types.Module, writer: Writer) !void {
+    try writer.writeAll("(module");
+    for (m.foreign_imports) |i| try foreignImport(i, writer);
     try writer.writeAll(
-        \\(module
+        \\
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
     );
-    for (m.foreign_imports) |i| try foreignImport(i, writer);
     try dataSegment(m.data_segment, writer);
     if (m.uses_memory) {
         try writer.print(

@@ -95,11 +95,10 @@ test "codegen import" {
     const expected =
         \\(module
         \\
-        \\    (import "console" "log" (func $print (param i32)))
-        \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
+        \\
+        \\    (import "console" "log" (func $print (param i32)))
         \\
         \\    (func $start
         \\        (call $print
@@ -262,7 +261,6 @@ test "codegen foreign export" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $double (param $x i32) (result i32)
         \\        (i32.mul
@@ -290,7 +288,6 @@ test "codegen named foreign export" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $double (param $x i32) (result i32)
         \\        (i32.mul
@@ -320,11 +317,10 @@ test "codegen hello world" {
     const expected =
         \\(module
         \\
-        \\    (import "wasi_unstable" "fd_write" (func $fd_write (param i32) (param i32) (param i32) (param i32) (result i32)))
-        \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 13))
+        \\
+        \\    (import "wasi_unstable" "fd_write" (func $fd_write (param i32) (param i32) (param i32) (param i32) (result i32)))
         \\
         \\    (data (i32.const 0) "Hello, World!")
         \\

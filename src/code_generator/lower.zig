@@ -19,6 +19,7 @@ const Context = struct {
     pointers: *List(types.LocalPointer),
     pointer_map: *Map(LocalName, PointerName),
     next_local: *u32,
+    uses_memory: *bool,
     data_segment: *types.DataSegment,
     intern: *Intern,
 };
@@ -28,6 +29,15 @@ fn freshLocal(context: Context, t: types.Type) !Interned {
     const interned = try context.intern.store(text);
     context.next_local.* += 1;
     try context.locals.append(.{ .name = interned, .type = t });
+    return interned;
+}
+
+fn freshLocalPointer(context: Context, size: u32) !Interned {
+    const text = try std.fmt.allocPrint(context.allocator, "{}", .{context.next_local.*});
+    const interned = try context.intern.store(text);
+    context.next_local.* += 1;
+    try context.pointers.append(.{ .name = interned, .size = size });
+    context.uses_memory.* = true;
     return interned;
 }
 
@@ -204,6 +214,7 @@ fn getOrCreatePointer(context: Context, s: type_checker.types.Symbol) !Interned 
     const interned = try context.intern.store(name);
     try context.pointers.append(.{ .name = interned, .size = 4 });
     result.value_ptr.* = interned;
+    context.uses_memory.* = true;
     return interned;
 }
 
@@ -352,57 +363,26 @@ fn convert(context: Context, c: type_checker.types.Convert) !types.Expression {
     }
 }
 
-fn storeArenaInLocal(context: Context, local: Interned) !types.Expression {
-    const global_get = try context.allocator.create(types.Expression);
-    global_get.* = .{ .global_get = .{ .name = context.builtins.arena } };
-    return .{ .local_set = .{ .name = local, .value = global_get } };
-}
-
-fn storeStringOffsetInArena(context: Context, local: Interned, offset: u32) !types.Expression {
-    const left = try context.allocator.create(types.Expression);
-    left.* = .{ .local_get = .{ .name = local } };
-    const right = try context.allocator.create(types.Expression);
-    right.* = .{ .literal = .{ .u32 = offset } };
-    return .{ .binary_op = .{ .kind = .i32_store, .left = left, .right = right } };
-}
-
-fn addLocalAndU32(context: Context, local: Interned, value: u32) !*const types.Expression {
-    const left = try context.allocator.create(types.Expression);
-    left.* = .{ .local_get = .{ .name = local } };
-    const right = try context.allocator.create(types.Expression);
-    right.* = .{ .literal = .{ .u32 = value } };
-    const result = try context.allocator.create(types.Expression);
-    result.* = .{ .binary_op = .{ .kind = .i32_add, .left = left, .right = right } };
-    return result;
-}
-
-fn storeStringLengthInArena(context: Context, local: Interned, offset: u32) !types.Expression {
-    const left = try addLocalAndU32(context, local, 4);
-    const right = try context.allocator.create(types.Expression);
-    right.* = .{ .literal = .{ .u32 = context.data_segment.offset - offset } };
-    return .{ .binary_op = .{ .kind = .i32_store, .left = left, .right = right } };
-}
-
-pub fn putStringInDataSegment(data_segment: *types.DataSegment, s: type_checker.types.String) !types.Offset {
-    const bytes = s.value.string();
-    const offset = data_segment.offset;
-    try data_segment.data.append(.{ .offset = offset, .bytes = bytes });
-    data_segment.offset += @intCast(u32, bytes.len - 2);
-    return offset;
-}
-
 fn string(context: Context, s: type_checker.types.String) !types.Expression {
-    const local = try freshLocal(context, .i32);
-    const exprs = try context.allocator.alloc(types.Expression, 5);
-    const offset = try putStringInDataSegment(context.data_segment, s);
-    exprs[0] = try storeArenaInLocal(context, local);
-    exprs[1] = try storeStringOffsetInArena(context, local, offset);
-    exprs[2] = try storeStringLengthInArena(context, local, offset);
-    exprs[3] = .{ .global_set = .{
-        .name = context.builtins.arena,
-        .value = try addLocalAndU32(context, local, 8),
-    } };
-    exprs[4] = .{ .local_get = .{ .name = local } };
+    const local = try freshLocalPointer(context, 8);
+    const bytes = s.value.string();
+    const offset = context.data_segment.offset;
+    try context.data_segment.data.append(.{ .offset = offset, .bytes = bytes });
+    context.data_segment.offset += @intCast(u32, bytes.len - 2);
+    const exprs = try context.allocator.alloc(types.Expression, 3);
+    const local_get = try context.allocator.create(types.Expression);
+    local_get.* = .{ .local_get = .{ .name = local } };
+    const literal_offset = try context.allocator.create(types.Expression);
+    literal_offset.* = .{ .literal = .{ .u32 = offset } };
+    exprs[0] = .{ .binary_op = .{ .kind = .i32_store, .left = local_get, .right = literal_offset } };
+    const literal_4 = try context.allocator.create(types.Expression);
+    literal_4.* = .{ .literal = .{ .u32 = 4 } };
+    const binary_add = try context.allocator.create(types.Expression);
+    binary_add.* = .{ .binary_op = .{ .kind = .i32_add, .left = local_get, .right = literal_4 } };
+    const literal_length = try context.allocator.create(types.Expression);
+    literal_length.* = .{ .literal = .{ .u32 = context.data_segment.offset - offset } };
+    exprs[1] = .{ .binary_op = .{ .kind = .i32_store, .left = binary_add, .right = literal_length } };
+    exprs[2] = .{ .local_get = .{ .name = local } };
     return .{ .block = types.Block{ .result = .i32, .expressions = exprs } };
 }
 
@@ -476,6 +456,7 @@ fn function(allocator: Allocator, builtins: Builtins, data_segment: *types.DataS
         .next_local = &next_local,
         .pointers = &pointers,
         .pointer_map = &pointer_map,
+        .uses_memory = uses_memory,
         .data_segment = data_segment,
         .intern = intern,
     };
