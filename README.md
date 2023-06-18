@@ -78,6 +78,8 @@ This will compile your Mantis code into web assembly and then execute it using t
 mantis source.mantis --wat
 ```
 
+Look at the code in the `examples` folder for inspiration. This compiler is a work in progress so expect bugs and incomplete features. You should NOT be using this in production yet. However, code in the examples folder should compile and run.
+
 ### Your first Mantis program
 
 Mantis has a straightforward syntax that is easy to read and write. Here is a simple Mantis program that defines a function to calculate the square of a number:
