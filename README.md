@@ -66,6 +66,18 @@ This command adds the directory containing the Mantis compiler to your system's 
 
 Now, you have Mantis installed on your system, and you're ready to start coding!
 
+### Running a Mantis program
+
+```bash
+mantis source.mantis
+```
+
+This will compile your Mantis code into web assembly and then execute it using the wasmer runtime. To see the generated wat code add `--wat` to the compile command.
+
+```bash
+mantis source.mantis --wat
+```
+
 ### Your first Mantis program
 
 Mantis has a straightforward syntax that is easy to read and write. Here is a simple Mantis program that defines a function to calculate the square of a number:
