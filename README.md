@@ -231,7 +231,7 @@ implement Shape for Square {
 
 test "area of shapes" {
     assert(area(Circle{radius: 10}) == 314)
-    assert(area(Square{width: 5, height: 10})) == 50)
+    assert(area(Square{width: 5, height: 10}) == 50)
 }
 ```
 
