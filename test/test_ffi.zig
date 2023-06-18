@@ -77,7 +77,9 @@ test "type check import" {
         \\                call =
         \\                    function = symbol{ value = print, type = fn([]u8) void }
         \\                    arguments =
-        \\                        string{ value = "hello world", type = []u8 }
+        \\                        argument =
+        \\                            mutable = false
+        \\                            value = string{ value = "hello world", type = []u8 }
         \\                    type = void
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -95,10 +97,10 @@ test "codegen import" {
     const expected =
         \\(module
         \\
+        \\    (import "console" "log" (func $print (param i32)))
+        \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\
-        \\    (import "console" "log" (func $print (param i32)))
         \\
         \\    (func $start
         \\        (call $print
@@ -317,23 +319,35 @@ test "codegen hello world" {
     const expected =
         \\(module
         \\
+        \\    (import "wasi_unstable" "fd_write" (func $fd_write (param i32) (param i32) (param i32) (param i32) (result i32)))
+        \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
         \\
-        \\    (import "wasi_unstable" "fd_write" (func $fd_write (param i32) (param i32) (param i32) (param i32) (result i32)))
-        \\
         \\    (data (i32.const 0) "Hello, World!")
+        \\
+        \\    (global $core/arena (mut i32) (i32.const 13))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (global.get $core/arena)
+        \\                (local.get $size))))
         \\
         \\    (global $stdout i32 (i32.const 1))
         \\
         \\    (func $start (result i32)
         \\        (local $text i32)
-        \\        (local $0 i32)
         \\        (local $nwritten i32)
+        \\        (local $0 i32)
+        \\        (local.set $0
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
         \\        (local.set $text
         \\            (block (result i32)
-        \\                (local.set $0
-        \\                    (global.get $arena))
         \\                (i32.store
         \\                    (local.get $0)
         \\                    (i32.const 0))
@@ -342,10 +356,6 @@ test "codegen hello world" {
         \\                        (local.get $0)
         \\                        (i32.const 4))
         \\                    (i32.const 13))
-        \\                (global.set $arena
-        \\                    (i32.add
-        \\                        (local.get $0)
-        \\                        (i32.const 8)))
         \\                (local.get $0)))
         \\        (call $fd_write
         \\            (global.get $stdout)

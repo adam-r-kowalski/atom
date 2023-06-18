@@ -44,7 +44,6 @@ test "codegen sqrt f32" {
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
-        \\    (global $arena (mut i32) (i32.const 0))
         \\
         \\    (func $start (param $x f32) (result f32)
         \\        (f32.sqrt
