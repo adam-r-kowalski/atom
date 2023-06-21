@@ -386,14 +386,10 @@ test "codegen echo" {
     const expected =
         \\(module
         \\
-        \\    (import "wasi_unstable" "fd_write" (func $fd_write (param i32) (param i32) (param i32) (param i32) (result i32)))
-        \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
         \\
-        \\    (data (i32.const 0) "Hello, World!")
-        \\
-        \\    (global $core/arena (mut i32) (i32.const 13))
+        \\    (global $core/arena (mut i32) (i32.const 0))
         \\
         \\    (func $core/alloc (param $size i32) (result i32)
         \\        (local $ptr i32)
@@ -404,31 +400,30 @@ test "codegen echo" {
         \\                (local.get $ptr)
         \\                (local.get $size))))
         \\
-        \\    (global $stdout i32 (i32.const 1))
-        \\
-        \\    (func $start (result i32)
-        \\        (local $text i32)
-        \\        (local $nwritten i32)
-        \\        (local $0 i32)
-        \\        (local.set $0
-        \\            (call $core/alloc
+        \\    (func $core/empty (param $size i32) (param $len i32) (result i32)
+        \\        (local $ptr i32)
+        \\            (local.set $ptr
+        \\                (call $core/alloc
         \\                (i32.const 8)))
+        \\        (i32.store
+        \\            (local.get $ptr)
+        \\            (call $core/alloc
+        \\            (i32.mul
+        \\                (local.get $size)
+        \\                (local.get $len))))
+        \\        (i32.store
+        \\            (i32.add
+        \\                (local.get $ptr)
+        \\                (i32.const 4))
+        \\            (local.get $len))
+        \\        (local.get $ptr))
+        \\
+        \\    (func $start
+        \\        (local $text i32)
         \\        (local.set $text
-        \\            (block (result i32)
-        \\                (i32.store
-        \\                    (local.get $0)
-        \\                    (i32.const 0))
-        \\                (i32.store
-        \\                    (i32.add
-        \\                        (local.get $0)
-        \\                        (i32.const 4))
-        \\                    (i32.const 13))
-        \\                (local.get $0)))
-        \\        (call $fd_write
-        \\            (global.get $stdout)
-        \\            (local.get $text)
-        \\            (i32.const 1)
-        \\            (i32.const 200)))
+        \\            (call $core/empty
+        \\                (i32.const 1)
+        \\                (i32.const 100))))
         \\
         \\    (export "_start" (func $start)))
     ;
