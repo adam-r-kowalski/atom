@@ -379,12 +379,19 @@ test "codegen echo" {
         \\
         \\start = fn() void {
         \\    mut text = empty(u8, 100)
+        \\    mut nread = undefined
+        \\    mut nwritten = undefined
+        \\    _ = stdin.fd_read(mut text, 1, mut nread)
+        \\    _1 = stdout.fd_write(text, 1, mut nwritten)
         \\}
     ;
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
+        \\
+        \\    (import "wasi_unstable" "fd_read" (func $fd_read (param i32) (param i32) (param i32) (param i32) (result i32)))
+        \\    (import "wasi_unstable" "fd_write" (func $fd_write (param i32) (param i32) (param i32) (param i32) (result i32)))
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))
@@ -418,12 +425,51 @@ test "codegen echo" {
         \\            (local.get $len))
         \\        (local.get $ptr))
         \\
+        \\    (global $stdin i32 (i32.const 1))
+        \\    (global $stdout i32 (i32.const 1))
+        \\
         \\    (func $start
         \\        (local $text i32)
+        \\        (local $nread i32)
+        \\        (local $nwritten i32)
+        \\        (local $_ i32)
+        \\        (local $_1 i32)
+        \\        (local $nread/ptr i32)
+        \\        (local $nwritten/ptr i32)
+        \\        (local.set $nread/ptr
+        \\            (call $core/alloc
+        \\                (i32.const 4)))
+        \\        (local.set $nwritten/ptr
+        \\            (call $core/alloc
+        \\                (i32.const 4)))
         \\        (local.set $text
         \\            (call $core/empty
         \\                (i32.const 1)
-        \\                (i32.const 100))))
+        \\                (i32.const 100)))
+        \\        (local.set $_
+        \\            (i32.store
+        \\                (local.get $nread/ptr)
+        \\                (local.get $nread))
+        \\            (call $fd_read
+        \\                (global.get $stdin)
+        \\                (local.get $text)
+        \\                (i32.const 1)
+        \\                (local.get $nread/ptr))
+        \\            (local.set $nread
+        \\                (i32.load
+        \\                    (local.get $nread/ptr))))
+        \\        (local.set $_1
+        \\            (i32.store
+        \\                (local.get $nwritten/ptr)
+        \\                (local.get $nwritten))
+        \\            (call $fd_write
+        \\                (global.get $stdout)
+        \\                (local.get $text)
+        \\                (i32.const 1)
+        \\                (local.get $nwritten/ptr))
+        \\            (local.set $nwritten
+        \\                (i32.load
+        \\                    (local.get $nwritten/ptr)))))
         \\
         \\    (export "_start" (func $start)))
     ;

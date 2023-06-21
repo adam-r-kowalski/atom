@@ -214,7 +214,6 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
 }
 
 pub fn foreignImport(i: types.ForeignImport, writer: Writer) !void {
-    try writer.writeAll("\n");
     try newlineAndIndent(1, writer);
     try writer.print("(import {s} {s} (func ${s} ", .{ i.path[0], i.path[1], i.name.string() });
     try typeOf(i.type, writer);
@@ -229,7 +228,6 @@ pub fn dataSegment(d: types.DataSegment, writer: Writer) !void {
 }
 
 pub fn global(g: types.Global, writer: Writer) !void {
-    try writer.writeAll("\n");
     try newlineAndIndent(1, writer);
     try writer.print("(global ${s} ", .{g.name.string()});
     try typeOf(g.type, writer);
@@ -317,7 +315,10 @@ pub fn intrinsics(is: types.Intrinsics, writer: Writer) !void {
 
 pub fn module(m: types.Module, writer: Writer) !void {
     try writer.writeAll("(module");
-    for (m.foreign_imports) |i| try foreignImport(i, writer);
+    if (m.foreign_imports.len > 0) {
+        try writer.writeAll("\n");
+        for (m.foreign_imports) |i| try foreignImport(i, writer);
+    }
     try writer.writeAll(
         \\
         \\
@@ -342,7 +343,10 @@ pub fn module(m: types.Module, writer: Writer) !void {
         , .{m.data_segment.offset});
     }
     try intrinsics(m.intrinsics, writer);
-    for (m.globals) |g| try global(g, writer);
+    if (m.globals.len > 0) {
+        try writer.writeAll("\n");
+        for (m.globals) |g| try global(g, writer);
+    }
     for (m.functions) |f| try function(f, writer);
     for (m.foreign_exports) |e| try foreignExport(e, writer);
     try writer.writeAll(")");

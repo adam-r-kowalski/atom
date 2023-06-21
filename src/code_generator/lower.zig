@@ -229,16 +229,22 @@ fn call(context: Context, c: type_checker.types.Call) !types.Expression {
                 if (arg.mutable) {
                     switch (arg.value) {
                         .symbol => |symbol_arg| {
-                            const pointer = try getOrCreatePointer(context, symbol_arg);
-                            const local_get_ptr = try context.allocator.create(types.Expression);
-                            local_get_ptr.* = .{ .local_get = .{ .name = pointer } };
-                            const local_get = try context.allocator.create(types.Expression);
-                            local_get.* = .{ .local_get = .{ .name = symbol_arg.value } };
-                            try exprs.append(.{ .binary_op = .{ .kind = .i32_store, .left = local_get_ptr, .right = local_get } });
-                            const i32_load = try context.allocator.create(types.Expression);
-                            i32_load.* = .{ .unary_op = .{ .kind = .i32_load, .expression = local_get_ptr } };
-                            try deferred.append(.{ .local_set = .{ .name = symbol_arg.value, .value = i32_load } });
-                            ir_arg.* = .{ .local_get = .{ .name = pointer } };
+                            switch (symbol_arg.type) {
+                                .i32 => {
+                                    const pointer = try getOrCreatePointer(context, symbol_arg);
+                                    const local_get_ptr = try context.allocator.create(types.Expression);
+                                    local_get_ptr.* = .{ .local_get = .{ .name = pointer } };
+                                    const local_get = try context.allocator.create(types.Expression);
+                                    local_get.* = .{ .local_get = .{ .name = symbol_arg.value } };
+                                    try exprs.append(.{ .binary_op = .{ .kind = .i32_store, .left = local_get_ptr, .right = local_get } });
+                                    const i32_load = try context.allocator.create(types.Expression);
+                                    i32_load.* = .{ .unary_op = .{ .kind = .i32_load, .expression = local_get_ptr } };
+                                    try deferred.append(.{ .local_set = .{ .name = symbol_arg.value, .value = i32_load } });
+                                    ir_arg.* = .{ .local_get = .{ .name = pointer } };
+                                },
+                                .array => ir_arg.* = try expression(context, arg.value),
+                                else => |k| std.debug.panic("\nMutable argument type {} not yet supported", .{k}),
+                            }
                         },
                         else => |k| std.debug.panic("\nMutable argument type {} not yet supported", .{k}),
                     }
