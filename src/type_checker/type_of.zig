@@ -8,6 +8,7 @@ pub fn expression(e: types.Expression) types.MonoType {
         .bool => |b| b.type,
         .string => |s| s.type,
         .define => |d| d.type,
+        .drop => |d| d.type,
         .plus_equal => |p| p.type,
         .times_equal => |t| t.type,
         .function => |f| f.type,

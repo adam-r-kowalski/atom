@@ -8,6 +8,7 @@ pub fn expression(e: types.Expression) types.Span {
         .string => |s| s.span,
         .bool => |b| b.span,
         .define => |d| d.span,
+        .drop => |d| d.span,
         .plus_equal => |a| a.span,
         .times_equal => |a| a.span,
         .function => |f| f.span,

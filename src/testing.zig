@@ -34,7 +34,7 @@ pub fn parse(allocator: Allocator, source: []const u8) ![]const u8 {
     var intern = Intern.init(arena.allocator());
     const builtins = try Builtins.init(&intern);
     const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
-    const module = try parser.parse(arena.allocator(), tokens);
+    const module = try parser.parse(arena.allocator(), builtins, tokens);
     var result = List(u8).init(allocator);
     try parser.pretty_print.module(module, result.writer());
     return try result.toOwnedSlice();
@@ -52,7 +52,7 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     };
     const builtins = try Builtins.init(&intern);
     const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
-    const untyped_ast = try parser.parse(arena.allocator(), tokens);
+    const untyped_ast = try parser.parse(arena.allocator(), builtins, tokens);
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.EqualConstraint).init(arena.allocator()),
         .next_type_var = .{ .value = 0 },
@@ -78,7 +78,7 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     };
     const builtins = try Builtins.init(&intern);
     const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
-    const untyped_ast = try parser.parse(arena.allocator(), tokens);
+    const untyped_ast = try parser.parse(arena.allocator(), builtins, tokens);
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.EqualConstraint).init(arena.allocator()),
         .next_type_var = .{ .value = 0 },
@@ -103,7 +103,7 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
 fn endToEnd(allocator: Allocator, intern: *Intern, errors: *error_reporter.types.Errors, source: []const u8) ![]const u8 {
     const builtins = try Builtins.init(intern);
     const tokens = try tokenizer.tokenize(allocator, intern, builtins, source);
-    const untyped_ast = try parser.parse(allocator, tokens);
+    const untyped_ast = try parser.parse(allocator, builtins, tokens);
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.EqualConstraint).init(allocator),
         .next_type_var = .{ .value = 0 },

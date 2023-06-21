@@ -25,6 +25,7 @@ pub const Builtins = struct {
     mut: Interned,
     undefined: Interned,
     one: Interned,
+    underscore: Interned,
 
     pub fn init(intern: *Intern) !Builtins {
         return Builtins{
@@ -50,6 +51,7 @@ pub const Builtins = struct {
             .mut = try intern.store("mut"),
             .undefined = try intern.store("undefined"),
             .one = try intern.store("1"),
+            .underscore = try intern.store("_"),
         };
     }
 };

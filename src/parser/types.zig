@@ -16,6 +16,12 @@ pub const Define = struct {
     span: Span,
 };
 
+pub const Drop = struct {
+    type: ?*const Expression,
+    value: *const Expression,
+    span: Span,
+};
+
 pub const PlusEqual = struct {
     name: Symbol,
     value: *const Expression,
@@ -118,6 +124,7 @@ pub const Expression = union(enum) {
     string: String,
     bool: Bool,
     define: Define,
+    drop: Drop,
     plus_equal: PlusEqual,
     times_equal: TimesEqual,
     function: Function,

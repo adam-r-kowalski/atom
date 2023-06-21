@@ -31,6 +31,11 @@ fn define(s: types.Substitution, d: *types.Define) void {
     monotype(s, &d.type);
 }
 
+fn drop(s: types.Substitution, d: *types.Drop) void {
+    expression(s, d.value);
+    monotype(s, &d.type);
+}
+
 fn plusEqual(s: types.Substitution, p: *types.PlusEqual) void {
     monotype(s, &p.name.type);
     expression(s, p.value);
@@ -86,6 +91,7 @@ pub fn expression(s: types.Substitution, e: *types.Expression) void {
         .branch => |*b| branch(s, b),
         .binary_op => |*b| binaryOp(s, b),
         .define => |*d| define(s, d),
+        .drop => |*d| drop(s, d),
         .plus_equal => |*p| plusEqual(s, p),
         .times_equal => |*t| timesEqual(s, t),
         .call => |*c| call(s, c),

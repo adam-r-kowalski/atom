@@ -10,6 +10,7 @@ const Token = tokenizer.types.Token;
 const types = @import("types.zig");
 const pretty_print = @import("pretty_print.zig");
 const spanOf = @import("span.zig").expression;
+const Builtins = @import("../builtins.zig").Builtins;
 
 const Precedence = u32;
 
@@ -35,6 +36,7 @@ const Context = struct {
     allocator: Allocator,
     tokens: *tokenizer.Iterator,
     precedence: Precedence,
+    builtins: Builtins,
 };
 
 fn withPrecedence(context: Context, p: Precedence) Context {
@@ -42,6 +44,7 @@ fn withPrecedence(context: Context, p: Precedence) Context {
         .allocator = context.allocator,
         .tokens = context.tokens,
         .precedence = p,
+        .builtins = context.builtins,
     };
 }
 
@@ -255,10 +258,20 @@ fn prefix(context: Context) !types.Expression {
     }
 }
 
-fn define(context: Context, name: types.Symbol) !types.Define {
+fn define(context: Context, name: types.Symbol) !types.Expression {
     context.tokens.advance();
     const value = try expressionAlloc(withPrecedence(context, DEFINE + 1));
-    return types.Define{
+    if (name.value.eql(context.builtins.underscore)) {
+        return types.Expression{ .drop = .{
+            .type = null,
+            .value = value,
+            .span = types.Span{
+                .begin = name.span.begin,
+                .end = spanOf(value.*).end,
+            },
+        } };
+    }
+    return types.Expression{ .define = .{
         .name = name,
         .type = null,
         .value = value,
@@ -267,7 +280,7 @@ fn define(context: Context, name: types.Symbol) !types.Define {
             .begin = name.span.begin,
             .end = spanOf(value.*).end,
         },
-    };
+    } };
 }
 
 fn plusEqual(context: Context, name: types.Symbol) !types.PlusEqual {
@@ -474,7 +487,7 @@ fn infix(context: Context, left: types.Expression) ?Infix {
 
 fn parseInfix(parser: Infix, context: Context, left: types.Expression) !types.Expression {
     return switch (parser) {
-        .define => .{ .define = try define(context, left.symbol) },
+        .define => try define(context, left.symbol),
         .plus_equal => .{ .plus_equal = try plusEqual(context, left.symbol) },
         .times_equal => .{ .times_equal = try timesEqual(context, left.symbol) },
         .annotate => .{ .define = try annotate(context, left.symbol) },
@@ -498,12 +511,13 @@ fn expression(context: Context) error{OutOfMemory}!types.Expression {
     }
 }
 
-pub fn parse(allocator: Allocator, tokens: []const tokenizer.types.Token) !types.Module {
+pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer.types.Token) !types.Module {
     var iterator = tokenizer.Iterator.init(tokens);
     const context = Context{
         .allocator = allocator,
         .tokens = &iterator,
         .precedence = LOWEST,
+        .builtins = builtins,
     };
     var expressions = List(types.Expression).init(allocator);
     while (iterator.peek()) |t| {
