@@ -275,7 +275,7 @@ test "codegen mutable parameter" {
         \\            (global.get $core/arena))
         \\        (global.set $core/arena
         \\            (i32.add
-        \\                (global.get $core/arena)
+        \\                (local.get $ptr)
         \\                (local.get $size))))
         \\
         \\    (func $double (param $x/ptr i32)

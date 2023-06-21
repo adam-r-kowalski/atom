@@ -82,6 +82,15 @@ pub const Call = struct {
     arguments: []const Expression,
 };
 
+pub const Intrinsic = enum {
+    empty,
+};
+
+pub const CallIntrinsic = struct {
+    intrinsic: Intrinsic,
+    arguments: []const Expression,
+};
+
 pub const If = struct {
     result: Type,
     condition: *const Expression,
@@ -132,6 +141,7 @@ pub const Expression = union(enum) {
     global_set: GlobalSet,
     literal: Literal,
     call: Call,
+    call_intrinsic: CallIntrinsic,
     if_: If,
     unary_op: UnaryOp,
     binary_op: BinaryOp,
@@ -188,6 +198,8 @@ pub const DataSegment = struct {
     data: List(Data),
 };
 
+pub const Intrinsics = std.AutoHashMap(Intrinsic, void);
+
 pub const Module = struct {
     functions: []const Function,
     foreign_imports: []const ForeignImport,
@@ -195,4 +207,5 @@ pub const Module = struct {
     uses_memory: bool,
     data_segment: DataSegment,
     foreign_exports: []const ForeignExport,
+    intrinsics: Intrinsics,
 };

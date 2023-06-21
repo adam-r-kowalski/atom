@@ -334,7 +334,74 @@ test "codegen hello world" {
         \\            (global.get $core/arena))
         \\        (global.set $core/arena
         \\            (i32.add
-        \\                (global.get $core/arena)
+        \\                (local.get $ptr)
+        \\                (local.get $size))))
+        \\
+        \\    (global $stdout i32 (i32.const 1))
+        \\
+        \\    (func $start (result i32)
+        \\        (local $text i32)
+        \\        (local $nwritten i32)
+        \\        (local $0 i32)
+        \\        (local.set $0
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (local.set $text
+        \\            (block (result i32)
+        \\                (i32.store
+        \\                    (local.get $0)
+        \\                    (i32.const 0))
+        \\                (i32.store
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 4))
+        \\                    (i32.const 13))
+        \\                (local.get $0)))
+        \\        (call $fd_write
+        \\            (global.get $stdout)
+        \\            (local.get $text)
+        \\            (i32.const 1)
+        \\            (i32.const 200)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen echo" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\fd_read = foreign_import("wasi_unstable", "fd_read", fn(fd: i32, mut iovs: []u8, iov_count: i32, mut nread: i32) i32)
+        \\fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, iovs: []u8, iov_count: i32, mut nwritten: i32) i32)
+        \\
+        \\stdin: i32 = 1
+        \\stdout: i32 = 1
+        \\
+        \\start = fn() void {
+        \\    mut text = empty(u8, 100)
+        \\}
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (import "wasi_unstable" "fd_write" (func $fd_write (param i32) (param i32) (param i32) (param i32) (result i32)))
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (data (i32.const 0) "Hello, World!")
+        \\
+        \\    (global $core/arena (mut i32) (i32.const 13))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
         \\                (local.get $size))))
         \\
         \\    (global $stdout i32 (i32.const 1))

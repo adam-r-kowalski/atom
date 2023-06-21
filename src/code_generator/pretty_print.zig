@@ -72,6 +72,18 @@ pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
     try writer.writeAll(")");
 }
 
+pub fn callIntrinsic(c: types.CallIntrinsic, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("(call $");
+    switch (c.intrinsic) {
+        .empty => try writer.writeAll("core/empty"),
+    }
+    for (c.arguments) |arg| {
+        try newlineAndIndent(indent + 1, writer);
+        try expression(arg, indent + 1, writer);
+    }
+    try writer.writeAll(")");
+}
+
 pub fn conditional(i: types.If, indent: Indent, writer: Writer) !void {
     try writer.writeAll("(if ");
     switch (i.result) {
@@ -191,6 +203,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .global_set => |g| try globalSet(g, indent, writer),
         .literal => |l| try literal(l, writer),
         .call => |c| try call(c, indent, writer),
+        .call_intrinsic => |c| try callIntrinsic(c, indent, writer),
         .if_ => |i| try conditional(i, indent, writer),
         .unary_op => |u| try unaryOp(u, indent, writer),
         .binary_op => |b| try binaryOp(b, indent, writer),
@@ -271,6 +284,37 @@ pub fn foreignExport(e: types.ForeignExport, writer: Writer) !void {
     try writer.print("(export \"{s}\" (func ${s}))", .{ e.alias.string(), e.name.string() });
 }
 
+pub fn intrinsics(is: types.Intrinsics, writer: Writer) !void {
+    var iterator = is.keyIterator();
+    while (iterator.next()) |value| {
+        switch (value.*) {
+            .empty => {
+                try writer.writeAll(
+                    \\
+                    \\
+                    \\    (func $core/empty (param $size i32) (param $len i32) (result i32)
+                    \\        (local $ptr i32)
+                    \\            (local.set $ptr
+                    \\                (call $core/alloc
+                    \\                (i32.const 8)))
+                    \\        (i32.store
+                    \\            (local.get $ptr)
+                    \\            (call $core/alloc
+                    \\            (i32.mul
+                    \\                (local.get $size)
+                    \\                (local.get $len))))
+                    \\        (i32.store
+                    \\            (i32.add
+                    \\                (local.get $ptr)
+                    \\                (i32.const 4))
+                    \\            (local.get $len))
+                    \\        (local.get $ptr))
+                );
+            },
+        }
+    }
+}
+
 pub fn module(m: types.Module, writer: Writer) !void {
     try writer.writeAll("(module");
     for (m.foreign_imports) |i| try foreignImport(i, writer);
@@ -293,10 +337,11 @@ pub fn module(m: types.Module, writer: Writer) !void {
             \\            (global.get $core/arena))
             \\        (global.set $core/arena
             \\            (i32.add
-            \\                (global.get $core/arena)
+            \\                (local.get $ptr)
             \\                (local.get $size))))
         , .{m.data_segment.offset});
     }
+    try intrinsics(m.intrinsics, writer);
     for (m.globals) |g| try global(g, writer);
     for (m.functions) |f| try function(f, writer);
     for (m.foreign_exports) |e| try foreignExport(e, writer);

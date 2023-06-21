@@ -22,6 +22,7 @@ const Context = struct {
     uses_memory: *bool,
     data_segment: *types.DataSegment,
     intern: *Intern,
+    intrinsics: *types.Intrinsics,
 };
 
 fn freshLocal(context: Context, t: types.Type) !Interned {
@@ -269,6 +270,20 @@ fn intrinsic(context: Context, i: type_checker.types.Intrinsic) !types.Expressio
             else => |k| std.debug.panic("\nSqrt type {} not yet supported", .{k}),
         }
     }
+    if (i.function.eql(context.builtins.empty)) {
+        try context.intrinsics.put(.empty, void{});
+        context.uses_memory.* = true;
+        const arguments = try context.allocator.alloc(types.Expression, i.arguments.len);
+        for (i.arguments, arguments) |arg, *ir_arg| {
+            ir_arg.* = try expression(context, arg);
+        }
+        return .{
+            .call_intrinsic = .{
+                .intrinsic = .empty,
+                .arguments = arguments,
+            },
+        };
+    }
     std.debug.panic("\nIntrinsic {} not yet supported", .{i.function});
 }
 
@@ -412,7 +427,7 @@ fn expressionAlloc(context: Context, e: type_checker.types.Expression) !*const t
     return ptr;
 }
 
-fn function(allocator: Allocator, builtins: Builtins, data_segment: *types.DataSegment, uses_memory: *bool, intern: *Intern, name: Interned, f: type_checker.types.Function) !types.Function {
+fn function(allocator: Allocator, builtins: Builtins, data_segment: *types.DataSegment, uses_memory: *bool, intrinsics: *types.Intrinsics, intern: *Intern, name: Interned, f: type_checker.types.Function) !types.Function {
     var locals = List(types.Local).init(allocator);
     const parameters = try allocator.alloc(types.Parameter, f.parameters.len);
     var body = List(types.Expression).init(allocator);
@@ -459,6 +474,7 @@ fn function(allocator: Allocator, builtins: Builtins, data_segment: *types.DataS
         .uses_memory = uses_memory,
         .data_segment = data_segment,
         .intern = intern,
+        .intrinsics = intrinsics,
     };
     for (f.body.expressions) |expr| {
         try body.append(try expression(context, expr));
@@ -502,6 +518,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
     var globals = std.ArrayList(types.Global).init(allocator);
     var exports = std.ArrayList(types.ForeignExport).init(allocator);
     var uses_memory = false;
+    var intrinsics = types.Intrinsics.init(allocator);
     for (m.order) |name| {
         if (m.typed.get(name)) |top_level| {
             switch (top_level) {
@@ -509,7 +526,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                     const name_symbol = d.name.value;
                     switch (d.value.*) {
                         .function => |f| {
-                            const lowered = try function(allocator, builtins, &data_segment, &uses_memory, intern, name_symbol, f);
+                            const lowered = try function(allocator, builtins, &data_segment, &uses_memory, &intrinsics, intern, name_symbol, f);
                             try functions.append(lowered);
                         },
                         .foreign_import => |i| {
@@ -528,7 +545,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                     const trimmed = try intern.store(name_string[1 .. name_string.len - 1]);
                     switch (e.value.*) {
                         .function => |f| {
-                            const lowered = try function(allocator, builtins, &data_segment, &uses_memory, intern, trimmed, f);
+                            const lowered = try function(allocator, builtins, &data_segment, &uses_memory, &intrinsics, intern, trimmed, f);
                             try functions.append(lowered);
                         },
                         .symbol => {},
@@ -547,5 +564,6 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
         .data_segment = data_segment,
         .uses_memory = uses_memory,
         .foreign_exports = try exports.toOwnedSlice(),
+        .intrinsics = intrinsics,
     };
 }

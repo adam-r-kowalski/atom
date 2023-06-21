@@ -373,6 +373,38 @@ fn callSqrt(context: Context, c: parser.types.Call) !types.Expression {
     };
 }
 
+fn sizeOfMonoType(builtins: Builtins, m: types.MonoType) Interned {
+    switch (m) {
+        .u8 => return builtins.one,
+        else => std.debug.panic("sizeOfMonoType: {} not yet implemented", .{m}),
+    }
+}
+
+fn callEmpty(context: Context, c: parser.types.Call) !types.Expression {
+    if (c.arguments.len != 2) std.debug.panic("empty takes 2 arguments", .{});
+    const arguments = try context.allocator.alloc(types.Expression, 2);
+    const arg = c.arguments[0].value;
+    const monotype = try expressionToMonoType(context.allocator, context.builtins, arg);
+    arguments[0] = .{ .int = .{
+        .value = sizeOfMonoType(context.builtins, monotype),
+        .span = parser.span.expression(arg),
+        .type = .i32,
+    } };
+    arguments[1] = try expression(context, c.arguments[1].value);
+    try context.constraints.equal.append(.{
+        .left = .{ .type = typeOf(arguments[1]), .span = spanOf(arguments[1]) },
+        .right = .{ .type = .i32, .span = null },
+    });
+    const element_type = try context.allocator.create(types.MonoType);
+    element_type.* = monotype;
+    return types.Expression{ .intrinsic = .{
+        .function = context.builtins.empty,
+        .arguments = arguments,
+        .span = c.span,
+        .type = .{ .array = .{ .size = null, .element_type = element_type } },
+    } };
+}
+
 fn call(context: Context, c: parser.types.Call) !types.Expression {
     switch (c.function.*) {
         .symbol => |s| {
@@ -382,6 +414,7 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
             if (s.value.eql(context.builtins.foreign_export)) return try callForeignExport(context, c);
             if (s.value.eql(context.builtins.convert)) return try callConvert(context, c);
             if (s.value.eql(context.builtins.sqrt)) return try callSqrt(context, c);
+            if (s.value.eql(context.builtins.empty)) return try callEmpty(context, c);
             const f = try symbol(context.scopes.*, s);
             const arguments = try context.allocator.alloc(types.Argument, len);
             for (c.arguments, arguments, function_type[0..len]) |untyped_arg, *typed_arg, *t| {

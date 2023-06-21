@@ -204,20 +204,37 @@ fn function(context: Context, fn_: FnToken) !types.Expression {
 
 fn mutable(context: Context, begin: tokenizer.types.Pos) !types.Define {
     const name = context.tokens.next().?.symbol;
-    _ = context.tokens.consume(.colon);
-    const type_ = try expressionAlloc(withPrecedence(context, DEFINE + 1));
-    _ = context.tokens.consume(.equal);
-    const value = try expressionAlloc(withPrecedence(context, DEFINE + 1));
-    return types.Define{
-        .name = name,
-        .type = type_,
-        .value = value,
-        .mutable = true,
-        .span = types.Span{
-            .begin = begin,
-            .end = spanOf(value.*).end,
+    switch (context.tokens.next().?) {
+        .colon => {
+            const type_ = try expressionAlloc(withPrecedence(context, DEFINE + 1));
+            _ = context.tokens.consume(.equal);
+            const value = try expressionAlloc(withPrecedence(context, DEFINE + 1));
+            return types.Define{
+                .name = name,
+                .type = type_,
+                .value = value,
+                .mutable = true,
+                .span = types.Span{
+                    .begin = begin,
+                    .end = spanOf(value.*).end,
+                },
+            };
         },
-    };
+        .equal => {
+            const value = try expressionAlloc(withPrecedence(context, DEFINE + 1));
+            return types.Define{
+                .name = name,
+                .type = null,
+                .value = value,
+                .mutable = true,
+                .span = types.Span{
+                    .begin = begin,
+                    .end = spanOf(value.*).end,
+                },
+            };
+        },
+        else => |k| std.debug.panic("\nExpected colon or equal, found {}", .{k}),
+    }
 }
 
 fn prefix(context: Context) !types.Expression {
