@@ -179,6 +179,17 @@ pub fn define(d: types.Define, indent: Indent, writer: Writer) !void {
     try expression(d.value.*, indent + 2, writer);
 }
 
+pub fn drop(d: types.Drop, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("drop =");
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("type = ");
+    try monotype(d.type, writer);
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("value =");
+    try newlineAndIndent(indent + 2, writer);
+    try expression(d.value.*, indent + 2, writer);
+}
+
 pub fn plusEqual(p: types.PlusEqual, indent: Indent, writer: Writer) !void {
     try writer.writeAll("plus_equal =");
     try newlineAndIndent(indent + 1, writer);
@@ -306,6 +317,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .call => |c| try call(c, indent, writer),
         .intrinsic => |i| try intrinsic(i, indent, writer),
         .define => |d| try define(d, indent, writer),
+        .drop => |d| try drop(d, indent, writer),
         .plus_equal => |p| try plusEqual(p, indent, writer),
         .times_equal => |t| try timesEqual(t, indent, writer),
         .function => |f| try function(f, indent, writer),

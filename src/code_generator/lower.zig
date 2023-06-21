@@ -333,6 +333,16 @@ fn define(context: Context, d: type_checker.types.Define) !types.Expression {
     }
 }
 
+fn drop(context: Context, d: type_checker.types.Drop) !types.Expression {
+    switch (d.value.*) {
+        .undefined => return .nop,
+        else => {
+            const value = try expressionAlloc(context, d.value.*);
+            return types.Expression{ .drop = .{ .expression = value } };
+        },
+    }
+}
+
 fn plusEqual(context: Context, a: type_checker.types.PlusEqual) !types.Expression {
     var left = type_checker.types.Expression{ .symbol = a.name };
     const binary_op = type_checker.types.BinaryOp{
@@ -419,6 +429,7 @@ fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMe
         .intrinsic => |i| return try intrinsic(context, i),
         .branch => |b| return try branch(context, b),
         .define => |d| return try define(context, d),
+        .drop => |d| return try drop(context, d),
         .plus_equal => |a| return try plusEqual(context, a),
         .times_equal => |a| return try timesEqual(context, a),
         .convert => |c| return try convert(context, c),

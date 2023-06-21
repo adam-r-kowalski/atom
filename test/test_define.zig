@@ -298,3 +298,80 @@ test "codegen define" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "parse drop" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = fn() void {
+        \\    _ = 5
+        \\}
+    ;
+    const actual = try mantis.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(def start (fn [] void
+        \\    (drop 5)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer drop" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = fn() void {
+        \\    x: i32 = 5
+        \\    _ = x
+        \\}
+    ;
+    const actual = try mantis.testing.typeInfer(allocator, source, "start");
+    defer allocator.free(actual);
+    const expected =
+        \\define =
+        \\    name = symbol{ value = start, type = fn() void }
+        \\    type = void
+        \\    mutable = false
+        \\    value =
+        \\        function =
+        \\            return_type = void
+        \\            body =
+        \\                define =
+        \\                    name = symbol{ value = x, type = i32 }
+        \\                    type = void
+        \\                    mutable = false
+        \\                    value =
+        \\                        int{ value = 5, type = i32 }
+        \\                drop =
+        \\                    type = void
+        \\                    value =
+        \\                        symbol{ value = x, type = i32 }
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen drop" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = fn() void {
+        \\    x: i32 = 5
+        \\    _ = x
+        \\}
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (func $start
+        \\        (local $x i32)
+        \\        (local.set $x
+        \\            (i32.const 5))
+        \\        (drop
+        \\            (local.get $x)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

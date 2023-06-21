@@ -374,7 +374,7 @@ test "codegen echo" {
         \\fd_read = foreign_import("wasi_unstable", "fd_read", fn(fd: i32, mut iovs: []u8, iov_count: i32, mut nread: i32) i32)
         \\fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, iovs: []u8, iov_count: i32, mut nwritten: i32) i32)
         \\
-        \\stdin: i32 = 1
+        \\stdin: i32 = 0
         \\stdout: i32 = 1
         \\
         \\start = fn() void {
@@ -382,7 +382,7 @@ test "codegen echo" {
         \\    mut nread = undefined
         \\    mut nwritten = undefined
         \\    _ = stdin.fd_read(mut text, 1, mut nread)
-        \\    _1 = stdout.fd_write(text, 1, mut nwritten)
+        \\    _ = stdout.fd_write(text, 1, mut nwritten)
         \\}
     ;
     const actual = try mantis.testing.codegen(allocator, source);
@@ -425,15 +425,13 @@ test "codegen echo" {
         \\            (local.get $len))
         \\        (local.get $ptr))
         \\
-        \\    (global $stdin i32 (i32.const 1))
+        \\    (global $stdin i32 (i32.const 0))
         \\    (global $stdout i32 (i32.const 1))
         \\
         \\    (func $start
         \\        (local $text i32)
         \\        (local $nread i32)
         \\        (local $nwritten i32)
-        \\        (local $_ i32)
-        \\        (local $_1 i32)
         \\        (local $nread/ptr i32)
         \\        (local $nwritten/ptr i32)
         \\        (local.set $nread/ptr
@@ -446,7 +444,7 @@ test "codegen echo" {
         \\            (call $core/empty
         \\                (i32.const 1)
         \\                (i32.const 100)))
-        \\        (local.set $_
+        \\        (drop
         \\            (i32.store
         \\                (local.get $nread/ptr)
         \\                (local.get $nread))
@@ -458,7 +456,7 @@ test "codegen echo" {
         \\            (local.set $nread
         \\                (i32.load
         \\                    (local.get $nread/ptr))))
-        \\        (local.set $_1
+        \\        (drop
         \\            (i32.store
         \\                (local.get $nwritten/ptr)
         \\                (local.get $nwritten))

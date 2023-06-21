@@ -195,6 +195,13 @@ pub fn block(b: types.Block, indent: Indent, writer: Writer) !void {
     try writer.writeAll(")");
 }
 
+fn drop(d: types.Drop, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("(drop");
+    try newlineAndIndent(indent + 1, writer);
+    try expression(d.expression.*, indent + 1, writer);
+    try writer.writeAll(")");
+}
+
 pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{OutOfMemory}!void {
     switch (e) {
         .local_get => |l| try writer.print("(local.get ${s})", .{l.name.string()}),
@@ -209,6 +216,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .binary_op => |b| try binaryOp(b, indent, writer),
         .expressions => |es| try expressions(es, indent, writer),
         .block => |b| try block(b, indent, writer),
+        .drop => |d| try drop(d, indent, writer),
         .nop => try writer.writeAll("(nop)"),
     }
 }

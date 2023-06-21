@@ -134,7 +134,7 @@ const WasmModule = struct {
 fn compileAndRun(allocator: Allocator, intern: *mantis.interner.Intern, errors: *mantis.error_reporter.types.Errors, flags: Flags, source: []const u8) !void {
     const builtins = try mantis.Builtins.init(intern);
     const tokens = try mantis.tokenizer.tokenize(allocator, intern, builtins, source);
-    const untyped_ast = try mantis.parser.parse(allocator, tokens);
+    const untyped_ast = try mantis.parser.parse(allocator, builtins, tokens);
     var constraints = mantis.type_checker.types.Constraints{
         .equal = List(mantis.type_checker.types.EqualConstraint).init(allocator),
         .next_type_var = .{ .value = 0 },

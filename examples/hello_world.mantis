@@ -3,11 +3,11 @@ fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, iovs: []u8, i
 stdout: i32 = 1
 
 print = fn(text: []u8) void {
-    mut nwritten: i32 = undefined
+    mut nwritten = undefined
     _ = stdout.fd_write(text, 1, mut nwritten)
 }
 
 start = fn() void {
-    print("Hello, World!\n")
-    print("Goodbye!")
+	print("Hello World!\n")
+	print("Goodbye!")
 }

@@ -24,6 +24,12 @@ pub fn define(d: types.Define, indent: Indent, writer: Writer) !void {
     try writer.writeAll(")");
 }
 
+pub fn drop(d: types.Drop, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("(drop ");
+    try expression(d.value.*, indent + 1, writer);
+    try writer.writeAll(")");
+}
+
 pub fn plusEqual(p: types.PlusEqual, indent: Indent, writer: Writer) !void {
     try writer.print("(+= {} ", .{p.name.value});
     try expression(p.value.*, indent + 1, writer);
@@ -155,6 +161,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .string => |s| try writer.print("{}", .{s.value}),
         .bool => |b| try writer.print("{}", .{b.value}),
         .define => |d| try define(d, indent, writer),
+        .drop => |d| try drop(d, indent, writer),
         .plus_equal => |p| try plusEqual(p, indent, writer),
         .times_equal => |t| try timesEqual(t, indent, writer),
         .function => |f| try function(f, indent, writer),

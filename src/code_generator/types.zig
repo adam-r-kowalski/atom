@@ -134,6 +134,10 @@ pub const Literal = union(enum) {
     f64: f64,
 };
 
+pub const Drop = struct {
+    expression: *const Expression,
+};
+
 pub const Expression = union(enum) {
     local_get: LocalGet,
     local_set: LocalSet,
@@ -147,6 +151,7 @@ pub const Expression = union(enum) {
     binary_op: BinaryOp,
     expressions: Expressions,
     block: Block,
+    drop: Drop,
     nop,
 };
 

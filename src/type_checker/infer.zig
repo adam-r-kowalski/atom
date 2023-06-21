@@ -276,6 +276,24 @@ fn define(context: Context, d: parser.types.Define) !types.Define {
     };
 }
 
+fn drop(context: Context, d: parser.types.Drop) !types.Drop {
+    const value = try expressionAlloc(context, d.value.*);
+    var monotype = typeOf(value.*);
+    if (d.type) |t| {
+        const annotated_type = try expressionToMonoType(context.allocator, context.builtins, t.*);
+        try context.constraints.equal.append(.{
+            .left = .{ .type = annotated_type, .span = parser.span.expression(t.*) },
+            .right = .{ .type = monotype, .span = parser.span.expression(d.value.*) },
+        });
+        monotype = annotated_type;
+    }
+    return types.Drop{
+        .value = value,
+        .span = d.span,
+        .type = .void,
+    };
+}
+
 fn plusEqual(context: Context, p: parser.types.PlusEqual) !types.PlusEqual {
     const value = try expressionAlloc(context, p.value.*);
     const binding = try findInScope(context.scopes.*, p.name);
@@ -509,6 +527,7 @@ fn expression(context: Context, e: parser.types.Expression) error{ OutOfMemory, 
         .symbol => |s| return .{ .symbol = try symbol(context.scopes.*, s) },
         .bool => |b| return .{ .bool = boolean(b) },
         .define => |d| return .{ .define = try define(context, d) },
+        .drop => |d| return .{ .drop = try drop(context, d) },
         .plus_equal => |a| return .{ .plus_equal = try plusEqual(context, a) },
         .times_equal => |a| return .{ .times_equal = try timesEqual(context, a) },
         .function => |f| return .{ .function = try function(context, f) },
