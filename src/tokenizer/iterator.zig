@@ -9,12 +9,21 @@ pub const Iterator = struct {
         return Iterator{ .tokens = tokens, .index = 0 };
     }
 
-    pub fn peek(self: Iterator) ?types.Token {
+    fn consumeComments(self: *Iterator) void {
+        const len = self.tokens.len;
+        var index = self.index;
+        while (index < len and self.tokens[index] == .comment) : (index += 1) {}
+        self.index = index;
+    }
+
+    pub fn peek(self: *Iterator) ?types.Token {
+        self.consumeComments();
         if (self.index >= self.tokens.len) return null;
         return self.tokens[self.index];
     }
 
     pub fn next(self: *Iterator) ?types.Token {
+        self.consumeComments();
         if (self.index >= self.tokens.len) return null;
         const index = self.index;
         self.index += 1;

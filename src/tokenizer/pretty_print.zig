@@ -6,6 +6,7 @@ const types = @import("types.zig");
 
 pub fn token(t: types.Token, writer: Writer) !void {
     switch (t) {
+        .comment => |c| try writer.print("(comment {})", .{c.value}),
         .symbol => |s| try writer.print("(symbol {})", .{s.value}),
         .int => |i| try writer.print("(int {})", .{i.value}),
         .float => |f| try writer.print("(float {})", .{f.value}),

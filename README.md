@@ -2,7 +2,8 @@
 
 ![Mantis Shrimp](images/mantis.jpeg)
 
-Mantis is a statically typed, high-performance programming language designed for machine learning and high-performance computing. It compiles to WebAssembly, allowing your code to run anywhere WebAssembly is supported, including web browsers and server environments.
+Mantis is a statically typed, high-performance programming language designed for machine learning and high-performance computing.
+It compiles to WebAssembly, allowing your code to run anywhere WebAssembly is supported, including web browsers and server environments.
 
 ## Getting Started
 
@@ -10,7 +11,9 @@ Mantis is a statically typed, high-performance programming language designed for
 
 #### Prerequisites
 
-Before installing Mantis, please ensure that you have installed [Zig](https://ziglang.org/) and [Wasmer](https://wasmer.io/). Zig is a fast and reliable language that we've used to develop Mantis's compiler, and Wasmer is the WebAssembly runtime that Mantis relies on for executing your code.
+Before installing Mantis, please ensure that you have installed [Zig](https://ziglang.org/) and [Wasmer](https://wasmer.io/).
+Zig is a fast and reliable language that we've used to develop Mantis's compiler,
+and Wasmer is the WebAssembly runtime that Mantis relies on for executing your code.
 
 #### Compiling From Source
 
@@ -72,17 +75,22 @@ Now, you have Mantis installed on your system, and you're ready to start coding!
 mantis source.mantis
 ```
 
-This will compile your Mantis code into web assembly and then execute it using the wasmer runtime. To see the generated wat code add `--wat` to the compile command.
+This will compile your Mantis code into web assembly and then execute it using the wasmer runtime.
+To see the generated wat code add `--wat` to the compile command.
 
 ```bash
 mantis source.mantis --wat
 ```
 
-Look at the code in the `examples` folder for inspiration. This compiler is a work in progress so expect bugs and incomplete features. You should NOT be using this in production yet. However, code in the examples folder should compile and run.
+Look at the code in the `examples` folder for inspiration.
+This compiler is a work in progress so expect bugs and incomplete features.
+You should NOT be using this in production yet.
+However, code in the examples folder should compile and run.
 
 ### Your first Mantis program
 
-Mantis has a straightforward syntax that is easy to read and write. Here is a simple Mantis program that defines a function to calculate the square of a number:
+Mantis has a straightforward syntax that is easy to read and write.
+Here is a simple Mantis program that defines a function to calculate the square of a number:
 
 ```zig
 square = fn(x: i32) i32 { x^2 }
@@ -100,7 +108,9 @@ This program defines a function `square` and a set of tests to verify its behavi
 
 ### Comments
 
-In Mantis, you can insert comments in your code to provide explanations or annotations. Comments are ignored by the compiler and do not affect the execution of the program. You can add a comment by starting the line with a hash (`#`).
+In Mantis, you can insert comments in your code to provide explanations or annotations.
+Comments are ignored by the compiler and do not affect the execution of the program.
+You can add a comment by starting the line with a hash (`#`).
 
 Here's an example:
 
@@ -170,11 +180,14 @@ test "named parameters" {
 }
 ```
 
-In this example, we are calling the `clamp` function with named parameters `value`, `low`, and `high`. This makes it clear what each parameter represents, which can be particularly helpful when dealing with functions that have many parameters or when the purpose of a parameter isn't immediately clear from its name.
+In this example, we are calling the `clamp` function with named parameters `value`, `low`, and `high`.
+This makes it clear what each parameter represents, which can be particularly helpful when dealing with
+functions that have many parameters or when the purpose of a parameter isn't immediately clear from its name.
 
 ### Method Call Syntax
 
-In addition to the standard function call syntax, Mantis also supports a method call syntax, allowing you to call functions in an object-oriented style. Here's an example:
+In addition to the standard function call syntax, Mantis also supports a method call syntax,
+allowing you to call functions in an object-oriented style. Here's an example:
 
 ```zig
 test "method notation named parameters" {
@@ -184,11 +197,13 @@ test "method notation named parameters" {
 }
 ```
 
-In this example, we are calling the `clamp` function using the dot syntax on an integer value. This can make your code more readable by clearly associating a function with the data it operates on.
+In this example, we are calling the `clamp` function using the dot syntax on an integer value.
+This can make your code more readable by clearly associating a function with the data it operates on.
 
 ### Pattern Matching
 
-Mantis supports pattern matching, which is a way of checking a given sequence of tokens for the presence of the constituents of some pattern. It's a powerful tool for working with complex data structures.
+Mantis supports pattern matching, which is a way of checking a given sequence of tokens for the presence of the constituents of some pattern.
+It's a powerful tool for working with complex data structures.
 
 ```zig
 # pattern matching is done with `match expression`
@@ -204,13 +219,18 @@ test "sum" {
 }
 ```
 
-In the above code, `sum` is a function that takes a list of integers and returns the sum of all elements in the list. The `match xs` construct is used for pattern matching. If the list is empty (`[]`), the function returns `0`. If the list has at least one element (`[x, ...xs]`), the function returns the sum of the first element and the result of the recursive call to `sum` on the rest of the list.
+In the above code, `sum` is a function that takes a list of integers and returns the sum of all elements in the list.
+The `match xs` construct is used for pattern matching. If the list is empty (`[]`), the function returns `0`.
+If the list has at least one element (`[x, ...xs]`), the function returns the sum of the first element and the
+result of the recursive call to `sum` on the rest of the list.
 
 ### Interfaces and Implementations
 
-Interfaces in Mantis define a contract for structs (in the form of function signatures), and any struct implementing an interface must fulfil this contract by defining those functions.
+Interfaces in Mantis define a contract for structs (in the form of function signatures),
+and any struct implementing an interface must fulfil this contract by defining those functions.
 
-For example, let's consider an interface `Shape` with a function `area`, and two struct types, `Circle` and `Square`, implementing this interface:
+For example, let's consider an interface `Shape` with a function `area`, and two struct types,
+`Circle` and `Square`, implementing this interface:
 
 ```zig
 # interfaces allow you to code against different types in a uniform way
@@ -249,11 +269,13 @@ test "area of shapes" {
 }
 ```
 
-In this code, `Shape` is an interface that declares a method named `area`. Both `Circle` and `Square` are structs that implement the Shape interface by providing their own implementation of the `area` method.
+In this code, `Shape` is an interface that declares a method named `area`. Both `Circle` and `Square`
+are structs that implement the Shape interface by providing their own implementation of the `area` method.
 
 ### Destructuring
 
-Destructuring in Mantis allows you to bind a set of variables to a corresponding set of values provided in a complex data structure, such as a struct or array. It provides a convenient way to extract multiple values from data stored in (possibly nested) objects and arrays.
+Destructuring in Mantis allows you to bind a set of variables to a corresponding set of values provided in a complex data structure,
+such as a struct or array. It provides a convenient way to extract multiple values from data stored in (possibly nested) objects and arrays.
 
 For example, consider the `Square` struct and the implementation of `Shape` interface for it:
 
@@ -270,7 +292,8 @@ implement Shape for Square {
 }
 ```
 
-In the `area` function for `Square`, `{width, height}` is a destructuring assignment: it binds the variables `width` and `height` to the respective values in the passed `Square` object.
+In the `area` function for `Square`, `{width, height}` is a destructuring assignment:
+it binds the variables `width` and `height` to the respective values in the passed `Square` object.
 
 Another example of destructuring can be found in array pattern matching:
 
@@ -284,13 +307,16 @@ sum = fn(xs: []i32) i32 {
 }
 ```
 
-In this function, `[x, ...rest]` destructures the array `xs`, binding the variable `x` to the first element of the array and `rest` to the rest of the array.
+In this function, `[x, ...rest]` destructures the array `xs`, binding the variable `x` to the
+first element of the array and `rest` to the rest of the array.
 
 Destructuring can make your code more readable and less error-prone by avoiding manual indexing and temporary variables.
 
 ### Shadowing
 
-Shadowing in Mantis allows you to declare a new variable with the same name as a previously declared variable. The new variable shadows the previous one within its scope, meaning the previous variable cannot be accessed. This is not an error in Mantis; it's a feature of the language.
+Shadowing in Mantis allows you to declare a new variable with the same name as a previously declared variable.
+The new variable shadows the previous one within its scope, meaning the previous variable cannot be accessed.
+This is not an error in Mantis; it's a feature of the language.
 
 Here's an example:
 
@@ -305,7 +331,8 @@ if true {
 log(x) # This will print 5 because the shadowed x was only valid within the if block
 ```
 
-In this example, `x` is shadowed within the `if` block. The `log` function within the block prints the shadowed `x`, while the one outside the block prints the original `x`.
+In this example, `x` is shadowed within the `if` block. The `log` function within the block prints the shadowed `x`,
+while the one outside the block prints the original `x`.
 
 Shadowing can be useful when you want to reuse variable names, but be careful, as it can lead to confusion if not used judiciously.
 
@@ -328,9 +355,12 @@ start = fn() void {
 
 In this example, the `log` function is imported from the host's console, and the `double` function is exported for use by the host.
 
-[WASI](https://wasi.dev/) stands for WebAssembly System Interface. It's an API designed by the Wasmtime project that provides access to several operating-system-like features, including files and filesystems, Berkeley sockets, clocks, and random numbers, that we'll be proposing for standardization.
+[WASI](https://wasi.dev/) stands for WebAssembly System Interface. It's an API designed by the Wasmtime project that provides access to
+several operating-system-like features, including files and filesystems, Berkeley sockets, clocks, and random numbers,
+that we'll be proposing for standardization.
 
-It's designed to be independent of browsers, so it doesn't depend on Web APIs or JS, and isn't limited by the need to be compatible with JS. And it has integrated capability-based security, so it extends WebAssembly's characteristic sandboxing to include I/O.
+It's designed to be independent of browsers, so it doesn't depend on Web APIs or JS, and isn't limited by the need to be compatible with JS.
+And it has integrated capability-based security, so it extends WebAssembly's characteristic sandboxing to include I/O.
 
 It is a first class citizen in Mantis and by targeting this API you can ensure that your programs work across as many platforms as possible.
 
@@ -382,7 +412,8 @@ matmul = fn[T: Num, m: u64, n: u64, p: u64](a: [m][n]T, b: [n][p]T) [m][p]T {
 
 ### Machine Learning
 
-Mantis is designed with machine learning in mind. For expressions allow you to express how models work across a single example rather than dealing with batches. Here is a simple linear model implemented in Mantis:
+Mantis is designed with machine learning in mind. For expressions allow you to express how models work across a
+single example rather than dealing with batches. Here is a simple linear model implemented in Mantis:
 
 ```zig
 Linear = struct {
@@ -427,4 +458,5 @@ test "gradient descent" {
 
 ## Community
 
-Mantis is open-source and community-driven. We welcome contributions of any kind: code, documentation, design, etc. Join our community and help us make Mantis the best language for machine learning and high-performance computing!
+Mantis is open-source and community-driven. We welcome contributions of any kind: code, documentation, design, etc.
+Join our community and help us make Mantis the best language for machine learning and high-performance computing!

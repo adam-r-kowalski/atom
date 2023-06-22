@@ -126,6 +126,20 @@ fn newLine(cursor: *Cursor) types.Token {
     return .{ .new_line = .{ .span = .{ .begin = begin, .end = cursor.pos } } };
 }
 
+fn comment(intern: *Intern, cursor: *Cursor) !types.Token {
+    const begin = cursor.pos;
+    var i: u64 = 0;
+    while (i < cursor.source.len and cursor.source[i] != '\n') : (i += 1) {}
+    const contents = cursor.source[0..i];
+    const value = try intern.store(contents);
+    cursor.pos.column += i;
+    cursor.source = cursor.source[i..];
+    return .{ .comment = .{
+        .value = value,
+        .span = .{ .begin = begin, .end = cursor.pos },
+    } };
+}
+
 fn either(cursor: *Cursor, comptime tag: Tag, comptime char: u8, comptime other: Tag) types.Token {
     const begin = cursor.pos;
     if (cursor.source.len > 1 and cursor.source[1] == char) {
@@ -161,6 +175,7 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?types.Token
         ']' => exact(cursor, .right_bracket),
         ',' => exact(cursor, .comma),
         '\n' => newLine(cursor),
+        '#' => try comment(intern, cursor),
         else => try symbol(intern, builtins, cursor),
     };
 }

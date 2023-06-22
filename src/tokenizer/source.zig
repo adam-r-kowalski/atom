@@ -7,6 +7,7 @@ const spanOf = @import("span.zig").token;
 
 pub fn token(t: types.Token, writer: Writer) !void {
     switch (t) {
+        .comment => |c| try writer.print("{}", .{c.value}),
         .symbol => |s| try writer.print("{}", .{s.value}),
         .int => |i| try writer.print("{}", .{i.value}),
         .float => |f| try writer.print("{}", .{f.value}),
