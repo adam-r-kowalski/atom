@@ -52,11 +52,13 @@ test "type error of if" {
         \\2 |     if {s}x{s} == y {{
         \\3 |         x
         \\
+        \\
         \\Here the inferred type is f64
         \\
         \\1 | start = fn(x: i32, y: f64) f32 {{
         \\2 |     if x == {s}y{s} {{
         \\3 |         x
+        \\
         \\
         \\Expected these two types to be the same.
         \\
@@ -84,11 +86,13 @@ test "type error of define" {
         \\1 | start = fn() {s}f32{s} {{
         \\2 |     x: f64 = 5
         \\
+        \\
         \\Here the inferred type is f64
         \\
         \\2 |     x: f64 = 5
         \\3 |     {s}x{s}
         \\4 | }}
+        \\
         \\
         \\Expected these two types to be the same.
         \\
@@ -120,11 +124,13 @@ test "type type mismatch between parameter and argument" {
         \\1 | double = fn(x: {s}i32{s}) i32 {{
         \\2 |     x * 2
         \\
+        \\
         \\Here the inferred type is f32
         \\
         \\6 |     y: f32 = 0
         \\7 |     double({s}y{s})
         \\8 | }}
+        \\
         \\
         \\Expected these two types to be the same.
         \\

@@ -62,12 +62,14 @@ fn typeMismatch(t: types.TypeMismatch, lines: [][]const u8, writer: Writer) !voi
     try writer.writeAll(
         \\
         \\
+        \\
         \\Here the inferred type is 
     );
     try type_checker.pretty_print.monotype(t.right, writer);
     try writer.writeAll("\n\n");
     if (type_checker.monotype.span(t.right)) |span| try source(lines, span, writer);
     try writer.writeAll(
+        \\
         \\
         \\
         \\Expected these two types to be the same.
