@@ -52,11 +52,13 @@ test "type error of if" {
         \\2 |     if {s}x{s} == y {{
         \\3 |         x
         \\
+        \\
         \\Here the inferred type is f64
         \\
         \\1 | start = fn(x: i32, y: f64) f32 {{
         \\2 |     if x == {s}y{s} {{
         \\3 |         x
+        \\
         \\
         \\Expected these two types to be the same.
         \\
@@ -84,17 +86,56 @@ test "type error of define" {
         \\1 | start = fn() {s}f32{s} {{
         \\2 |     x: f64 = 5
         \\
+        \\
         \\Here the inferred type is f64
         \\
-        \\1 | start = fn() f32 {s}{{
-        \\{s}2 |{s}     x: f64 = 5
-        \\{s}3 |{s}     x
-        \\{s}4 |{s} }}{s}
+        \\2 |     x: f64 = 5
+        \\3 |     {s}x{s}
+        \\4 | }}
+        \\
         \\
         \\Expected these two types to be the same.
         \\
         \\
-    , .{ RED, CLEAR, RED, CLEAR, RED, CLEAR, RED, CLEAR, RED, CLEAR, RED, CLEAR });
+    , .{ RED, CLEAR, RED, CLEAR, RED, CLEAR });
+    defer allocator.free(expected);
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type type mismatch between parameter and argument" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\double = fn(x: i32) i32 {
+        \\    x * 2
+        \\}
+        \\
+        \\start = fn() f32 {
+        \\    y: f32 = 0
+        \\    double(y)
+        \\}
+    ;
+    const actual = try mantis.testing.compileErrors(allocator, source);
+    defer allocator.free(actual);
+    const expected = try std.fmt.allocPrint(allocator,
+        \\---- {s}TYPE MISMATCH{s} ---------------------------------------------------
+        \\
+        \\Here the inferred type is i32
+        \\
+        \\1 | double = fn(x: {s}i32{s}) i32 {{
+        \\2 |     x * 2
+        \\
+        \\
+        \\Here the inferred type is f32
+        \\
+        \\6 |     y: f32 = 0
+        \\7 |     double({s}y{s})
+        \\8 | }}
+        \\
+        \\
+        \\Expected these two types to be the same.
+        \\
+        \\
+    , .{ RED, CLEAR, RED, CLEAR, RED, CLEAR });
     defer allocator.free(expected);
     try std.testing.expectEqualStrings(expected, actual);
 }

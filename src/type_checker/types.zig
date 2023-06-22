@@ -8,44 +8,30 @@ const interner = @import("../interner.zig");
 const Interned = interner.Interned;
 const parser = @import("../parser.zig");
 pub const Span = parser.types.Span;
-
-pub const TypeVar = struct { value: u64 };
-
-const ArrayMonoType = struct {
-    size: ?u32,
-    element_type: *const MonoType,
-};
-
-pub const MonoType = union(enum) {
-    void,
-    u8,
-    i32,
-    i64,
-    f32,
-    f64,
-    bool,
-    typevar: TypeVar,
-    function: []MonoType,
-    array: ArrayMonoType,
-};
+const monotype = @import("monotype.zig");
+pub const TypeVar = monotype.TypeVar;
+pub const MonoType = monotype.MonoType;
 
 pub const Substitution = struct {
-    map: Map(TypeVar, MonoType),
-};
+    map: Map(u64, MonoType),
 
-pub const TypedSpan = struct {
-    span: ?Span,
-    type: MonoType,
+    pub fn get(self: Substitution, typevar: TypeVar) ?MonoType {
+        return self.map.get(typevar.value);
+    }
+
+    pub fn getOrPut(self: *Substitution, typevar: TypeVar) !Map(u64, MonoType).GetOrPutResult {
+        return try self.map.getOrPut(typevar.value);
+    }
 };
 
 pub const EqualConstraint = struct {
-    left: TypedSpan,
-    right: TypedSpan,
+    left: MonoType,
+    right: MonoType,
 };
 
 pub const Constraints = struct {
     equal: List(EqualConstraint),
-    next_type_var: TypeVar,
+    next_type_var: u64,
 };
 
 pub const Binding = struct {
@@ -89,28 +75,28 @@ pub const String = struct {
 
 pub const Define = struct {
     name: Symbol,
-    value: *Expression,
+    value: *const Expression,
     span: Span,
     mutable: bool,
     type: MonoType,
 };
 
 pub const Drop = struct {
-    value: *Expression,
+    value: *const Expression,
     span: Span,
     type: MonoType,
 };
 
 pub const PlusEqual = struct {
     name: Symbol,
-    value: *Expression,
+    value: *const Expression,
     span: Span,
     type: MonoType,
 };
 
 pub const TimesEqual = struct {
     name: Symbol,
-    value: *Expression,
+    value: *const Expression,
     span: Span,
     type: MonoType,
 };
@@ -136,8 +122,8 @@ pub const Function = struct {
 
 pub const BinaryOp = struct {
     kind: parser.types.BinaryOpKind,
-    left: *Expression,
-    right: *Expression,
+    left: *const Expression,
+    right: *const Expression,
     span: Span,
     type: MonoType,
 };
@@ -160,7 +146,7 @@ pub const Argument = struct {
 };
 
 pub const Call = struct {
-    function: *Expression,
+    function: *const Expression,
     arguments: []Argument,
     span: Span,
     type: MonoType,
@@ -168,7 +154,7 @@ pub const Call = struct {
 
 pub const Intrinsic = struct {
     function: Interned,
-    arguments: []Expression,
+    arguments: []Argument,
     span: Span,
     type: MonoType,
 };
@@ -188,13 +174,13 @@ pub const ForeignImport = struct {
 
 pub const ForeignExport = struct {
     name: Interned,
-    value: *Expression,
+    value: *const Expression,
     span: Span,
     type: MonoType,
 };
 
 pub const Convert = struct {
-    value: *Expression,
+    value: *const Expression,
     span: Span,
     type: MonoType,
 };

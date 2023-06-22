@@ -55,14 +55,48 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     const untyped_ast = try parser.parse(arena.allocator(), builtins, tokens);
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.EqualConstraint).init(arena.allocator()),
-        .next_type_var = .{ .value = 0 },
+        .next_type_var = 0,
     };
     var ast = try type_checker.infer.module(arena.allocator(), &constraints, builtins, untyped_ast);
     try type_checker.infer.topLevel(&ast, try intern.store(name), &errors);
     const substitution = try type_checker.solve_constraints.constraints(arena.allocator(), constraints, &errors);
-    type_checker.apply_substitution.module(substitution, &ast);
+    ast = try type_checker.apply_substitution.module(arena.allocator(), substitution, ast);
     var result = List(u8).init(allocator);
     try type_checker.pretty_print.module(ast, result.writer());
+    return try result.toOwnedSlice();
+}
+
+pub fn typeInferVerbose(allocator: Allocator, source: []const u8, name: []const u8) ![]const u8 {
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+    var intern = Intern.init(arena.allocator());
+    var errors = error_reporter.types.Errors{
+        .allocator = arena.allocator(),
+        .undefined_variables = List(error_reporter.types.UndefinedVariable).init(arena.allocator()),
+        .type_mismatches = List(error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .source = source,
+    };
+    const builtins = try Builtins.init(&intern);
+    const tokens = try tokenizer.tokenize(arena.allocator(), &intern, builtins, source);
+    const untyped_ast = try parser.parse(arena.allocator(), builtins, tokens);
+    var constraints = type_checker.types.Constraints{
+        .equal = List(type_checker.types.EqualConstraint).init(arena.allocator()),
+        .next_type_var = 0,
+    };
+    var ast = try type_checker.infer.module(arena.allocator(), &constraints, builtins, untyped_ast);
+    try type_checker.infer.topLevel(&ast, try intern.store(name), &errors);
+    const substitution = try type_checker.solve_constraints.constraints(arena.allocator(), constraints, &errors);
+    const typed_ast = try type_checker.apply_substitution.module(arena.allocator(), substitution, ast);
+    var result = List(u8).init(allocator);
+    const writer = result.writer();
+    try writer.writeAll("\n\n======== Untyped ========\n\n");
+    try type_checker.pretty_print.module(ast, writer);
+    try writer.writeAll("\n\n======== Constraints ========\n\n");
+    try type_checker.pretty_print.constraints(constraints, writer);
+    try writer.writeAll("\n\n======== Substitution ========\n\n");
+    try type_checker.pretty_print.substitution(substitution, writer);
+    try writer.writeAll("\n\n======== Typed ========\n\n");
+    try type_checker.pretty_print.module(typed_ast, writer);
     return try result.toOwnedSlice();
 }
 
@@ -81,7 +115,7 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     const untyped_ast = try parser.parse(arena.allocator(), builtins, tokens);
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.EqualConstraint).init(arena.allocator()),
-        .next_type_var = .{ .value = 0 },
+        .next_type_var = 0,
     };
     var ast = try type_checker.infer.module(arena.allocator(), &constraints, builtins, untyped_ast);
     const export_count = ast.foreign_exports.len;
@@ -89,7 +123,7 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     if (export_count == 0) ast.foreign_exports = &.{start};
     for (ast.foreign_exports) |foreign_export| try type_checker.infer.topLevel(&ast, foreign_export, &errors);
     const substitution = try type_checker.solve_constraints.constraints(arena.allocator(), constraints, &errors);
-    type_checker.apply_substitution.module(substitution, &ast);
+    ast = try type_checker.apply_substitution.module(arena.allocator(), substitution, ast);
     var ir = try code_generator.lower.module(arena.allocator(), builtins, ast, &intern);
     if (export_count == 0) {
         const alias = try intern.store("_start");
@@ -106,7 +140,7 @@ fn endToEnd(allocator: Allocator, intern: *Intern, errors: *error_reporter.types
     const untyped_ast = try parser.parse(allocator, builtins, tokens);
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.EqualConstraint).init(allocator),
-        .next_type_var = .{ .value = 0 },
+        .next_type_var = 0,
     };
     var ast = try type_checker.infer.module(allocator, &constraints, builtins, untyped_ast);
     const export_count = ast.foreign_exports.len;
@@ -114,7 +148,7 @@ fn endToEnd(allocator: Allocator, intern: *Intern, errors: *error_reporter.types
     if (export_count == 0) ast.foreign_exports = &.{start};
     for (ast.foreign_exports) |foreign_export| try type_checker.infer.topLevel(&ast, foreign_export, errors);
     const substitution = try type_checker.solve_constraints.constraints(allocator, constraints, errors);
-    type_checker.apply_substitution.module(substitution, &ast);
+    ast = try type_checker.apply_substitution.module(allocator, substitution, ast);
     var ir = try code_generator.lower.module(allocator, builtins, ast, intern);
     if (export_count == 0) {
         const alias = try intern.store("_start");

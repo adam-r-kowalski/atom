@@ -1,112 +1,256 @@
+const std = @import("std");
+const Allocator = std.mem.Allocator;
 const types = @import("types.zig");
 
-fn monotype(s: types.Substitution, m: *types.MonoType) void {
-    switch (m.*) {
-        .function => |f| for (f) |*t| monotype(s, t),
-        .typevar => |t| {
-            if (s.map.get(t)) |mono| m.* = mono;
+fn monotype(allocator: Allocator, sub: types.Substitution, m: types.MonoType) !types.MonoType {
+    switch (m) {
+        .function => |f| {
+            const parameters = try allocator.alloc(types.MonoType, f.parameters.len);
+            for (f.parameters, parameters) |unapplied, *applied| applied.* = try monotype(allocator, sub, unapplied);
+            const return_type = try allocator.create(types.MonoType);
+            return_type.* = try monotype(allocator, sub, f.return_type.*);
+            return .{ .function = .{
+                .parameters = parameters,
+                .return_type = return_type,
+                .span = f.span,
+            } };
         },
-        else => return,
+        .array => |a| {
+            const element_type = try allocator.create(types.MonoType);
+            element_type.* = try monotype(allocator, sub, a.element_type.*);
+            return .{ .array = .{
+                .size = a.size,
+                .element_type = element_type,
+                .span = a.span,
+            } };
+        },
+        .typevar => |t| {
+            if (sub.map.get(t.value)) |mono| {
+                return mono;
+            }
+            return m;
+        },
+        else => return m,
     }
 }
 
-fn branch(s: types.Substitution, b: *types.Branch) void {
-    for (b.arms) |*arm| {
-        expression(s, &arm.condition);
-        block(s, &arm.then);
+fn symbol(allocator: Allocator, sub: types.Substitution, s: types.Symbol) !types.Symbol {
+    return .{
+        .value = s.value,
+        .span = s.span,
+        .type = try monotype(allocator, sub, s.type),
+        .global = s.global,
+    };
+}
+
+fn int(allocator: Allocator, sub: types.Substitution, i: types.Int) !types.Int {
+    return .{
+        .value = i.value,
+        .span = i.span,
+        .type = try monotype(allocator, sub, i.type),
+    };
+}
+
+fn float(allocator: Allocator, sub: types.Substitution, f: types.Float) !types.Float {
+    return .{
+        .value = f.value,
+        .span = f.span,
+        .type = try monotype(allocator, sub, f.type),
+    };
+}
+
+fn branch(allocator: Allocator, sub: types.Substitution, b: types.Branch) !types.Branch {
+    const arms = try allocator.alloc(types.Arm, b.arms.len);
+    for (b.arms, arms) |unapplied, *applied| {
+        applied.* = .{
+            .condition = try expression(allocator, sub, unapplied.condition),
+            .then = try block(allocator, sub, unapplied.then),
+        };
     }
-    block(s, &b.else_);
-    monotype(s, &b.type);
+    return .{
+        .arms = arms,
+        .else_ = try block(allocator, sub, b.else_),
+        .span = b.span,
+        .type = try monotype(allocator, sub, b.type),
+    };
 }
 
-fn binaryOp(s: types.Substitution, b: *types.BinaryOp) void {
-    expression(s, b.left);
-    expression(s, b.right);
-    monotype(s, &b.type);
+fn binaryOp(allocator: Allocator, sub: types.Substitution, b: types.BinaryOp) !types.BinaryOp {
+    return .{
+        .kind = b.kind,
+        .left = try expressionAlloc(allocator, sub, b.left.*),
+        .right = try expressionAlloc(allocator, sub, b.right.*),
+        .span = b.span,
+        .type = try monotype(allocator, sub, b.type),
+    };
 }
 
-fn define(s: types.Substitution, d: *types.Define) void {
-    monotype(s, &d.name.type);
-    expression(s, d.value);
-    monotype(s, &d.type);
+fn define(allocator: Allocator, sub: types.Substitution, d: types.Define) !types.Define {
+    return .{
+        .name = try symbol(allocator, sub, d.name),
+        .value = try expressionAlloc(allocator, sub, d.value.*),
+        .span = d.span,
+        .mutable = d.mutable,
+        .type = try monotype(allocator, sub, d.type),
+    };
 }
 
-fn drop(s: types.Substitution, d: *types.Drop) void {
-    expression(s, d.value);
-    monotype(s, &d.type);
+fn drop(allocator: Allocator, sub: types.Substitution, d: types.Drop) !types.Drop {
+    return .{
+        .value = try expressionAlloc(allocator, sub, d.value.*),
+        .span = d.span,
+        .type = try monotype(allocator, sub, d.type),
+    };
 }
 
-fn plusEqual(s: types.Substitution, p: *types.PlusEqual) void {
-    monotype(s, &p.name.type);
-    expression(s, p.value);
-    monotype(s, &p.type);
+fn plusEqual(allocator: Allocator, sub: types.Substitution, p: types.PlusEqual) !types.PlusEqual {
+    return .{
+        .name = try symbol(allocator, sub, p.name),
+        .value = try expressionAlloc(allocator, sub, p.value.*),
+        .span = p.span,
+        .type = try monotype(allocator, sub, p.type),
+    };
 }
 
-fn timesEqual(s: types.Substitution, t: *types.TimesEqual) void {
-    monotype(s, &t.name.type);
-    expression(s, t.value);
-    monotype(s, &t.type);
+fn timesEqual(allocator: Allocator, sub: types.Substitution, t: types.TimesEqual) !types.TimesEqual {
+    return .{
+        .name = try symbol(allocator, sub, t.name),
+        .value = try expressionAlloc(allocator, sub, t.value.*),
+        .span = t.span,
+        .type = try monotype(allocator, sub, t.type),
+    };
 }
 
-fn call(s: types.Substitution, c: *types.Call) void {
-    expression(s, c.function);
-    for (c.arguments) |*a| expression(s, &a.value);
-    monotype(s, &c.type);
+fn call(allocator: Allocator, sub: types.Substitution, c: types.Call) !types.Call {
+    const arguments = try allocator.alloc(types.Argument, c.arguments.len);
+    for (c.arguments, arguments) |unapplied, *applied|
+        applied.* = .{
+            .value = try expression(allocator, sub, unapplied.value),
+            .mutable = unapplied.mutable,
+        };
+    return .{
+        .function = try expressionAlloc(allocator, sub, c.function.*),
+        .arguments = arguments,
+        .span = c.span,
+        .type = try monotype(allocator, sub, c.type),
+    };
 }
 
-fn intrinsic(s: types.Substitution, i: *types.Intrinsic) void {
-    for (i.arguments) |*a| expression(s, a);
-    monotype(s, &i.type);
+fn intrinsic(allocator: Allocator, sub: types.Substitution, i: types.Intrinsic) !types.Intrinsic {
+    const arguments = try allocator.alloc(types.Argument, i.arguments.len);
+    for (i.arguments, arguments) |unapplied, *applied|
+        applied.* = .{
+            .value = try expression(allocator, sub, unapplied.value),
+            .mutable = unapplied.mutable,
+        };
+    return .{
+        .function = i.function,
+        .arguments = arguments,
+        .span = i.span,
+        .type = try monotype(allocator, sub, i.type),
+    };
 }
 
-fn block(s: types.Substitution, b: *types.Block) void {
-    for (b.expressions) |*e| expression(s, e);
-    monotype(s, &b.type);
+fn block(allocator: Allocator, sub: types.Substitution, b: types.Block) !types.Block {
+    const expressions = try allocator.alloc(types.Expression, b.expressions.len);
+    for (b.expressions, expressions) |unapplied, *applied|
+        applied.* = try expression(allocator, sub, unapplied);
+    return .{
+        .expressions = expressions,
+        .span = b.span,
+        .type = try monotype(allocator, sub, b.type),
+    };
 }
 
-fn group(s: types.Substitution, g: *types.Group) void {
-    for (g.expressions) |*e| expression(s, e);
-    monotype(s, &g.type);
+fn group(allocator: Allocator, sub: types.Substitution, g: types.Group) !types.Group {
+    const expressions = try allocator.alloc(types.Expression, g.expressions.len);
+    for (g.expressions, expressions) |unapplied, *applied|
+        applied.* = try expression(allocator, sub, unapplied);
+    return .{
+        .expressions = expressions,
+        .span = g.span,
+        .type = try monotype(allocator, sub, g.type),
+    };
 }
 
-fn function(s: types.Substitution, f: *types.Function) void {
-    for (f.parameters) |*p| monotype(s, &p.name.type);
-    monotype(s, &f.return_type);
-    block(s, &f.body);
-    monotype(s, &f.type);
+fn function(allocator: Allocator, sub: types.Substitution, f: types.Function) !types.Function {
+    const parameters = try allocator.alloc(types.Parameter, f.parameters.len);
+    for (f.parameters, parameters) |unapplied, *applied|
+        applied.* = .{
+            .name = try symbol(allocator, sub, unapplied.name),
+            .mutable = unapplied.mutable,
+        };
+    return .{
+        .parameters = parameters,
+        .return_type = try monotype(allocator, sub, f.return_type),
+        .body = try block(allocator, sub, f.body),
+        .span = f.span,
+        .type = try monotype(allocator, sub, f.type),
+    };
 }
 
-fn foreignExport(s: types.Substitution, f: *types.ForeignExport) void {
-    expression(s, f.value);
-    monotype(s, &f.type);
+fn foreignExport(allocator: Allocator, sub: types.Substitution, f: types.ForeignExport) !types.ForeignExport {
+    return .{
+        .name = f.name,
+        .value = try expressionAlloc(allocator, sub, f.value.*),
+        .span = f.span,
+        .type = try monotype(allocator, sub, f.type),
+    };
 }
 
-pub fn expression(s: types.Substitution, e: *types.Expression) void {
-    switch (e.*) {
-        .symbol => |*sym| monotype(s, &sym.type),
-        .int => |*i| monotype(s, &i.type),
-        .float => |*f| monotype(s, &f.type),
-        .bool => {},
-        .string => {},
-        .branch => |*b| branch(s, b),
-        .binary_op => |*b| binaryOp(s, b),
-        .define => |*d| define(s, d),
-        .drop => |*d| drop(s, d),
-        .plus_equal => |*p| plusEqual(s, p),
-        .times_equal => |*t| timesEqual(s, t),
-        .call => |*c| call(s, c),
-        .intrinsic => |*i| intrinsic(s, i),
-        .function => |*f| function(s, f),
-        .block => |*b| block(s, b),
-        .group => |*g| group(s, g),
-        .foreign_import => {},
-        .foreign_export => |*f| foreignExport(s, f),
-        .convert => {},
-        .undefined => |*u| monotype(s, &u.type),
+fn undef(allocator: Allocator, sub: types.Substitution, u: types.Undefined) !types.Undefined {
+    return .{
+        .span = u.span,
+        .type = try monotype(allocator, sub, u.type),
+    };
+}
+
+pub fn expression(allocator: Allocator, sub: types.Substitution, e: types.Expression) error{OutOfMemory}!types.Expression {
+    return switch (e) {
+        .symbol => |s| .{ .symbol = try symbol(allocator, sub, s) },
+        .int => |i| .{ .int = try int(allocator, sub, i) },
+        .float => |f| .{ .float = try float(allocator, sub, f) },
+        .bool => e,
+        .string => e,
+        .branch => |b| .{ .branch = try branch(allocator, sub, b) },
+        .binary_op => |b| .{ .binary_op = try binaryOp(allocator, sub, b) },
+        .define => |d| .{ .define = try define(allocator, sub, d) },
+        .drop => |d| .{ .drop = try drop(allocator, sub, d) },
+        .plus_equal => |p| .{ .plus_equal = try plusEqual(allocator, sub, p) },
+        .times_equal => |t| .{ .times_equal = try timesEqual(allocator, sub, t) },
+        .call => |c| .{ .call = try call(allocator, sub, c) },
+        .intrinsic => |i| .{ .intrinsic = try intrinsic(allocator, sub, i) },
+        .function => |f| .{ .function = try function(allocator, sub, f) },
+        .block => |b| .{ .block = try block(allocator, sub, b) },
+        .group => |g| .{ .group = try group(allocator, sub, g) },
+        .foreign_import => e,
+        .foreign_export => |f| .{ .foreign_export = try foreignExport(allocator, sub, f) },
+        .convert => e,
+        .undefined => |u| .{ .undefined = try undef(allocator, sub, u) },
+    };
+}
+
+pub fn expressionAlloc(allocator: Allocator, sub: types.Substitution, e: types.Expression) !*const types.Expression {
+    const expr = try allocator.create(types.Expression);
+    expr.* = try expression(allocator, sub, e);
+    return expr;
+}
+
+pub fn module(allocator: Allocator, sub: types.Substitution, m: types.Module) !types.Module {
+    var typed = types.Typed.init(allocator);
+    var iterator = m.typed.iterator();
+    while (iterator.next()) |entry| {
+        const applied = try expression(allocator, sub, entry.value_ptr.*);
+        try typed.putNoClobber(entry.key_ptr.*, applied);
     }
-}
-
-pub fn module(s: types.Substitution, m: *types.Module) void {
-    var iterator = m.typed.valueIterator();
-    while (iterator.next()) |value_ptr| expression(s, value_ptr);
+    return types.Module{
+        .allocator = allocator,
+        .constraints = m.constraints,
+        .builtins = m.builtins,
+        .order = m.order,
+        .untyped = m.untyped,
+        .typed = typed,
+        .scope = m.scope,
+        .foreign_exports = m.foreign_exports,
+    };
 }

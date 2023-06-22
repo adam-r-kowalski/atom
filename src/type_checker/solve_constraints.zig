@@ -5,15 +5,19 @@ const Errors = @import("../error_reporter.zig").types.Errors;
 
 fn exactEqual(a: types.MonoType, b: types.MonoType) bool {
     switch (a) {
-        .void, .u8, .i32, .i64, .f32, .f64, .bool, .typevar => return std.meta.eql(a, b),
+        .void, .u8, .i32, .i64, .f32, .f64, .bool => {
+            return std.meta.activeTag(a) == std.meta.activeTag(b);
+        },
+        .typevar => {
+            return std.meta.activeTag(a) == std.meta.activeTag(b) and a.typevar.value == b.typevar.value;
+        },
         .function => |f1| switch (b) {
             .function => |f2| {
-                if (f1.len != f2.len) return false;
-                for (f1, 0..) |t1, i| {
-                    const t2 = f2[i];
+                if (f1.parameters.len != f2.parameters.len) return false;
+                for (f1.parameters, f2.parameters) |t1, t2| {
                     if (!exactEqual(t1, t2)) return false;
                 }
-                return true;
+                return exactEqual(f1.return_type.*, f2.return_type.*);
             },
             else => return false,
         },
@@ -25,7 +29,7 @@ fn exactEqual(a: types.MonoType, b: types.MonoType) bool {
 }
 
 pub fn set(s: *types.Substitution, t: types.TypeVar, m: types.MonoType) !void {
-    const result = try s.map.getOrPut(t);
+    const result = try s.getOrPut(t);
     if (result.found_existing) {
         if (exactEqual(result.value_ptr.*, m)) return;
         switch (m) {
@@ -40,13 +44,13 @@ pub fn set(s: *types.Substitution, t: types.TypeVar, m: types.MonoType) !void {
 }
 
 pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, errors: *Errors) !void {
-    const left_tag = std.meta.activeTag(equal.left.type);
-    const right_tag = std.meta.activeTag(equal.right.type);
+    const left_tag = std.meta.activeTag(equal.left);
+    const right_tag = std.meta.activeTag(equal.right);
     if (left_tag == .typevar) {
-        return set(s, equal.left.type.typevar, equal.right.type) catch |e| switch (e) {
+        return set(s, equal.left.typevar, equal.right) catch |e| switch (e) {
             error.CompileError => {
-                const left = if (s.map.get(equal.left.type.typevar)) |t|
-                    types.TypedSpan{ .type = t, .span = equal.left.span }
+                const left = if (s.get(equal.left.typevar)) |t|
+                    t
                 else
                     equal.left;
                 try errors.type_mismatches.append(.{ .left = left, .right = equal.right });
@@ -56,10 +60,10 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
         };
     }
     if (right_tag == .typevar) {
-        return set(s, equal.right.type.typevar, equal.left.type) catch |e| switch (e) {
+        return set(s, equal.right.typevar, equal.left) catch |e| switch (e) {
             error.CompileError => {
-                const right = if (s.map.get(equal.right.type.typevar)) |t|
-                    types.TypedSpan{ .type = t, .span = equal.right.span }
+                const right = if (s.get(equal.right.typevar)) |t|
+                    t
                 else
                     equal.right;
                 try errors.type_mismatches.append(.{ .left = equal.left, .right = right });
@@ -69,19 +73,21 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
         };
     }
     if (left_tag == .function and right_tag == .function) {
-        if (equal.left.type.function.len != equal.right.type.function.len)
+        if (equal.left.function.parameters.len != equal.right.function.parameters.len)
             std.debug.panic("\nFunction arity mismatch: {} != {}\n", .{
-                equal.left.type.function.len,
-                equal.right.type.function.len,
+                equal.left.function.parameters.len,
+                equal.right.function.parameters.len,
             });
-        for (equal.left.type.function, 0..) |left, i| {
-            const right = equal.right.type.function[i];
-            const constraint = types.EqualConstraint{
-                .left = .{ .type = left, .span = null },
-                .right = .{ .type = right, .span = null },
-            };
+        for (equal.left.function.parameters, 0..) |left, i| {
+            const right = equal.right.function.parameters[i];
+            const constraint = types.EqualConstraint{ .left = left, .right = right };
             try equalConstraint(constraint, s, errors);
         }
+        const constraint = types.EqualConstraint{
+            .left = equal.left.function.return_type.*,
+            .right = equal.right.function.return_type.*,
+        };
+        try equalConstraint(constraint, s, errors);
         return;
     }
     if (left_tag == right_tag) {
@@ -97,7 +103,7 @@ pub fn simplify(s: *types.Substitution) u64 {
     while (iterator.next()) |entry| {
         switch (entry.value_ptr.*) {
             .typevar => |t| {
-                if (s.map.get(t)) |v| {
+                if (s.get(t)) |v| {
                     entry.value_ptr.* = v;
                     count += 1;
                 }
@@ -110,7 +116,7 @@ pub fn simplify(s: *types.Substitution) u64 {
 
 pub fn constraints(allocator: std.mem.Allocator, cs: types.Constraints, errors: *Errors) !types.Substitution {
     var s = types.Substitution{
-        .map = Map(types.TypeVar, types.MonoType).init(allocator),
+        .map = Map(u64, types.MonoType).init(allocator),
     };
     for (cs.equal.items) |e| try equalConstraint(e, &s, errors);
     var max_attemps: u64 = 3;

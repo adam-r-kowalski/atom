@@ -7,13 +7,18 @@ const Interned = interner.Interned;
 const type_checker = @import("../type_checker.zig");
 const Builtins = @import("../builtins.zig").Builtins;
 
+pub const FunctionType = struct {
+    parameters: []const Type,
+    return_type: *const Type,
+};
+
 pub const Type = union(enum) {
     i32,
     i64,
     f32,
     f64,
     void,
-    function: []const Type,
+    function: FunctionType,
 };
 
 pub const Parameter = struct {

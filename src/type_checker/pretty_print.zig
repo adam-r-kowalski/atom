@@ -20,17 +20,17 @@ pub fn monotype(m: types.MonoType, writer: Writer) !void {
         .f64 => try writer.writeAll("f64"),
         .bool => try writer.writeAll("bool"),
         .void => try writer.writeAll("void"),
-        .typevar => |t| try writer.print("${}", .{t}),
+        .typevar => |t| try writer.print("${}", .{t.value}),
         .function => |f| {
             try writer.writeAll("fn(");
-            for (f, 0..) |a, i| {
-                if (i == f.len - 1) {
-                    try writer.writeAll(") ");
-                } else if (i > 0) {
+            for (f.parameters, 0..) |a, i| {
+                if (i > 0) {
                     try writer.writeAll(", ");
                 }
                 try monotype(a, writer);
             }
+            try writer.writeAll(") ");
+            try monotype(f.return_type.*, writer);
         },
         .array => |a| {
             if (a.size) |size| {
@@ -156,7 +156,12 @@ pub fn intrinsic(i: types.Intrinsic, indent: Indent, writer: Writer) !void {
     try writer.writeAll("arguments =");
     for (i.arguments) |a| {
         try newlineAndIndent(indent + 2, writer);
-        try expression(a, indent + 3, writer);
+        try writer.writeAll("argument =");
+        try newlineAndIndent(indent + 3, writer);
+        try writer.print("mutable = {}", .{a.mutable});
+        try newlineAndIndent(indent + 3, writer);
+        try writer.writeAll("value = ");
+        try expression(a.value, indent + 4, writer);
     }
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("type = ");
@@ -336,5 +341,27 @@ pub fn module(m: types.Module, writer: Writer) !void {
             if (i > 0) try writer.writeAll("\n\n");
             try expression(e, 0, writer);
         }
+    }
+}
+
+pub fn constraints(c: types.Constraints, writer: Writer) !void {
+    for (c.equal.items) |e| {
+        try writer.writeAll("\nconstraint =");
+        try newlineAndIndent(1, writer);
+        try writer.writeAll("left = ");
+        try monotype(e.left, writer);
+        try newlineAndIndent(1, writer);
+        try writer.writeAll("right = ");
+        try monotype(e.right, writer);
+    }
+}
+
+pub fn substitution(s: types.Substitution, writer: Writer) !void {
+    var iterator = s.map.iterator();
+    while (iterator.next()) |entry| {
+        try writer.writeAll("\nsubstitution =");
+        try newlineAndIndent(1, writer);
+        try writer.print("${} =>", .{entry.key_ptr.*});
+        try monotype(entry.value_ptr.*, writer);
     }
 }

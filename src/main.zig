@@ -137,7 +137,7 @@ fn compileAndRun(allocator: Allocator, intern: *mantis.interner.Intern, errors: 
     const untyped_ast = try mantis.parser.parse(allocator, builtins, tokens);
     var constraints = mantis.type_checker.types.Constraints{
         .equal = List(mantis.type_checker.types.EqualConstraint).init(allocator),
-        .next_type_var = .{ .value = 0 },
+        .next_type_var = 0,
     };
     var ast = try mantis.type_checker.infer.module(allocator, &constraints, builtins, untyped_ast);
     const export_count = ast.foreign_exports.len;
@@ -145,7 +145,7 @@ fn compileAndRun(allocator: Allocator, intern: *mantis.interner.Intern, errors: 
     if (export_count == 0) ast.foreign_exports = &.{start};
     for (ast.foreign_exports) |foreign_export| try mantis.type_checker.infer.topLevel(&ast, foreign_export, errors);
     const substitution = try mantis.type_checker.solve_constraints.constraints(allocator, constraints, errors);
-    mantis.type_checker.apply_substitution.module(substitution, &ast);
+    ast = try mantis.type_checker.apply_substitution.module(allocator, substitution, ast);
     var ir = try mantis.code_generator.lower.module(allocator, builtins, ast, intern);
     if (export_count == 0) {
         const alias = try intern.store("_start");

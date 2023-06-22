@@ -12,8 +12,8 @@ pub const UndefinedVariable = struct {
 };
 
 pub const TypeMismatch = struct {
-    left: type_checker.types.TypedSpan,
-    right: type_checker.types.TypedSpan,
+    left: type_checker.monotype.MonoType,
+    right: type_checker.monotype.MonoType,
 };
 
 pub const Errors = struct {

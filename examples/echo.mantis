@@ -19,4 +19,6 @@ print = fn(text: []u8) void {
 start = fn() void {
 	text = input()
 	print(text)
+	print(text)
+	print(text)
 }
