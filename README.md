@@ -92,7 +92,7 @@ However, code in the examples folder should compile and run.
 Mantis has a straightforward syntax that is easy to read and write.
 Here is a simple Mantis program that defines a function to calculate the square of a number:
 
-```zig
+```mantis
 square = fn(x: i32) i32 { x^2 }
 
 test "function calls" {
@@ -114,7 +114,7 @@ You can add a comment by starting the line with a hash (`#`).
 
 Here's an example:
 
-```zig
+```mantis
 # This is a single line comment
 
 square = fn(x: i32) i32 {
@@ -131,7 +131,7 @@ sum = fn(xs: []i32) i32 { xs.fold(0, +) } # Here we calculate the sum of an arra
 
 In Mantis, you define a function using the `fn` keyword, followed by a list of parameters and their types, the return type, and then the function body.
 
-```zig
+```mantis
 max = fn(x: i32, y: i32) i32 {
     if x > y { x } else { y }
 }
@@ -152,7 +152,7 @@ This is a function `max` that takes two parameters, `x` and `y`, and returns the
 
 Mantis supports conditional logic with `if`, `else if` and `else` expressions.
 
-```zig
+```mantis
 clamp = fn(value: i32, low: i32, high: i32) i32 {
     if value < low { low }
     else if value > high { high }
@@ -172,7 +172,7 @@ This `clamp` function ensures that a value stays within a specific range.
 
 Mantis supports named parameters, which can improve the readability of your code. Here is an example of using named parameters:
 
-```zig
+```mantis
 test "named parameters" {
     assert(clamp(value=1, low=3, high=5) == 3)
     assert(clamp(value=7, low=3, high=5) == 5)
@@ -189,7 +189,7 @@ functions that have many parameters or when the purpose of a parameter isn't imm
 In addition to the standard function call syntax, Mantis also supports a method call syntax,
 allowing you to call functions in an object-oriented style. Here's an example:
 
-```zig
+```mantis
 test "method notation named parameters" {
     assert(1.clamp(low=3, high=5) == 3)
     assert(7.clamp(low=3, high=5) == 5)
@@ -205,7 +205,7 @@ This can make your code more readable by clearly associating a function with the
 Mantis supports pattern matching, which is a way of checking a given sequence of tokens for the presence of the constituents of some pattern.
 It's a powerful tool for working with complex data structures.
 
-```zig
+```mantis
 # pattern matching is done with `match expression`
 sum = fn(xs: []i32) i32 {
     match xs {
@@ -232,7 +232,7 @@ and any struct implementing an interface must fulfil this contract by defining t
 For example, let's consider an interface `Shape` with a function `area`, and two struct types,
 `Circle` and `Square`, implementing this interface:
 
-```zig
+```mantis
 # interfaces allow you to code against different types in a uniform way
 Shape = interface {
     area: fn(shape: Self) f32
@@ -279,7 +279,7 @@ such as a struct or array. It provides a convenient way to extract multiple valu
 
 For example, consider the `Square` struct and the implementation of `Shape` interface for it:
 
-```zig
+```mantis
 Square = struct {
     width: f32,
     height: f32
@@ -297,7 +297,7 @@ it binds the variables `width` and `height` to the respective values in the pass
 
 Another example of destructuring can be found in array pattern matching:
 
-```zig
+```mantis
 # pattern matching with destructuring
 sum = fn(xs: []i32) i32 {
     match xs {
@@ -320,7 +320,7 @@ This is not an error in Mantis; it's a feature of the language.
 
 Here's an example:
 
-```zig
+```mantis
 x = 5
 
 if true {
@@ -340,7 +340,7 @@ Shadowing can be useful when you want to reuse variable names, but be careful, a
 
 Mantis supports importing and exporting functions from the host environment.
 
-```zig
+```mantis
 # Import a function from the host
 log = foreign_import("console", "log", fn(x: []u8) void)
 
@@ -364,7 +364,7 @@ And it has integrated capability-based security, so it extends WebAssembly's cha
 
 It is a first class citizen in Mantis and by targeting this API you can ensure that your programs work across as many platforms as possible.
 
-```zig
+```mantis
 fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, iovs: []u8, iovs_len: i32, mut nwritten: i32) i32)
 
 stdout: i32 = 1
@@ -384,7 +384,7 @@ start = fn() void {
 
 Mantis includes built-in support for arrays and powerful operations over them.
 
-```zig
+```mantis
 # Create an array
 xs = [1, 2, 3, 4, 5]
 
@@ -398,7 +398,7 @@ Here, `xs` is an array of integers, and `sum` is a function that computes the su
 
 Mantis provides powerful constructs for high-performance computing, like parallel fold and Einstein summation notation.
 
-```zig
+```mantis
 # Compute the dot product of two vectors
 dot = fn[T: Num, n: u64](a: [n]T, b: [n]T) T {
     sum(for i { a[i] * b[i] })
@@ -415,7 +415,7 @@ matmul = fn[T: Num, m: u64, n: u64, p: u64](a: [m][n]T, b: [n][p]T) [m][p]T {
 Mantis is designed with machine learning in mind. For expressions allow you to express how models work across a
 single example rather than dealing with batches. Here is a simple linear model implemented in Mantis:
 
-```zig
+```mantis
 Linear = struct {
     m: f64,
     b: f64
