@@ -2,6 +2,7 @@ const types = @import("types.zig");
 
 pub fn token(t: types.Token) types.Span {
     return switch (t) {
+        .comment => |c| c.span,
         .symbol => |s| s.span,
         .int => |i| i.span,
         .float => |f| f.span,

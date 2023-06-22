@@ -3,6 +3,7 @@ const Interned = @import("../interner.zig").Interned;
 pub const Pos = struct { line: u64, column: u64 };
 pub const Span = struct { begin: Pos, end: Pos };
 
+pub const Comment = struct { value: Interned, span: Span };
 pub const Symbol = struct { value: Interned, span: Span };
 pub const Int = struct { value: Interned, span: Span };
 pub const Float = struct { value: Interned, span: Span };
@@ -38,6 +39,7 @@ pub const Undefined = struct { span: Span };
 pub const NewLine = struct { span: Span };
 
 pub const Token = union(enum) {
+    comment: Comment,
     symbol: Symbol,
     int: Int,
     float: Float,
