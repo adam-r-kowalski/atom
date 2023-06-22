@@ -385,7 +385,7 @@ test "codegen echo" {
         \\    _ = stdout.fd_write(text, 1, mut nwritten)
         \\}
     ;
-    const actual = try mantis.testing.codegen(allocator, source);
+    const actual = try mantis.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\(module

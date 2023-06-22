@@ -19,14 +19,13 @@ pub fn typeOf(t: types.Type, writer: Writer) !void {
         .f64 => try writer.writeAll("f64"),
         .void => try writer.writeAll("void"),
         .function => |f| {
-            const last = f.len - 1;
-            for (f[0..last], 0..) |arg, i| {
+            for (f.parameters, 0..) |arg, i| {
                 if (i > 0) try writer.writeAll(" ");
                 try writer.writeAll("(param ");
                 try typeOf(arg, writer);
                 try writer.writeAll(")");
             }
-            switch (f[last]) {
+            switch (f.return_type.*) {
                 .void => {},
                 else => |k| {
                     try writer.writeAll(" (result ");

@@ -513,12 +513,14 @@ fn foreignImport(allocator: Allocator, name: Interned, i: type_checker.types.For
     switch (i.type) {
         .function => |f| {
             const path = [2]Interned{ i.module, i.name };
-            const function_type = try allocator.alloc(types.Type, f.len);
-            for (f, function_type) |t, *ir_t| ir_t.* = mapType(t);
+            const parameters = try allocator.alloc(types.Type, f.parameters.len);
+            for (f.parameters, parameters) |t, *ir_t| ir_t.* = mapType(t);
+            const return_type = try allocator.create(types.Type);
+            return_type.* = mapType(f.return_type.*);
             return types.ForeignImport{
                 .name = name,
                 .path = path,
-                .type = .{ .function = function_type },
+                .type = .{ .function = .{ .parameters = parameters, .return_type = return_type } },
             };
         },
         else => |k| std.debug.panic("\nForeign import type {} not yet supported", .{k}),

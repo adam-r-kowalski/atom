@@ -56,17 +56,17 @@ fn typeMismatch(t: types.TypeMismatch, lines: [][]const u8, writer: Writer) !voi
         \\
         \\Here the inferred type is 
     , .{ RED, CLEAR });
-    try type_checker.pretty_print.monotype(t.left.type, writer);
+    try type_checker.pretty_print.monotype(t.left, writer);
     try writer.writeAll("\n\n");
-    if (t.left.span) |span| try source(lines, span, writer);
+    if (type_checker.monotype.span(t.left)) |span| try source(lines, span, writer);
     try writer.writeAll(
         \\
         \\
         \\Here the inferred type is 
     );
-    try type_checker.pretty_print.monotype(t.right.type, writer);
+    try type_checker.pretty_print.monotype(t.right, writer);
     try writer.writeAll("\n\n");
-    if (t.right.span) |span| try source(lines, span, writer);
+    if (type_checker.monotype.span(t.right)) |span| try source(lines, span, writer);
     try writer.writeAll(
         \\
         \\

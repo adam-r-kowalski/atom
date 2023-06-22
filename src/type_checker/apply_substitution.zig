@@ -2,7 +2,13 @@ const types = @import("types.zig");
 
 fn monotype(s: types.Substitution, m: *types.MonoType) void {
     switch (m.*) {
-        .function => |f| for (f) |*t| monotype(s, t),
+        .function => |f| {
+            for (f.parameters) |*t| monotype(s, t);
+            monotype(s, f.return_type);
+        },
+        .array => |a| {
+            monotype(s, a.element_type);
+        },
         .typevar => |t| {
             if (s.map.get(t)) |mono| m.* = mono;
         },

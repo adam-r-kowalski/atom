@@ -8,44 +8,22 @@ const interner = @import("../interner.zig");
 const Interned = interner.Interned;
 const parser = @import("../parser.zig");
 pub const Span = parser.types.Span;
-
-pub const TypeVar = struct { value: u64 };
-
-const ArrayMonoType = struct {
-    size: ?u32,
-    element_type: *const MonoType,
-};
-
-pub const MonoType = union(enum) {
-    void,
-    u8,
-    i32,
-    i64,
-    f32,
-    f64,
-    bool,
-    typevar: TypeVar,
-    function: []MonoType,
-    array: ArrayMonoType,
-};
+const monotype = @import("monotype.zig");
+pub const TypeVar = monotype.TypeVar;
+pub const MonoType = monotype.MonoType;
 
 pub const Substitution = struct {
     map: Map(TypeVar, MonoType),
 };
 
-pub const TypedSpan = struct {
-    span: ?Span,
-    type: MonoType,
-};
-
 pub const EqualConstraint = struct {
-    left: TypedSpan,
-    right: TypedSpan,
+    left: MonoType,
+    right: MonoType,
 };
 
 pub const Constraints = struct {
     equal: List(EqualConstraint),
-    next_type_var: TypeVar,
+    next_type_var: u64,
 };
 
 pub const Binding = struct {

@@ -55,7 +55,7 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     const untyped_ast = try parser.parse(arena.allocator(), builtins, tokens);
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.EqualConstraint).init(arena.allocator()),
-        .next_type_var = .{ .value = 0 },
+        .next_type_var = 0,
     };
     var ast = try type_checker.infer.module(arena.allocator(), &constraints, builtins, untyped_ast);
     try type_checker.infer.topLevel(&ast, try intern.store(name), &errors);
@@ -81,7 +81,7 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     const untyped_ast = try parser.parse(arena.allocator(), builtins, tokens);
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.EqualConstraint).init(arena.allocator()),
-        .next_type_var = .{ .value = 0 },
+        .next_type_var = 0,
     };
     var ast = try type_checker.infer.module(arena.allocator(), &constraints, builtins, untyped_ast);
     const export_count = ast.foreign_exports.len;
@@ -106,7 +106,7 @@ fn endToEnd(allocator: Allocator, intern: *Intern, errors: *error_reporter.types
     const untyped_ast = try parser.parse(allocator, builtins, tokens);
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.EqualConstraint).init(allocator),
-        .next_type_var = .{ .value = 0 },
+        .next_type_var = 0,
     };
     var ast = try type_checker.infer.module(allocator, &constraints, builtins, untyped_ast);
     const export_count = ast.foreign_exports.len;
