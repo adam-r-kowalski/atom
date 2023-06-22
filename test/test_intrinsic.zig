@@ -24,7 +24,9 @@ test "type infer sqrt f32" {
         \\                intrinsic =
         \\                    function = sqrt
         \\                    arguments =
-        \\                        symbol{ value = x, type = f32 }
+        \\                        argument =
+        \\                            mutable = false
+        \\                            value = symbol{ value = x, type = f32 }
         \\                    type = f32
     ;
     try std.testing.expectEqualStrings(expected, actual);

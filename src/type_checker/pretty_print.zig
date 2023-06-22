@@ -156,7 +156,12 @@ pub fn intrinsic(i: types.Intrinsic, indent: Indent, writer: Writer) !void {
     try writer.writeAll("arguments =");
     for (i.arguments) |a| {
         try newlineAndIndent(indent + 2, writer);
-        try expression(a, indent + 3, writer);
+        try writer.writeAll("argument =");
+        try newlineAndIndent(indent + 3, writer);
+        try writer.print("mutable = {}", .{a.mutable});
+        try newlineAndIndent(indent + 3, writer);
+        try writer.writeAll("value = ");
+        try expression(a.value, indent + 4, writer);
     }
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("type = ");

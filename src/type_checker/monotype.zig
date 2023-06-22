@@ -11,14 +11,14 @@ pub const Bool = struct { span: ?Span };
 pub const TypeVar = struct { value: u64, span: ?Span };
 
 const Function = struct {
-    parameters: []MonoType,
-    return_type: *MonoType,
+    parameters: []const MonoType,
+    return_type: *const MonoType,
     span: ?Span,
 };
 
 const Array = struct {
     size: ?u32,
-    element_type: *MonoType,
+    element_type: *const MonoType,
     span: ?Span,
 };
 

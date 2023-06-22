@@ -379,13 +379,13 @@ test "codegen echo" {
         \\
         \\start = fn() void {
         \\    mut text = empty(u8, 100)
-        \\    mut nread = undefined
-        \\    mut nwritten = undefined
+        \\    mut nread: i32 = undefined
+        \\    mut nwritten: i32 = undefined
         \\    _ = stdin.fd_read(mut text, 1, mut nread)
         \\    _ = stdout.fd_write(text, 1, mut nwritten)
         \\}
     ;
-    const actual = try mantis.testing.typeInfer(allocator, source, "start");
+    const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module

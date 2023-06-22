@@ -60,7 +60,7 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     var ast = try type_checker.infer.module(arena.allocator(), &constraints, builtins, untyped_ast);
     try type_checker.infer.topLevel(&ast, try intern.store(name), &errors);
     const substitution = try type_checker.solve_constraints.constraints(arena.allocator(), constraints, &errors);
-    type_checker.apply_substitution.module(substitution, &ast);
+    ast = try type_checker.apply_substitution.module(arena.allocator(), substitution, ast);
     var result = List(u8).init(allocator);
     try type_checker.pretty_print.module(ast, result.writer());
     return try result.toOwnedSlice();
@@ -89,7 +89,7 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     if (export_count == 0) ast.foreign_exports = &.{start};
     for (ast.foreign_exports) |foreign_export| try type_checker.infer.topLevel(&ast, foreign_export, &errors);
     const substitution = try type_checker.solve_constraints.constraints(arena.allocator(), constraints, &errors);
-    type_checker.apply_substitution.module(substitution, &ast);
+    ast = try type_checker.apply_substitution.module(arena.allocator(), substitution, ast);
     var ir = try code_generator.lower.module(arena.allocator(), builtins, ast, &intern);
     if (export_count == 0) {
         const alias = try intern.store("_start");
@@ -114,7 +114,7 @@ fn endToEnd(allocator: Allocator, intern: *Intern, errors: *error_reporter.types
     if (export_count == 0) ast.foreign_exports = &.{start};
     for (ast.foreign_exports) |foreign_export| try type_checker.infer.topLevel(&ast, foreign_export, errors);
     const substitution = try type_checker.solve_constraints.constraints(allocator, constraints, errors);
-    type_checker.apply_substitution.module(substitution, &ast);
+    ast = try type_checker.apply_substitution.module(allocator, substitution, ast);
     var ir = try code_generator.lower.module(allocator, builtins, ast, intern);
     if (export_count == 0) {
         const alias = try intern.store("_start");

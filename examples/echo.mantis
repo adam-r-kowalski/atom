@@ -6,17 +6,19 @@ stdout: i32 = 1
 
 input = fn() []u8 {
     mut text = empty(u8, 100)
-    mut nread = undefined
+    mut nread: i32 = undefined
     _ = stdin.fd_read(mut text, 1, mut nread)
 	text
 }
 
 print = fn(text: []u8) void {
-    mut nwritten = undefined
+    mut nwritten: i32 = undefined
     _ = stdout.fd_write(text, 1, mut nwritten)
 }
 
 start = fn() void {
 	text = input()
+	print(text)
+	print(text)
 	print(text)
 }

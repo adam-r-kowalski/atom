@@ -67,28 +67,28 @@ pub const String = struct {
 
 pub const Define = struct {
     name: Symbol,
-    value: *Expression,
+    value: *const Expression,
     span: Span,
     mutable: bool,
     type: MonoType,
 };
 
 pub const Drop = struct {
-    value: *Expression,
+    value: *const Expression,
     span: Span,
     type: MonoType,
 };
 
 pub const PlusEqual = struct {
     name: Symbol,
-    value: *Expression,
+    value: *const Expression,
     span: Span,
     type: MonoType,
 };
 
 pub const TimesEqual = struct {
     name: Symbol,
-    value: *Expression,
+    value: *const Expression,
     span: Span,
     type: MonoType,
 };
@@ -114,8 +114,8 @@ pub const Function = struct {
 
 pub const BinaryOp = struct {
     kind: parser.types.BinaryOpKind,
-    left: *Expression,
-    right: *Expression,
+    left: *const Expression,
+    right: *const Expression,
     span: Span,
     type: MonoType,
 };
@@ -138,7 +138,7 @@ pub const Argument = struct {
 };
 
 pub const Call = struct {
-    function: *Expression,
+    function: *const Expression,
     arguments: []Argument,
     span: Span,
     type: MonoType,
@@ -146,7 +146,7 @@ pub const Call = struct {
 
 pub const Intrinsic = struct {
     function: Interned,
-    arguments: []Expression,
+    arguments: []Argument,
     span: Span,
     type: MonoType,
 };
@@ -166,13 +166,13 @@ pub const ForeignImport = struct {
 
 pub const ForeignExport = struct {
     name: Interned,
-    value: *Expression,
+    value: *const Expression,
     span: Span,
     type: MonoType,
 };
 
 pub const Convert = struct {
-    value: *Expression,
+    value: *const Expression,
     span: Span,
     type: MonoType,
 };

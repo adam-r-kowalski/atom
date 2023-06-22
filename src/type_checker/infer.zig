@@ -359,14 +359,19 @@ fn callConvert(context: Context, c: parser.types.Call) !types.Expression {
 
 fn callSqrt(context: Context, c: parser.types.Call) !types.Expression {
     if (c.arguments.len != 1) std.debug.panic("sqrt takes 1 arguments", .{});
-    const arguments = try context.allocator.alloc(types.Expression, 1);
-    arguments[0] = try expression(context, c.arguments[0].value);
+    const arguments = try context.allocator.alloc(types.Argument, c.arguments.len);
+    for (c.arguments, arguments) |untyped, *typed| {
+        typed.* = .{
+            .value = try expression(context, untyped.value),
+            .mutable = untyped.mutable,
+        };
+    }
     return types.Expression{
         .intrinsic = .{
             .function = context.builtins.sqrt,
             .arguments = arguments,
             .span = c.span,
-            .type = typeOf(arguments[0]),
+            .type = typeOf(arguments[0].value),
         },
     };
 }
@@ -380,18 +385,27 @@ fn sizeOfMonoType(builtins: Builtins, m: types.MonoType) Interned {
 
 fn callEmpty(context: Context, c: parser.types.Call) !types.Expression {
     if (c.arguments.len != 2) std.debug.panic("empty takes 2 arguments", .{});
-    const arguments = try context.allocator.alloc(types.Expression, 2);
-    const arg = c.arguments[0].value;
-    const monotype = try expressionToMonoType(context.allocator, context.builtins, arg);
-    const arg_span = parser.span.expression(arg);
-    arguments[0] = .{ .int = .{
-        .value = sizeOfMonoType(context.builtins, monotype),
-        .span = arg_span,
-        .type = .{ .i32 = .{ .span = arg_span } },
-    } };
-    arguments[1] = try expression(context, c.arguments[1].value);
+    const arguments = try context.allocator.alloc(types.Argument, 2);
+    const arg0 = c.arguments[0];
+    const monotype = try expressionToMonoType(context.allocator, context.builtins, arg0.value);
+    const arg_span = parser.span.expression(arg0.value);
+    arguments[0] = .{
+        .value = .{
+            .int = .{
+                .value = sizeOfMonoType(context.builtins, monotype),
+                .span = arg_span,
+                .type = .{ .i32 = .{ .span = arg_span } },
+            },
+        },
+        .mutable = arg0.mutable,
+    };
+    const arg1 = c.arguments[1];
+    arguments[1] = .{
+        .value = try expression(context, arg1.value),
+        .mutable = arg1.mutable,
+    };
     try context.constraints.equal.append(.{
-        .left = typeOf(arguments[1]),
+        .left = typeOf(arguments[1].value),
         .right = .{ .i32 = .{ .span = null } },
     });
     const element_type = try context.allocator.create(types.MonoType);

@@ -269,7 +269,7 @@ fn call(context: Context, c: type_checker.types.Call) !types.Expression {
 
 fn intrinsic(context: Context, i: type_checker.types.Intrinsic) !types.Expression {
     if (i.function.eql(context.builtins.sqrt)) {
-        const expr = try expressionAlloc(context, i.arguments[0]);
+        const expr = try expressionAlloc(context, i.arguments[0].value);
         switch (i.type) {
             .f32 => return .{ .unary_op = .{ .kind = .f32_sqrt, .expression = expr } },
             .f64 => return .{ .unary_op = .{ .kind = .f64_sqrt, .expression = expr } },
@@ -281,7 +281,7 @@ fn intrinsic(context: Context, i: type_checker.types.Intrinsic) !types.Expressio
         context.uses_memory.* = true;
         const arguments = try context.allocator.alloc(types.Expression, i.arguments.len);
         for (i.arguments, arguments) |arg, *ir_arg| {
-            ir_arg.* = try expression(context, arg);
+            ir_arg.* = try expression(context, arg.value);
         }
         return .{
             .call_intrinsic = .{
