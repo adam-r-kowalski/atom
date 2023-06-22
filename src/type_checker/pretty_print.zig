@@ -20,7 +20,7 @@ pub fn monotype(m: types.MonoType, writer: Writer) !void {
         .f64 => try writer.writeAll("f64"),
         .bool => try writer.writeAll("bool"),
         .void => try writer.writeAll("void"),
-        .typevar => |t| try writer.print("${}", .{t}),
+        .typevar => |t| try writer.print("${}", .{t.value}),
         .function => |f| {
             try writer.writeAll("fn(");
             for (f.parameters, 0..) |a, i| {
@@ -341,5 +341,27 @@ pub fn module(m: types.Module, writer: Writer) !void {
             if (i > 0) try writer.writeAll("\n\n");
             try expression(e, 0, writer);
         }
+    }
+}
+
+pub fn constraints(c: types.Constraints, writer: Writer) !void {
+    for (c.equal.items) |e| {
+        try writer.writeAll("\nconstraint =");
+        try newlineAndIndent(1, writer);
+        try writer.writeAll("left = ");
+        try monotype(e.left, writer);
+        try newlineAndIndent(1, writer);
+        try writer.writeAll("right = ");
+        try monotype(e.right, writer);
+    }
+}
+
+pub fn substitution(s: types.Substitution, writer: Writer) !void {
+    var iterator = s.map.iterator();
+    while (iterator.next()) |entry| {
+        try writer.writeAll("\nsubstitution =");
+        try newlineAndIndent(1, writer);
+        try writer.print("${} =>", .{entry.key_ptr.*});
+        try monotype(entry.value_ptr.*, writer);
     }
 }

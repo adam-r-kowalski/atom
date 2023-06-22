@@ -25,7 +25,9 @@ fn monotype(allocator: Allocator, sub: types.Substitution, m: types.MonoType) !t
             } };
         },
         .typevar => |t| {
-            if (sub.map.get(t)) |mono| return mono;
+            if (sub.map.get(t.value)) |mono| {
+                return mono;
+            }
             return m;
         },
         else => return m,

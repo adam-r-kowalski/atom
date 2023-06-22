@@ -13,7 +13,15 @@ pub const TypeVar = monotype.TypeVar;
 pub const MonoType = monotype.MonoType;
 
 pub const Substitution = struct {
-    map: Map(TypeVar, MonoType),
+    map: Map(u64, MonoType),
+
+    pub fn get(self: Substitution, typevar: TypeVar) ?MonoType {
+        return self.map.get(typevar.value);
+    }
+
+    pub fn getOrPut(self: *Substitution, typevar: TypeVar) !Map(u64, MonoType).GetOrPutResult {
+        return try self.map.getOrPut(typevar.value);
+    }
 };
 
 pub const EqualConstraint = struct {

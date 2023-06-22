@@ -29,7 +29,7 @@ fn exactEqual(a: types.MonoType, b: types.MonoType) bool {
 }
 
 pub fn set(s: *types.Substitution, t: types.TypeVar, m: types.MonoType) !void {
-    const result = try s.map.getOrPut(t);
+    const result = try s.getOrPut(t);
     if (result.found_existing) {
         if (exactEqual(result.value_ptr.*, m)) return;
         switch (m) {
@@ -49,7 +49,7 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
     if (left_tag == .typevar) {
         return set(s, equal.left.typevar, equal.right) catch |e| switch (e) {
             error.CompileError => {
-                const left = if (s.map.get(equal.left.typevar)) |t|
+                const left = if (s.get(equal.left.typevar)) |t|
                     t
                 else
                     equal.left;
@@ -62,7 +62,7 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
     if (right_tag == .typevar) {
         return set(s, equal.right.typevar, equal.left) catch |e| switch (e) {
             error.CompileError => {
-                const right = if (s.map.get(equal.right.typevar)) |t|
+                const right = if (s.get(equal.right.typevar)) |t|
                     t
                 else
                     equal.right;
@@ -103,7 +103,7 @@ pub fn simplify(s: *types.Substitution) u64 {
     while (iterator.next()) |entry| {
         switch (entry.value_ptr.*) {
             .typevar => |t| {
-                if (s.map.get(t)) |v| {
+                if (s.get(t)) |v| {
                     entry.value_ptr.* = v;
                     count += 1;
                 }
@@ -116,7 +116,7 @@ pub fn simplify(s: *types.Substitution) u64 {
 
 pub fn constraints(allocator: std.mem.Allocator, cs: types.Constraints, errors: *Errors) !types.Substitution {
     var s = types.Substitution{
-        .map = Map(types.TypeVar, types.MonoType).init(allocator),
+        .map = Map(u64, types.MonoType).init(allocator),
     };
     for (cs.equal.items) |e| try equalConstraint(e, &s, errors);
     var max_attemps: u64 = 3;

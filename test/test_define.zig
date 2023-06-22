@@ -375,3 +375,33 @@ test "codegen drop" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "type infer based on return type" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = fn() i32 {
+        \\    x = 5
+        \\    x
+        \\}
+    ;
+    const actual = try mantis.testing.typeInfer(allocator, source, "start");
+    defer allocator.free(actual);
+    const expected =
+        \\define =
+        \\    name = symbol{ value = start, type = fn() i32 }
+        \\    type = void
+        \\    mutable = false
+        \\    value =
+        \\        function =
+        \\            return_type = i32
+        \\            body =
+        \\                define =
+        \\                    name = symbol{ value = x, type = i32 }
+        \\                    type = void
+        \\                    mutable = false
+        \\                    value =
+        \\                        int{ value = 5, type = i32 }
+        \\                symbol{ value = x, type = i32 }
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

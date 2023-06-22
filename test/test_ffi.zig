@@ -379,8 +379,8 @@ test "codegen echo" {
         \\
         \\start = fn() void {
         \\    mut text = empty(u8, 100)
-        \\    mut nread: i32 = undefined
-        \\    mut nwritten: i32 = undefined
+        \\    mut nread = undefined
+        \\    mut nwritten = undefined
         \\    _ = stdin.fd_read(mut text, 1, mut nread)
         \\    _ = stdout.fd_write(text, 1, mut nwritten)
         \\}
