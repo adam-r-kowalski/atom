@@ -121,7 +121,7 @@ test "type type mismatch between parameter and argument" {
         \\
         \\Here the inferred type is i32
         \\
-        \\1 | double = fn(x: {s}i32{s}) i32 {{
+        \\1 | double = fn({s}x: i32{s}) i32 {{
         \\2 |     x * 2
         \\
         \\
@@ -133,6 +133,45 @@ test "type type mismatch between parameter and argument" {
         \\
         \\
         \\Expected these two types to be the same.
+        \\
+        \\
+    , .{ RED, CLEAR, RED, CLEAR, RED, CLEAR });
+    defer allocator.free(expected);
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "mutability mismatch between parameter and argument" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\double = fn(mut x: i32) void {
+        \\    x *= 2
+        \\}
+        \\
+        \\start = fn() i32 {
+        \\    x: i32 = 0
+        \\    double(x)
+        \\    x
+        \\}
+    ;
+    const actual = try mantis.testing.compileErrors(allocator, source);
+    defer allocator.free(actual);
+    const expected = try std.fmt.allocPrint(allocator,
+        \\---- {s}MUTABILITY MISMATCH{s} ---------------------------------------------------
+        \\
+        \\Here we have a mutable value
+        \\
+        \\1 | double = fn({s}mut x: i32{s}) void {{
+        \\2 |     x *= 2
+        \\
+        \\
+        \\Here we have a immutable value
+        \\
+        \\6 |     x: i32 = 0
+        \\7 |     double({s}x{s})
+        \\8 |     x
+        \\
+        \\
+        \\Expected both of these values to be mutable.
         \\
         \\
     , .{ RED, CLEAR, RED, CLEAR, RED, CLEAR });

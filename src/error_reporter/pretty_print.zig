@@ -78,10 +78,37 @@ fn typeMismatch(t: types.TypeMismatch, lines: [][]const u8, writer: Writer) !voi
     );
 }
 
+fn mutabilityMismatch(m: types.MutabilityMismatch, lines: [][]const u8, writer: Writer) !void {
+    try writer.print(
+        \\---- {s}MUTABILITY MISMATCH{s} ---------------------------------------------------
+        \\
+        \\Here we have a {s} value
+    , .{ RED, CLEAR, if (m.left.mutable) "mutable" else "immutable" });
+    try writer.writeAll("\n\n");
+    if (m.left.span) |span| try source(lines, span, writer);
+    try writer.print(
+        \\
+        \\
+        \\
+        \\Here we have a {s} value
+    , .{if (m.right.mutable) "mutable" else "immutable"});
+    try writer.writeAll("\n\n");
+    if (m.right.span) |span| try source(lines, span, writer);
+    try writer.writeAll(
+        \\
+        \\
+        \\
+        \\Expected both of these values to be mutable.
+        \\
+        \\
+    );
+}
+
 pub fn errors(es: types.Errors, writer: Writer) !void {
     var lines = List([]const u8).init(es.allocator);
     var iterator = std.mem.split(u8, es.source, "\n");
     while (iterator.next()) |line| try lines.append(line);
     for (es.undefined_variables.items) |u| try undefinedVariable(u, lines.items, writer);
     for (es.type_mismatches.items) |u| try typeMismatch(u, lines.items, writer);
+    for (es.mutability_mismatches.items) |u| try mutabilityMismatch(u, lines.items, writer);
 }

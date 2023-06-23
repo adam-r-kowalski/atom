@@ -177,6 +177,7 @@ pub fn main() !void {
         .allocator = arena.allocator(),
         .undefined_variables = List(mantis.error_reporter.types.UndefinedVariable).init(arena.allocator()),
         .type_mismatches = List(mantis.error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .mutability_mismatches = List(mantis.error_reporter.types.MutabilityMismatch).init(arena.allocator()),
         .source = source,
     };
     compileAndRun(allocator, &intern, &errors, flags, source) catch |e| switch (e) {

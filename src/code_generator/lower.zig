@@ -514,7 +514,7 @@ fn foreignImport(allocator: Allocator, name: Interned, i: type_checker.types.For
         .function => |f| {
             const path = [2]Interned{ i.module, i.name };
             const parameters = try allocator.alloc(types.Type, f.parameters.len);
-            for (f.parameters, parameters) |t, *ir_t| ir_t.* = mapType(t);
+            for (f.parameters, parameters) |t, *ir_t| ir_t.* = mapType(t.type);
             const return_type = try allocator.create(types.Type);
             return_type.* = mapType(f.return_type.*);
             return types.ForeignImport{

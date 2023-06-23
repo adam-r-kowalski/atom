@@ -48,6 +48,7 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
         .allocator = arena.allocator(),
         .undefined_variables = List(error_reporter.types.UndefinedVariable).init(arena.allocator()),
         .type_mismatches = List(error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .mutability_mismatches = List(error_reporter.types.MutabilityMismatch).init(arena.allocator()),
         .source = source,
     };
     const builtins = try Builtins.init(&intern);
@@ -74,6 +75,7 @@ pub fn typeInferVerbose(allocator: Allocator, source: []const u8, name: []const 
         .allocator = arena.allocator(),
         .undefined_variables = List(error_reporter.types.UndefinedVariable).init(arena.allocator()),
         .type_mismatches = List(error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .mutability_mismatches = List(error_reporter.types.MutabilityMismatch).init(arena.allocator()),
         .source = source,
     };
     const builtins = try Builtins.init(&intern);
@@ -108,6 +110,7 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
         .allocator = arena.allocator(),
         .undefined_variables = List(error_reporter.types.UndefinedVariable).init(arena.allocator()),
         .type_mismatches = List(error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .mutability_mismatches = List(error_reporter.types.MutabilityMismatch).init(arena.allocator()),
         .source = source,
     };
     const builtins = try Builtins.init(&intern);
@@ -167,6 +170,7 @@ pub fn compileErrors(allocator: Allocator, source: []const u8) ![]const u8 {
         .allocator = arena.allocator(),
         .undefined_variables = List(error_reporter.types.UndefinedVariable).init(arena.allocator()),
         .type_mismatches = List(error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .mutability_mismatches = List(error_reporter.types.MutabilityMismatch).init(arena.allocator()),
         .source = source,
     };
     _ = endToEnd(arena.allocator(), &intern, &errors, source) catch |e| {

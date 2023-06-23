@@ -23,11 +23,12 @@ pub fn monotype(m: types.MonoType, writer: Writer) !void {
         .typevar => |t| try writer.print("${}", .{t.value}),
         .function => |f| {
             try writer.writeAll("fn(");
-            for (f.parameters, 0..) |a, i| {
+            for (f.parameters, 0..) |p, i| {
                 if (i > 0) {
                     try writer.writeAll(", ");
                 }
-                try monotype(a, writer);
+                if (p.mutable) try writer.writeAll("mut ");
+                try monotype(p.type, writer);
             }
             try writer.writeAll(") ");
             try monotype(f.return_type.*, writer);

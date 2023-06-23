@@ -2,6 +2,7 @@ const std = @import("std");
 const Map = std.AutoHashMap;
 const types = @import("types.zig");
 const Errors = @import("../error_reporter.zig").types.Errors;
+const monotype = @import("monotype.zig");
 
 fn exactEqual(a: types.MonoType, b: types.MonoType) bool {
     switch (a) {
@@ -15,7 +16,8 @@ fn exactEqual(a: types.MonoType, b: types.MonoType) bool {
             .function => |f2| {
                 if (f1.parameters.len != f2.parameters.len) return false;
                 for (f1.parameters, f2.parameters) |t1, t2| {
-                    if (!exactEqual(t1, t2)) return false;
+                    if (t1.mutable != t2.mutable) return false;
+                    if (!exactEqual(t1.type, t2.type)) return false;
                 }
                 return exactEqual(f1.return_type.*, f2.return_type.*);
             },
@@ -78,10 +80,16 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
                 equal.left.function.parameters.len,
                 equal.right.function.parameters.len,
             });
-        for (equal.left.function.parameters, 0..) |left, i| {
-            const right = equal.right.function.parameters[i];
-            const constraint = types.EqualConstraint{ .left = left, .right = right };
+        for (equal.left.function.parameters, equal.right.function.parameters) |left, right| {
+            const constraint = types.EqualConstraint{ .left = left.type, .right = right.type };
             try equalConstraint(constraint, s, errors);
+            if (left.mutable != right.mutable) {
+                try errors.mutability_mismatches.append(.{
+                    .left = .{ .mutable = left.mutable, .span = monotype.span(left.type) },
+                    .right = .{ .mutable = right.mutable, .span = monotype.span(right.type) },
+                });
+                return error.CompileError;
+            }
         }
         const constraint = types.EqualConstraint{
             .left = equal.left.function.return_type.*,

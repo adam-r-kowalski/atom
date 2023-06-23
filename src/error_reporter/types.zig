@@ -16,9 +16,20 @@ pub const TypeMismatch = struct {
     right: type_checker.monotype.MonoType,
 };
 
+pub const MutabilityAndSpan = struct {
+    mutable: bool,
+    span: ?type_checker.types.Span,
+};
+
+pub const MutabilityMismatch = struct {
+    left: MutabilityAndSpan,
+    right: MutabilityAndSpan,
+};
+
 pub const Errors = struct {
     allocator: Allocator,
     undefined_variables: List(UndefinedVariable),
     type_mismatches: List(TypeMismatch),
+    mutability_mismatches: List(MutabilityMismatch),
     source: []const u8,
 };
