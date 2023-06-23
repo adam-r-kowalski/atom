@@ -320,7 +320,13 @@ fn timesEqual(context: Context, t: parser.types.TimesEqual) !types.TimesEqual {
     const value = try expressionAlloc(context, t.value.*);
     const binding = try findInScope(context.scopes.*, t.name);
     if (binding.global) std.debug.panic("Cannot reassign global variable {s}", .{t.name.value.string()});
-    if (!binding.mutable) std.debug.panic("Cannot reassign immutable variable {s}", .{t.name.value.string()});
+    if (!binding.mutable) {
+        try context.errors.reassigning_immutable.append(.{
+            .span = t.name.span,
+            .name = t.name.value,
+        });
+        return error.CompileError;
+    }
     try context.constraints.equal.append(.{ .left = typeOf(value.*), .right = binding.type });
     const name = types.Symbol{
         .value = t.name.value,
