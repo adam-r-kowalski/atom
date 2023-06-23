@@ -206,3 +206,43 @@ test "mutability mismatch between binding and assignment" {
     defer allocator.free(expected);
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "mutability mismatch between binding and argument" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\double = fn(mut x: i32) void {
+        \\    x *= 2
+        \\}
+        \\
+        \\start = fn() i32 {
+        \\    x: i32 = 5
+        \\    double(mut x)
+        \\    x
+        \\}
+    ;
+    const actual = try mantis.testing.compileErrors(allocator, source);
+    defer allocator.free(actual);
+    const expected = try std.fmt.allocPrint(allocator,
+        \\---- {s}MUTABILITY MISMATCH{s} ---------------------------------------------------
+        \\
+        \\Here we have a immutable value
+        \\
+        \\5 | start = fn() i32 {{
+        \\6 |     {s}x{s}: i32 = 5
+        \\7 |     double(mut x)
+        \\
+        \\
+        \\Here we have a mutable value
+        \\
+        \\6 |     x: i32 = 5
+        \\7 |     double({s}mut x{s})
+        \\8 |     x
+        \\
+        \\
+        \\Expected both of these values to be mutable.
+        \\
+        \\
+    , .{ RED, CLEAR, RED, CLEAR, RED, CLEAR });
+    defer allocator.free(expected);
+    try std.testing.expectEqualStrings(expected, actual);
+}

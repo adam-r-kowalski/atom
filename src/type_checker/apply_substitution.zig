@@ -45,7 +45,7 @@ fn symbol(allocator: Allocator, sub: types.Substitution, s: types.Symbol) !types
         .value = s.value,
         .span = s.span,
         .type = try monotype(allocator, sub, s.type),
-        .global = s.global,
+        .binding = s.binding,
     };
 }
 

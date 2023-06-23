@@ -204,7 +204,7 @@ fn binaryOp(context: Context, b: type_checker.types.BinaryOp) !types.Expression 
 }
 
 fn symbol(s: type_checker.types.Symbol) types.Expression {
-    if (s.global) return types.Expression{ .global_get = .{ .name = s.value } };
+    if (s.binding.global) return types.Expression{ .global_get = .{ .name = s.value } };
     return .{ .local_get = .{ .name = s.value } };
 }
 
