@@ -104,11 +104,30 @@ fn mutabilityMismatch(m: types.MutabilityMismatch, lines: [][]const u8, writer: 
     );
 }
 
+fn reassigningImmutable(m: types.ReassigningImmutable, lines: [][]const u8, writer: Writer) !void {
+    try writer.print(
+        \\---- {s}REASSIGNING IMMUTABLE VALUE{s} ---------------------------------------------------
+        \\
+        \\Cannot reassign immutable value `{s}{s}{s}`.
+        \\
+        \\
+    , .{ RED, CLEAR, RED, m.name.string(), CLEAR });
+    try source(lines, m.span, writer);
+    try writer.writeAll(
+        \\
+        \\
+        \\Perhaps you meant to make this value mutable?
+        \\
+        \\
+    );
+}
+
 pub fn errors(es: types.Errors, writer: Writer) !void {
     var lines = List([]const u8).init(es.allocator);
     var iterator = std.mem.split(u8, es.source, "\n");
     while (iterator.next()) |line| try lines.append(line);
-    for (es.undefined_variables.items) |u| try undefinedVariable(u, lines.items, writer);
-    for (es.type_mismatches.items) |u| try typeMismatch(u, lines.items, writer);
-    for (es.mutability_mismatches.items) |u| try mutabilityMismatch(u, lines.items, writer);
+    for (es.undefined_variable.items) |u| try undefinedVariable(u, lines.items, writer);
+    for (es.type_mismatch.items) |u| try typeMismatch(u, lines.items, writer);
+    for (es.mutability_mismatch.items) |u| try mutabilityMismatch(u, lines.items, writer);
+    for (es.reassigning_immutable.items) |u| try reassigningImmutable(u, lines.items, writer);
 }

@@ -50,7 +50,7 @@ pub fn findInScope(scopes: Scopes, s: parser.types.Symbol) !types.Binding {
         var scope_iterator = scope.keyIterator();
         while (scope_iterator.next()) |key| try in_scope.append(key.*);
     }
-    try scopes.errors.undefined_variables.append(.{
+    try scopes.errors.undefined_variable.append(.{
         .symbol = s.value,
         .span = s.span,
         .in_scope = try in_scope.toOwnedSlice(),
@@ -103,6 +103,7 @@ const Context = struct {
     builtins: Builtins,
     constraints: *types.Constraints,
     scopes: *Scopes,
+    errors: *Errors,
 };
 
 fn symbol(scopes: Scopes, s: parser.types.Symbol) !types.Symbol {
@@ -293,7 +294,13 @@ fn plusEqual(context: Context, p: parser.types.PlusEqual) !types.PlusEqual {
     const value = try expressionAlloc(context, p.value.*);
     const binding = try findInScope(context.scopes.*, p.name);
     if (binding.global) std.debug.panic("Cannot reassign global variable {s}", .{p.name.value.string()});
-    if (!binding.mutable) std.debug.panic("Cannot reassign immutable variable {s}", .{p.name.value.string()});
+    if (!binding.mutable) {
+        try context.errors.reassigning_immutable.append(.{
+            .span = p.name.span,
+            .name = p.name.value,
+        });
+        return error.CompileError;
+    }
     try context.constraints.equal.append(.{ .left = typeOf(value.*), .right = binding.type });
     const name = types.Symbol{
         .value = p.name.value,
@@ -594,6 +601,7 @@ pub fn topLevel(m: *types.Module, name: Interned, errors: *Errors) !void {
                 .builtins = m.builtins,
                 .constraints = m.constraints,
                 .scopes = &scopes,
+                .errors = errors,
             };
             const expr = try expression(context, entry.value);
             try m.typed.putNoClobber(current, expr);

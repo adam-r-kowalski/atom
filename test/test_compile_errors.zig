@@ -178,3 +178,31 @@ test "mutability mismatch between parameter and argument" {
     defer allocator.free(expected);
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "mutability mismatch between binding and assignment" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = fn() i32 {
+        \\    x: i32 = 0
+        \\    x += 1
+        \\    x
+        \\}
+    ;
+    const actual = try mantis.testing.compileErrors(allocator, source);
+    defer allocator.free(actual);
+    const expected = try std.fmt.allocPrint(allocator,
+        \\---- {s}REASSIGNING IMMUTABLE VALUE{s} ---------------------------------------------------
+        \\
+        \\Cannot reassign immutable value `{s}x{s}`.
+        \\
+        \\2 |     x: i32 = 0
+        \\3 |     {s}x{s} += 1
+        \\4 |     x
+        \\
+        \\Perhaps you meant to make this value mutable?
+        \\
+        \\
+    , .{ RED, CLEAR, RED, CLEAR, RED, CLEAR });
+    defer allocator.free(expected);
+    try std.testing.expectEqualStrings(expected, actual);
+}

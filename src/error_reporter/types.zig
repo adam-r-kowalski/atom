@@ -26,10 +26,16 @@ pub const MutabilityMismatch = struct {
     right: MutabilityAndSpan,
 };
 
+pub const ReassigningImmutable = struct {
+    span: type_checker.types.Span,
+    name: Interned,
+};
+
 pub const Errors = struct {
     allocator: Allocator,
-    undefined_variables: List(UndefinedVariable),
-    type_mismatches: List(TypeMismatch),
-    mutability_mismatches: List(MutabilityMismatch),
+    undefined_variable: List(UndefinedVariable),
+    type_mismatch: List(TypeMismatch),
+    mutability_mismatch: List(MutabilityMismatch),
+    reassigning_immutable: List(ReassigningImmutable),
     source: []const u8,
 };

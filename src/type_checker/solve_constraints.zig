@@ -55,7 +55,7 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
                     t
                 else
                     equal.left;
-                try errors.type_mismatches.append(.{ .left = left, .right = equal.right });
+                try errors.type_mismatch.append(.{ .left = left, .right = equal.right });
                 return error.CompileError;
             },
             else => return e,
@@ -68,7 +68,7 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
                     t
                 else
                     equal.right;
-                try errors.type_mismatches.append(.{ .left = equal.left, .right = right });
+                try errors.type_mismatch.append(.{ .left = equal.left, .right = right });
                 return error.CompileError;
             },
             else => return e,
@@ -84,7 +84,7 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
             const constraint = types.EqualConstraint{ .left = left.type, .right = right.type };
             try equalConstraint(constraint, s, errors);
             if (left.mutable != right.mutable) {
-                try errors.mutability_mismatches.append(.{
+                try errors.mutability_mismatch.append(.{
                     .left = .{ .mutable = left.mutable, .span = monotype.span(left.type) },
                     .right = .{ .mutable = right.mutable, .span = monotype.span(right.type) },
                 });
@@ -101,7 +101,7 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
     if (left_tag == right_tag) {
         return;
     }
-    try errors.type_mismatches.append(.{ .left = equal.left, .right = equal.right });
+    try errors.type_mismatch.append(.{ .left = equal.left, .right = equal.right });
     return error.CompileError;
 }
 
