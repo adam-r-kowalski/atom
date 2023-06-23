@@ -1,13 +1,19 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const types = @import("types.zig");
+const Parameter = @import("monotype.zig").Parameter;
+const MonoType = @import("monotype.zig").MonoType;
 
-fn monotype(allocator: Allocator, sub: types.Substitution, m: types.MonoType) !types.MonoType {
+fn monotype(allocator: Allocator, sub: types.Substitution, m: MonoType) !MonoType {
     switch (m) {
         .function => |f| {
-            const parameters = try allocator.alloc(types.MonoType, f.parameters.len);
-            for (f.parameters, parameters) |unapplied, *applied| applied.* = try monotype(allocator, sub, unapplied);
-            const return_type = try allocator.create(types.MonoType);
+            const parameters = try allocator.alloc(Parameter, f.parameters.len);
+            for (f.parameters, parameters) |unapplied, *applied|
+                applied.* = .{
+                    .type = try monotype(allocator, sub, unapplied.type),
+                    .mutable = unapplied.mutable,
+                };
+            const return_type = try allocator.create(MonoType);
             return_type.* = try monotype(allocator, sub, f.return_type.*);
             return .{ .function = .{
                 .parameters = parameters,
@@ -16,7 +22,7 @@ fn monotype(allocator: Allocator, sub: types.Substitution, m: types.MonoType) !t
             } };
         },
         .array => |a| {
-            const element_type = try allocator.create(types.MonoType);
+            const element_type = try allocator.create(MonoType);
             element_type.* = try monotype(allocator, sub, a.element_type.*);
             return .{ .array = .{
                 .size = a.size,

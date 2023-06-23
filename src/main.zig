@@ -175,8 +175,10 @@ pub fn main() !void {
     var intern = mantis.interner.Intern.init(allocator);
     var errors = mantis.error_reporter.types.Errors{
         .allocator = arena.allocator(),
-        .undefined_variables = List(mantis.error_reporter.types.UndefinedVariable).init(arena.allocator()),
-        .type_mismatches = List(mantis.error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .undefined_variable = List(mantis.error_reporter.types.UndefinedVariable).init(arena.allocator()),
+        .type_mismatch = List(mantis.error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .mutability_mismatch = List(mantis.error_reporter.types.MutabilityMismatch).init(arena.allocator()),
+        .reassigning_immutable = List(mantis.error_reporter.types.ReassigningImmutable).init(arena.allocator()),
         .source = source,
     };
     compileAndRun(allocator, &intern, &errors, flags, source) catch |e| switch (e) {

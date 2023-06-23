@@ -10,13 +10,18 @@ pub const F64 = struct { span: ?Span };
 pub const Bool = struct { span: ?Span };
 pub const TypeVar = struct { value: u64, span: ?Span };
 
-const Function = struct {
-    parameters: []const MonoType,
+pub const Parameter = struct {
+    type: MonoType,
+    mutable: bool,
+};
+
+pub const Function = struct {
+    parameters: []const Parameter,
     return_type: *const MonoType,
     span: ?Span,
 };
 
-const Array = struct {
+pub const Array = struct {
     size: ?u32,
     element_type: *const MonoType,
     span: ?Span,

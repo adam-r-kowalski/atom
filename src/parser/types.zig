@@ -38,6 +38,7 @@ pub const Parameter = struct {
     name: Symbol,
     type: Expression,
     mutable: bool,
+    span: Span,
 };
 
 pub const Block = struct {
@@ -109,6 +110,7 @@ pub const Branch = struct {
 pub const Argument = struct {
     value: Expression,
     mutable: bool,
+    span: Span,
 };
 
 pub const Call = struct {

@@ -159,15 +159,25 @@ fn functionParameters(context: Context) ![]const types.Parameter {
                 _ = context.tokens.consume(.colon);
                 const type_ = try expression(withPrecedence(context, DEFINE + 1));
                 context.tokens.maybeConsume(.comma);
-                try parameters.append(types.Parameter{ .name = name, .type = type_, .mutable = false });
+                try parameters.append(types.Parameter{
+                    .name = name,
+                    .type = type_,
+                    .mutable = false,
+                    .span = .{ .begin = name.span.begin, .end = spanOf(type_).end },
+                });
             },
-            .mut => {
+            .mut => |mut| {
                 context.tokens.advance();
                 const name = context.tokens.consume(.symbol).symbol;
                 _ = context.tokens.consume(.colon);
                 const type_ = try expression(withPrecedence(context, DEFINE + 1));
                 context.tokens.maybeConsume(.comma);
-                try parameters.append(types.Parameter{ .name = name, .type = type_, .mutable = true });
+                try parameters.append(types.Parameter{
+                    .name = name,
+                    .type = type_,
+                    .mutable = true,
+                    .span = .{ .begin = mut.span.begin, .end = spanOf(type_).end },
+                });
             },
             else => |k| std.debug.panic("\nExpected symbol or right paren, found {}", .{k}),
         }
@@ -346,15 +356,22 @@ fn call(context: Context, left: types.Expression) !types.Call {
     while (context.tokens.peek()) |t| {
         switch (t) {
             .right_paren => break,
-            .mut => {
+            .mut => |mut| {
                 context.tokens.advance();
                 const value = try expression(withPrecedence(context, DEFINE + 1));
-                try arguments.append(.{ .value = value, .mutable = true });
+                try arguments.append(.{
+                    .value = value,
+                    .mutable = true,
+                    .span = types.Span{
+                        .begin = mut.span.begin,
+                        .end = spanOf(value).end,
+                    },
+                });
                 context.tokens.maybeConsume(.comma);
             },
             else => {
                 const value = try expression(withPrecedence(context, DEFINE + 1));
-                try arguments.append(.{ .value = value, .mutable = false });
+                try arguments.append(.{ .value = value, .mutable = false, .span = spanOf(value) });
                 context.tokens.maybeConsume(.comma);
             },
         }

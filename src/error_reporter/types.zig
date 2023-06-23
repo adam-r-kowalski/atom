@@ -16,9 +16,26 @@ pub const TypeMismatch = struct {
     right: type_checker.monotype.MonoType,
 };
 
+pub const MutabilityAndSpan = struct {
+    mutable: bool,
+    span: ?type_checker.types.Span,
+};
+
+pub const MutabilityMismatch = struct {
+    left: MutabilityAndSpan,
+    right: MutabilityAndSpan,
+};
+
+pub const ReassigningImmutable = struct {
+    span: type_checker.types.Span,
+    name: Interned,
+};
+
 pub const Errors = struct {
     allocator: Allocator,
-    undefined_variables: List(UndefinedVariable),
-    type_mismatches: List(TypeMismatch),
+    undefined_variable: List(UndefinedVariable),
+    type_mismatch: List(TypeMismatch),
+    mutability_mismatch: List(MutabilityMismatch),
+    reassigning_immutable: List(ReassigningImmutable),
     source: []const u8,
 };

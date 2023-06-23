@@ -46,8 +46,10 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     var intern = Intern.init(arena.allocator());
     var errors = error_reporter.types.Errors{
         .allocator = arena.allocator(),
-        .undefined_variables = List(error_reporter.types.UndefinedVariable).init(arena.allocator()),
-        .type_mismatches = List(error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .undefined_variable = List(error_reporter.types.UndefinedVariable).init(arena.allocator()),
+        .type_mismatch = List(error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .mutability_mismatch = List(error_reporter.types.MutabilityMismatch).init(arena.allocator()),
+        .reassigning_immutable = List(error_reporter.types.ReassigningImmutable).init(arena.allocator()),
         .source = source,
     };
     const builtins = try Builtins.init(&intern);
@@ -72,8 +74,10 @@ pub fn typeInferVerbose(allocator: Allocator, source: []const u8, name: []const 
     var intern = Intern.init(arena.allocator());
     var errors = error_reporter.types.Errors{
         .allocator = arena.allocator(),
-        .undefined_variables = List(error_reporter.types.UndefinedVariable).init(arena.allocator()),
-        .type_mismatches = List(error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .undefined_variable = List(error_reporter.types.UndefinedVariable).init(arena.allocator()),
+        .type_mismatch = List(error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .mutability_mismatch = List(error_reporter.types.MutabilityMismatch).init(arena.allocator()),
+        .reassigning_immutable = List(error_reporter.types.ReassigningImmutable).init(arena.allocator()),
         .source = source,
     };
     const builtins = try Builtins.init(&intern);
@@ -106,8 +110,10 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     var intern = Intern.init(arena.allocator());
     var errors = error_reporter.types.Errors{
         .allocator = arena.allocator(),
-        .undefined_variables = List(error_reporter.types.UndefinedVariable).init(arena.allocator()),
-        .type_mismatches = List(error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .undefined_variable = List(error_reporter.types.UndefinedVariable).init(arena.allocator()),
+        .type_mismatch = List(error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .mutability_mismatch = List(error_reporter.types.MutabilityMismatch).init(arena.allocator()),
+        .reassigning_immutable = List(error_reporter.types.ReassigningImmutable).init(arena.allocator()),
         .source = source,
     };
     const builtins = try Builtins.init(&intern);
@@ -165,8 +171,10 @@ pub fn compileErrors(allocator: Allocator, source: []const u8) ![]const u8 {
     var intern = Intern.init(arena.allocator());
     var errors = error_reporter.types.Errors{
         .allocator = arena.allocator(),
-        .undefined_variables = List(error_reporter.types.UndefinedVariable).init(arena.allocator()),
-        .type_mismatches = List(error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .undefined_variable = List(error_reporter.types.UndefinedVariable).init(arena.allocator()),
+        .type_mismatch = List(error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .mutability_mismatch = List(error_reporter.types.MutabilityMismatch).init(arena.allocator()),
+        .reassigning_immutable = List(error_reporter.types.ReassigningImmutable).init(arena.allocator()),
         .source = source,
     };
     _ = endToEnd(arena.allocator(), &intern, &errors, source) catch |e| {
