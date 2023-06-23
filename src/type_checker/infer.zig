@@ -112,7 +112,7 @@ fn symbol(scopes: Scopes, s: parser.types.Symbol) !types.Symbol {
         .value = s.value,
         .span = s.span,
         .type = monotype.withSpan(binding.type, s.span),
-        .global = binding.global,
+        .binding = binding,
     };
 }
 
@@ -258,12 +258,13 @@ fn define(context: Context, d: parser.types.Define) !types.Define {
         .type = mono,
         .global = false,
         .mutable = d.mutable,
+        .span = d.name.span,
     };
     const name = types.Symbol{
         .value = d.name.value,
         .span = d.span,
         .type = mono,
-        .global = false,
+        .binding = binding,
     };
     try putInScope(context.scopes, name.value, binding);
     return types.Define{
@@ -306,7 +307,7 @@ fn plusEqual(context: Context, p: parser.types.PlusEqual) !types.PlusEqual {
         .value = p.name.value,
         .span = p.span,
         .type = binding.type,
-        .global = binding.global,
+        .binding = binding,
     };
     return types.PlusEqual{
         .name = name,
@@ -332,7 +333,7 @@ fn timesEqual(context: Context, t: parser.types.TimesEqual) !types.TimesEqual {
         .value = t.name.value,
         .span = t.span,
         .type = binding.type,
-        .global = binding.global,
+        .binding = binding,
     };
     return types.TimesEqual{
         .name = name,
@@ -454,6 +455,26 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
             const arguments = try context.allocator.alloc(types.Argument, len);
             for (c.arguments, arguments, parameters) |untyped_arg, *typed_arg, *parameter| {
                 typed_arg.value = try expression(context, untyped_arg.value);
+                if (untyped_arg.mutable) {
+                    switch (typed_arg.value) {
+                        .symbol => |sym| {
+                            if (sym.binding.mutable == false) {
+                                try context.errors.mutability_mismatch.append(.{
+                                    .left = .{
+                                        .mutable = false,
+                                        .span = sym.binding.span,
+                                    },
+                                    .right = .{
+                                        .mutable = true,
+                                        .span = untyped_arg.span,
+                                    },
+                                });
+                                return error.CompileError;
+                            }
+                        },
+                        else => |k| std.debug.panic("Can only mutate symbol, but found {}", .{k}),
+                    }
+                }
                 typed_arg.mutable = untyped_arg.mutable;
                 parameter.* = .{
                     .type = monotype.withSpan(typeOf(typed_arg.value), untyped_arg.span),
@@ -494,16 +515,17 @@ fn function(context: Context, f: parser.types.Function) !types.Function {
         const mono = try expressionToMonoType(context.allocator, context.builtins, untyped_p.type);
         const p_type = monotype.withSpan(mono, untyped_p.span);
         const binding = types.Binding{
-            .type = p_type,
+            .type = mono,
             .global = false,
             .mutable = untyped_p.mutable,
+            .span = untyped_p.name.span,
         };
         typed_p.* = types.Parameter{
             .name = types.Symbol{
                 .value = name_symbol,
                 .span = untyped_p.name.span,
                 .type = p_type,
-                .global = false,
+                .binding = binding,
             },
             .mutable = binding.mutable,
         };
@@ -680,6 +702,7 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
                     .type = mono,
                     .global = true,
                     .mutable = false,
+                    .span = d.name.span,
                 });
             },
             .call => |c| {

@@ -38,6 +38,7 @@ pub const Binding = struct {
     type: MonoType,
     global: bool,
     mutable: bool,
+    span: Span,
 };
 
 pub const Scope = Map(Interned, Binding);
@@ -58,7 +59,7 @@ pub const Symbol = struct {
     value: Interned,
     span: Span,
     type: MonoType,
-    global: bool,
+    binding: Binding,
 };
 
 pub const Bool = struct {
