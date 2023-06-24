@@ -1,7 +1,19 @@
 create_element = foreign_import("document", "create_element", fn(tag: []u8) i32)
 
+inner_html = foreign_import("element", "inner_html", fn(element: i32, text: []u8) void)
+
+log = foreign_import("console", "log", fn(text: []u8) void)
+
 foreign_export("onload", fn() void {
-	_ = create_element("h1")
-	_ = create_element("h2")
-	_ = create_element("h3")
+	h1 = create_element("h1")
+	h1.inner_html("H1")
+	
+	h2 = create_element("h2")
+	h2.inner_html("H2")
+
+	h3 = create_element("h3")
+	h3.inner_html("H3")
+
+	log("hello mantis")
+	log("goodbye")
 })

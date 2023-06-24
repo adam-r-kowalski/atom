@@ -2,19 +2,33 @@ let memory = undefined;
 
 let elements = [];
 
+const readString = (memory, string) => {
+  const bytes = new Uint8Array(memory);
+  const view = new DataView(bytes.buffer, string);
+  const ptr = view.getInt32(0, true);
+  const len = view.getInt32(4, true);
+  return new TextDecoder().decode(bytes.slice(ptr, ptr + len));
+};
+
 const imports = {
   document: {
     create_element: (tag) => {
-      const bytes = new Uint8Array(memory);
-      const view = new DataView(bytes.buffer, tag);
-      const ptr = view.getInt32(0, true);
-      const len = view.getInt32(4, true);
-      const string = new TextDecoder().decode(bytes.slice(ptr, ptr + len));
+      const string = readString(memory, tag);
       const element = document.createElement(string);
       document.body.appendChild(element);
       const index = elements.length;
       elements.push(element);
       return index;
+    },
+  },
+  element: {
+    inner_html: (element, tag) => {
+      elements[element].innerHTML = readString(memory, tag);
+    },
+  },
+  console: {
+    log: (text) => {
+      console.log(readString(memory, text));
     },
   },
 };
