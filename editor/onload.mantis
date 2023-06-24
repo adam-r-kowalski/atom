@@ -1,0 +1,7 @@
+create_element = foreign_import("document", "create_element", fn(tag: []u8) i32)
+
+foreign_export("onload", fn() void {
+	_ = create_element("h1")
+	_ = create_element("h2")
+	_ = create_element("h3")
+})
