@@ -228,3 +228,38 @@ test "type infer dot call" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "tokenize single line dot call" {
+    const allocator = std.testing.allocator;
+    const source = "x.f(y)";
+    const actual = try mantis.testing.tokenize(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(symbol x)
+        \\(operator .)
+        \\(symbol f)
+        \\(delimiter '(')
+        \\(symbol y)
+        \\(delimiter ')')
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "tokenize multi line dot call" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\x
+        \\    .f(y)
+    ;
+    const actual = try mantis.testing.tokenize(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(symbol x)
+        \\(operator .)
+        \\(symbol f)
+        \\(delimiter '(')
+        \\(symbol y)
+        \\(delimiter ')')
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
