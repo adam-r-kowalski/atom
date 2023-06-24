@@ -1,4 +1,5 @@
 let memory = undefined;
+let instance = undefined;
 
 let elements = [];
 
@@ -15,15 +16,34 @@ const imports = {
     create_element: (tag) => {
       const string = readString(memory, tag);
       const element = document.createElement(string);
-      document.body.appendChild(element);
       const index = elements.length;
       elements.push(element);
+      window.foo = element;
       return index;
     },
   },
   element: {
     inner_html: (element, tag) => {
       elements[element].innerHTML = readString(memory, tag);
+      return element;
+    },
+    style: (element, property, value) => {
+      const propertyString = readString(memory, property);
+      const valueString = readString(memory, value);
+      elements[element].style[propertyString] = valueString;
+      return element;
+    },
+    append_child: (parent, child) => {
+      elements[parent].appendChild(elements[child]);
+      return parent;
+    },
+    add_event_listener: (element, event, callback) => {
+      const eventString = readString(memory, event);
+      const callbackString = readString(memory, callback);
+      elements[element].addEventListener(eventString, () => {
+        instance.exports[callbackString](element);
+      });
+      return element;
     },
   },
   console: {
@@ -38,12 +58,13 @@ const onload = async () => {
   const wat = await fetch("onload.wat");
   const text = await wat.text();
   const wasm = await wabt.parseWat("onload.wat", text);
-  const { instance } = await WebAssembly.instantiate(
+  const result = await WebAssembly.instantiate(
     wasm.toBinary({}).buffer,
     imports
   );
+  instance = result.instance;
   memory = instance.exports.memory.buffer;
-  instance.exports.onload();
+  document.body.appendChild(elements[instance.exports.onload()]);
 };
 
 onload();

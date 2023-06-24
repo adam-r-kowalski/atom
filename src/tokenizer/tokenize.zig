@@ -119,9 +119,21 @@ fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !types.Token {
 fn newLine(cursor: *Cursor) types.Token {
     const begin = cursor.pos;
     var i: u64 = 0;
-    while (i < cursor.source.len and cursor.source[i] == '\n') : (i += 1) {}
-    cursor.pos.line += i;
-    cursor.pos.column = 1;
+    while (i < cursor.source.len) : (i += 1) {
+        switch (cursor.source[i]) {
+            '\n' => {
+                cursor.pos.line += 1;
+                cursor.pos.column = 1;
+            },
+            ' ', '\t' => cursor.pos.column += 1,
+            '.' => {
+                cursor.pos.column += 1;
+                cursor.source = cursor.source[i + 1 ..];
+                return .{ .dot = .{ .span = .{ .begin = begin, .end = cursor.pos } } };
+            },
+            else => break,
+        }
+    }
     cursor.source = cursor.source[i..];
     return .{ .new_line = .{ .span = .{ .begin = begin, .end = cursor.pos } } };
 }
