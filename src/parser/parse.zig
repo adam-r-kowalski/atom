@@ -159,6 +159,7 @@ fn functionParameters(context: Context) ![]const types.Parameter {
                 context.tokens.advance();
                 _ = context.tokens.consume(.colon);
                 const type_ = try expression(withPrecedence(context, DEFINE + 1));
+                context.tokens.consumeNewLines();
                 context.tokens.maybeConsume(.comma);
                 try parameters.append(types.Parameter{
                     .name = name,
@@ -172,6 +173,7 @@ fn functionParameters(context: Context) ![]const types.Parameter {
                 const name = context.tokens.consume(.symbol).symbol;
                 _ = context.tokens.consume(.colon);
                 const type_ = try expression(withPrecedence(context, DEFINE + 1));
+                context.tokens.consumeNewLines();
                 context.tokens.maybeConsume(.comma);
                 try parameters.append(types.Parameter{
                     .name = name,
@@ -369,11 +371,13 @@ fn call(context: Context, left: types.Expression) !types.Call {
                         .end = spanOf(value).end,
                     },
                 });
+                context.tokens.consumeNewLines();
                 context.tokens.maybeConsume(.comma);
             },
             else => {
                 const value = try expression(withPrecedence(context, DEFINE + 1));
                 try arguments.append(.{ .value = value, .mutable = false, .span = spanOf(value) });
+                context.tokens.consumeNewLines();
                 context.tokens.maybeConsume(.comma);
             },
         }
