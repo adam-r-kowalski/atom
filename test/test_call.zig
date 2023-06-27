@@ -263,3 +263,63 @@ test "tokenize multi line dot call" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "parse call with multiple lines" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\add = fn(
+        \\    x: i32,
+        \\    y: i32
+        \\) i32 {
+        \\    x + y
+        \\}
+        \\
+        \\start = fn() i32 {
+        \\    add(
+        \\        1,
+        \\        2
+        \\    )
+        \\}
+    ;
+    const actual = try mantis.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(def add (fn [(x i32) (y i32)] i32
+        \\    (+ x y)))
+        \\
+        \\(def start (fn [] i32
+        \\    (add 1 2)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse call with space before and after" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\add = fn(
+        \\    x: i32
+        \\    ,
+        \\    y: i32
+        \\) i32 {
+        \\    x + y
+        \\}
+        \\
+        \\start = fn() i32 {
+        \\    add(
+        \\        1
+        \\        ,
+        \\        2
+        \\    )
+        \\}
+    ;
+    const actual = try mantis.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(def add (fn [(x i32) (y i32)] i32
+        \\    (+ x y)))
+        \\
+        \\(def start (fn [] i32
+        \\    (add 1 2)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

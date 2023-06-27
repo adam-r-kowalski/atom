@@ -399,7 +399,7 @@ fn string(context: Context, s: type_checker.types.String) !types.Expression {
     const bytes = s.value.string();
     const offset = context.data_segment.offset;
     try context.data_segment.data.append(.{ .offset = offset, .bytes = bytes });
-    context.data_segment.offset += @intCast(u32, bytes.len - 2);
+    context.data_segment.offset += @intCast(bytes.len - 2);
     const exprs = try context.allocator.alloc(types.Expression, 3);
     const local_get = try context.allocator.create(types.Expression);
     local_get.* = .{ .local_get = .{ .name = local } };

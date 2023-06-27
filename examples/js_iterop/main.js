@@ -18,7 +18,14 @@ const imports = {
       const element = document.createElement(string);
       const index = elements.length;
       elements.push(element);
-      window.foo = element;
+      return index;
+    },
+    create_element_ns: (ns, tag) => {
+      const nsString = readString(memory, ns);
+      const tagString = readString(memory, tag);
+      const element = document.createElementNS(nsString, tagString);
+      const index = elements.length;
+      elements.push(element);
       return index;
     },
   },
@@ -31,6 +38,12 @@ const imports = {
       const propertyString = readString(memory, property);
       const valueString = readString(memory, value);
       elements[element].style[propertyString] = valueString;
+      return element;
+    },
+    set_attribute: (element, attribute, value) => {
+      const attributeString = readString(memory, attribute);
+      const valueString = readString(memory, value);
+      elements[element].setAttribute(attributeString, valueString);
       return element;
     },
     append_child: (parent, child) => {
