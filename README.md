@@ -11,7 +11,7 @@ It compiles to WebAssembly, allowing your code to run anywhere WebAssembly is su
 
 #### Prerequisites
 
-Before installing Mantis, please ensure that you have installed [Zig](https://ziglang.org/) and [Wasmer](https://wasmer.io/).
+Before installing Mantis, please ensure that you have installed [zig 0.11.0-dev.3859+88284c124](https://ziglang.org/) and [wasmer](https://wasmer.io/).
 Zig is a fast and reliable language that we've used to develop Mantis's compiler,
 and Wasmer is the WebAssembly runtime that Mantis relies on for executing your code.
 
