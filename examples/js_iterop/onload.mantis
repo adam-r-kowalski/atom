@@ -12,28 +12,24 @@ svg = fn(tag: []u8) i32 {
 	element_ns("http://www.w3.org/2000/svg", tag)
 }
 
+foreign_export("onmouseenter", fn(el: i32) i32 {
+    el.attr("fill", "blue")
+})
+
+foreign_export("onmouseleave", fn(el: i32) i32 {
+    el.attr("fill", "lightblue")
+})
 
 point = fn(x: []u8, y: []u8) i32 {
 	svg("circle")
 		.attr("cx", x)
 		.attr("cy", y)
-		.attr("r", "1")
-		.attr("fill", "cornflowerblue")
-}
-
-
-plot = fn() i32 {
-	svg("g")
-		.attr("transform", "scale(1, -1) translate(0, -100)")
-		.child(point("10", "1"))
-		.child(point("20", "4"))
-		.child(point("30", "9"))
-		.child(point("40", "16"))
-		.child(point("50", "25"))
-		.child(point("60", "36"))
-		.child(point("70", "49"))
-		.child(point("80", "64"))
-		.child(point("90", "81"))
+		.attr("r", "3")
+		.attr("fill", "lightblue")
+		.attr("stroke", "blue")
+		.style("cursor", "pointer")
+		.on("mouseenter", "onmouseenter")
+		.on("mouseleave", "onmouseleave")
 }
 
 
@@ -42,6 +38,17 @@ foreign_export("onload", fn() i32 {
 		.attr("width", "500")
 		.attr("height", "500")
 		.attr("viewBox", "0 0 100 100")
-		.child(plot())
+		.child(
+			svg("g")
+				.attr("transform", "scale(1, -1) translate(0, -100)")
+				.child(point("20", "4"))
+				.child(point("30", "9"))
+				.child(point("40", "16"))
+				.child(point("50", "25"))
+				.child(point("60", "36"))
+				.child(point("70", "49"))
+				.child(point("80", "64"))
+				.child(point("90", "81"))
+		)
 })
 

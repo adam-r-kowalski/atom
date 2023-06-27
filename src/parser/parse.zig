@@ -153,6 +153,7 @@ fn functionParameters(context: Context) ![]const types.Parameter {
     var parameters = List(types.Parameter).init(context.allocator);
     while (context.tokens.peek()) |t| {
         switch (t) {
+            .new_line => context.tokens.advance(),
             .right_paren => break,
             .symbol => |name| {
                 context.tokens.advance();
@@ -355,6 +356,7 @@ fn call(context: Context, left: types.Expression) !types.Call {
     var arguments = List(types.Argument).init(context.allocator);
     while (context.tokens.peek()) |t| {
         switch (t) {
+            .new_line => context.tokens.advance(),
             .right_paren => break,
             .mut => |mut| {
                 context.tokens.advance();
