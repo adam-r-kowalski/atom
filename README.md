@@ -406,7 +406,7 @@ dot = fn[T: Num](a: vec[T], b: vec[T]) T {
 
 # Perform matrix multiplication
 matmul = fn[T: Num](a: mat[T], b: mat[T]) mat[T] {
-    for i, j, k { sum(a[i][k] * b[k][j]) }
+    for i, j, k { sum(a[i, k] * b[k, j]) }
 }
 ```
 
