@@ -1,37 +1,47 @@
-create_element = foreign_import("document", "create_element", fn(tag: []u8) i32)
-inner_html = foreign_import("element", "inner_html", fn(el: i32, text: []u8) i32)
+element_ns = foreign_import("document", "create_element_ns", fn(ns: []u8, tag: []u8) i32)
+element = foreign_import("document", "create_element", fn(tag: []u8) i32)
+html = foreign_import("element", "inner_html", fn(el: i32, text: []u8) i32)
 style = foreign_import("element", "style", fn(el: i32, property: []u8, value: []u8) i32)
+attr = foreign_import("element", "set_attribute", fn(el: i32, attribute: []u8, value: []u8) i32)
 child = foreign_import("element", "append_child", fn(parent: i32, child: i32) i32)
 on = foreign_import("element", "add_event_listener", fn(el: i32, event: []u8, cb: []u8) i32)
 log = foreign_import("console", "log", fn(text: []u8) void)
 
-foreign_export("mouseover_square", fn(el: i32) i32 {
-	el.style("backgroundColor", "teal")
-})
 
-foreign_export("mouseleave_square", fn(el: i32) i32 {
-	el.style("backgroundColor", "blue")
-})
-
-square = fn(color: []u8) i32 {
-	create_element("div")
-		.style("width", "50px")
-		.style("height", "50px")
-		.style("backgroundColor", color)
+svg = fn(tag: []u8) i32 {
+	element_ns("http://www.w3.org/2000/svg", tag)
 }
 
-hover_effects = fn(el: i32) i32 {
-	el
-		.on("mouseover", "mouseover_square")
-		.on("mouseleave", "mouseleave_square")
-		.style("cursor", "pointer")
+
+point = fn(x: []u8, y: []u8) i32 {
+	svg("circle")
+		.attr("cx", x)
+		.attr("cy", y)
+		.attr("r", "1")
+		.attr("fill", "cornflowerblue")
 }
+
+
+plot = fn() i32 {
+	svg("g")
+		.attr("transform", "scale(1, -1) translate(0, -100)")
+		.child(point("10", "1"))
+		.child(point("20", "4"))
+		.child(point("30", "9"))
+		.child(point("40", "16"))
+		.child(point("50", "25"))
+		.child(point("60", "36"))
+		.child(point("70", "49"))
+		.child(point("80", "64"))
+		.child(point("90", "81"))
+}
+
 
 foreign_export("onload", fn() i32 {
-    create_element("div")
-		.style("display", "flex")
-		.style("gap", "10px")
-		.child(square("red"))
-		.child(square("green"))
-		.child(square("blue").hover_effects())
+	svg("svg")
+		.attr("width", "500")
+		.attr("height", "500")
+		.attr("viewBox", "0 0 100 100")
+		.child(plot())
 })
+
