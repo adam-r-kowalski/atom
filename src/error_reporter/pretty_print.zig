@@ -47,7 +47,10 @@ pub fn undefinedVariable(allocator: std.mem.Allocator, u: types.UndefinedVariabl
     const strings = try allocator.alloc([]const u8, u.in_scope.len);
     for (u.in_scope, strings) |symbol, *string| string.* = symbol.string();
     const suggestions = try edit_distance.sort(allocator, u.symbol.string(), strings);
-    for (suggestions) |suggestion| try writer.print("\n    {s}", .{suggestion.text});
+    for (suggestions, 0..) |suggestion, i| {
+        try writer.print("\n    {s}", .{suggestion.text});
+        if (i == 4) break;
+    }
     try writer.writeAll(
         \\
         \\
