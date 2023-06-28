@@ -6,3 +6,4 @@ pub const type_checker = @import("type_checker.zig");
 pub const code_generator = @import("code_generator.zig");
 pub const testing = @import("testing.zig");
 pub const error_reporter = @import("error_reporter.zig");
+pub const editDistance = @import("edit_distance.zig").editDistance;
