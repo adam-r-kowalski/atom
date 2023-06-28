@@ -68,6 +68,15 @@ pub fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: parser.
             if (s.value.eql(builtins.f64)) return .{ .f64 = .{ .span = s.span } };
             if (s.value.eql(builtins.bool)) return .{ .bool = .{ .span = s.span } };
             if (s.value.eql(builtins.void)) return .{ .void = .{ .span = s.span } };
+            if (s.value.eql(builtins.str)) {
+                const element_type = try allocator.create(MonoType);
+                element_type.* = .{ .u8 = .{ .span = null } };
+                return .{ .array = .{
+                    .rank = 1,
+                    .element_type = element_type,
+                    .span = s.span,
+                } };
+            }
             std.debug.panic("\nCannot convert symbol {} to mono type", .{s});
         },
         .prototype => |p| {
@@ -87,12 +96,6 @@ pub fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: parser.
                 .return_type = return_type,
                 .span = p.span,
             } };
-        },
-        .array_of => |a| {
-            if (a.size) |_| std.debug.panic("\nSize of array currently not supported", .{});
-            const element_type = try allocator.create(MonoType);
-            element_type.* = try expressionToMonoType(allocator, builtins, a.element_type.*);
-            return MonoType{ .array = .{ .size = null, .element_type = element_type, .span = a.span } };
         },
         else => std.debug.panic("\nCannot convert expression {} to mono type", .{e}),
     }
@@ -144,7 +147,7 @@ fn string(context: Context, s: parser.types.String) !types.String {
     return types.String{
         .value = s.value,
         .span = s.span,
-        .type = .{ .array = .{ .size = null, .element_type = element_type, .span = s.span } },
+        .type = .{ .array = .{ .rank = 1, .element_type = element_type, .span = s.span } },
     };
 }
 
@@ -437,7 +440,11 @@ fn callEmpty(context: Context, c: parser.types.Call) !types.Expression {
         .function = context.builtins.empty,
         .arguments = arguments,
         .span = c.span,
-        .type = .{ .array = .{ .size = null, .element_type = element_type, .span = c.span } },
+        .type = .{ .array = .{
+            .rank = 1,
+            .element_type = element_type,
+            .span = c.span,
+        } },
     } };
 }
 

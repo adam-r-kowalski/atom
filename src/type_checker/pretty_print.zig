@@ -34,12 +34,23 @@ pub fn monotype(m: types.MonoType, writer: Writer) !void {
             try monotype(f.return_type.*, writer);
         },
         .array => |a| {
-            if (a.size) |size| {
-                try writer.print("[{}]", .{size});
-            } else {
-                try writer.writeAll("[]");
+            switch (a.rank) {
+                1 => {
+                    switch (a.element_type.*) {
+                        .u8 => try writer.writeAll("str"),
+                        else => {
+                            try writer.writeAll("vec[");
+                            try monotype(a.element_type.*, writer);
+                            try writer.writeAll("]");
+                        },
+                    }
+                },
+                else => {
+                    try writer.writeAll("arr[");
+                    try monotype(a.element_type.*, writer);
+                    try writer.print(", {}]", .{a.rank});
+                },
             }
-            try monotype(a.element_type.*, writer);
         },
     }
 }

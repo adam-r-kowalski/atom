@@ -24,8 +24,7 @@ const ADD: Precedence = COMPARE + DELTA;
 const MULTIPLY: Precedence = ADD + DELTA;
 const EXPONENTIATE: Precedence = MULTIPLY + DELTA;
 const CALL: Precedence = EXPONENTIATE + DELTA;
-const ARRAY_OF: Precedence = CALL + DELTA;
-const HIGHEST: Precedence = ARRAY_OF + DELTA;
+const HIGHEST: Precedence = CALL + DELTA;
 
 const Associativity = enum {
     left,
@@ -424,7 +423,6 @@ const Infix = union(enum) {
     times_equal,
     annotate,
     call,
-    array_of,
     binary_op: types.BinaryOpKind,
 };
 
@@ -435,7 +433,6 @@ fn precedence(i: Infix) Precedence {
         .times_equal => DEFINE,
         .annotate => DEFINE,
         .call => CALL,
-        .array_of => ARRAY_OF,
         .binary_op => |b| switch (b) {
             .add => ADD,
             .subtract => ADD,
@@ -459,7 +456,6 @@ fn associativity(i: Infix) Associativity {
         .times_equal => .right,
         .annotate => .right,
         .call => .left,
-        .array_of => .right,
         .binary_op => |b| switch (b) {
             .add => .left,
             .subtract => .left,
@@ -498,10 +494,6 @@ fn infix(context: Context, left: types.Expression) ?Infix {
                 .symbol => .call,
                 else => null,
             },
-            .symbol => |_| switch (left) {
-                .array => .array_of,
-                else => null,
-            },
             else => null,
         };
     }
@@ -515,7 +507,6 @@ fn parseInfix(parser: Infix, context: Context, left: types.Expression) !types.Ex
         .times_equal => .{ .times_equal = try timesEqual(context, left.symbol) },
         .annotate => .{ .define = try annotate(context, left.symbol) },
         .call => .{ .call = try call(context, left) },
-        .array_of => .{ .array_of = try arrayOf(context, left) },
         .binary_op => |kind| .{ .binary_op = try binaryOp(context, left, kind) },
     };
 }

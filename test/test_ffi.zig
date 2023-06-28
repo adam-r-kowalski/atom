@@ -4,7 +4,7 @@ const mantis = @import("mantis");
 test "tokenize import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", fn(msg: []u8) void)
+        \\print = foreign_import("console", "log", fn(msg: str) void)
     ;
     const actual = try mantis.testing.tokenize(allocator, source);
     defer allocator.free(actual);
@@ -21,9 +21,7 @@ test "tokenize import" {
         \\(delimiter '(')
         \\(symbol msg)
         \\(operator :)
-        \\(delimiter '[')
-        \\(delimiter ']')
-        \\(symbol u8)
+        \\(symbol str)
         \\(delimiter ')')
         \\(symbol void)
         \\(delimiter ')')
@@ -34,12 +32,12 @@ test "tokenize import" {
 test "parse import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", fn(msg: []u8) void)
+        \\print = foreign_import("console", "log", fn(msg: str) void)
     ;
     const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def print (foreign_import "console" "log" (fn [(msg []u8)] void)))
+        \\(def print (foreign_import "console" "log" (fn [(msg str)] void)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -47,7 +45,7 @@ test "parse import" {
 test "type check import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", fn(msg: []u8) void)
+        \\print = foreign_import("console", "log", fn(msg: str) void)
         \\
         \\start = fn() void {
         \\    print("hello world")
@@ -57,14 +55,14 @@ test "type check import" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = print, type = fn([]u8) void }
+        \\    name = symbol{ value = print, type = fn(str) void }
         \\    type = void
         \\    mutable = false
         \\    value =
         \\        foreign_import =
         \\            module = "console"
         \\            name = "log"
-        \\            type = fn([]u8) void
+        \\            type = fn(str) void
         \\
         \\define =
         \\    name = symbol{ value = start, type = fn() void }
@@ -75,11 +73,11 @@ test "type check import" {
         \\            return_type = void
         \\            body =
         \\                call =
-        \\                    function = symbol{ value = print, type = fn([]u8) void }
+        \\                    function = symbol{ value = print, type = fn(str) void }
         \\                    arguments =
         \\                        argument =
         \\                            mutable = false
-        \\                            value = string{ value = "hello world", type = []u8 }
+        \\                            value = string{ value = "hello world", type = str }
         \\                    type = void
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -304,7 +302,7 @@ test "codegen named foreign export" {
 test "codegen hello world" {
     const allocator = std.testing.allocator;
     const source =
-        \\fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, text: []u8, count: i32, out: i32) i32)
+        \\fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, text: str, count: i32, out: i32) i32)
         \\
         \\stdout: i32 = 1
         \\
@@ -371,8 +369,8 @@ test "codegen hello world" {
 test "codegen echo" {
     const allocator = std.testing.allocator;
     const source =
-        \\fd_read = foreign_import("wasi_unstable", "fd_read", fn(fd: i32, mut iovs: []u8, iov_count: i32, mut nread: i32) i32)
-        \\fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, iovs: []u8, iov_count: i32, mut nwritten: i32) i32)
+        \\fd_read = foreign_import("wasi_unstable", "fd_read", fn(fd: i32, mut iovs: str, iov_count: i32, mut nread: i32) i32)
+        \\fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, iovs: str, iov_count: i32, mut nwritten: i32) i32)
         \\
         \\stdin: i32 = 0
         \\stdout: i32 = 1
