@@ -22,7 +22,7 @@ pub const Function = struct {
 };
 
 pub const Array = struct {
-    size: ?u32,
+    rank: u32,
     element_type: *const MonoType,
     span: ?Span,
 };
@@ -66,6 +66,6 @@ pub fn withSpan(monotype: MonoType, s: Span) MonoType {
         .bool => .{ .bool = .{ .span = s } },
         .typevar => |t| .{ .typevar = .{ .value = t.value, .span = s } },
         .function => |f| .{ .function = .{ .parameters = f.parameters, .return_type = f.return_type, .span = s } },
-        .array => |a| .{ .array = .{ .size = a.size, .element_type = a.element_type, .span = s } },
+        .array => |a| .{ .array = .{ .rank = a.rank, .element_type = a.element_type, .span = s } },
     };
 }

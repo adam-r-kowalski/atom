@@ -170,7 +170,6 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .group => |g| try expression(g.expression.*, indent, writer),
         .block => |b| try block(b, indent, writer),
         .array => |a| try array(a, indent, writer),
-        .array_of => |a| try arrayOf(a, indent, writer),
         .branch => |b| try branch(b, indent, writer),
         .call => |c| try call(c, indent, writer),
         .undefined => |u| try writer.print("{}", .{u}),

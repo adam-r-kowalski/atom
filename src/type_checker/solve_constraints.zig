@@ -24,7 +24,7 @@ fn exactEqual(a: types.MonoType, b: types.MonoType) bool {
             else => return false,
         },
         .array => |a1| switch (b) {
-            .array => |a2| return a1.size == a2.size and exactEqual(a1.element_type.*, a2.element_type.*),
+            .array => |a2| return a1.rank == a2.rank and exactEqual(a1.element_type.*, a2.element_type.*),
             else => return false,
         },
     }

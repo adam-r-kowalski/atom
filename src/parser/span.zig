@@ -17,7 +17,6 @@ pub fn expression(e: types.Expression) types.Span {
         .group => |g| g.span,
         .block => |b| b.span,
         .array => |a| a.span,
-        .array_of => |a| a.span,
         .branch => |b| b.span,
         .call => |c| c.span,
         .undefined => |u| u.span,

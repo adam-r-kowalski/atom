@@ -51,12 +51,6 @@ pub const Array = struct {
     span: Span,
 };
 
-pub const ArrayOf = struct {
-    size: ?Int,
-    element_type: *const Expression,
-    span: Span,
-};
-
 pub const Function = struct {
     parameters: []const Parameter,
     return_type: *const Expression,
@@ -135,7 +129,6 @@ pub const Expression = union(enum) {
     group: Group,
     block: Block,
     array: Array,
-    array_of: ArrayOf,
     branch: Branch,
     call: Call,
     undefined: Undefined,
