@@ -246,3 +246,34 @@ test "mutability mismatch between binding and argument" {
     defer allocator.free(expected);
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "undefined variable sorted by edit distance" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = fn() f32 {
+        \\    apple: f32 = 5
+        \\    banana: f32 = 10
+        \\    banna
+        \\}
+    ;
+    const actual = try mantis.testing.compileErrors(allocator, source);
+    defer allocator.free(actual);
+    const expected = try std.fmt.allocPrint(allocator,
+        \\---- {s}UNDEFINED VARIABLE{s} ---------------------------------------------------
+        \\
+        \\Cannot find variable `banna`.
+        \\
+        \\3 |     banana: f32 = 10
+        \\4 |     {s}banna{s}
+        \\5 | }}
+        \\
+        \\Maybe you want one of the following?
+        \\
+        \\    banana
+        \\    start
+        \\    apple
+        \\
+    , .{ RED, CLEAR, RED, CLEAR });
+    defer allocator.free(expected);
+    try std.testing.expectEqualStrings(expected, actual);
+}

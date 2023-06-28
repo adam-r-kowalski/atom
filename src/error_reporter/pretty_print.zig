@@ -4,6 +4,7 @@ const Writer = List(u8).Writer;
 
 const type_checker = @import("../type_checker.zig");
 const types = @import("types.zig");
+const edit_distance = @import("../edit_distance.zig");
 pub const RED = "\x1b[31m";
 pub const CLEAR = "\x1b[0m";
 
@@ -28,14 +29,14 @@ fn source(lines: [][]const u8, span: type_checker.types.Span, writer: Writer) !v
     if (index < lines.len - 1) try writer.print("\n{} | {s}", .{ span.end.line + 1, lines[index + 1] });
 }
 
-pub fn undefinedVariable(u: types.UndefinedVariable, lines: [][]const u8, writer: Writer) !void {
+pub fn undefinedVariable(allocator: std.mem.Allocator, u: types.UndefinedVariable, lines: [][]const u8, writer: Writer) !void {
     try writer.print(
         \\---- {s}UNDEFINED VARIABLE{s} ---------------------------------------------------
         \\
-        \\Cannot find variable `{}`.
+        \\Cannot find variable `{s}`.
         \\
         \\
-    , .{ RED, CLEAR, u.symbol });
+    , .{ RED, CLEAR, u.symbol.string() });
     try source(lines, u.span, writer);
     try writer.writeAll(
         \\
@@ -43,7 +44,10 @@ pub fn undefinedVariable(u: types.UndefinedVariable, lines: [][]const u8, writer
         \\Maybe you want one of the following?
         \\
     );
-    for (u.in_scope) |symbol| try writer.print("\n    {}", .{symbol});
+    const strings = try allocator.alloc([]const u8, u.in_scope.len);
+    for (u.in_scope, strings) |symbol, *string| string.* = symbol.string();
+    const suggestions = try edit_distance.sort(allocator, u.symbol.string(), strings);
+    for (suggestions) |suggestion| try writer.print("\n    {s}", .{suggestion.text});
     try writer.writeAll(
         \\
         \\
@@ -126,7 +130,7 @@ pub fn errors(es: types.Errors, writer: Writer) !void {
     var lines = List([]const u8).init(es.allocator);
     var iterator = std.mem.split(u8, es.source, "\n");
     while (iterator.next()) |line| try lines.append(line);
-    for (es.undefined_variable.items) |u| try undefinedVariable(u, lines.items, writer);
+    for (es.undefined_variable.items) |u| try undefinedVariable(es.allocator, u, lines.items, writer);
     for (es.type_mismatch.items) |u| try typeMismatch(u, lines.items, writer);
     for (es.mutability_mismatch.items) |u| try mutabilityMismatch(u, lines.items, writer);
     for (es.reassigning_immutable.items) |u| try reassigningImmutable(u, lines.items, writer);

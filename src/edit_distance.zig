@@ -49,3 +49,25 @@ pub fn editDistance(allocator: std.mem.Allocator, a: []const u8, b: []const u8) 
     }
     return d.get(a.len, b.len);
 }
+
+pub const Entry = struct {
+    text: []const u8,
+    distance: u32,
+
+    fn lessThan(ctx: void, a: Entry, b: Entry) bool {
+        _ = ctx;
+        return a.distance < b.distance;
+    }
+};
+
+pub fn sort(allocator: std.mem.Allocator, needle: []const u8, haystack: []const []const u8) ![]const Entry {
+    var entries = try allocator.alloc(Entry, haystack.len);
+    for (0..haystack.len) |i| {
+        entries[i] = Entry{
+            .text = haystack[i],
+            .distance = try editDistance(allocator, needle, haystack[i]),
+        };
+    }
+    std.sort.heap(Entry, entries, {}, Entry.lessThan);
+    return entries;
+}
