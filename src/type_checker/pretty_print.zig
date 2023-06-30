@@ -52,6 +52,17 @@ pub fn monotype(m: types.MonoType, writer: Writer) !void {
                 },
             }
         },
+        .enumeration => |e| {
+            try writer.writeAll("enum{ ");
+            for (e.variants, 0..) |v, i| {
+                if (i > 0) try writer.writeAll(", ");
+                try writer.writeAll(v.string());
+            }
+            try writer.writeAll(" }");
+        },
+        .enumeration_instance => |e| {
+            try writer.writeAll(e.name.string());
+        },
     }
 }
 

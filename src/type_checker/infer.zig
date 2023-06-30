@@ -663,6 +663,15 @@ fn topLevelFunction(allocator: Allocator, builtins: Builtins, f: parser.types.Fu
     } };
 }
 
+fn topLevelEnumeration(allocator: Allocator, e: parser.types.Enum) !MonoType {
+    const variants = try allocator.alloc(Interned, e.variants.len);
+    for (e.variants, variants) |v, *t| t.* = v.value;
+    return MonoType{ .enumeration = .{
+        .variants = variants,
+        .span = e.span,
+    } };
+}
+
 fn topLevelCall(allocator: Allocator, builtins: Builtins, c: parser.types.Call) !MonoType {
     switch (c.function.*) {
         .symbol => |s| {
@@ -686,6 +695,7 @@ fn topLevelInt(allocator: Allocator, builtins: Builtins, d: parser.types.Define)
 fn topLevelType(allocator: Allocator, builtins: Builtins, d: parser.types.Define) !MonoType {
     return switch (d.value.*) {
         .function => |f| try topLevelFunction(allocator, builtins, f),
+        .enumeration => |e| try topLevelEnumeration(allocator, e),
         .call => |c| try topLevelCall(allocator, builtins, c),
         .int => try topLevelInt(allocator, builtins, d),
         else => |k| std.debug.panic("\nInvalid top level value {}", .{k}),

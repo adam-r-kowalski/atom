@@ -71,6 +71,15 @@ pub fn prototype(p: types.Prototype, indent: Indent, writer: Writer) !void {
     try writer.writeAll(")");
 }
 
+pub fn enumeration(e: types.Enum, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("(enum");
+    for (e.variants) |variant| {
+        try newlineAndIndent(indent, writer);
+        try writer.writeAll(variant.value.string());
+    }
+    try writer.writeAll(")");
+}
+
 pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
     try writer.writeAll("(");
     switch (b.kind) {
@@ -166,6 +175,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .times_equal => |t| try timesEqual(t, indent, writer),
         .function => |f| try function(f, indent, writer),
         .prototype => |p| try prototype(p, indent, writer),
+        .enumeration => |en| try enumeration(en, indent, writer),
         .binary_op => |b| try binaryOp(b, indent, writer),
         .group => |g| try expression(g.expression.*, indent, writer),
         .block => |b| try block(b, indent, writer),

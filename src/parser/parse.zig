@@ -6,6 +6,7 @@ const tokenizer = @import("../tokenizer.zig");
 const LeftParen = tokenizer.types.LeftParen;
 const IfToken = tokenizer.types.If;
 const FnToken = tokenizer.types.Fn;
+const EnumToken = tokenizer.types.Enum;
 const Token = tokenizer.types.Token;
 const types = @import("types.zig");
 const pretty_print = @import("pretty_print.zig");
@@ -217,6 +218,33 @@ fn function(context: Context, fn_: FnToken) !types.Expression {
     };
 }
 
+fn enumeration(context: Context, enum_: EnumToken) !types.Enum {
+    const begin = enum_.span.begin;
+    _ = context.tokens.consume(.left_brace);
+    var variants = List(types.Symbol).init(context.allocator);
+    while (context.tokens.peek()) |t| {
+        switch (t) {
+            .new_line => context.tokens.advance(),
+            .right_brace => break,
+            .symbol => |name| {
+                context.tokens.advance();
+                context.tokens.consumeNewLines();
+                context.tokens.maybeConsume(.comma);
+                try variants.append(types.Symbol{
+                    .value = name.value,
+                    .span = name.span,
+                });
+            },
+            else => |k| std.debug.panic("\nExpected symbol or right paren, found {}", .{k}),
+        }
+    }
+    const end = tokenizer.span.token(context.tokens.consume(.right_brace)).end;
+    return types.Enum{
+        .variants = try variants.toOwnedSlice(),
+        .span = types.Span{ .begin = begin, .end = end },
+    };
+}
+
 fn mutable(context: Context, begin: tokenizer.types.Pos) !types.Define {
     const name = context.tokens.next().?.symbol;
     switch (context.tokens.next().?) {
@@ -262,6 +290,7 @@ fn prefix(context: Context) !types.Expression {
         .left_paren => |l| return .{ .group = try group(context, l) },
         .if_ => |i| return .{ .branch = try branch(context, i) },
         .fn_ => |f| return try function(context, f),
+        .enum_ => |e| return .{ .enumeration = try enumeration(context, e) },
         .left_brace => |l| return .{ .block = try block(context, l.span.begin) },
         .left_bracket => |l| return .{ .array = try array(context, l.span.begin) },
         .mut => |m| return .{ .define = try mutable(context, m.span.begin) },

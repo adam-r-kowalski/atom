@@ -64,6 +64,11 @@ pub const Prototype = struct {
     span: Span,
 };
 
+pub const Enum = struct {
+    variants: []const Symbol,
+    span: Span,
+};
+
 pub const BinaryOpKind = enum {
     add,
     subtract,
@@ -124,6 +129,7 @@ pub const Expression = union(enum) {
     plus_equal: PlusEqual,
     times_equal: TimesEqual,
     function: Function,
+    enumeration: Enum,
     prototype: Prototype,
     binary_op: BinaryOp,
     group: Group,
