@@ -211,6 +211,14 @@ fn undef(allocator: Allocator, sub: types.Substitution, u: types.Undefined) !typ
     };
 }
 
+fn variant(allocator: Allocator, sub: types.Substitution, v: types.Variant) !types.Variant {
+    return .{
+        .value = v.value,
+        .span = v.span,
+        .type = try monotype(allocator, sub, v.type),
+    };
+}
+
 pub fn expression(allocator: Allocator, sub: types.Substitution, e: types.Expression) error{OutOfMemory}!types.Expression {
     return switch (e) {
         .symbol => |s| .{ .symbol = try symbol(allocator, sub, s) },
@@ -229,6 +237,7 @@ pub fn expression(allocator: Allocator, sub: types.Substitution, e: types.Expres
         .function => |f| .{ .function = try function(allocator, sub, f) },
         .block => |b| .{ .block = try block(allocator, sub, b) },
         .group => |g| .{ .group = try group(allocator, sub, g) },
+        .variant => |v| .{ .variant = try variant(allocator, sub, v) },
         .foreign_import => e,
         .foreign_export => |f| .{ .foreign_export = try foreignExport(allocator, sub, f) },
         .convert => e,

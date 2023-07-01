@@ -58,7 +58,7 @@ pub fn findInScope(scopes: Scopes, s: parser.types.Symbol) !types.Binding {
     return error.CompileError;
 }
 
-pub fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: parser.types.Expression) !MonoType {
+pub fn expressionToMonoType(allocator: Allocator, scope: types.Scope, builtins: Builtins, e: parser.types.Expression) !MonoType {
     switch (e) {
         .symbol => |s| {
             if (s.value.eql(builtins.u8)) return .{ .u8 = .{ .span = s.span } };
@@ -77,20 +77,23 @@ pub fn expressionToMonoType(allocator: Allocator, builtins: Builtins, e: parser.
                     .span = s.span,
                 } };
             }
+            if (scope.get(s.value)) |binding| {
+                return monotype.withSpan(binding.type, s.span);
+            }
             std.debug.panic("\nCannot convert symbol {} to mono type", .{s});
         },
         .prototype => |p| {
             const len = p.parameters.len;
             const parameters = try allocator.alloc(monotype.Parameter, len);
             for (p.parameters, parameters) |param, *t| {
-                const mono = try expressionToMonoType(allocator, builtins, param.type);
+                const mono = try expressionToMonoType(allocator, scope, builtins, param.type);
                 t.* = .{
                     .type = monotype.withSpan(mono, param.span),
                     .mutable = param.mutable,
                 };
             }
             const return_type = try allocator.create(MonoType);
-            return_type.* = try expressionToMonoType(allocator, builtins, p.return_type.*);
+            return_type.* = try expressionToMonoType(allocator, scope, builtins, p.return_type.*);
             return MonoType{ .function = .{
                 .parameters = parameters,
                 .return_type = return_type,
@@ -191,7 +194,7 @@ fn branch(context: Context, b: parser.types.Branch) !types.Branch {
     };
 }
 
-fn dotCall(context: Context, b: parser.types.BinaryOp) !types.Expression {
+fn dot(context: Context, b: parser.types.BinaryOp) !types.Expression {
     switch (b.right.*) {
         .call => |c| {
             const arguments = try context.allocator.alloc(parser.types.Argument, c.arguments.len + 1);
@@ -208,13 +211,39 @@ fn dotCall(context: Context, b: parser.types.BinaryOp) !types.Expression {
             };
             return try call(context, new_call);
         },
+        .symbol => |right| {
+            switch (b.left.*) {
+                .symbol => |left| {
+                    const binding = try findInScope(context.scopes.*, left);
+                    switch (binding.type) {
+                        .enumeration => |e| {
+                            for (e.variants) |v| {
+                                if (v.eql(right.value)) {
+                                    return types.Expression{
+                                        .variant = .{
+                                            .value = v,
+                                            .span = b.span,
+                                            .type = monotype.withSpan(binding.type, b.span),
+                                        },
+                                    };
+                                }
+                            }
+                            std.debug.panic("\nvariant {s} not found in enumeration {}", .{ right.value.string(), binding.type });
+                        },
+                        else => |k| std.debug.panic("Expected enumeration, got {}", .{k}),
+                    }
+                    std.debug.panic("\nfound binding {} for symbol {s}", .{ binding, left.value.string() });
+                },
+                else => |t| std.debug.panic("Expected symbol before dot, got {}", .{t}),
+            }
+        },
         else => |k| std.debug.panic("Expected call after dot, got {}", .{k}),
     }
 }
 
 fn binaryOp(context: Context, b: parser.types.BinaryOp) !types.Expression {
     switch (b.kind) {
-        .dot => return dotCall(context, b),
+        .dot => return dot(context, b),
         .equal, .greater, .less => {
             const left = try expressionAlloc(context, b.left.*);
             const right = try expressionAlloc(context, b.right.*);
@@ -253,7 +282,7 @@ fn define(context: Context, d: parser.types.Define) !types.Define {
     const value = try expressionAlloc(context, d.value.*);
     var mono = typeOf(value.*);
     if (d.type) |t| {
-        const annotated_type = try expressionToMonoType(context.allocator, context.builtins, t.*);
+        const annotated_type = try expressionToMonoType(context.allocator, context.scopes.base, context.builtins, t.*);
         try context.constraints.equal.append(.{ .left = annotated_type, .right = mono });
         mono = annotated_type;
     }
@@ -283,7 +312,7 @@ fn drop(context: Context, d: parser.types.Drop) !types.Drop {
     const value = try expressionAlloc(context, d.value.*);
     var mono = typeOf(value.*);
     if (d.type) |t| {
-        const annotated_type = try expressionToMonoType(context.allocator, context.builtins, t.*);
+        const annotated_type = try expressionToMonoType(context.allocator, context.scopes.base, context.builtins, t.*);
         try context.constraints.equal.append(.{ .left = annotated_type, .right = mono });
         mono = annotated_type;
     }
@@ -348,7 +377,7 @@ fn timesEqual(context: Context, t: parser.types.TimesEqual) !types.TimesEqual {
 
 fn callForeignImport(context: Context, c: parser.types.Call) !types.Expression {
     if (c.arguments.len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
-    const mono = try expressionToMonoType(context.allocator, context.builtins, c.arguments[2].value);
+    const mono = try expressionToMonoType(context.allocator, context.scopes.base, context.builtins, c.arguments[2].value);
     return types.Expression{
         .foreign_import = .{
             .module = c.arguments[0].value.string.value,
@@ -373,7 +402,7 @@ fn callForeignExport(context: Context, c: parser.types.Call) !types.Expression {
 
 fn callConvert(context: Context, c: parser.types.Call) !types.Expression {
     if (c.arguments.len != 2) std.debug.panic("convert takes 2 arguments", .{});
-    const mono = try expressionToMonoType(context.allocator, context.builtins, c.arguments[1].value);
+    const mono = try expressionToMonoType(context.allocator, context.scopes.base, context.builtins, c.arguments[1].value);
     return types.Expression{
         .convert = .{
             .value = try expressionAlloc(context, c.arguments[0].value),
@@ -413,7 +442,7 @@ fn callEmpty(context: Context, c: parser.types.Call) !types.Expression {
     if (c.arguments.len != 2) std.debug.panic("empty takes 2 arguments", .{});
     const arguments = try context.allocator.alloc(types.Argument, 2);
     const arg0 = c.arguments[0];
-    const mono = try expressionToMonoType(context.allocator, context.builtins, arg0.value);
+    const mono = try expressionToMonoType(context.allocator, context.scopes.base, context.builtins, arg0.value);
     const arg_span = parser.span.expression(arg0.value);
     arguments[0] = .{
         .value = .{
@@ -519,7 +548,7 @@ fn function(context: Context, f: parser.types.Function) !types.Function {
     const function_parameters = try context.allocator.alloc(monotype.Parameter, len);
     for (f.parameters, parameters, function_parameters) |untyped_p, *typed_p, *t| {
         const name_symbol = untyped_p.name.value;
-        const mono = try expressionToMonoType(context.allocator, context.builtins, untyped_p.type);
+        const mono = try expressionToMonoType(context.allocator, context.scopes.base, context.builtins, untyped_p.type);
         const p_type = monotype.withSpan(mono, untyped_p.span);
         const binding = types.Binding{
             .type = mono,
@@ -543,7 +572,7 @@ fn function(context: Context, f: parser.types.Function) !types.Function {
         };
     }
     const return_type = try context.allocator.create(MonoType);
-    return_type.* = try expressionToMonoType(context.allocator, context.builtins, f.return_type.*);
+    return_type.* = try expressionToMonoType(context.allocator, context.scopes.base, context.builtins, f.return_type.*);
     const body = try block(context, f.body);
     try context.constraints.equal.append(.{
         .left = return_type.*,
@@ -650,6 +679,19 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
     var typed = types.Typed.init(allocator);
     var scope = types.Scope.init(allocator);
     var foreign_exports = List(Interned).init(allocator);
+    for (ast.enumerations) |e| {
+        const variants = try allocator.alloc(Interned, e.enumeration.variants.len);
+        for (e.enumeration.variants, variants) |v, *i| i.* = v.value;
+        try scope.put(e.name.value, types.Binding{
+            .type = .{ .enumeration = .{
+                .variants = variants,
+                .span = e.enumeration.span,
+            } },
+            .global = true,
+            .mutable = false,
+            .span = e.span,
+        });
+    }
     for (ast.foreign_imports) |f| {
         const name = f.name.value;
         try order.append(name);
@@ -663,7 +705,7 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
             .span = f.span,
         } });
         if (f.call.arguments.len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
-        const mono = try expressionToMonoType(allocator, builtins, f.call.arguments[2].value);
+        const mono = try expressionToMonoType(allocator, scope, builtins, f.call.arguments[2].value);
         try scope.put(name, types.Binding{
             .type = mono,
             .global = true,
@@ -686,14 +728,14 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
         const len = f.function.parameters.len;
         const parameters = try allocator.alloc(monotype.Parameter, len);
         for (f.function.parameters, parameters) |p, *t| {
-            const m = try expressionToMonoType(allocator, builtins, p.type);
+            const m = try expressionToMonoType(allocator, scope, builtins, p.type);
             t.* = .{
                 .type = monotype.withSpan(m, p.span),
                 .mutable = p.mutable,
             };
         }
         const return_type = try allocator.create(MonoType);
-        return_type.* = try expressionToMonoType(allocator, builtins, f.function.return_type.*);
+        return_type.* = try expressionToMonoType(allocator, scope, builtins, f.function.return_type.*);
         const mono = MonoType{ .function = .{
             .parameters = parameters,
             .return_type = return_type,
@@ -711,7 +753,7 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
         try order.append(name);
         try untyped.putNoClobber(name, .{ .define = d });
         if (d.type) |t| {
-            const mono = try expressionToMonoType(allocator, builtins, t.*);
+            const mono = try expressionToMonoType(allocator, scope, builtins, t.*);
             try scope.put(name, types.Binding{
                 .type = mono,
                 .global = true,

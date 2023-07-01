@@ -153,6 +153,12 @@ pub const Call = struct {
     type: MonoType,
 };
 
+pub const Variant = struct {
+    value: Interned,
+    span: Span,
+    type: MonoType,
+};
+
 pub const Intrinsic = struct {
     function: Interned,
     arguments: []Argument,
@@ -207,6 +213,7 @@ pub const Expression = union(enum) {
     block: Block,
     branch: Branch,
     call: Call,
+    variant: Variant,
     intrinsic: Intrinsic,
     foreign_import: ForeignImport,
     foreign_export: ForeignExport,
