@@ -218,7 +218,7 @@ fn function(context: Context, fn_: FnToken) !types.Expression {
     };
 }
 
-fn enumeration(context: Context, enum_: EnumToken) !types.Enum {
+fn enumeration(context: Context, enum_: EnumToken) !types.Enumeration {
     const begin = enum_.span.begin;
     _ = context.tokens.consume(.left_brace);
     var variants = List(types.Symbol).init(context.allocator);
@@ -239,7 +239,7 @@ fn enumeration(context: Context, enum_: EnumToken) !types.Enum {
         }
     }
     const end = tokenizer.span.token(context.tokens.consume(.right_brace)).end;
-    return types.Enum{
+    return types.Enumeration{
         .variants = try variants.toOwnedSlice(),
         .span = types.Span{ .begin = begin, .end = end },
     };
@@ -562,14 +562,60 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
         .precedence = LOWEST,
         .builtins = builtins,
     };
-    var expressions = List(types.Expression).init(allocator);
+    var enumerations = List(types.TopLevelEnumeration).init(allocator);
+    var functions = List(types.TopLevelFunction).init(allocator);
+    var foreign_imports = List(types.TopLevelForeignImport).init(allocator);
+    var ignored = List(types.Expression).init(allocator);
     while (iterator.peek()) |t| {
         switch (t) {
             .new_line => context.tokens.advance(),
-            else => try expressions.append(try expression(context)),
+            else => {
+                const e = try expression(context);
+                switch (e) {
+                    .define => |d| {
+                        if (d.mutable) std.debug.panic("\nNo top level mutable definitions allowed", .{});
+                        switch (d.value.*) {
+                            .enumeration => |en| try enumerations.append(.{
+                                .name = d.name,
+                                .type = d.type,
+                                .enumeration = en,
+                                .span = d.span,
+                            }),
+                            .function => |f| try functions.append(.{
+                                .name = d.name,
+                                .type = d.type,
+                                .function = f,
+                                .span = d.span,
+                            }),
+                            .call => |c| {
+                                switch (c.function.*) {
+                                    .symbol => |s| {
+                                        if (s.value.eql(builtins.foreign_import)) {
+                                            try foreign_imports.append(.{
+                                                .name = d.name,
+                                                .type = d.type,
+                                                .call = c,
+                                                .span = d.span,
+                                            });
+                                        } else {
+                                            try ignored.append(e);
+                                        }
+                                    },
+                                    else => try ignored.append(e),
+                                }
+                            },
+                            else => |k| std.debug.panic("\nInvalid top level define, found {}", .{k}),
+                        }
+                    },
+                    else => try ignored.append(e),
+                }
+            },
         }
     }
     return types.Module{
-        .expressions = try expressions.toOwnedSlice(),
+        .enumerations = try enumerations.toOwnedSlice(),
+        .functions = try functions.toOwnedSlice(),
+        .foreign_imports = try foreign_imports.toOwnedSlice(),
+        .ignored = try ignored.toOwnedSlice(),
     };
 }

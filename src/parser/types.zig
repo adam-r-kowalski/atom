@@ -64,7 +64,7 @@ pub const Prototype = struct {
     span: Span,
 };
 
-pub const Enum = struct {
+pub const Enumeration = struct {
     variants: []const Symbol,
     span: Span,
 };
@@ -129,7 +129,7 @@ pub const Expression = union(enum) {
     plus_equal: PlusEqual,
     times_equal: TimesEqual,
     function: Function,
-    enumeration: Enum,
+    enumeration: Enumeration,
     prototype: Prototype,
     binary_op: BinaryOp,
     group: Group,
@@ -140,4 +140,30 @@ pub const Expression = union(enum) {
     undefined: Undefined,
 };
 
-pub const Module = struct { expressions: []const Expression };
+pub const TopLevelEnumeration = struct {
+    name: Symbol,
+    type: ?*const Expression,
+    enumeration: Enumeration,
+    span: Span,
+};
+
+pub const TopLevelFunction = struct {
+    name: Symbol,
+    type: ?*const Expression,
+    function: Function,
+    span: Span,
+};
+
+pub const TopLevelForeignImport = struct {
+    name: Symbol,
+    type: ?*const Expression,
+    call: Call,
+    span: Span,
+};
+
+pub const Module = struct {
+    enumerations: []const TopLevelEnumeration,
+    functions: []const TopLevelFunction,
+    foreign_imports: []const TopLevelForeignImport,
+    ignored: []const Expression,
+};
