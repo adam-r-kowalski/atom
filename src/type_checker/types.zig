@@ -155,6 +155,7 @@ pub const Call = struct {
 
 pub const Variant = struct {
     value: Interned,
+    index: u64,
     span: Span,
     type: MonoType,
 };

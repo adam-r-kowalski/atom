@@ -214,6 +214,7 @@ fn undef(allocator: Allocator, sub: types.Substitution, u: types.Undefined) !typ
 fn variant(allocator: Allocator, sub: types.Substitution, v: types.Variant) !types.Variant {
     return .{
         .value = v.value,
+        .index = v.index,
         .span = v.span,
         .type = try monotype(allocator, sub, v.type),
     };

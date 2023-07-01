@@ -133,6 +133,7 @@ pub const Block = struct {
 pub const Literal = union(enum) {
     bool: bool,
     u32: u32,
+    u64: u64,
     i32: i32,
     i64: i64,
     f32: f32,

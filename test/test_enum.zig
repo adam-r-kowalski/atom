@@ -117,7 +117,70 @@ test "type infer enum" {
         \\            body =
         \\                variant =
         \\                    value = a
+        \\                    index = 0
         \\                    type = enum{ a, b, c, d, f }
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen enum index 0" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\Grade = enum {
+        \\    a,
+        \\    b,
+        \\    c,
+        \\    d,
+        \\    f,
+        \\}
+        \\
+        \\start = fn() Grade {
+        \\    Grade.a
+        \\}
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (func $start (result i32)
+        \\        (i32.const 0))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen enum index 1" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\Grade = enum {
+        \\    a,
+        \\    b,
+        \\    c,
+        \\    d,
+        \\    f,
+        \\}
+        \\
+        \\start = fn() Grade {
+        \\    Grade.b
+        \\}
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (func $start (result i32)
+        \\        (i32.const 1))
+        \\
+        \\    (export "_start" (func $start)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

@@ -51,6 +51,13 @@ fn mapType(monotype: type_checker.types.MonoType) types.Type {
         .bool => return .i32,
         .void => return .void,
         .array => return .i32,
+        .enumeration => |e| {
+            switch (e.variants.len) {
+                0...31 => return .i32,
+                32...63 => return .i64,
+                else => std.debug.panic("\nEnumeration with {} variants not yet supported", .{e.variants.len}),
+            }
+        },
         else => std.debug.panic("\nMonotype {} not yet supported", .{monotype}),
     }
 }
@@ -417,6 +424,19 @@ fn string(context: Context, s: type_checker.types.String) !types.Expression {
     return .{ .block = types.Block{ .result = .i32, .expressions = exprs } };
 }
 
+fn variant(v: type_checker.types.Variant) !types.Expression {
+    switch (v.type) {
+        .enumeration => |e| {
+            switch (e.variants.len) {
+                0...31 => return .{ .literal = .{ .u32 = @intCast(v.index) } },
+                32...63 => return .{ .literal = .{ .u64 = v.index } },
+                else => |k| std.debug.panic("\nVariant type {} not allowed", .{k}),
+            }
+        },
+        else => |k| std.debug.panic("\nVariant type {} not allowed", .{k}),
+    }
+}
+
 fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMemory, InvalidCharacter, Overflow }!types.Expression {
     switch (e) {
         .int => |i| return try int(i),
@@ -434,6 +454,7 @@ fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMe
         .times_equal => |a| return try timesEqual(context, a),
         .convert => |c| return try convert(context, c),
         .string => |s| return try string(context, s),
+        .variant => |v| return try variant(v),
         else => |k| std.debug.panic("\ntypes.Expression {} not yet supported", .{k}),
     }
 }

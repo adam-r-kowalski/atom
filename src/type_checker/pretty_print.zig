@@ -338,6 +338,8 @@ pub fn variant(v: types.Variant, indent: Indent, writer: Writer) !void {
     try newlineAndIndent(indent + 1, writer);
     try writer.print("value = {s}", .{v.value.string()});
     try newlineAndIndent(indent + 1, writer);
+    try writer.print("index = {}", .{v.index});
+    try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("type = ");
     try monotype(v.type, writer);
 }

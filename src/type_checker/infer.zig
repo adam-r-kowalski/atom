@@ -217,11 +217,12 @@ fn dot(context: Context, b: parser.types.BinaryOp) !types.Expression {
                     const binding = try findInScope(context.scopes.*, left);
                     switch (binding.type) {
                         .enumeration => |e| {
-                            for (e.variants) |v| {
+                            for (e.variants, 0..) |v, i| {
                                 if (v.eql(right.value)) {
                                     return types.Expression{
                                         .variant = .{
                                             .value = v,
+                                            .index = i,
                                             .span = b.span,
                                             .type = monotype.withSpan(binding.type, b.span),
                                         },
