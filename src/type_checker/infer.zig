@@ -644,105 +644,93 @@ pub fn topLevel(m: *types.Module, name: Interned, errors: *Errors) !void {
     }
 }
 
-fn topLevelFunction(allocator: Allocator, builtins: Builtins, f: parser.types.Function) !MonoType {
-    const len = f.parameters.len;
-    const parameters = try allocator.alloc(monotype.Parameter, len);
-    for (f.parameters, parameters) |p, *t| {
-        const mono = try expressionToMonoType(allocator, builtins, p.type);
-        t.* = .{
-            .type = monotype.withSpan(mono, p.span),
-            .mutable = p.mutable,
-        };
-    }
-    const return_type = try allocator.create(MonoType);
-    return_type.* = try expressionToMonoType(allocator, builtins, f.return_type.*);
-    return MonoType{ .function = .{
-        .parameters = parameters,
-        .return_type = return_type,
-        .span = f.span,
-    } };
-}
-
-fn topLevelEnumeration(allocator: Allocator, e: parser.types.Enum) !MonoType {
-    const variants = try allocator.alloc(Interned, e.variants.len);
-    for (e.variants, variants) |v, *t| t.* = v.value;
-    return MonoType{ .enumeration = .{
-        .variants = variants,
-        .span = e.span,
-    } };
-}
-
-fn topLevelCall(allocator: Allocator, builtins: Builtins, c: parser.types.Call) !MonoType {
-    switch (c.function.*) {
-        .symbol => |s| {
-            if (s.value.eql(builtins.foreign_import)) {
-                if (c.arguments.len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
-                return try expressionToMonoType(allocator, builtins, c.arguments[2].value);
-            }
-        },
-        else => |k| std.debug.panic("\nInvalid top level call function {}", .{k}),
-    }
-    std.debug.panic("\nInvalid top level call {}", .{c.function});
-}
-
-fn topLevelInt(allocator: Allocator, builtins: Builtins, d: parser.types.Define) !MonoType {
-    if (d.type) |t| {
-        return try expressionToMonoType(allocator, builtins, t.*);
-    }
-    std.debug.panic("\nInvalid top level int {}", .{d});
-}
-
-fn topLevelType(allocator: Allocator, builtins: Builtins, d: parser.types.Define) !MonoType {
-    return switch (d.value.*) {
-        .function => |f| try topLevelFunction(allocator, builtins, f),
-        .enumeration => |e| try topLevelEnumeration(allocator, e),
-        .call => |c| try topLevelCall(allocator, builtins, c),
-        .int => try topLevelInt(allocator, builtins, d),
-        else => |k| std.debug.panic("\nInvalid top level value {}", .{k}),
-    };
-}
-
 pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, ast: parser.types.Module) !types.Module {
     var order = List(Interned).init(allocator);
     var untyped = types.Untyped.init(allocator);
     var typed = types.Typed.init(allocator);
     var scope = types.Scope.init(allocator);
     var foreign_exports = List(Interned).init(allocator);
-    for (ast.expressions) |top_level| {
-        switch (top_level) {
-            .define => |d| {
-                const name = d.name.value;
-                try order.append(name);
-                try untyped.putNoClobber(name, top_level);
-                const mono = try topLevelType(allocator, builtins, d);
-                try scope.put(name, types.Binding{
-                    .type = mono,
-                    .global = true,
-                    .mutable = false,
-                    .span = d.name.span,
-                });
+    for (ast.foreign_imports) |f| {
+        const name = f.name.value;
+        try order.append(name);
+        const value = try allocator.create(parser.types.Expression);
+        value.* = .{ .call = f.call };
+        try untyped.putNoClobber(name, .{ .define = .{
+            .name = f.name,
+            .type = f.type,
+            .value = value,
+            .mutable = false,
+            .span = f.span,
+        } });
+        if (f.call.arguments.len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
+        const mono = try expressionToMonoType(allocator, builtins, f.call.arguments[2].value);
+        try scope.put(name, types.Binding{
+            .type = mono,
+            .global = true,
+            .mutable = false,
+            .span = f.name.span,
+        });
+    }
+    for (ast.functions) |f| {
+        const name = f.name.value;
+        try order.append(name);
+        const value = try allocator.create(parser.types.Expression);
+        value.* = .{ .function = f.function };
+        try untyped.putNoClobber(name, .{ .define = .{
+            .name = f.name,
+            .type = f.type,
+            .value = value,
+            .mutable = false,
+            .span = f.span,
+        } });
+        const len = f.function.parameters.len;
+        const parameters = try allocator.alloc(monotype.Parameter, len);
+        for (f.function.parameters, parameters) |p, *t| {
+            const m = try expressionToMonoType(allocator, builtins, p.type);
+            t.* = .{
+                .type = monotype.withSpan(m, p.span),
+                .mutable = p.mutable,
+            };
+        }
+        const return_type = try allocator.create(MonoType);
+        return_type.* = try expressionToMonoType(allocator, builtins, f.function.return_type.*);
+        const mono = MonoType{ .function = .{
+            .parameters = parameters,
+            .return_type = return_type,
+            .span = f.span,
+        } };
+        try scope.put(name, types.Binding{
+            .type = mono,
+            .global = true,
+            .mutable = false,
+            .span = f.name.span,
+        });
+    }
+    for (ast.defines) |d| {
+        const name = d.name.value;
+        try order.append(name);
+        try untyped.putNoClobber(name, .{ .define = d });
+        if (d.type) |t| {
+            const mono = try expressionToMonoType(allocator, builtins, t.*);
+            try scope.put(name, types.Binding{
+                .type = mono,
+                .global = true,
+                .mutable = false,
+                .span = d.name.span,
+            });
+        } else {
+            std.debug.panic("\nInvalid top level int {}", .{d});
+        }
+    }
+    for (ast.foreign_exports) |c| {
+        if (c.arguments.len != 2) std.debug.panic("\nForeign export call expects 2 arguments received {}", .{c.arguments.len});
+        switch (c.arguments[0].value) {
+            .string => |str| {
+                try order.append(str.value);
+                try untyped.putNoClobber(str.value, .{ .call = c });
+                try foreign_exports.append(str.value);
             },
-            .call => |c| {
-                switch (c.function.*) {
-                    .symbol => |sym| {
-                        if (sym.value.eql(builtins.foreign_export)) {
-                            if (c.arguments.len != 2) std.debug.panic("\nInvalid foreign export call {}", .{c});
-                            switch (c.arguments[0].value) {
-                                .string => |str| {
-                                    try order.append(str.value);
-                                    try untyped.putNoClobber(str.value, top_level);
-                                    try foreign_exports.append(str.value);
-                                },
-                                else => |k| std.debug.panic("\nInvalid foreign export call {}", .{k}),
-                            }
-                        } else {
-                            std.debug.panic("\nInvalid top level call to {}", .{sym});
-                        }
-                    },
-                    else => |k| std.debug.panic("\nInvalid top level call {}", .{k}),
-                }
-            },
-            else => |k| std.debug.panic("\nInvalid top level expression {}", .{k}),
+            else => |k| std.debug.panic("\nInvalid foreign export call {}", .{k}),
         }
     }
     return types.Module{

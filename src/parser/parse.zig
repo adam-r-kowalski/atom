@@ -562,9 +562,10 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
         .precedence = LOWEST,
         .builtins = builtins,
     };
-    var enumerations = List(types.TopLevelEnumeration).init(allocator);
-    var functions = List(types.TopLevelFunction).init(allocator);
     var foreign_imports = List(types.TopLevelForeignImport).init(allocator);
+    var enumerations = List(types.TopLevelEnumeration).init(allocator);
+    var defines = List(types.Define).init(allocator);
+    var functions = List(types.TopLevelFunction).init(allocator);
     var foreign_exports = List(types.Call).init(allocator);
     var ignored = List(types.Expression).init(allocator);
     while (iterator.peek()) |t| {
@@ -599,13 +600,13 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
                                                 .span = d.span,
                                             });
                                         } else {
-                                            try ignored.append(e);
+                                            try defines.append(d);
                                         }
                                     },
-                                    else => try ignored.append(e),
+                                    else => try defines.append(d),
                                 }
                             },
-                            else => |k| std.debug.panic("\nInvalid top level define, found {}", .{k}),
+                            else => try defines.append(d),
                         }
                     },
                     .call => |c| {
@@ -626,9 +627,10 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
         }
     }
     return types.Module{
+        .foreign_imports = try foreign_imports.toOwnedSlice(),
         .enumerations = try enumerations.toOwnedSlice(),
         .functions = try functions.toOwnedSlice(),
-        .foreign_imports = try foreign_imports.toOwnedSlice(),
+        .defines = try defines.toOwnedSlice(),
         .foreign_exports = try foreign_exports.toOwnedSlice(),
         .ignored = try ignored.toOwnedSlice(),
     };

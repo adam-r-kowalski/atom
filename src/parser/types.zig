@@ -165,6 +165,7 @@ pub const Module = struct {
     foreign_imports: []const TopLevelForeignImport,
     enumerations: []const TopLevelEnumeration,
     functions: []const TopLevelFunction,
+    defines: []const Define,
     foreign_exports: []const Call,
     ignored: []const Expression,
 };
