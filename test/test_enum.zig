@@ -184,3 +184,77 @@ test "codegen enum index 1" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "codegen enum equality" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\Grade = enum {
+        \\    a,
+        \\    b,
+        \\    c,
+        \\    d,
+        \\    f,
+        \\}
+        \\
+        \\start = fn() bool {
+        \\    Grade.a == Grade.b
+        \\}
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (func $start (result i32)
+        \\        (i32.eq
+        \\            (i32.const 0)
+        \\            (i32.const 1)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen enum passed to function" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\Grade = enum {
+        \\    a,
+        \\    b,
+        \\    c,
+        \\    d,
+        \\    f,
+        \\}
+        \\
+        \\got_an_a = fn(grade: Grade) bool {
+        \\    grade == Grade.a
+        \\}
+        \\
+        \\start = fn() bool {
+        \\    got_an_a(Grade.b)
+        \\}
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (func $got_an_a (param $grade i32) (result i32)
+        \\        (i32.eq
+        \\            (local.get $grade)
+        \\            (i32.const 0)))
+        \\
+        \\    (func $start (result i32)
+        \\        (call $got_an_a
+        \\            (i32.const 1)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

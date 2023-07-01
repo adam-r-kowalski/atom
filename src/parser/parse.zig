@@ -18,13 +18,13 @@ const Precedence = u32;
 const DELTA: Precedence = 10;
 const LOWEST: Precedence = 0;
 const DEFINE: Precedence = LOWEST + DELTA;
-const DOT: Precedence = DEFINE + DELTA;
-const AND: Precedence = DOT + DELTA;
+const AND: Precedence = DEFINE + DELTA;
 const COMPARE: Precedence = AND + DELTA;
 const ADD: Precedence = COMPARE + DELTA;
 const MULTIPLY: Precedence = ADD + DELTA;
 const EXPONENTIATE: Precedence = MULTIPLY + DELTA;
-const CALL: Precedence = EXPONENTIATE + DELTA;
+const DOT: Precedence = EXPONENTIATE + DELTA;
+const CALL: Precedence = DOT + DELTA;
 const HIGHEST: Precedence = CALL + DELTA;
 
 const Associativity = enum {

@@ -158,6 +158,13 @@ fn equal(context: Context, b: type_checker.types.BinaryOp) !types.Expression {
         .i64 => return .{ .binary_op = .{ .kind = .i64_eq, .left = left, .right = right } },
         .f32 => return .{ .binary_op = .{ .kind = .f32_eq, .left = left, .right = right } },
         .f64 => return .{ .binary_op = .{ .kind = .f64_eq, .left = left, .right = right } },
+        .enumeration => |e| {
+            switch (e.variants.len) {
+                0...31 => return .{ .binary_op = .{ .kind = .i32_eq, .left = left, .right = right } },
+                32...63 => return .{ .binary_op = .{ .kind = .i64_eq, .left = left, .right = right } },
+                else => std.debug.panic("\nEnumeration with {} variants not yet supported", .{e.variants.len}),
+            }
+        },
         else => |k| std.debug.panic("\nEqual type {} not yet supported", .{k}),
     }
 }
