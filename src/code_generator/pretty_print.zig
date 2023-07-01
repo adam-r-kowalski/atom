@@ -55,6 +55,7 @@ pub fn literal(l: types.Literal, writer: Writer) !void {
     switch (l) {
         .bool => |v| try writer.print("(i32.const {})", .{@as(i32, if (v) 1 else 0)}),
         .u32 => |v| try writer.print("(i32.const {})", .{v}),
+        .u64 => |v| try writer.print("(i64.const {})", .{v}),
         .i32 => |v| try writer.print("(i32.const {})", .{v}),
         .i64 => |v| try writer.print("(i64.const {})", .{v}),
         .f32 => |v| try writer.print("(f32.const {})", .{v}),

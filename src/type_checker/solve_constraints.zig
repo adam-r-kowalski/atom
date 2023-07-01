@@ -27,6 +27,17 @@ fn exactEqual(a: types.MonoType, b: types.MonoType) bool {
             .array => |a2| return a1.rank == a2.rank and exactEqual(a1.element_type.*, a2.element_type.*),
             else => return false,
         },
+        .enumeration => |e1| switch (b) {
+            .enumeration => |e2| {
+                for (e1.variants, e2.variants) |v1, v2| if (!v1.eql(v2)) return false;
+                return true;
+            },
+            else => return false,
+        },
+        .enumeration_instance => |e1| switch (b) {
+            .enumeration_instance => |e2| return e1.name.eql(e2.name),
+            else => return false,
+        },
     }
 }
 

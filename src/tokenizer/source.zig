@@ -38,6 +38,7 @@ pub fn token(t: types.Token, writer: Writer) !void {
         .or_ => try writer.writeAll("or"),
         .comma => try writer.writeAll(","),
         .fn_ => try writer.writeAll("fn"),
+        .enum_ => try writer.writeAll("enum"),
         .mut => try writer.writeAll("mut"),
         .undefined => try writer.writeAll("undefined"),
         .new_line => {},

@@ -33,6 +33,7 @@ pub fn token(t: types.Token) types.Span {
         .or_ => |o| o.span,
         .comma => |c| c.span,
         .fn_ => |f| f.span,
+        .enum_ => |e| e.span,
         .mut => |m| m.span,
         .undefined => |u| u.span,
         .new_line => |n| n.span,

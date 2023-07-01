@@ -52,6 +52,17 @@ pub fn monotype(m: types.MonoType, writer: Writer) !void {
                 },
             }
         },
+        .enumeration => |e| {
+            try writer.writeAll("enum{ ");
+            for (e.variants, 0..) |v, i| {
+                if (i > 0) try writer.writeAll(", ");
+                try writer.writeAll(v.string());
+            }
+            try writer.writeAll(" }");
+        },
+        .enumeration_instance => |e| {
+            try writer.writeAll(e.name.string());
+        },
     }
 }
 
@@ -322,6 +333,17 @@ pub fn undefinedKeyword(u: types.Undefined, indent: Indent, writer: Writer) !voi
     try writer.writeAll(" }");
 }
 
+pub fn variant(v: types.Variant, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("variant =");
+    try newlineAndIndent(indent + 1, writer);
+    try writer.print("value = {s}", .{v.value.string()});
+    try newlineAndIndent(indent + 1, writer);
+    try writer.print("index = {}", .{v.index});
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("type = ");
+    try monotype(v.type, writer);
+}
+
 pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{OutOfMemory}!void {
     switch (e) {
         .int => |i| try int(i, writer),
@@ -344,6 +366,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .foreign_export => |f| try foreignExport(f, indent, writer),
         .convert => |c| try convert(c, indent, writer),
         .undefined => |u| try undefinedKeyword(u, indent, writer),
+        .variant => |v| try variant(v, indent, writer),
     }
 }
 

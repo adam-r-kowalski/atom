@@ -106,6 +106,7 @@ fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !types.Token {
     const span = types.Span{ .begin = begin, .end = end };
     const interned = try intern.store(contents);
     if (interned.eql(builtins.fn_)) return .{ .fn_ = .{ .span = span } };
+    if (interned.eql(builtins.enum_)) return .{ .enum_ = .{ .span = span } };
     if (interned.eql(builtins.if_)) return .{ .if_ = .{ .span = span } };
     if (interned.eql(builtins.else_)) return .{ .else_ = .{ .span = span } };
     if (interned.eql(builtins.true_)) return .{ .bool = .{ .value = true, .span = span } };

@@ -205,7 +205,7 @@ test "type check mutable parameter" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = double, type = fn(i32) void }
+        \\    name = symbol{ value = double, type = fn(mut i32) void }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -235,7 +235,7 @@ test "type check mutable parameter" {
         \\                    value =
         \\                        int{ value = 5, type = i32 }
         \\                call =
-        \\                    function = symbol{ value = double, type = fn(i32) void }
+        \\                    function = symbol{ value = double, type = fn(mut i32) void }
         \\                    arguments =
         \\                        argument =
         \\                            mutable = true

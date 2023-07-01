@@ -22,5 +22,6 @@ pub fn expression(e: types.Expression) types.MonoType {
         .foreign_export => |f| f.type,
         .convert => |c| c.type,
         .undefined => |u| u.type,
+        .variant => |v| v.type,
     };
 }

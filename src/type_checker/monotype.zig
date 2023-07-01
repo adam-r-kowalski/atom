@@ -1,4 +1,5 @@
 const parser = @import("../parser.zig");
+const Interned = @import("../interner.zig").Interned;
 pub const Span = parser.types.Span;
 
 pub const Void = struct { span: ?Span };
@@ -27,6 +28,16 @@ pub const Array = struct {
     span: ?Span,
 };
 
+pub const Enumeration = struct {
+    variants: []const Interned,
+    span: ?Span,
+};
+
+pub const EnumerationInstance = struct {
+    name: Interned,
+    span: ?Span,
+};
+
 pub const MonoType = union(enum) {
     void: Void,
     u8: U8,
@@ -38,6 +49,8 @@ pub const MonoType = union(enum) {
     typevar: TypeVar,
     function: Function,
     array: Array,
+    enumeration: Enumeration,
+    enumeration_instance: EnumerationInstance,
 };
 
 pub fn span(monotype: MonoType) ?Span {
@@ -52,6 +65,8 @@ pub fn span(monotype: MonoType) ?Span {
         .typevar => |t| t.span,
         .function => |f| f.span,
         .array => |a| a.span,
+        .enumeration => |e| e.span,
+        .enumeration_instance => |e| e.span,
     };
 }
 
@@ -67,5 +82,7 @@ pub fn withSpan(monotype: MonoType, s: Span) MonoType {
         .typevar => |t| .{ .typevar = .{ .value = t.value, .span = s } },
         .function => |f| .{ .function = .{ .parameters = f.parameters, .return_type = f.return_type, .span = s } },
         .array => |a| .{ .array = .{ .rank = a.rank, .element_type = a.element_type, .span = s } },
+        .enumeration => |e| .{ .enumeration = .{ .variants = e.variants, .span = s } },
+        .enumeration_instance => |e| .{ .enumeration_instance = .{ .name = e.name, .span = s } },
     };
 }

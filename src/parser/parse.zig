@@ -6,6 +6,7 @@ const tokenizer = @import("../tokenizer.zig");
 const LeftParen = tokenizer.types.LeftParen;
 const IfToken = tokenizer.types.If;
 const FnToken = tokenizer.types.Fn;
+const EnumToken = tokenizer.types.Enum;
 const Token = tokenizer.types.Token;
 const types = @import("types.zig");
 const pretty_print = @import("pretty_print.zig");
@@ -17,13 +18,13 @@ const Precedence = u32;
 const DELTA: Precedence = 10;
 const LOWEST: Precedence = 0;
 const DEFINE: Precedence = LOWEST + DELTA;
-const DOT: Precedence = DEFINE + DELTA;
-const AND: Precedence = DOT + DELTA;
+const AND: Precedence = DEFINE + DELTA;
 const COMPARE: Precedence = AND + DELTA;
 const ADD: Precedence = COMPARE + DELTA;
 const MULTIPLY: Precedence = ADD + DELTA;
 const EXPONENTIATE: Precedence = MULTIPLY + DELTA;
-const CALL: Precedence = EXPONENTIATE + DELTA;
+const DOT: Precedence = EXPONENTIATE + DELTA;
+const CALL: Precedence = DOT + DELTA;
 const HIGHEST: Precedence = CALL + DELTA;
 
 const Associativity = enum {
@@ -217,6 +218,33 @@ fn function(context: Context, fn_: FnToken) !types.Expression {
     };
 }
 
+fn enumeration(context: Context, enum_: EnumToken) !types.Enumeration {
+    const begin = enum_.span.begin;
+    _ = context.tokens.consume(.left_brace);
+    var variants = List(types.Symbol).init(context.allocator);
+    while (context.tokens.peek()) |t| {
+        switch (t) {
+            .new_line => context.tokens.advance(),
+            .right_brace => break,
+            .symbol => |name| {
+                context.tokens.advance();
+                context.tokens.consumeNewLines();
+                context.tokens.maybeConsume(.comma);
+                try variants.append(types.Symbol{
+                    .value = name.value,
+                    .span = name.span,
+                });
+            },
+            else => |k| std.debug.panic("\nExpected symbol or right paren, found {}", .{k}),
+        }
+    }
+    const end = tokenizer.span.token(context.tokens.consume(.right_brace)).end;
+    return types.Enumeration{
+        .variants = try variants.toOwnedSlice(),
+        .span = types.Span{ .begin = begin, .end = end },
+    };
+}
+
 fn mutable(context: Context, begin: tokenizer.types.Pos) !types.Define {
     const name = context.tokens.next().?.symbol;
     switch (context.tokens.next().?) {
@@ -262,6 +290,7 @@ fn prefix(context: Context) !types.Expression {
         .left_paren => |l| return .{ .group = try group(context, l) },
         .if_ => |i| return .{ .branch = try branch(context, i) },
         .fn_ => |f| return try function(context, f),
+        .enum_ => |e| return .{ .enumeration = try enumeration(context, e) },
         .left_brace => |l| return .{ .block = try block(context, l.span.begin) },
         .left_bracket => |l| return .{ .array = try array(context, l.span.begin) },
         .mut => |m| return .{ .define = try mutable(context, m.span.begin) },
@@ -533,14 +562,76 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
         .precedence = LOWEST,
         .builtins = builtins,
     };
-    var expressions = List(types.Expression).init(allocator);
+    var foreign_imports = List(types.TopLevelForeignImport).init(allocator);
+    var enumerations = List(types.TopLevelEnumeration).init(allocator);
+    var defines = List(types.Define).init(allocator);
+    var functions = List(types.TopLevelFunction).init(allocator);
+    var foreign_exports = List(types.Call).init(allocator);
+    var ignored = List(types.Expression).init(allocator);
     while (iterator.peek()) |t| {
         switch (t) {
             .new_line => context.tokens.advance(),
-            else => try expressions.append(try expression(context)),
+            else => {
+                const e = try expression(context);
+                switch (e) {
+                    .define => |d| {
+                        if (d.mutable) std.debug.panic("\nNo top level mutable definitions allowed", .{});
+                        switch (d.value.*) {
+                            .enumeration => |en| try enumerations.append(.{
+                                .name = d.name,
+                                .type = d.type,
+                                .enumeration = en,
+                                .span = d.span,
+                            }),
+                            .function => |f| try functions.append(.{
+                                .name = d.name,
+                                .type = d.type,
+                                .function = f,
+                                .span = d.span,
+                            }),
+                            .call => |c| {
+                                switch (c.function.*) {
+                                    .symbol => |s| {
+                                        if (s.value.eql(builtins.foreign_import)) {
+                                            try foreign_imports.append(.{
+                                                .name = d.name,
+                                                .type = d.type,
+                                                .call = c,
+                                                .span = d.span,
+                                            });
+                                        } else {
+                                            try defines.append(d);
+                                        }
+                                    },
+                                    else => try defines.append(d),
+                                }
+                            },
+                            else => try defines.append(d),
+                        }
+                    },
+                    .call => |c| {
+                        switch (c.function.*) {
+                            .symbol => |s| {
+                                if (s.value.eql(builtins.foreign_export)) {
+                                    try foreign_exports.append(c);
+                                } else {
+                                    try ignored.append(e);
+                                }
+                            },
+                            else => try ignored.append(e),
+                        }
+                    },
+                    else => try ignored.append(e),
+                }
+            },
         }
     }
     return types.Module{
-        .expressions = try expressions.toOwnedSlice(),
+        .foreign_imports = try foreign_imports.toOwnedSlice(),
+        .enumerations = try enumerations.toOwnedSlice(),
+        .functions = try functions.toOwnedSlice(),
+        .defines = try defines.toOwnedSlice(),
+        .foreign_exports = try foreign_exports.toOwnedSlice(),
+        .ignored = try ignored.toOwnedSlice(),
     };
 }
