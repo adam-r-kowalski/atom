@@ -236,6 +236,11 @@ pub fn module(m: types.Module, writer: Writer) !void {
         try topLevelFunction(f, 0, writer);
         i += 1;
     }
+    for (m.foreign_exports) |f| {
+        if (i > 0) try writer.writeAll("\n\n");
+        try call(f, 0, writer);
+        i += 1;
+    }
     for (m.ignored) |ig| {
         if (i > 0) try writer.writeAll("\n\n");
         try expression(ig, 0, writer);

@@ -565,6 +565,7 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
     var enumerations = List(types.TopLevelEnumeration).init(allocator);
     var functions = List(types.TopLevelFunction).init(allocator);
     var foreign_imports = List(types.TopLevelForeignImport).init(allocator);
+    var foreign_exports = List(types.Call).init(allocator);
     var ignored = List(types.Expression).init(allocator);
     while (iterator.peek()) |t| {
         switch (t) {
@@ -607,6 +608,18 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
                             else => |k| std.debug.panic("\nInvalid top level define, found {}", .{k}),
                         }
                     },
+                    .call => |c| {
+                        switch (c.function.*) {
+                            .symbol => |s| {
+                                if (s.value.eql(builtins.foreign_export)) {
+                                    try foreign_exports.append(c);
+                                } else {
+                                    try ignored.append(e);
+                                }
+                            },
+                            else => try ignored.append(e),
+                        }
+                    },
                     else => try ignored.append(e),
                 }
             },
@@ -616,6 +629,7 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
         .enumerations = try enumerations.toOwnedSlice(),
         .functions = try functions.toOwnedSlice(),
         .foreign_imports = try foreign_imports.toOwnedSlice(),
+        .foreign_exports = try foreign_exports.toOwnedSlice(),
         .ignored = try ignored.toOwnedSlice(),
     };
 }

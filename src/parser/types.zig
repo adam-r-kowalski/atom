@@ -162,8 +162,9 @@ pub const TopLevelForeignImport = struct {
 };
 
 pub const Module = struct {
+    foreign_imports: []const TopLevelForeignImport,
     enumerations: []const TopLevelEnumeration,
     functions: []const TopLevelFunction,
-    foreign_imports: []const TopLevelForeignImport,
+    foreign_exports: []const Call,
     ignored: []const Expression,
 };
