@@ -35,6 +35,7 @@ pub const Or = struct { span: Span };
 pub const Comma = struct { span: Span };
 pub const Fn = struct { span: Span };
 pub const Enum = struct { span: Span };
+pub const Struct = struct { span: Span };
 pub const Mut = struct { span: Span };
 pub const Undefined = struct { span: Span };
 pub const NewLine = struct { span: Span };
@@ -72,6 +73,7 @@ pub const Token = union(enum) {
     comma: Comma,
     fn_: Fn,
     enum_: Enum,
+    struct_: Struct,
     mut: Mut,
     undefined: Undefined,
     new_line: NewLine,
