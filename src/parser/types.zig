@@ -85,6 +85,11 @@ pub const Structure = struct {
     span: Span,
 };
 
+pub const StructLiteral = struct {
+    fields: []const Field,
+    span: Span,
+};
+
 pub const BinaryOpKind = enum {
     add,
     subtract,
@@ -147,6 +152,7 @@ pub const Expression = union(enum) {
     function: Function,
     enumeration: Enumeration,
     structure: Structure,
+    struct_literal: StructLiteral,
     prototype: Prototype,
     binary_op: BinaryOp,
     group: Group,
@@ -155,6 +161,13 @@ pub const Expression = union(enum) {
     branch: Branch,
     call: Call,
     undefined: Undefined,
+};
+
+pub const TopLevelStructure = struct {
+    name: Symbol,
+    type: ?*const Expression,
+    structure: Structure,
+    span: Span,
 };
 
 pub const TopLevelEnumeration = struct {
@@ -180,6 +193,7 @@ pub const TopLevelForeignImport = struct {
 
 pub const Module = struct {
     foreign_imports: []const TopLevelForeignImport,
+    structures: []const TopLevelStructure,
     enumerations: []const TopLevelEnumeration,
     functions: []const TopLevelFunction,
     defines: []const Define,

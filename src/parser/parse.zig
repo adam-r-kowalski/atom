@@ -95,6 +95,34 @@ fn explicitBlock(context: Context, b: tokenizer.types.Block) !types.Block {
     };
 }
 
+fn structLiteral(context: Context, begin: tokenizer.types.Pos) !types.StructLiteral {
+    var fields = List(types.Field).init(context.allocator);
+    while (context.tokens.peek()) |t| {
+        switch (t) {
+            .right_brace => break,
+            .new_line => context.tokens.advance(),
+            .symbol => |name| {
+                context.tokens.advance();
+                _ = context.tokens.consume(.colon);
+                const type_ = try expression(withPrecedence(context, DEFINE + 1));
+                context.tokens.consumeNewLines();
+                context.tokens.maybeConsume(.comma);
+                try fields.append(types.Field{
+                    .name = name,
+                    .type = type_,
+                    .span = types.Span{ .begin = name.span.begin, .end = spanOf(type_).end },
+                });
+            },
+            else => |k| std.debug.panic("\nExpected symbol or right brace, found {}", .{k}),
+        }
+    }
+    const end = tokenizer.span.token(context.tokens.consume(.right_brace)).end;
+    return types.StructLiteral{
+        .fields = try fields.toOwnedSlice(),
+        .span = .{ .begin = begin, .end = end },
+    };
+}
+
 fn array(context: Context, begin: tokenizer.types.Pos) !types.Array {
     var exprs = List(types.Expression).init(context.allocator);
     while (context.tokens.peek()) |t| {
@@ -342,6 +370,7 @@ fn prefix(context: Context) !types.Expression {
         .enum_ => |e| return .{ .enumeration = try enumeration(context, e) },
         .struct_ => |s| return .{ .structure = try structure(context, s) },
         .block => |b| return .{ .block = try explicitBlock(context, b) },
+        .left_brace => |l| return .{ .struct_literal = try structLiteral(context, l.span.begin) },
         .left_bracket => |l| return .{ .array = try array(context, l.span.begin) },
         .mut => |m| return .{ .define = try mutable(context, m.span.begin) },
         .undefined => |u| return .{ .undefined = u },
@@ -613,6 +642,7 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
         .builtins = builtins,
     };
     var foreign_imports = List(types.TopLevelForeignImport).init(allocator);
+    var structures = List(types.TopLevelStructure).init(allocator);
     var enumerations = List(types.TopLevelEnumeration).init(allocator);
     var defines = List(types.Define).init(allocator);
     var functions = List(types.TopLevelFunction).init(allocator);
@@ -627,6 +657,12 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
                     .define => |d| {
                         if (d.mutable) std.debug.panic("\nNo top level mutable definitions allowed", .{});
                         switch (d.value.*) {
+                            .structure => |s| try structures.append(.{
+                                .name = d.name,
+                                .type = d.type,
+                                .structure = s,
+                                .span = d.span,
+                            }),
                             .enumeration => |en| try enumerations.append(.{
                                 .name = d.name,
                                 .type = d.type,
@@ -678,6 +714,7 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
     }
     return types.Module{
         .foreign_imports = try foreign_imports.toOwnedSlice(),
+        .structures = try structures.toOwnedSlice(),
         .enumerations = try enumerations.toOwnedSlice(),
         .functions = try functions.toOwnedSlice(),
         .defines = try defines.toOwnedSlice(),

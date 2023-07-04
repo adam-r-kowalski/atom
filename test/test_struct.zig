@@ -70,6 +70,13 @@ test "parse struct" {
         \\    name: str,
         \\    age: u8,
         \\}
+        \\
+        \\start = fn() Person {
+        \\    {
+        \\        name: "Bob",
+        \\        age: 42,
+        \\    }
+        \\}
     ;
     const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
@@ -77,6 +84,11 @@ test "parse struct" {
         \\(def Person (struct
         \\    name str
         \\    age u8))
+        \\
+        \\(def start (fn [] Person
+        \\    (struct_literal
+        \\        name "Bob"
+        \\        age 42)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
