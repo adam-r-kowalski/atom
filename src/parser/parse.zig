@@ -1,6 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const List = std.ArrayList;
+const Map = std.AutoHashMap;
 
 const tokenizer = @import("../tokenizer.zig");
 const LeftParen = tokenizer.types.LeftParen;
@@ -13,6 +14,7 @@ const types = @import("types.zig");
 const pretty_print = @import("pretty_print.zig");
 const spanOf = @import("span.zig").expression;
 const Builtins = @import("../builtins.zig").Builtins;
+const Interned = @import("../interner.zig").Interned;
 
 const Precedence = u32;
 
@@ -96,7 +98,8 @@ fn explicitBlock(context: Context, b: tokenizer.types.Block) !types.Block {
 }
 
 fn structLiteral(context: Context, begin: tokenizer.types.Pos) !types.StructLiteral {
-    var fields = List(types.Field).init(context.allocator);
+    var fields = Map(Interned, types.Field).init(context.allocator);
+    var order = List(Interned).init(context.allocator);
     while (context.tokens.peek()) |t| {
         switch (t) {
             .right_brace => break,
@@ -107,18 +110,20 @@ fn structLiteral(context: Context, begin: tokenizer.types.Pos) !types.StructLite
                 const type_ = try expression(withPrecedence(context, DEFINE + 1));
                 context.tokens.consumeNewLines();
                 context.tokens.maybeConsume(.comma);
-                try fields.append(types.Field{
+                try fields.putNoClobber(name.value, types.Field{
                     .name = name,
                     .type = type_,
                     .span = types.Span{ .begin = name.span.begin, .end = spanOf(type_).end },
                 });
+                try order.append(name.value);
             },
             else => |k| std.debug.panic("\nExpected symbol or right brace, found {}", .{k}),
         }
     }
     const end = tokenizer.span.token(context.tokens.consume(.right_brace)).end;
     return types.StructLiteral{
-        .fields = try fields.toOwnedSlice(),
+        .fields = fields,
+        .order = try order.toOwnedSlice(),
         .span = .{ .begin = begin, .end = end },
     };
 }

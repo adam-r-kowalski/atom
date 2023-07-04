@@ -86,7 +86,8 @@ pub const Structure = struct {
 };
 
 pub const StructLiteral = struct {
-    fields: []const Field,
+    fields: Map(Interned, Field),
+    order: []const Interned,
     span: Span,
 };
 

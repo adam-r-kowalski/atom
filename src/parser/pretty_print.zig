@@ -92,7 +92,8 @@ pub fn structure(s: types.Structure, indent: Indent, writer: Writer) !void {
 
 pub fn structLiteral(s: types.StructLiteral, indent: Indent, writer: Writer) !void {
     try writer.writeAll("(struct_literal");
-    for (s.fields) |field| {
+    for (s.order) |interned| {
+        const field = s.fields.get(interned).?;
         try newlineAndIndent(indent, writer);
         try writer.print("{s} ", .{field.name.value.string()});
         try expression(field.type, indent, writer);
