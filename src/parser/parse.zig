@@ -98,7 +98,7 @@ fn explicitBlock(context: Context, b: tokenizer.types.Block) !types.Block {
 }
 
 fn structLiteral(context: Context, begin: tokenizer.types.Pos) !types.StructLiteral {
-    var fields = Map(Interned, types.Field).init(context.allocator);
+    var fields = types.Fields.init(context.allocator);
     var order = List(Interned).init(context.allocator);
     while (context.tokens.peek()) |t| {
         switch (t) {
@@ -300,7 +300,8 @@ fn enumeration(context: Context, enum_: EnumToken) !types.Enumeration {
 fn structure(context: Context, struct_: StructToken) !types.Structure {
     const begin = struct_.span.begin;
     _ = context.tokens.consume(.left_brace);
-    var fields = List(types.Field).init(context.allocator);
+    var fields = types.Fields.init(context.allocator);
+    var order = List(Interned).init(context.allocator);
     while (context.tokens.peek()) |t| {
         switch (t) {
             .new_line => context.tokens.advance(),
@@ -311,18 +312,20 @@ fn structure(context: Context, struct_: StructToken) !types.Structure {
                 const type_ = try expression(withPrecedence(context, DEFINE + 1));
                 context.tokens.consumeNewLines();
                 context.tokens.maybeConsume(.comma);
-                try fields.append(types.Field{
+                try fields.putNoClobber(name.value, types.Field{
                     .name = name,
                     .type = type_,
                     .span = types.Span{ .begin = name.span.begin, .end = spanOf(type_).end },
                 });
+                try order.append(name.value);
             },
             else => |k| std.debug.panic("\nExpected symbol or right brace, found {}", .{k}),
         }
     }
     const end = tokenizer.span.token(context.tokens.consume(.right_brace)).end;
     return types.Structure{
-        .fields = try fields.toOwnedSlice(),
+        .fields = fields,
+        .order = try order.toOwnedSlice(),
         .span = types.Span{ .begin = begin, .end = end },
     };
 }

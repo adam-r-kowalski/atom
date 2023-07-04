@@ -80,13 +80,16 @@ pub const Field = struct {
     span: Span,
 };
 
+pub const Fields = Map(Interned, Field);
+
 pub const Structure = struct {
-    fields: []const Field,
+    fields: Fields,
+    order: []const Interned,
     span: Span,
 };
 
 pub const StructLiteral = struct {
-    fields: Map(Interned, Field),
+    fields: Fields,
     order: []const Interned,
     span: Span,
 };
