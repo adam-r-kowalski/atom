@@ -23,5 +23,6 @@ pub fn expression(e: types.Expression) types.MonoType {
         .convert => |c| c.type,
         .undefined => |u| u.type,
         .variant => |v| v.type,
+        .struct_literal => |s| s.type,
     };
 }

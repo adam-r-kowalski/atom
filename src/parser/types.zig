@@ -74,22 +74,30 @@ pub const Enumeration = struct {
     span: Span,
 };
 
-pub const Field = struct {
+pub const StructField = struct {
     name: Symbol,
     type: Expression,
     span: Span,
 };
 
-pub const Fields = Map(Interned, Field);
+pub const StructFields = Map(Interned, StructField);
 
 pub const Structure = struct {
-    fields: Fields,
+    fields: StructFields,
     order: []const Interned,
     span: Span,
 };
 
+pub const StructLiteralField = struct {
+    name: Symbol,
+    value: Expression,
+    span: Span,
+};
+
+pub const StructLiteralFields = Map(Interned, StructLiteralField);
+
 pub const StructLiteral = struct {
-    fields: Fields,
+    fields: StructLiteralFields,
     order: []const Interned,
     span: Span,
 };

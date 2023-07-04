@@ -63,6 +63,27 @@ pub fn monotype(m: types.MonoType, writer: Writer) !void {
         .enumeration_instance => |e| {
             try writer.writeAll(e.name.string());
         },
+        .structure => |s| {
+            try writer.writeAll("struct{ ");
+            for (s.order, 0..) |o, i| {
+                const field = s.fields.get(o).?;
+                if (i > 0) try writer.writeAll(", ");
+                try writer.print("{s}: ", .{o.string()});
+                try monotype(field, writer);
+            }
+            try writer.writeAll(" }");
+        },
+        .structure_literal => |s| {
+            try writer.writeAll("struct_literal{ ");
+            for (s.order, 0..) |o, i| {
+                const field = s.fields.get(o).?;
+                if (i > 0) try writer.writeAll(", ");
+                try writer.print("{s}: ", .{o.string()});
+                try monotype(field, writer);
+            }
+            try writer.writeAll(" } as ");
+            try monotype(s.structure.*, writer);
+        },
     }
 }
 
@@ -344,6 +365,13 @@ pub fn variant(v: types.Variant, indent: Indent, writer: Writer) !void {
     try monotype(v.type, writer);
 }
 
+pub fn structLiteral(s: types.StructLiteral, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("struct_literal =");
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("type = ");
+    try monotype(s.type, writer);
+}
+
 pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{OutOfMemory}!void {
     switch (e) {
         .int => |i| try int(i, writer),
@@ -367,6 +395,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .convert => |c| try convert(c, indent, writer),
         .undefined => |u| try undefinedKeyword(u, indent, writer),
         .variant => |v| try variant(v, indent, writer),
+        .struct_literal => |s| try structLiteral(s, indent, writer),
     }
 }
 

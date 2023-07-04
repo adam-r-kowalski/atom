@@ -198,6 +198,21 @@ pub const Undefined = struct {
     type: MonoType,
 };
 
+pub const Field = struct {
+    name: Symbol,
+    value: Expression,
+    span: Span,
+};
+
+pub const Fields = Map(Interned, Field);
+
+pub const StructLiteral = struct {
+    fields: Fields,
+    order: []const Interned,
+    type: MonoType,
+    span: Span,
+};
+
 pub const Expression = union(enum) {
     int: Int,
     float: Float,
@@ -220,6 +235,7 @@ pub const Expression = union(enum) {
     foreign_export: ForeignExport,
     convert: Convert,
     undefined: Undefined,
+    struct_literal: StructLiteral,
 };
 
 pub const Untyped = Map(Interned, parser.types.Expression);

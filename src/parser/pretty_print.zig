@@ -97,7 +97,7 @@ pub fn structLiteral(s: types.StructLiteral, indent: Indent, writer: Writer) !vo
         const field = s.fields.get(interned).?;
         try newlineAndIndent(indent, writer);
         try writer.print("{s} ", .{field.name.value.string()});
-        try expression(field.type, indent, writer);
+        try expression(field.value, indent, writer);
     }
     try writer.writeAll(")");
 }

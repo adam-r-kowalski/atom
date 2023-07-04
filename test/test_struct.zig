@@ -92,3 +92,35 @@ test "parse struct" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "type infer struct" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\Person = struct {
+        \\    name: str,
+        \\    age: u8,
+        \\}
+        \\
+        \\start = fn() Person {
+        \\    {
+        \\        name: "Bob",
+        \\        age: 42,
+        \\    }
+        \\}
+    ;
+    const actual = try mantis.testing.typeInfer(allocator, source, "start");
+    defer allocator.free(actual);
+    const expected =
+        \\define =
+        \\    name = symbol{ value = start, type = fn() struct{ name: str, age: u8 } }
+        \\    type = void
+        \\    mutable = false
+        \\    value =
+        \\        function =
+        \\            return_type = struct{ name: str, age: u8 }
+        \\            body =
+        \\                struct_literal =
+        \\                    type = struct_literal{ name: str, age: u8 } as struct{ name: str, age: u8 }
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
