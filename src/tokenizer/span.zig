@@ -35,6 +35,7 @@ pub fn token(t: types.Token) types.Span {
         .fn_ => |f| f.span,
         .enum_ => |e| e.span,
         .struct_ => |s| s.span,
+        .block => |b| b.span,
         .mut => |m| m.span,
         .undefined => |u| u.span,
         .new_line => |n| n.span,

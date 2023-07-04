@@ -80,6 +80,16 @@ pub fn enumeration(e: types.Enumeration, indent: Indent, writer: Writer) !void {
     try writer.writeAll(")");
 }
 
+pub fn structure(s: types.Structure, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("(struct");
+    for (s.fields) |field| {
+        try newlineAndIndent(indent, writer);
+        try writer.print("{s} ", .{field.name.value.string()});
+        try expression(field.type, indent, writer);
+    }
+    try writer.writeAll(")");
+}
+
 pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
     try writer.writeAll("(");
     switch (b.kind) {
@@ -176,6 +186,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .function => |f| try function(f, indent, writer),
         .prototype => |p| try prototype(p, indent, writer),
         .enumeration => |en| try enumeration(en, indent, writer),
+        .structure => |s| try structure(s, indent, writer),
         .binary_op => |b| try binaryOp(b, indent, writer),
         .group => |g| try expression(g.expression.*, indent, writer),
         .block => |b| try block(b, indent, writer),

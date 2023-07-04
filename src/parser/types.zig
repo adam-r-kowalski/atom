@@ -1,3 +1,6 @@
+const std = @import("std");
+const Map = std.AutoHashMap;
+
 const tokenizer = @import("../tokenizer.zig");
 
 pub const Span = tokenizer.types.Span;
@@ -7,6 +10,8 @@ pub const Symbol = tokenizer.types.Symbol;
 pub const String = tokenizer.types.String;
 pub const Bool = tokenizer.types.Bool;
 pub const Undefined = tokenizer.types.Undefined;
+
+const Interned = @import("../interner.zig").Interned;
 
 pub const Define = struct {
     name: Symbol,
@@ -66,6 +71,17 @@ pub const Prototype = struct {
 
 pub const Enumeration = struct {
     variants: []const Symbol,
+    span: Span,
+};
+
+pub const Field = struct {
+    name: Symbol,
+    type: Expression,
+    span: Span,
+};
+
+pub const Structure = struct {
+    fields: []const Field,
     span: Span,
 };
 
@@ -130,6 +146,7 @@ pub const Expression = union(enum) {
     times_equal: TimesEqual,
     function: Function,
     enumeration: Enumeration,
+    structure: Structure,
     prototype: Prototype,
     binary_op: BinaryOp,
     group: Group,

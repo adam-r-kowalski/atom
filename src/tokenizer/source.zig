@@ -40,6 +40,7 @@ pub fn token(t: types.Token, writer: Writer) !void {
         .fn_ => try writer.writeAll("fn"),
         .enum_ => try writer.writeAll("enum"),
         .struct_ => try writer.writeAll("struct"),
+        .block => try writer.writeAll("block"),
         .mut => try writer.writeAll("mut"),
         .undefined => try writer.writeAll("undefined"),
         .new_line => {},

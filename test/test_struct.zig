@@ -21,7 +21,7 @@ test "tokenize struct" {
     const expected =
         \\(symbol Person)
         \\(operator =)
-        \\(symbol struct)
+        \\(keyword struct)
         \\(delimiter '{')
         \\(new_line)
         \\(symbol name)
@@ -59,6 +59,24 @@ test "tokenize struct" {
         \\(delimiter '}')
         \\(new_line)
         \\(delimiter '}')
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse struct" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\Person = struct {
+        \\    name: str,
+        \\    age: u8,
+        \\}
+    ;
+    const actual = try mantis.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(def Person (struct
+        \\    name str
+        \\    age u8))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

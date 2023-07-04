@@ -7,6 +7,7 @@ const LeftParen = tokenizer.types.LeftParen;
 const IfToken = tokenizer.types.If;
 const FnToken = tokenizer.types.Fn;
 const EnumToken = tokenizer.types.Enum;
+const StructToken = tokenizer.types.Struct;
 const Token = tokenizer.types.Token;
 const types = @import("types.zig");
 const pretty_print = @import("pretty_print.zig");
@@ -61,6 +62,24 @@ fn expressionAlloc(context: Context) !*const types.Expression {
 }
 
 fn block(context: Context, begin: tokenizer.types.Pos) !types.Block {
+    var exprs = List(types.Expression).init(context.allocator);
+    while (context.tokens.peek()) |t| {
+        switch (t) {
+            .right_brace => break,
+            .new_line => context.tokens.advance(),
+            else => try exprs.append(try expression(withPrecedence(context, LOWEST))),
+        }
+    }
+    const end = tokenizer.span.token(context.tokens.consume(.right_brace)).end;
+    return types.Block{
+        .expressions = try exprs.toOwnedSlice(),
+        .span = .{ .begin = begin, .end = end },
+    };
+}
+
+fn explicitBlock(context: Context, b: tokenizer.types.Block) !types.Block {
+    const begin = b.span.begin;
+    _ = context.tokens.consume(.left_brace);
     var exprs = List(types.Expression).init(context.allocator);
     while (context.tokens.peek()) |t| {
         switch (t) {
@@ -235,12 +254,42 @@ fn enumeration(context: Context, enum_: EnumToken) !types.Enumeration {
                     .span = name.span,
                 });
             },
-            else => |k| std.debug.panic("\nExpected symbol or right paren, found {}", .{k}),
+            else => |k| std.debug.panic("\nExpected symbol or right brace, found {}", .{k}),
         }
     }
     const end = tokenizer.span.token(context.tokens.consume(.right_brace)).end;
     return types.Enumeration{
         .variants = try variants.toOwnedSlice(),
+        .span = types.Span{ .begin = begin, .end = end },
+    };
+}
+
+fn structure(context: Context, struct_: StructToken) !types.Structure {
+    const begin = struct_.span.begin;
+    _ = context.tokens.consume(.left_brace);
+    var fields = List(types.Field).init(context.allocator);
+    while (context.tokens.peek()) |t| {
+        switch (t) {
+            .new_line => context.tokens.advance(),
+            .right_brace => break,
+            .symbol => |name| {
+                context.tokens.advance();
+                _ = context.tokens.consume(.colon);
+                const type_ = try expression(withPrecedence(context, DEFINE + 1));
+                context.tokens.consumeNewLines();
+                context.tokens.maybeConsume(.comma);
+                try fields.append(types.Field{
+                    .name = name,
+                    .type = type_,
+                    .span = types.Span{ .begin = name.span.begin, .end = spanOf(type_).end },
+                });
+            },
+            else => |k| std.debug.panic("\nExpected symbol or right brace, found {}", .{k}),
+        }
+    }
+    const end = tokenizer.span.token(context.tokens.consume(.right_brace)).end;
+    return types.Structure{
+        .fields = try fields.toOwnedSlice(),
         .span = types.Span{ .begin = begin, .end = end },
     };
 }
@@ -291,7 +340,8 @@ fn prefix(context: Context) !types.Expression {
         .if_ => |i| return .{ .branch = try branch(context, i) },
         .fn_ => |f| return try function(context, f),
         .enum_ => |e| return .{ .enumeration = try enumeration(context, e) },
-        .left_brace => |l| return .{ .block = try block(context, l.span.begin) },
+        .struct_ => |s| return .{ .structure = try structure(context, s) },
+        .block => |b| return .{ .block = try explicitBlock(context, b) },
         .left_bracket => |l| return .{ .array = try array(context, l.span.begin) },
         .mut => |m| return .{ .define = try mutable(context, m.span.begin) },
         .undefined => |u| return .{ .undefined = u },
