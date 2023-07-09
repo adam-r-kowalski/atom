@@ -8,6 +8,7 @@ const Interned = interner.Interned;
 const type_checker = @import("../type_checker.zig");
 const Builtins = @import("../builtins.zig").Builtins;
 const types = @import("types.zig");
+const size_of = @import("size_of.zig");
 
 const LocalName = Interned;
 const PointerName = Interned;
@@ -52,9 +53,9 @@ fn mapType(monotype: type_checker.types.MonoType) types.Type {
         .void => return .void,
         .array => return .i32,
         .enumeration => |e| {
-            switch (e.variants.len) {
-                0...31 => return .i32,
-                32...63 => return .i64,
+            switch (size_of.enumeration(e)) {
+                0...4 => return .i32,
+                5...8 => return .i64,
                 else => std.debug.panic("\nEnumeration with {} variants not yet supported", .{e.variants.len}),
             }
         },
@@ -159,9 +160,9 @@ fn equal(context: Context, b: type_checker.types.BinaryOp) !types.Expression {
         .f32 => return .{ .binary_op = .{ .kind = .f32_eq, .left = left, .right = right } },
         .f64 => return .{ .binary_op = .{ .kind = .f64_eq, .left = left, .right = right } },
         .enumeration => |e| {
-            switch (e.variants.len) {
-                0...31 => return .{ .binary_op = .{ .kind = .i32_eq, .left = left, .right = right } },
-                32...63 => return .{ .binary_op = .{ .kind = .i64_eq, .left = left, .right = right } },
+            switch (size_of.enumeration(e)) {
+                0...4 => return .{ .binary_op = .{ .kind = .i32_eq, .left = left, .right = right } },
+                5...8 => return .{ .binary_op = .{ .kind = .i64_eq, .left = left, .right = right } },
                 else => std.debug.panic("\nEnumeration with {} variants not yet supported", .{e.variants.len}),
             }
         },
@@ -434,14 +435,19 @@ fn string(context: Context, s: type_checker.types.String) !types.Expression {
 fn variant(v: type_checker.types.Variant) !types.Expression {
     switch (v.type) {
         .enumeration => |e| {
-            switch (e.variants.len) {
-                0...31 => return .{ .literal = .{ .u32 = @intCast(v.index) } },
-                32...63 => return .{ .literal = .{ .u64 = v.index } },
+            switch (size_of.enumeration(e)) {
+                0...4 => return .{ .literal = .{ .u32 = @intCast(v.index) } },
+                5...8 => return .{ .literal = .{ .u64 = v.index } },
                 else => |k| std.debug.panic("\nVariant type {} not allowed", .{k}),
             }
         },
         else => |k| std.debug.panic("\nVariant type {} not allowed", .{k}),
     }
+}
+
+fn structLiteral(s: type_checker.types.StructLiteral) !types.Expression {
+    const size = size_of.monotype(s.type);
+    std.debug.panic("\nSize of struct literal is {}\n", .{size});
 }
 
 fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMemory, InvalidCharacter, Overflow }!types.Expression {
@@ -462,6 +468,7 @@ fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMe
         .convert => |c| return try convert(context, c),
         .string => |s| return try string(context, s),
         .variant => |v| return try variant(v),
+        .struct_literal => |s| return try structLiteral(s),
         else => |k| std.debug.panic("\ntypes.Expression {} not yet supported", .{k}),
     }
 }
