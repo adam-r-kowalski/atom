@@ -93,7 +93,7 @@ Mantis has a straightforward syntax that is easy to read and write.
 Here is a simple Mantis program that defines a function to calculate the square of a number:
 
 ```mantis
-square = (x: i32) -> i32 { x^2 }
+square = (x: i32) i32 { x^2 }
 
 test("function calls", () {
     assert(square(1) == 1)
@@ -117,14 +117,14 @@ Here's an example:
 ```mantis
 # This is a single line comment
 
-square = (x: i32) -> i32 {
+square = (x: i32) i32 {
     # This function calculates the square of a number
     x^2
 }
 
 # You can also place comments at the end of a line
 
-sum = (xs: vec[i32]) -> i32 { xs.fold(0, +) } # Here we calculate the sum of an array
+sum = (xs: vec[i32]) i32 { xs.fold(0, +) } # Here we calculate the sum of an array
 ```
 
 ### Functions
@@ -132,11 +132,11 @@ sum = (xs: vec[i32]) -> i32 { xs.fold(0, +) } # Here we calculate the sum of an 
 In Mantis, you define a function using the `fn` keyword, followed by a list of parameters and their types, the return type, and then the function body.
 
 ```mantis
-max = (x: i32, y: i32) -> i32 {
+max = (x: i32, y: i32) i32 {
     if x > y { x } else { y }
 }
 
-min = (x: i32, y: i32) -> i32 {
+min = (x: i32, y: i32) i32 {
     if x < y { x } else { y }
 }
 
@@ -153,7 +153,7 @@ This is a function `max` that takes two parameters, `x` and `y`, and returns the
 Mantis supports conditional logic with `if`, `else if` and `else` expressions.
 
 ```mantis
-clamp = (value: i32, low: i32, high: i32) -> i32 {
+clamp = (value: i32, low: i32, high: i32) i32 {
     if value < low { low }
     else if value > high { high }
     else { value }
@@ -194,7 +194,7 @@ It's a powerful tool for working with complex data structures.
 
 ```mantis
 # pattern matching is done with `match expression`
-sum = (xs: vec[i32]) -> i32 {
+sum = (xs: vec[i32]) i32 {
     match xs {
         [] { 0 }
         [x, ...xs] { x + sum(xs) }
@@ -224,7 +224,7 @@ Square = struct {
     height: f32
 }
 
-area = ({width, height}: Square) -> f32 {
+area = ({width, height}: Square) f32 {
     width * height
 }
 
@@ -240,7 +240,7 @@ Another example of destructuring can be found in array pattern matching:
 
 ```mantis
 # pattern matching with destructuring
-sum = (xs: vec[i32]) -> i32 {
+sum = (xs: vec[i32]) i32 {
     match xs {
         [] { 0 }
         [x, ...rest] { x + sum(rest) }
@@ -294,7 +294,7 @@ Circle = struct {
     radius: f64
 }
 
-area = ({radius}: Circle) -> f64 {
+area = ({radius}: Circle) f64 {
     math.pi * radius ^ 2
 }
 
@@ -309,13 +309,13 @@ Mantis supports importing and exporting functions from the host environment.
 
 ```mantis
 # Import a function from the host
-log = foreign_import("console", "log", (x: str) -> void)
+log = foreign_import("console", "log", (x: str) void)
 
 # Export a function to the host
-foreign_export("double", (x: i32) -> i32 { x * 2 })
+foreign_export("double", (x: i32) i32 { x * 2 })
 
 # call the log function from Mantis
-start = () -> void {
+start = () void {
     log("hello world")
 }
 ```
@@ -335,17 +335,17 @@ It is a first class citizen in Mantis and by targeting this API you can ensure t
 fd_write = foreign_import(
     "wasi_unstable",
     "fd_write",
-    (fd: i32, iovs: str, iovs_len: i32, mut nwritten: i32) -> i32
+    (fd: i32, iovs: str, iovs_len: i32, mut nwritten: i32) i32
 )
 
 stdout: i32 = 1
 
-print = (text: str) -> void {
+print = (text: str) void {
     mut nwritten: i32 = undefined
     _ = stdout.fd_write(text, 1, mut nwritten)
 }
 
-start = () -> void {
+start = () void {
     print("Hello, World!\n")
     print("Goodbye!")
 }
@@ -360,7 +360,7 @@ Mantis includes built-in support for arrays and powerful operations over them.
 xs = [1, 2, 3, 4, 5]
 
 # Compute the sum of an array
-sum = (xs: vec[i32]) -> i32 { fold(xs, 0, +) }
+sum = (xs: vec[i32]) i32 { fold(xs, 0, +) }
 ```
 
 Here, `xs` is an array of integers, and `sum` is a function that computes the sum of an array by folding over it.
@@ -371,11 +371,12 @@ Mantis supports a pipeline syntax allowing you to pass the output of one functio
 
 ```mantis
 test("sum of first ten even squares", () {
-    naturals()
-    |> map((x) { x ^ 2 })
-    |> filter((x) { x % 2 == 0 })
-    |> take(10)
-    |> sum()
+    result = naturals()
+        |> map((x) { x ^ 2 })
+        |> filter((x) { x % 2 == 0 })
+        |> take(10)
+        |> sum()
+    assert(result == 1140)
 })
 ```
 
@@ -385,12 +386,12 @@ Mantis provides for expressions to efficiently iterate through an array and buil
 
 ```mantis
 # Compute the dot product of two vectors
-dot = [T: Num](a: vec[T], b: vec[T]) -> T {
+dot = [T: Num](a: vec[T], b: vec[T]) T {
     sum(for i { a[i] * b[i] })
 }
 
 # Perform matrix multiplication
-matmul = [T: Num](a: mat[T], b: mat[T]) -> mat[T] {
+matmul = [T: Num](a: mat[T], b: mat[T]) mat[T] {
     for i, j, k { sum(a[i, k] * b[k, j]) }
 }
 ```
@@ -406,25 +407,25 @@ Linear = struct {
     b: f64
 }
 
-predict = ({m, b}: Linear, x: f64) -> f64 {
+predict = ({m, b}: Linear, x: f64) f64 {
     m * x + b
 }
 
-sse = (model: Linear, x: vec[f64], y: vec[f64]) -> f64 {
+sse = (model: Linear, x: vec[f64], y: vec[f64]) f64 {
     sum(for i {
         y_hat = predict(model, x[i])
         (y_hat - y[i]) ^ 2
     })
 }
 
-update = (model: Linear, gradient: Linear, learning_rate: f64) -> Linear {
+update = (model: Linear, gradient: Linear, learning_rate: f64) Linear {
     Linear{
         m: model.m - gradient.m * learning_rate,
         b: model.b - gradient.b * learning_rate,
     }
 }
 
-step = (model: Linear, learning_rate: f64, x: vec[f64], y: vec[f64]) -> Linear {
+step = (model: Linear, learning_rate: f64, x: vec[f64], y: vec[f64]) Linear {
     gradient = grad(sse)(model, x, y)
     update(model, gradient, learning_rate)
 }
