@@ -168,3 +168,38 @@ test "type infer function body" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "codegen drops unused returns" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\double = fn(x: i32) i32 { x * 2 }
+        \\
+        \\start = fn() i32 {
+        \\    double(2)
+        \\    double(4)
+        \\}
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (func $double (param $x i32) (result i32)
+        \\        (i32.mul
+        \\            (local.get $x)
+        \\            (i32.const 2)))
+        \\
+        \\    (func $start (result i32)
+        \\        (drop
+        \\            (call $double
+        \\                (i32.const 2)))
+        \\        (call $double
+        \\            (i32.const 4)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

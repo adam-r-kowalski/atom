@@ -5,7 +5,7 @@ const StructureLiteral = @import("../type_checker/monotype.zig").StructureLitera
 const MonoType = @import("../type_checker/monotype.zig").MonoType;
 const align_of = @import("align_of.zig");
 
-pub fn enumeration(e: Enumeration) i32 {
+pub fn enumeration(e: Enumeration) u32 {
     return switch (e.variants.len) {
         0...31 => 4,
         32...63 => 8,
@@ -13,9 +13,9 @@ pub fn enumeration(e: Enumeration) i32 {
     };
 }
 
-pub fn structure(s: Structure) i32 {
-    var size: i32 = 0;
-    var max_alignment: i32 = 1;
+pub fn structure(s: Structure) u32 {
+    var size: u32 = 0;
+    var max_alignment: u32 = 1;
     for (s.order) |o| {
         const field = s.fields.get(o).?;
         const field_size = monotype(field);
@@ -30,11 +30,11 @@ pub fn structure(s: Structure) i32 {
     return size;
 }
 
-pub fn structureLiteral(s: StructureLiteral) i32 {
+pub fn structureLiteral(s: StructureLiteral) u32 {
     return monotype(s.structure.*);
 }
 
-pub fn monotype(m: MonoType) i32 {
+pub fn monotype(m: MonoType) u32 {
     return switch (m) {
         .void => 0,
         .u8 => 1,

@@ -143,16 +143,54 @@ test "codegen struct" {
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\define =
-        \\    name = symbol{ value = start, type = fn() struct{ name: str, age: u8 } }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            return_type = struct{ name: str, age: u8 }
-        \\            body =
-        \\                struct_literal =
-        \\                    type = struct_literal{ name: str, age: u8 } as struct{ name: str, age: u8 }
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (data (i32.const 0) "Bob")
+        \\
+        \\    (global $core/arena (mut i32) (i32.const 3))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
+        \\                (local.get $size))))
+        \\
+        \\    (func $start (result i32)
+        \\        (local $0 i32)
+        \\        (local $1 i32)
+        \\        (local.set $0
+        \\            (call $core/alloc
+        \\                (i32.const 12)))
+        \\        (local.set $1
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (block (result i32)
+        \\            (memory.copy
+        \\                (local.get $0)
+        \\                (block (result i32)
+        \\                    (i32.store
+        \\                        (local.get $1)
+        \\                        (i32.const 0))
+        \\                    (i32.store
+        \\                        (i32.add
+        \\                            (local.get $1)
+        \\                            (i32.const 4))
+        \\                        (i32.const 3))
+        \\                    (local.get $1))
+        \\                (i32.const 8))
+        \\            (i32.store8
+        \\                (i32.add
+        \\                    (local.get $0)
+        \\                    (i32.const 8))
+        \\                (i32.const 42))))
+        \\
+        \\    (export "_start" (func $start)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
