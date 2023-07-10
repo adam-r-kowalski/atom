@@ -446,6 +446,28 @@ test("gradient descent", () {
 })
 ```
 
+### HTML
+
+Mantis is built to be a citizen of the web. We want to ensure you can build services which can render html
+on the server side or client side.
+
+```mantis
+route("/customers",
+    <html>
+        <head>
+            <title>Customers</title>
+        </head>
+        <body>
+            <ul>
+                <li>Customer 1</li>
+                <li>Customer 2</li>
+                <li>Customer 3</li>
+            </ul>
+        </body>
+    </html>
+)
+```
+
 ## Community
 
 Mantis is open-source and community-driven. We welcome contributions of any kind: code, documentation, design, etc.
