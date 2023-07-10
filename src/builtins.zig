@@ -5,6 +5,8 @@ const Interned = interner.Interned;
 pub const Builtins = struct {
     fn_: Interned,
     enum_: Interned,
+    struct_: Interned,
+    block: Interned,
     u8: Interned,
     i32: Interned,
     i64: Interned,
@@ -33,6 +35,8 @@ pub const Builtins = struct {
         return Builtins{
             .fn_ = try intern.store("fn"),
             .enum_ = try intern.store("enum"),
+            .struct_ = try intern.store("struct"),
+            .block = try intern.store("block"),
             .u8 = try intern.store("u8"),
             .i32 = try intern.store("i32"),
             .i64 = try intern.store("i64"),

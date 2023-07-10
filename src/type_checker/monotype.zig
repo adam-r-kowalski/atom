@@ -1,3 +1,5 @@
+const std = @import("std");
+const Map = std.AutoHashMap;
 const parser = @import("../parser.zig");
 const Interned = @import("../interner.zig").Interned;
 pub const Span = parser.types.Span;
@@ -38,6 +40,21 @@ pub const EnumerationInstance = struct {
     span: ?Span,
 };
 
+pub const Fields = Map(Interned, MonoType);
+
+pub const Structure = struct {
+    fields: Fields,
+    order: []const Interned,
+    span: ?Span,
+};
+
+pub const StructureLiteral = struct {
+    fields: Fields,
+    order: []const Interned,
+    structure: *const MonoType,
+    span: ?Span,
+};
+
 pub const MonoType = union(enum) {
     void: Void,
     u8: U8,
@@ -51,6 +68,8 @@ pub const MonoType = union(enum) {
     array: Array,
     enumeration: Enumeration,
     enumeration_instance: EnumerationInstance,
+    structure: Structure,
+    structure_literal: StructureLiteral,
 };
 
 pub fn span(monotype: MonoType) ?Span {
@@ -67,6 +86,8 @@ pub fn span(monotype: MonoType) ?Span {
         .array => |a| a.span,
         .enumeration => |e| e.span,
         .enumeration_instance => |e| e.span,
+        .structure => |s| s.span,
+        .structure_literal => |s| s.span,
     };
 }
 
@@ -84,5 +105,12 @@ pub fn withSpan(monotype: MonoType, s: Span) MonoType {
         .array => |a| .{ .array = .{ .rank = a.rank, .element_type = a.element_type, .span = s } },
         .enumeration => |e| .{ .enumeration = .{ .variants = e.variants, .span = s } },
         .enumeration_instance => |e| .{ .enumeration_instance = .{ .name = e.name, .span = s } },
+        .structure => |st| .{ .structure = .{ .fields = st.fields, .order = st.order, .span = s } },
+        .structure_literal => |st| .{ .structure_literal = .{
+            .fields = st.fields,
+            .order = st.order,
+            .structure = st.structure,
+            .span = s,
+        } },
     };
 }

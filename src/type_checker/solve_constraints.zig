@@ -38,17 +38,38 @@ fn exactEqual(a: types.MonoType, b: types.MonoType) bool {
             .enumeration_instance => |e2| return e1.name.eql(e2.name),
             else => return false,
         },
+        .structure_literal => return false,
+        else => |k| std.debug.panic("Unhandled type: {}\n", .{k}),
     }
 }
 
-pub fn set(s: *types.Substitution, t: types.TypeVar, m: types.MonoType) !void {
+pub fn set(s: *types.Substitution, t: types.TypeVar, m: types.MonoType, errors: *Errors) !void {
     const result = try s.getOrPut(t);
     if (result.found_existing) {
         if (exactEqual(result.value_ptr.*, m)) return;
         switch (m) {
-            .typevar => |t1| try set(s, t1, result.value_ptr.*),
+            .typevar => |t1| try set(s, t1, result.value_ptr.*, errors),
+            .structure => |s1| {
+                switch (result.value_ptr.*) {
+                    .typevar => |t1| try set(s, t1, m, errors),
+                    .structure_literal => |s2| {
+                        if (s1.order.len != s2.order.len) return error.CompileError;
+                        for (s1.order) |o| {
+                            const s1_field = s1.fields.get(o).?;
+                            if (s2.fields.get(o)) |s2_field| {
+                                try equalConstraint(.{ .left = s1_field, .right = s2_field }, s, errors);
+                            } else {
+                                return error.CompileError;
+                            }
+                        }
+                        try equalConstraint(.{ .left = m, .right = s2.structure.* }, s, errors);
+                        return;
+                    },
+                    else => return error.CompileError,
+                }
+            },
             else => switch (result.value_ptr.*) {
-                .typevar => |t1| try set(s, t1, m),
+                .typevar => |t1| try set(s, t1, m, errors),
                 else => return error.CompileError,
             },
         }
@@ -56,11 +77,11 @@ pub fn set(s: *types.Substitution, t: types.TypeVar, m: types.MonoType) !void {
     result.value_ptr.* = m;
 }
 
-pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, errors: *Errors) !void {
+pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, errors: *Errors) error{ CompileError, OutOfMemory }!void {
     const left_tag = std.meta.activeTag(equal.left);
     const right_tag = std.meta.activeTag(equal.right);
     if (left_tag == .typevar) {
-        return set(s, equal.left.typevar, equal.right) catch |e| switch (e) {
+        return set(s, equal.left.typevar, equal.right, errors) catch |e| switch (e) {
             error.CompileError => {
                 const left = if (s.get(equal.left.typevar)) |t|
                     t
@@ -73,7 +94,7 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
         };
     }
     if (right_tag == .typevar) {
-        return set(s, equal.right.typevar, equal.left) catch |e| switch (e) {
+        return set(s, equal.right.typevar, equal.left, errors) catch |e| switch (e) {
             error.CompileError => {
                 const right = if (s.get(equal.right.typevar)) |t|
                     t

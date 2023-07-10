@@ -1,3 +1,6 @@
+const std = @import("std");
+const Map = std.AutoHashMap;
+
 const tokenizer = @import("../tokenizer.zig");
 
 pub const Span = tokenizer.types.Span;
@@ -7,6 +10,8 @@ pub const Symbol = tokenizer.types.Symbol;
 pub const String = tokenizer.types.String;
 pub const Bool = tokenizer.types.Bool;
 pub const Undefined = tokenizer.types.Undefined;
+
+const Interned = @import("../interner.zig").Interned;
 
 pub const Define = struct {
     name: Symbol,
@@ -66,6 +71,34 @@ pub const Prototype = struct {
 
 pub const Enumeration = struct {
     variants: []const Symbol,
+    span: Span,
+};
+
+pub const StructField = struct {
+    name: Symbol,
+    type: Expression,
+    span: Span,
+};
+
+pub const StructFields = Map(Interned, StructField);
+
+pub const Structure = struct {
+    fields: StructFields,
+    order: []const Interned,
+    span: Span,
+};
+
+pub const StructLiteralField = struct {
+    name: Symbol,
+    value: Expression,
+    span: Span,
+};
+
+pub const StructLiteralFields = Map(Interned, StructLiteralField);
+
+pub const StructLiteral = struct {
+    fields: StructLiteralFields,
+    order: []const Interned,
     span: Span,
 };
 
@@ -130,6 +163,8 @@ pub const Expression = union(enum) {
     times_equal: TimesEqual,
     function: Function,
     enumeration: Enumeration,
+    structure: Structure,
+    struct_literal: StructLiteral,
     prototype: Prototype,
     binary_op: BinaryOp,
     group: Group,
@@ -138,6 +173,13 @@ pub const Expression = union(enum) {
     branch: Branch,
     call: Call,
     undefined: Undefined,
+};
+
+pub const TopLevelStructure = struct {
+    name: Symbol,
+    type: ?*const Expression,
+    structure: Structure,
+    span: Span,
 };
 
 pub const TopLevelEnumeration = struct {
@@ -163,6 +205,7 @@ pub const TopLevelForeignImport = struct {
 
 pub const Module = struct {
     foreign_imports: []const TopLevelForeignImport,
+    structures: []const TopLevelStructure,
     enumerations: []const TopLevelEnumeration,
     functions: []const TopLevelFunction,
     defines: []const Define,

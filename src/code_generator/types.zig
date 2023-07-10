@@ -37,6 +37,7 @@ pub const BinaryOpKind = enum {
     i32_rem_s,
     i32_or,
     i32_store,
+    i32_store8,
     i64_add,
     i64_sub,
     i64_mul,
@@ -144,6 +145,12 @@ pub const Drop = struct {
     expression: *const Expression,
 };
 
+pub const MemoryCopy = struct {
+    destination: *const Expression,
+    source: *const Expression,
+    size: *const Expression,
+};
+
 pub const Expression = union(enum) {
     local_get: LocalGet,
     local_set: LocalSet,
@@ -158,6 +165,7 @@ pub const Expression = union(enum) {
     expressions: Expressions,
     block: Block,
     drop: Drop,
+    memory_copy: MemoryCopy,
     nop,
 };
 

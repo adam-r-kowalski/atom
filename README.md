@@ -93,13 +93,13 @@ Mantis has a straightforward syntax that is easy to read and write.
 Here is a simple Mantis program that defines a function to calculate the square of a number:
 
 ```mantis
-square = fn(x: i32) i32 { x^2 }
+square = (x: i32) i32 { x^2 }
 
-test "function calls" {
+test("function calls", () {
     assert(square(1) == 1)
     assert(square(2) == 4)
     assert(square(3) == 9)
-}
+})
 ```
 
 This program defines a function `square` and a set of tests to verify its behavior.
@@ -117,14 +117,14 @@ Here's an example:
 ```mantis
 # This is a single line comment
 
-square = fn(x: i32) i32 {
+square = (x: i32) i32 {
     # This function calculates the square of a number
     x^2
 }
 
 # You can also place comments at the end of a line
 
-sum = fn(xs: vec[i32]) i32 { xs.fold(0, +) } # Here we calculate the sum of an array
+sum = (xs: vec[i32]) i32 { xs.fold(0, +) } # Here we calculate the sum of an array
 ```
 
 ### Functions
@@ -132,18 +132,18 @@ sum = fn(xs: vec[i32]) i32 { xs.fold(0, +) } # Here we calculate the sum of an a
 In Mantis, you define a function using the `fn` keyword, followed by a list of parameters and their types, the return type, and then the function body.
 
 ```mantis
-max = fn(x: i32, y: i32) i32 {
+max = (x: i32, y: i32) i32 {
     if x > y { x } else { y }
 }
 
-min = fn(x: i32, y: i32) i32 {
+min = (x: i32, y: i32) i32 {
     if x < y { x } else { y }
 }
 
-test "if else" {
+test("if else", () {
     assert(max(5, 3) == 5)
     assert(min(5, 3) == 3)
-}
+})
 ```
 
 This is a function `max` that takes two parameters, `x` and `y`, and returns the greater of the two.
@@ -153,17 +153,17 @@ This is a function `max` that takes two parameters, `x` and `y`, and returns the
 Mantis supports conditional logic with `if`, `else if` and `else` expressions.
 
 ```mantis
-clamp = fn(value: i32, low: i32, high: i32) i32 {
+clamp = (value: i32, low: i32, high: i32) i32 {
     if value < low { low }
     else if value > high { high }
     else { value }
 }
 
-test "multi arm if" {
+test("multi arm if", () {
     assert(clamp(1, 3, 5) == 3)
     assert(clamp(7, 3, 5) == 5)
     assert(clamp(4, 3, 5) == 4)
-}
+})
 ```
 
 This `clamp` function ensures that a value stays within a specific range.
@@ -173,29 +173,16 @@ This `clamp` function ensures that a value stays within a specific range.
 Mantis supports named parameters, which can improve the readability of your code. Here is an example of using named parameters:
 
 ```mantis
-test "named parameters" {
+test("named parameters", () {
     assert(clamp(value=1, low=3, high=5) == 3)
     assert(clamp(value=7, low=3, high=5) == 5)
     assert(clamp(value=4, low=3, high=5) == 4)
-}
+})
 ```
 
 In this example, we are calling the `clamp` function with named parameters `value`, `low`, and `high`.
 This makes it clear what each parameter represents, which can be particularly helpful when dealing with
 functions that have many parameters or when the purpose of a parameter isn't immediately clear from its name.
-
-### Method Call Syntax
-
-In addition to the standard function call syntax, Mantis also supports a method call syntax,
-allowing you to call functions in an object-oriented style. Here's an example:
-
-```mantis
-test "method notation named parameters" {
-    assert(1.clamp(low=3, high=5) == 3)
-    assert(7.clamp(low=3, high=5) == 5)
-    assert(4.clamp(low=3, high=5) == 4)
-}
-```
 
 In this example, we are calling the `clamp` function using the dot syntax on an integer value.
 This can make your code more readable by clearly associating a function with the data it operates on.
@@ -207,70 +194,22 @@ It's a powerful tool for working with complex data structures.
 
 ```mantis
 # pattern matching is done with `match expression`
-sum = fn(xs: vec[i32]) i32 {
+sum = (xs: vec[i32]) i32 {
     match xs {
         [] { 0 }
         [x, ...xs] { x + sum(xs) }
     }
 }
 
-test "sum" {
+test("sum", () {
     assert(sum([1, 2, 3]) == 6)
-}
+})
 ```
 
 In the above code, `sum` is a function that takes a list of integers and returns the sum of all elements in the list.
 The `match xs` construct is used for pattern matching. If the list is empty (`[]`), the function returns `0`.
 If the list has at least one element (`[x, ...xs]`), the function returns the sum of the first element and the
 result of the recursive call to `sum` on the rest of the list.
-
-### Interfaces and Implementations
-
-Interfaces in Mantis define a contract for structs (in the form of function signatures),
-and any struct implementing an interface must fulfil this contract by defining those functions.
-
-For example, let's consider an interface `Shape` with a function `area`, and two struct types,
-`Circle` and `Square`, implementing this interface:
-
-```mantis
-# interfaces allow you to code against different types in a uniform way
-Shape = interface {
-    area: fn(shape: Self) f32
-}
-
-Circle = struct {
-    radius: f32
-}
-
-# you can import functions from other mantis modules
-math = import("math.mantis")
-
-implement Shape for Circle {
-    area = fn(c: Circle) f32 {
-        math.pi * c.radius ^ 2
-    }
-}
-
-Square = struct {
-    width: f32,
-    height: f32
-}
-
-# here we leverage destructuring
-implement Shape for Square {
-    area = fn({width, height}: Square) f32 {
-        width * height
-    }
-}
-
-test "area of shapes" {
-    assert(area(Circle{radius: 10}) == 314)
-    assert(area(Square{width: 5, height: 10}) == 50)
-}
-```
-
-In this code, `Shape` is an interface that declares a method named `area`. Both `Circle` and `Square`
-are structs that implement the Shape interface by providing their own implementation of the `area` method.
 
 ### Destructuring
 
@@ -285,11 +224,13 @@ Square = struct {
     height: f32
 }
 
-implement Shape for Square {
-    area = fn({width, height}: Square) f32 {
-        width * height
-    }
+area = ({width, height}: Square) f32 {
+    width * height
 }
+
+test("area of square", () {
+    assert(area({ width: 10, height: 5 }) == 50)
+})
 ```
 
 In the `area` function for `Square`, `{width, height}` is a destructuring assignment:
@@ -299,7 +240,7 @@ Another example of destructuring can be found in array pattern matching:
 
 ```mantis
 # pattern matching with destructuring
-sum = fn(xs: vec[i32]) i32 {
+sum = (xs: vec[i32]) i32 {
     match xs {
         [] { 0 }
         [x, ...rest] { x + sum(rest) }
@@ -336,19 +277,45 @@ while the one outside the block prints the original `x`.
 
 Shadowing can be useful when you want to reuse variable names, but be careful, as it can lead to confusion if not used judiciously.
 
+### Importing from other files
+
+Mantis supports importing other files and calling functions in them
+
+```mantis
+# math.mantis
+pi: f64 = 3.14
+```
+
+```mantis
+# circle.mantis
+math = import("math.mantis")
+
+Circle = struct {
+    radius: f64
+}
+
+area = ({radius}: Circle) f64 {
+    math.pi * radius ^ 2
+}
+
+test("area of a circle", () {
+    assert(area({radius: 10}) == 314)
+})
+```
+
 ### Foreign Function Interface
 
 Mantis supports importing and exporting functions from the host environment.
 
 ```mantis
 # Import a function from the host
-log = foreign_import("console", "log", fn(x: str) void)
+log = foreign_import("console", "log", (x: str) void)
 
 # Export a function to the host
-foreign_export("double", fn(x: i32) i32 { x * 2 })
+foreign_export("double", (x: i32) i32 { x * 2 })
 
 # call the log function from Mantis
-start = fn() void {
+start = () void {
     log("hello world")
 }
 ```
@@ -365,16 +332,20 @@ And it has integrated capability-based security, so it extends WebAssembly's cha
 It is a first class citizen in Mantis and by targeting this API you can ensure that your programs work across as many platforms as possible.
 
 ```mantis
-fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, iovs: str, iovs_len: i32, mut nwritten: i32) i32)
+fd_write = foreign_import(
+    "wasi_unstable",
+    "fd_write",
+    (fd: i32, iovs: str, iovs_len: i32, mut nwritten: i32) i32
+)
 
 stdout: i32 = 1
 
-print = fn(text: str) void {
+print = (text: str) void {
     mut nwritten: i32 = undefined
     _ = stdout.fd_write(text, 1, mut nwritten)
 }
 
-start = fn() void {
+start = () void {
     print("Hello, World!\n")
     print("Goodbye!")
 }
@@ -389,23 +360,42 @@ Mantis includes built-in support for arrays and powerful operations over them.
 xs = [1, 2, 3, 4, 5]
 
 # Compute the sum of an array
-sum = fn(xs: vec[i32]) i32 { fold(xs, 0, +) }
+sum = (xs: vec[i32]) i32 { fold(xs, 0, +) }
+
+test("sum of array", () {
+    assert(sum(xs) == 15)
+})
 ```
 
 Here, `xs` is an array of integers, and `sum` is a function that computes the sum of an array by folding over it.
 
-### High-Performance Computing
+### Pipelines
 
-Mantis provides powerful constructs for high-performance computing, like parallel fold and Einstein summation notation.
+Mantis supports a pipeline syntax allowing you to pass the output of one function as the input for the next
+
+```mantis
+test("sum of first ten even squares", () {
+    result = naturals()
+        |> map((x) { x ^ 2 })
+        |> filter((x) { x % 2 == 0 })
+        |> take(10)
+        |> sum()
+    assert(result == 1140)
+})
+```
+
+### For expressions
+
+Mantis provides for expressions to efficiently iterate through an array and build up a new one.
 
 ```mantis
 # Compute the dot product of two vectors
-dot = fn[T: Num](a: vec[T], b: vec[T]) T {
+dot = [T: Num](a: vec[T], b: vec[T]) T {
     sum(for i { a[i] * b[i] })
 }
 
 # Perform matrix multiplication
-matmul = fn[T: Num](a: mat[T], b: mat[T]) mat[T] {
+matmul = [T: Num](a: mat[T], b: mat[T]) mat[T] {
     for i, j, k { sum(a[i, k] * b[k, j]) }
 }
 ```
@@ -421,39 +411,39 @@ Linear = struct {
     b: f64
 }
 
-predict = fn({m, b}: Linear, x: f64) f64 {
+predict = ({m, b}: Linear, x: f64) f64 {
     m * x + b
 }
 
-sse = fn(model: Linear, x: vec[f64], y: vec[f64]) f64 {
+sse = (model: Linear, x: vec[f64], y: vec[f64]) f64 {
     sum(for i {
-        y_hat = model.predict(x[i])
+        y_hat = predict(model, x[i])
         (y_hat - y[i]) ^ 2
     })
 }
 
-update = fn(model: Linear, gradient: Linear, learning_rate: f64) Linear {
+update = (model: Linear, gradient: Linear, learning_rate: f64) Linear {
     Linear{
         m: model.m - gradient.m * learning_rate,
         b: model.b - gradient.b * learning_rate,
     }
 }
 
-step = fn(model: Linear, learning_rate: f64, x: vec[f64], y: vec[f64]) Linear {
+step = (model: Linear, learning_rate: f64, x: vec[f64], y: vec[f64]) Linear {
     gradient = grad(sse)(model, x, y)
-    model.update(gradient, learning_rate)
+    update(model, gradient, learning_rate)
 }
 
-test "gradient descent" {
-    model = Linear{m: 1.0, b: 0.0}
+test("gradient descent", () {
+    model = {m: 1.0, b: 0.0}
     learning_rate = 0.01
     x = [1.0, 2.0, 3.0, 4.0]
     y = [2.0, 4.0, 6.0, 8.0]
-    initial_loss = model.sse(x, y)
-    model = model.step(learning_rate, x, y)
-    updated_loss = model.sse(x, y)
+    initial_loss = sse(model, x, y)
+    model = step(model, learning_rate, x, y)
+    updated_loss = sse(model, x, y)
     assert(updated_loss < initial_loss)
-}
+})
 ```
 
 ## Community

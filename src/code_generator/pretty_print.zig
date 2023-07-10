@@ -140,6 +140,7 @@ pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
         .i32_gt_s => try writer.writeAll("i32.gt_s"),
         .i32_lt_s => try writer.writeAll("i32.lt_s"),
         .i32_store => try writer.writeAll("i32.store"),
+        .i32_store8 => try writer.writeAll("i32.store8"),
         .i64_add => try writer.writeAll("i64.add"),
         .i64_sub => try writer.writeAll("i64.sub"),
         .i64_mul => try writer.writeAll("i64.mul"),
@@ -202,6 +203,17 @@ fn drop(d: types.Drop, indent: Indent, writer: Writer) !void {
     try writer.writeAll(")");
 }
 
+fn memoryCopy(m: types.MemoryCopy, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("(memory.copy");
+    try newlineAndIndent(indent + 1, writer);
+    try expression(m.destination.*, indent + 1, writer);
+    try newlineAndIndent(indent + 1, writer);
+    try expression(m.source.*, indent + 1, writer);
+    try newlineAndIndent(indent + 1, writer);
+    try expression(m.size.*, indent + 1, writer);
+    try writer.writeAll(")");
+}
+
 pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{OutOfMemory}!void {
     switch (e) {
         .local_get => |l| try writer.print("(local.get ${s})", .{l.name.string()}),
@@ -217,6 +229,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .expressions => |es| try expressions(es, indent, writer),
         .block => |b| try block(b, indent, writer),
         .drop => |d| try drop(d, indent, writer),
+        .memory_copy => |m| try memoryCopy(m, indent, writer),
         .nop => try writer.writeAll("(nop)"),
     }
 }

@@ -80,6 +80,28 @@ pub fn enumeration(e: types.Enumeration, indent: Indent, writer: Writer) !void {
     try writer.writeAll(")");
 }
 
+pub fn structure(s: types.Structure, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("(struct");
+    for (s.order) |interned| {
+        const field = s.fields.get(interned).?;
+        try newlineAndIndent(indent, writer);
+        try writer.print("{s} ", .{field.name.value.string()});
+        try expression(field.type, indent, writer);
+    }
+    try writer.writeAll(")");
+}
+
+pub fn structLiteral(s: types.StructLiteral, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("(struct_literal");
+    for (s.order) |interned| {
+        const field = s.fields.get(interned).?;
+        try newlineAndIndent(indent, writer);
+        try writer.print("{s} ", .{field.name.value.string()});
+        try expression(field.value, indent, writer);
+    }
+    try writer.writeAll(")");
+}
+
 pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
     try writer.writeAll("(");
     switch (b.kind) {
@@ -176,6 +198,8 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .function => |f| try function(f, indent, writer),
         .prototype => |p| try prototype(p, indent, writer),
         .enumeration => |en| try enumeration(en, indent, writer),
+        .structure => |s| try structure(s, indent, writer),
+        .struct_literal => |s| try structLiteral(s, indent, writer),
         .binary_op => |b| try binaryOp(b, indent, writer),
         .group => |g| try expression(g.expression.*, indent, writer),
         .block => |b| try block(b, indent, writer),
@@ -194,6 +218,17 @@ pub fn topLevelForeignImport(f: types.TopLevelForeignImport, indent: Indent, wri
     }
     try writer.writeAll(" ");
     try call(f.call, indent + 1, writer);
+    try writer.writeAll(")");
+}
+
+pub fn topLevelStructure(s: types.TopLevelStructure, indent: Indent, writer: Writer) !void {
+    try writer.print("(def {s}", .{s.name.value.string()});
+    if (s.type) |t| {
+        try writer.writeAll(" ");
+        try expression(t.*, indent, writer);
+    }
+    try writer.writeAll(" ");
+    try structure(s.structure, indent + 1, writer);
     try writer.writeAll(")");
 }
 
@@ -224,6 +259,11 @@ pub fn module(m: types.Module, writer: Writer) !void {
     for (m.foreign_imports) |f| {
         if (i > 0) try writer.writeAll("\n\n");
         try topLevelForeignImport(f, 0, writer);
+        i += 1;
+    }
+    for (m.structures) |s| {
+        if (i > 0) try writer.writeAll("\n\n");
+        try topLevelStructure(s, 0, writer);
         i += 1;
     }
     for (m.enumerations) |e| {

@@ -8,6 +8,7 @@ const Interned = interner.Interned;
 const type_checker = @import("../type_checker.zig");
 const Builtins = @import("../builtins.zig").Builtins;
 const types = @import("types.zig");
+const size_of = @import("size_of.zig");
 
 const LocalName = Interned;
 const PointerName = Interned;
@@ -52,18 +53,20 @@ fn mapType(monotype: type_checker.types.MonoType) types.Type {
         .void => return .void,
         .array => return .i32,
         .enumeration => |e| {
-            switch (e.variants.len) {
-                0...31 => return .i32,
-                32...63 => return .i64,
+            switch (size_of.enumeration(e)) {
+                0...4 => return .i32,
+                5...8 => return .i64,
                 else => std.debug.panic("\nEnumeration with {} variants not yet supported", .{e.variants.len}),
             }
         },
+        .structure => return .i32,
         else => std.debug.panic("\nMonotype {} not yet supported", .{monotype}),
     }
 }
 
 fn int(i: type_checker.types.Int) !types.Expression {
     switch (i.type) {
+        .u8 => return .{ .literal = .{ .i32 = try std.fmt.parseInt(u8, i.value.string(), 10) } },
         .i32 => return .{ .literal = .{ .i32 = try std.fmt.parseInt(i32, i.value.string(), 10) } },
         .i64 => return .{ .literal = .{ .i64 = try std.fmt.parseInt(i64, i.value.string(), 10) } },
         .f32 => return .{ .literal = .{ .f32 = try std.fmt.parseFloat(f32, i.value.string()) } },
@@ -159,9 +162,9 @@ fn equal(context: Context, b: type_checker.types.BinaryOp) !types.Expression {
         .f32 => return .{ .binary_op = .{ .kind = .f32_eq, .left = left, .right = right } },
         .f64 => return .{ .binary_op = .{ .kind = .f64_eq, .left = left, .right = right } },
         .enumeration => |e| {
-            switch (e.variants.len) {
-                0...31 => return .{ .binary_op = .{ .kind = .i32_eq, .left = left, .right = right } },
-                32...63 => return .{ .binary_op = .{ .kind = .i64_eq, .left = left, .right = right } },
+            switch (size_of.enumeration(e)) {
+                0...4 => return .{ .binary_op = .{ .kind = .i32_eq, .left = left, .right = right } },
+                5...8 => return .{ .binary_op = .{ .kind = .i64_eq, .left = left, .right = right } },
                 else => std.debug.panic("\nEnumeration with {} variants not yet supported", .{e.variants.len}),
             }
         },
@@ -434,14 +437,54 @@ fn string(context: Context, s: type_checker.types.String) !types.Expression {
 fn variant(v: type_checker.types.Variant) !types.Expression {
     switch (v.type) {
         .enumeration => |e| {
-            switch (e.variants.len) {
-                0...31 => return .{ .literal = .{ .u32 = @intCast(v.index) } },
-                32...63 => return .{ .literal = .{ .u64 = v.index } },
+            switch (size_of.enumeration(e)) {
+                0...4 => return .{ .literal = .{ .u32 = @intCast(v.index) } },
+                5...8 => return .{ .literal = .{ .u64 = v.index } },
                 else => |k| std.debug.panic("\nVariant type {} not allowed", .{k}),
             }
         },
         else => |k| std.debug.panic("\nVariant type {} not allowed", .{k}),
     }
+}
+
+fn structLiteral(context: Context, s: type_checker.types.StructLiteral) !types.Expression {
+    const size = size_of.monotype(s.type);
+    const local = try freshLocalPointer(context, size);
+    const exprs = try context.allocator.alloc(types.Expression, s.order.len + 1);
+    const structure = s.type.structure_literal.structure.structure;
+    const base = try context.allocator.create(types.Expression);
+    base.* = .{ .local_get = .{ .name = local } };
+    var offset: u32 = 0;
+    for (structure.order, exprs[0..structure.order.len]) |o, *e| {
+        const field = s.fields.get(o).?;
+        const result = try expressionAlloc(context, field.value);
+        const field_offset = try context.allocator.create(types.Expression);
+        field_offset.* = .{ .literal = .{ .u32 = offset } };
+        const field_address = blk: {
+            if (offset > 0) {
+                const ptr = try context.allocator.create(types.Expression);
+                ptr.* = .{ .binary_op = .{ .kind = .i32_add, .left = base, .right = field_offset } };
+                break :blk ptr;
+            }
+            break :blk base;
+        };
+        switch (type_checker.type_of.expression(field.value)) {
+            .u8 => e.* = .{ .binary_op = .{ .kind = .i32_store8, .left = field_address, .right = result } },
+            .array => {
+                const size_expr = try context.allocator.create(types.Expression);
+                size_expr.* = .{ .literal = .{ .u32 = 8 } };
+                e.* = .{ .memory_copy = .{
+                    .destination = field_address,
+                    .source = result,
+                    .size = size_expr,
+                } };
+                offset += 8;
+            },
+            else => |k| std.debug.panic("\nField type {} not allowed", .{k}),
+        }
+    }
+    exprs[s.order.len] = base.*;
+    return .{ .block = types.Block{ .result = .i32, .expressions = exprs } };
 }
 
 fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMemory, InvalidCharacter, Overflow }!types.Expression {
@@ -462,6 +505,7 @@ fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMe
         .convert => |c| return try convert(context, c),
         .string => |s| return try string(context, s),
         .variant => |v| return try variant(v),
+        .struct_literal => |s| return try structLiteral(context, s),
         else => |k| std.debug.panic("\ntypes.Expression {} not yet supported", .{k}),
     }
 }
@@ -521,8 +565,21 @@ fn function(allocator: Allocator, builtins: Builtins, data_segment: *types.DataS
         .intern = intern,
         .intrinsics = intrinsics,
     };
-    for (f.body.expressions) |expr| {
-        try body.append(try expression(context, expr));
+    const last = f.body.expressions.len - 1;
+    for (f.body.expressions, 0..) |expr, i| {
+        const e = try expression(context, expr);
+        if (i != last) {
+            switch (type_checker.type_of.expression(expr)) {
+                .void => try body.append(e),
+                else => {
+                    const value = try allocator.create(types.Expression);
+                    value.* = e;
+                    try body.append(.{ .drop = .{ .expression = value } });
+                },
+            }
+        } else {
+            try body.append(e);
+        }
     }
     for (deferred.items) |expr| {
         try body.append(expr);

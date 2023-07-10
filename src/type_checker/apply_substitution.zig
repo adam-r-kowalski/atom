@@ -3,6 +3,7 @@ const Allocator = std.mem.Allocator;
 const types = @import("types.zig");
 const Parameter = @import("monotype.zig").Parameter;
 const MonoType = @import("monotype.zig").MonoType;
+const Fields = @import("monotype.zig").Fields;
 
 fn monotype(allocator: Allocator, sub: types.Substitution, m: MonoType) !MonoType {
     switch (m) {
@@ -35,6 +36,22 @@ fn monotype(allocator: Allocator, sub: types.Substitution, m: MonoType) !MonoTyp
                 return mono;
             }
             return m;
+        },
+        .structure_literal => |s| {
+            var fields = Fields.init(allocator);
+            for (s.order) |o| {
+                const field = s.fields.get(o).?;
+                const value = try monotype(allocator, sub, field);
+                try fields.putNoClobber(o, value);
+            }
+            const structure = try allocator.create(MonoType);
+            structure.* = try monotype(allocator, sub, s.structure.*);
+            return .{ .structure_literal = .{
+                .fields = fields,
+                .order = s.order,
+                .span = s.span,
+                .structure = structure,
+            } };
         },
         else => return m,
     }
@@ -220,6 +237,26 @@ fn variant(allocator: Allocator, sub: types.Substitution, v: types.Variant) !typ
     };
 }
 
+fn structLiteral(allocator: Allocator, sub: types.Substitution, s: types.StructLiteral) !types.StructLiteral {
+    var fields = types.Fields.init(allocator);
+    for (s.order) |o| {
+        const field = s.fields.get(o).?;
+        const name = try symbol(allocator, sub, field.name);
+        const value = try expression(allocator, sub, field.value);
+        try fields.putNoClobber(o, .{
+            .name = name,
+            .value = value,
+            .span = field.span,
+        });
+    }
+    return .{
+        .fields = fields,
+        .order = s.order,
+        .span = s.span,
+        .type = try monotype(allocator, sub, s.type),
+    };
+}
+
 pub fn expression(allocator: Allocator, sub: types.Substitution, e: types.Expression) error{OutOfMemory}!types.Expression {
     return switch (e) {
         .symbol => |s| .{ .symbol = try symbol(allocator, sub, s) },
@@ -243,6 +280,7 @@ pub fn expression(allocator: Allocator, sub: types.Substitution, e: types.Expres
         .foreign_export => |f| .{ .foreign_export = try foreignExport(allocator, sub, f) },
         .convert => e,
         .undefined => |u| .{ .undefined = try undef(allocator, sub, u) },
+        .struct_literal => |s| .{ .struct_literal = try structLiteral(allocator, sub, s) },
     };
 }
 

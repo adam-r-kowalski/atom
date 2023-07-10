@@ -1,6 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const List = std.ArrayList;
+const Map = std.AutoHashMap;
 
 const Interned = @import("../interner.zig").Interned;
 const Builtins = @import("../builtins.zig").Builtins;
@@ -166,6 +167,46 @@ fn untypedUndefined(context: Context, u: parser.types.Undefined) types.Undefined
     return types.Undefined{
         .span = u.span,
         .type = freshTypeVar(context.constraints, u.span),
+    };
+}
+
+fn structLiteral(context: Context, s: parser.types.StructLiteral) !types.StructLiteral {
+    var field_types = Map(Interned, MonoType).init(context.allocator);
+    var fields = Map(Interned, types.Field).init(context.allocator);
+    for (s.order) |o| {
+        const field = s.fields.get(o).?;
+        const expr = try expression(context, field.value);
+        const mono = typeOf(expr);
+        try field_types.putNoClobber(o, mono);
+        try fields.putNoClobber(o, .{
+            .name = .{
+                .value = field.name.value,
+                .span = field.name.span,
+                .type = monotype.withSpan(mono, field.name.span),
+                .binding = .{
+                    .type = mono,
+                    .global = false,
+                    .mutable = false,
+                    .span = field.name.span,
+                },
+            },
+            .value = expr,
+            .span = field.span,
+        });
+    }
+    const structure = try context.allocator.create(MonoType);
+    structure.* = freshTypeVar(context.constraints, s.span);
+    const mono = MonoType{ .structure_literal = .{
+        .fields = field_types,
+        .order = s.order,
+        .span = s.span,
+        .structure = structure,
+    } };
+    return types.StructLiteral{
+        .fields = fields,
+        .order = s.order,
+        .type = mono,
+        .span = s.span,
     };
 }
 
@@ -632,6 +673,7 @@ fn expression(context: Context, e: parser.types.Expression) error{ OutOfMemory, 
         .branch => |b| return .{ .branch = try branch(context, b) },
         .call => |c| return try call(context, c),
         .undefined => |u| return .{ .undefined = untypedUndefined(context, u) },
+        .struct_literal => |s| return .{ .struct_literal = try structLiteral(context, s) },
         else => |k| std.debug.panic("\nUnsupported expression {}", .{k}),
     }
 }
@@ -691,6 +733,23 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
             .global = true,
             .mutable = false,
             .span = e.span,
+        });
+    }
+    for (ast.structures) |s| {
+        var fields = Map(Interned, MonoType).init(allocator);
+        for (s.structure.order) |o| {
+            const field = s.structure.fields.get(o).?;
+            try fields.putNoClobber(o, try expressionToMonoType(allocator, scope, builtins, field.type));
+        }
+        try scope.put(s.name.value, types.Binding{
+            .type = .{ .structure = .{
+                .fields = fields,
+                .order = s.structure.order,
+                .span = s.structure.span,
+            } },
+            .global = true,
+            .mutable = false,
+            .span = s.span,
         });
     }
     for (ast.foreign_imports) |f| {

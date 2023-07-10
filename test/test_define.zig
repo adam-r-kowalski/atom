@@ -84,7 +84,7 @@ test "tokenize define using block" {
 test "parse define using block" {
     const allocator = std.testing.allocator;
     const source =
-        \\x = {
+        \\x = block {
         \\    a = y + z
         \\    a - b
         \\}
@@ -103,7 +103,7 @@ test "parse define using block" {
 test "parse multi line define with type annotation" {
     const allocator = std.testing.allocator;
     const source =
-        \\x: i32 = {
+        \\x: i32 = block {
         \\    a: i32 = y + z
         \\    a - b
         \\}
@@ -181,7 +181,7 @@ test "parse nested define" {
     const allocator = std.testing.allocator;
     const source =
         \\f = fn(x: i32, y: i32) i32 {
-        \\    a = {
+        \\    a = block {
         \\        b = y * y
         \\        b + x
         \\    }
@@ -206,7 +206,7 @@ test "type infer nested define" {
     const allocator = std.testing.allocator;
     const source =
         \\f = fn(x: i32, y: i32) i32 {
-        \\    a = {
+        \\    a = block {
         \\        b = y * y
         \\        b + x
         \\    }
