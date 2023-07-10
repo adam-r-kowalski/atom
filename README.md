@@ -361,6 +361,10 @@ xs = [1, 2, 3, 4, 5]
 
 # Compute the sum of an array
 sum = (xs: vec[i32]) i32 { fold(xs, 0, +) }
+
+test("sum of array", () {
+    assert(sum(xs) == 15)
+})
 ```
 
 Here, `xs` is an array of integers, and `sum` is a function that computes the sum of an array by folding over it.
