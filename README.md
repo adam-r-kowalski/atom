@@ -452,20 +452,39 @@ Mantis is built to be a citizen of the web. We want to ensure you can build serv
 on the server side or client side.
 
 ```mantis
-route("/customers",
+Customer = struct {
+    name: str,
+    age: u8,
+}
+
+customers: vec[Customer] = [
+    {
+        name: "Joe",
+        age: 30
+    },
+    {
+        name: "Sally",
+        age: 27,
+    }
+]
+
+get("/customers", () {
     <html>
         <head>
             <title>Customers</title>
         </head>
         <body>
             <ul>
-                <li>Customer 1</li>
-                <li>Customer 2</li>
-                <li>Customer 3</li>
+                for i {
+                    <li>
+                        <h3>customers[i].name</h3>
+                        <p>customers[i].age</p>
+                    </li>
+                }
             </ul>
         </body>
     </html>
-)
+})
 ```
 
 ## Community
