@@ -450,12 +450,12 @@ fn variant(v: type_checker.types.Variant) !types.Expression {
 fn structLiteral(context: Context, s: type_checker.types.StructLiteral) !types.Expression {
     const size = size_of.monotype(s.type);
     const local = try freshLocalPointer(context, size);
-    const exprs = try context.allocator.alloc(types.Expression, s.order.len);
+    const exprs = try context.allocator.alloc(types.Expression, s.order.len + 1);
     const structure = s.type.structure_literal.structure.structure;
     const base = try context.allocator.create(types.Expression);
     base.* = .{ .local_get = .{ .name = local } };
     var offset: u32 = 0;
-    for (structure.order, exprs) |o, *e| {
+    for (structure.order, exprs[0..structure.order.len]) |o, *e| {
         const field = s.fields.get(o).?;
         const result = try expressionAlloc(context, field.value);
         const field_offset = try context.allocator.create(types.Expression);
@@ -483,6 +483,7 @@ fn structLiteral(context: Context, s: type_checker.types.StructLiteral) !types.E
             else => |k| std.debug.panic("\nField type {} not allowed", .{k}),
         }
     }
+    exprs[s.order.len] = base.*;
     return .{ .block = types.Block{ .result = .i32, .expressions = exprs } };
 }
 

@@ -188,7 +188,8 @@ test "codegen struct" {
         \\                (i32.add
         \\                    (local.get $0)
         \\                    (i32.const 8))
-        \\                (i32.const 42))))
+        \\                (i32.const 42))
+        \\            (local.get $0)))
         \\
         \\    (export "_start" (func $start)))
     ;
