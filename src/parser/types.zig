@@ -115,6 +115,7 @@ pub const BinaryOpKind = enum {
     less,
     or_,
     dot,
+    pipeline,
 };
 
 pub const BinaryOp = struct {

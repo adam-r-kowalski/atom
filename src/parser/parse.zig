@@ -26,7 +26,8 @@ const COMPARE: Precedence = AND + DELTA;
 const ADD: Precedence = COMPARE + DELTA;
 const MULTIPLY: Precedence = ADD + DELTA;
 const EXPONENTIATE: Precedence = MULTIPLY + DELTA;
-const DOT: Precedence = EXPONENTIATE + DELTA;
+const PIPELINE: Precedence = EXPONENTIATE + DELTA;
+const DOT: Precedence = PIPELINE + DELTA;
 const CALL: Precedence = DOT + DELTA;
 const HIGHEST: Precedence = CALL + DELTA;
 
@@ -593,6 +594,7 @@ fn precedence(i: Infix) Precedence {
             .less => COMPARE,
             .or_ => AND,
             .dot => DOT,
+            .pipeline => DOT,
         },
     };
 }
@@ -616,6 +618,7 @@ fn associativity(i: Infix) Associativity {
             .less => .left,
             .or_ => .left,
             .dot => .left,
+            .pipeline => .left,
         },
     };
 }
@@ -638,6 +641,7 @@ fn infix(context: Context, left: types.Expression) ?Infix {
             .less => .{ .binary_op = .less },
             .or_ => .{ .binary_op = .or_ },
             .dot => .{ .binary_op = .dot },
+            .bar_greater => .{ .binary_op = .pipeline },
             .left_paren => switch (left) {
                 .symbol => .call,
                 else => null,

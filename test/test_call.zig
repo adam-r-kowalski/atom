@@ -37,12 +37,12 @@ test "parse call with expression" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "parse dot call" {
+test "parse pipeline call" {
     const allocator = std.testing.allocator;
-    const source = "x.f(y, z)";
+    const source = "x |> f(y, z)";
     const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
-    const expected = "(. x (f y z))";
+    const expected = "(|> x (f y z))";
     try std.testing.expectEqualStrings(expected, actual);
 }
 
@@ -182,12 +182,12 @@ test "codegen recursive function" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "type infer dot call" {
+test "type infer pipeline call" {
     const allocator = std.testing.allocator;
     const source =
         \\double = (x: i32) i32 { x * 2 }
         \\
-        \\start = () i32 { 2.double() }
+        \\start = () i32 { 2 |> double() }
     ;
     const actual = try mantis.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
@@ -229,14 +229,14 @@ test "type infer dot call" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "tokenize single line dot call" {
+test "tokenize single line pipeline call" {
     const allocator = std.testing.allocator;
-    const source = "x.f(y)";
+    const source = "x |> f(y)";
     const actual = try mantis.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol x)
-        \\(operator .)
+        \\(operator |>)
         \\(symbol f)
         \\(delimiter '(')
         \\(symbol y)
@@ -245,17 +245,17 @@ test "tokenize single line dot call" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "tokenize multi line dot call" {
+test "tokenize multi line pipeline call" {
     const allocator = std.testing.allocator;
     const source =
         \\x
-        \\    .f(y)
+        \\    |> f(y)
     ;
     const actual = try mantis.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol x)
-        \\(operator .)
+        \\(operator |>)
         \\(symbol f)
         \\(delimiter '(')
         \\(symbol y)

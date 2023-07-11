@@ -116,6 +116,7 @@ pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
         .less => try writer.writeAll("<"),
         .or_ => try writer.writeAll("or"),
         .dot => try writer.writeAll("."),
+        .pipeline => try writer.writeAll("|>"),
     }
     try writer.writeAll(" ");
     try expression(b.left.*, indent, writer);

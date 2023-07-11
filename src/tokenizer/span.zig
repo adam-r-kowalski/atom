@@ -38,6 +38,8 @@ pub fn token(t: types.Token) types.Span {
         .block => |b| b.span,
         .mut => |m| m.span,
         .undefined => |u| u.span,
+        .bar => |b| b.span,
+        .bar_greater => |b| b.span,
         .new_line => |n| n.span,
     };
 }
