@@ -4,6 +4,7 @@ const Map = std.AutoHashMap;
 const tokenizer = @import("../tokenizer.zig");
 
 pub const Span = tokenizer.types.Span;
+pub const Pos = tokenizer.types.Pos;
 pub const Int = tokenizer.types.Int;
 pub const Float = tokenizer.types.Float;
 pub const Symbol = tokenizer.types.Symbol;

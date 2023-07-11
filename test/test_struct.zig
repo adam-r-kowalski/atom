@@ -9,7 +9,7 @@ test "tokenize struct" {
         \\    age: u8,
         \\}
         \\
-        \\start = fn() Person {
+        \\start = () Person {
         \\    {
         \\        name: "Bob",
         \\        age: 42,
@@ -38,7 +38,6 @@ test "tokenize struct" {
         \\(new_line)
         \\(symbol start)
         \\(operator =)
-        \\(keyword fn)
         \\(delimiter '(')
         \\(delimiter ')')
         \\(symbol Person)
@@ -71,7 +70,7 @@ test "parse struct" {
         \\    age: u8,
         \\}
         \\
-        \\start = fn() Person {
+        \\start = () Person {
         \\    {
         \\        name: "Bob",
         \\        age: 42,
@@ -101,7 +100,7 @@ test "type infer struct" {
         \\    age: u8,
         \\}
         \\
-        \\start = fn() Person {
+        \\start = () Person {
         \\    {
         \\        name: "Bob",
         \\        age: 42,
@@ -112,7 +111,7 @@ test "type infer struct" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = fn() struct{ name: str, age: u8 } }
+        \\    name = symbol{ value = start, type = () struct{ name: str, age: u8 } }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -133,7 +132,7 @@ test "codegen struct" {
         \\    age: u8,
         \\}
         \\
-        \\start = fn() Person {
+        \\start = () Person {
         \\    {
         \\        name: "Bob",
         \\        age: 42,

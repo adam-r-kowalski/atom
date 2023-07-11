@@ -4,7 +4,7 @@ const mantis = @import("mantis");
 test "type infer sqrt f32" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn(x: f32) f32 {
+        \\start = (x: f32) f32 {
         \\    sqrt(x)
         \\}
     ;
@@ -12,7 +12,7 @@ test "type infer sqrt f32" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = fn(f32) f32 }
+        \\    name = symbol{ value = start, type = (f32) f32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -35,7 +35,7 @@ test "type infer sqrt f32" {
 test "codegen sqrt f32" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn(x: f32) f32 {
+        \\start = (x: f32) f32 {
         \\    sqrt(x)
         \\}
     ;

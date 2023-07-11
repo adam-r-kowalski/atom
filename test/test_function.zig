@@ -3,13 +3,12 @@ const mantis = @import("mantis");
 
 test "tokenize function definition" {
     const allocator = std.testing.allocator;
-    const source = "double = fn(x: i32) i32 { x + x }";
+    const source = "double = (x: i32) i32 { x + x }";
     const actual = try mantis.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol double)
         \\(operator =)
-        \\(keyword fn)
         \\(delimiter '(')
         \\(symbol x)
         \\(operator :)
@@ -28,8 +27,8 @@ test "tokenize function definition" {
 test "tokenize function definition with new lines and tabs" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = fn(x: i32) i32 {
-        \\	x + x
+        \\double = (x: i32) i32 {
+        \\    x + x
         \\}
     ;
     const actual = try mantis.testing.tokenize(allocator, source);
@@ -37,7 +36,6 @@ test "tokenize function definition with new lines and tabs" {
     const expected =
         \\(symbol double)
         \\(operator =)
-        \\(keyword fn)
         \\(delimiter '(')
         \\(symbol x)
         \\(operator :)
@@ -57,7 +55,7 @@ test "tokenize function definition with new lines and tabs" {
 
 test "parse function definition" {
     const allocator = std.testing.allocator;
-    const source = "double = fn(x: i32) i32 { x + x }";
+    const source = "double = (x: i32) i32 { x + x }";
     const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -69,7 +67,7 @@ test "parse function definition" {
 
 test "parse multiple parameters" {
     const allocator = std.testing.allocator;
-    const source = "add = fn(x: i32, y: i32) i32 { x + y }";
+    const source = "add = (x: i32, y: i32) i32 { x + y }";
     const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -82,7 +80,7 @@ test "parse multiple parameters" {
 test "tokenize multi line function" {
     const allocator = std.testing.allocator;
     const source =
-        \\sum_squares = fn(x: i32, y: i32) i32 {
+        \\sum_squares = (x: i32, y: i32) i32 {
         \\    x_squared = x ^ 2
         \\    y_squared = y ^ 2
         \\    x_squared + y_squared
@@ -93,7 +91,6 @@ test "tokenize multi line function" {
     const expected =
         \\(symbol sum_squares)
         \\(operator =)
-        \\(keyword fn)
         \\(delimiter '(')
         \\(symbol x)
         \\(operator :)
@@ -130,7 +127,7 @@ test "tokenize multi line function" {
 test "parse multi line function" {
     const allocator = std.testing.allocator;
     const source =
-        \\sum_squares = fn(x: i32, y: i32) i32 {
+        \\sum_squares = (x: i32, y: i32) i32 {
         \\    x_squared = x ^ 2
         \\    y_squared = y ^ 2
         \\    x_squared + y_squared
@@ -150,12 +147,12 @@ test "parse multi line function" {
 
 test "type infer function body" {
     const allocator = std.testing.allocator;
-    const source = "id = fn(x: i32) i32 { x }";
+    const source = "id = (x: i32) i32 { x }";
     const actual = try mantis.testing.typeInfer(allocator, source, "id");
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = id, type = fn(i32) i32 }
+        \\    name = symbol{ value = id, type = (i32) i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -172,9 +169,9 @@ test "type infer function body" {
 test "codegen drops unused returns" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = fn(x: i32) i32 { x * 2 }
+        \\double = (x: i32) i32 { x * 2 }
         \\
-        \\start = fn() i32 {
+        \\start = () i32 {
         \\    double(2)
         \\    double(4)
         \\}

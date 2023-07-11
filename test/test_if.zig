@@ -23,7 +23,7 @@ test "tokenize if" {
 test "parse if" {
     const allocator = std.testing.allocator;
     const source =
-        \\f = fn(x: bool, y: i32, z: i32) i32 {
+        \\f = (x: bool, y: i32, z: i32) i32 {
         \\    if x { y } else { z }
         \\}
     ;
@@ -43,7 +43,7 @@ test "parse if" {
 test "parse multiple line if" {
     const allocator = std.testing.allocator;
     const source =
-        \\f = fn(x: bool, y: i32, z: i32) i32 {
+        \\f = (x: bool, y: i32, z: i32) i32 {
         \\    if x {
         \\        y
         \\    } else {
@@ -67,7 +67,7 @@ test "parse multiple line if" {
 test "parse if multi line then else" {
     const allocator = std.testing.allocator;
     const source =
-        \\f = fn(x: bool, y: i32, z: i32) i32 {
+        \\f = (x: bool, y: i32, z: i32) i32 {
         \\    if x {
         \\        a = y ^ 2
         \\        a * 5
@@ -94,7 +94,7 @@ test "parse if multi line then else" {
 test "parse if then multi line else" {
     const allocator = std.testing.allocator;
     const source =
-        \\f = fn(x: bool, y: i32, z: i32) i32 {
+        \\f = (x: bool, y: i32, z: i32) i32 {
         \\    if x {
         \\        y
         \\    } else {
@@ -145,7 +145,7 @@ test "parse let on result of if then else" {
 test "parse nested if then else" {
     const allocator = std.testing.allocator;
     const source =
-        \\f = fn(x: i32, y: i32) i32 {
+        \\f = (x: i32, y: i32) i32 {
         \\    if x > y {
         \\        1
         \\    } else {
@@ -177,7 +177,7 @@ test "parse nested if then else" {
 test "type infer if then else" {
     const allocator = std.testing.allocator;
     const source =
-        \\f = fn(c: bool, x: i32, y: i32) i32 {
+        \\f = (c: bool, x: i32, y: i32) i32 {
         \\    if c { x } else { y }
         \\}
     ;
@@ -185,7 +185,7 @@ test "type infer if then else" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = f, type = fn(bool, i32, i32) i32 }
+        \\    name = symbol{ value = f, type = (bool, i32, i32) i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -211,7 +211,7 @@ test "type infer if then else" {
 test "codegen if" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn() i32 {
+        \\start = () i32 {
         \\    if true { 10 } else { 20 }
         \\}
     ;
@@ -239,9 +239,9 @@ test "codegen if" {
 test "codegen if with void result" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("stdout", "print", fn (x: i32) void)
+        \\print = foreign_import("stdout", "print", (x: i32) void)
         \\
-        \\start = fn() void {
+        \\start = () void {
         \\    if true { print(10) } else { print(20) }
         \\}
     ;
@@ -273,9 +273,9 @@ test "codegen if with void result" {
 test "codegen if with empty else block" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("stdout", "print", fn (x: i32) void)
+        \\print = foreign_import("stdout", "print", (x: i32) void)
         \\
-        \\start = fn() void {
+        \\start = () void {
         \\    if true { print(10) } else { }
         \\}
     ;
@@ -304,9 +304,9 @@ test "codegen if with empty else block" {
 test "codegen if with no else block" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("stdout", "print", fn (x: i32) void)
+        \\print = foreign_import("stdout", "print", (x: i32) void)
         \\
-        \\start = fn() void {
+        \\start = () void {
         \\    if true {
         \\        print(10)
         \\    }
@@ -337,7 +337,7 @@ test "codegen if with no else block" {
 test "parse multi arm if" {
     const allocator = std.testing.allocator;
     const source =
-        \\clamp = fn(x: i32, lb: i32, ub: i32) i32 {
+        \\clamp = (x: i32, lb: i32, ub: i32) i32 {
         \\    if x < lb { lb }
         \\    else if x > ub { ub }
         \\    else { x }
@@ -361,7 +361,7 @@ test "parse multi arm if" {
 test "type infer multi arm if" {
     const allocator = std.testing.allocator;
     const source =
-        \\clamp = fn(x: i32, lb: i32, ub: i32) i32 {
+        \\clamp = (x: i32, lb: i32, ub: i32) i32 {
         \\    if x < lb { lb }
         \\    else if x > ub { ub }
         \\    else { x }
@@ -371,7 +371,7 @@ test "type infer multi arm if" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = clamp, type = fn(i32, i32, i32) i32 }
+        \\    name = symbol{ value = clamp, type = (i32, i32, i32) i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -413,13 +413,13 @@ test "type infer multi arm if" {
 test "codegen multi arm if" {
     const allocator = std.testing.allocator;
     const source =
-        \\clamp = fn(x: i32, lb: i32, ub: i32) i32 {
+        \\clamp = (x: i32, lb: i32, ub: i32) i32 {
         \\    if x < lb { lb }
         \\    else if x > ub { ub }
         \\    else { x }
         \\}
         \\
-        \\start = fn() i32 {
+        \\start = () i32 {
         \\    clamp(5, 10, 20)
         \\}
     ;

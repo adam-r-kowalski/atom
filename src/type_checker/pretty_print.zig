@@ -22,7 +22,7 @@ pub fn monotype(m: types.MonoType, writer: Writer) !void {
         .void => try writer.writeAll("void"),
         .typevar => |t| try writer.print("${}", .{t.value}),
         .function => |f| {
-            try writer.writeAll("fn(");
+            try writer.writeAll("(");
             for (f.parameters, 0..) |p, i| {
                 if (i > 0) {
                     try writer.writeAll(", ");

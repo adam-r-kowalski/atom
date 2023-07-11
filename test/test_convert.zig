@@ -4,7 +4,7 @@ const mantis = @import("mantis");
 test "type infer convert i32 to f32" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn(x: i32) f32 {
+        \\start = (x: i32) f32 {
         \\    convert(x, f32)
         \\}
     ;
@@ -12,7 +12,7 @@ test "type infer convert i32 to f32" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = fn(i32) f32 }
+        \\    name = symbol{ value = start, type = (i32) f32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -32,7 +32,7 @@ test "type infer convert i32 to f32" {
 test "codegen convert i32 to f32" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn(x: i32) f32 {
+        \\start = (x: i32) f32 {
         \\    convert(x, f32)
         \\}
     ;
@@ -56,7 +56,7 @@ test "codegen convert i32 to f32" {
 test "codegen convert f32 to i32" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn(x: f32) i32 {
+        \\start = (x: f32) i32 {
         \\    convert(x, i32)
         \\}
     ;
@@ -80,7 +80,7 @@ test "codegen convert f32 to i32" {
 test "codegen convert i64 to f64" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn(x: i64) f64 {
+        \\start = (x: i64) f64 {
         \\    convert(x, f64)
         \\}
     ;
@@ -104,7 +104,7 @@ test "codegen convert i64 to f64" {
 test "codegen convert f64 to i64" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn(x: f64) i64 {
+        \\start = (x: f64) i64 {
         \\    convert(x, i64)
         \\}
     ;
