@@ -39,6 +39,8 @@ pub const Struct = struct { span: Span };
 pub const Block = struct { span: Span };
 pub const Mut = struct { span: Span };
 pub const Undefined = struct { span: Span };
+pub const Bar = struct { span: Span };
+pub const BarGreater = struct { span: Span };
 pub const NewLine = struct { span: Span };
 
 pub const Token = union(enum) {
@@ -78,5 +80,7 @@ pub const Token = union(enum) {
     block: Block,
     mut: Mut,
     undefined: Undefined,
+    bar: Bar,
+    bar_greater: BarGreater,
     new_line: NewLine,
 };

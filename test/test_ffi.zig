@@ -377,8 +377,8 @@ test "codegen echo" {
         \\    mut text = empty(u8, 100)
         \\    mut nread = undefined
         \\    mut nwritten = undefined
-        \\    _ = stdin.fd_read(mut text, 1, mut nread)
-        \\    _ = stdout.fd_write(text, 1, mut nwritten)
+        \\    stdin |> fd_read(mut text, 1, mut nread)
+        \\    _ = stdout |> fd_write(text, 1, mut nwritten)
         \\}
     ;
     const actual = try mantis.testing.codegen(allocator, source);

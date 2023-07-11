@@ -42,6 +42,8 @@ pub fn token(t: types.Token, writer: Writer) !void {
         .block => try writer.writeAll("(keyword block)"),
         .mut => try writer.writeAll("(keyword mut)"),
         .undefined => try writer.writeAll("(keyword undefined)"),
+        .bar => try writer.writeAll("(operator |)"),
+        .bar_greater => try writer.writeAll("(operator |>)"),
         .new_line => try writer.writeAll("(new_line)"),
     }
 }

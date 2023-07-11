@@ -43,6 +43,8 @@ pub fn token(t: types.Token, writer: Writer) !void {
         .block => try writer.writeAll("block"),
         .mut => try writer.writeAll("mut"),
         .undefined => try writer.writeAll("undefined"),
+        .bar => try writer.writeAll("|"),
+        .bar_greater => try writer.writeAll("|>"),
         .new_line => {},
     }
 }

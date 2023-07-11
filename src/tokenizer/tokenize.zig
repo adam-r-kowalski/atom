@@ -128,10 +128,12 @@ fn newLine(cursor: *Cursor) types.Token {
                 cursor.pos.column = 1;
             },
             ' ', '\t' => cursor.pos.column += 1,
-            '.' => {
-                cursor.pos.column += 1;
-                cursor.source = cursor.source[i + 1 ..];
-                return .{ .dot = .{ .span = .{ .begin = begin, .end = cursor.pos } } };
+            '|' => {
+                const next_i = i + 1;
+                if (next_i >= cursor.source.len or cursor.source[next_i] != '>') break;
+                cursor.pos.column += 2;
+                cursor.source = cursor.source[i + 2 ..];
+                return .{ .bar_greater = .{ .span = .{ .begin = begin, .end = cursor.pos } } };
             },
             else => break,
         }
@@ -176,6 +178,7 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?types.Token
         ':' => exact(cursor, .colon),
         '+' => either(cursor, .plus, '=', .plus_equal),
         '*' => either(cursor, .times, '=', .times_equal),
+        '|' => either(cursor, .bar, '>', .bar_greater),
         '/' => exact(cursor, .slash),
         '^' => exact(cursor, .caret),
         '>' => exact(cursor, .greater),

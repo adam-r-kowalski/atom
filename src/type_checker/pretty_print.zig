@@ -156,6 +156,7 @@ pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
         .less => try writer.writeAll("<"),
         .or_ => try writer.writeAll("or"),
         .dot => try writer.writeAll("."),
+        .pipeline => try writer.writeAll("|>"),
     }
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("left =");

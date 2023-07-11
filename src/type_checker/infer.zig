@@ -237,21 +237,6 @@ fn branch(context: Context, b: parser.types.Branch) !types.Branch {
 
 fn dot(context: Context, b: parser.types.BinaryOp) !types.Expression {
     switch (b.right.*) {
-        .call => |c| {
-            const arguments = try context.allocator.alloc(parser.types.Argument, c.arguments.len + 1);
-            arguments[0] = .{
-                .value = b.left.*,
-                .mutable = false,
-                .span = parser.span.expression(b.left.*),
-            };
-            @memcpy(arguments[1..], c.arguments);
-            const new_call = parser.types.Call{
-                .function = c.function,
-                .arguments = arguments,
-                .span = b.span,
-            };
-            return try call(context, new_call);
-        },
         .symbol => |right| {
             switch (b.left.*) {
                 .symbol => |left| {
@@ -279,13 +264,35 @@ fn dot(context: Context, b: parser.types.BinaryOp) !types.Expression {
                 else => |t| std.debug.panic("Expected symbol before dot, got {}", .{t}),
             }
         },
-        else => |k| std.debug.panic("Expected call after dot, got {}", .{k}),
+        else => |k| std.debug.panic("Expected symbol after dot, got {}", .{k}),
+    }
+}
+
+fn pipeline(context: Context, b: parser.types.BinaryOp) !types.Expression {
+    switch (b.right.*) {
+        .call => |c| {
+            const arguments = try context.allocator.alloc(parser.types.Argument, c.arguments.len + 1);
+            arguments[0] = .{
+                .value = b.left.*,
+                .mutable = false,
+                .span = parser.span.expression(b.left.*),
+            };
+            @memcpy(arguments[1..], c.arguments);
+            const new_call = parser.types.Call{
+                .function = c.function,
+                .arguments = arguments,
+                .span = b.span,
+            };
+            return try call(context, new_call);
+        },
+        else => |k| std.debug.panic("Expected call after pipeline, got {}", .{k}),
     }
 }
 
 fn binaryOp(context: Context, b: parser.types.BinaryOp) !types.Expression {
     switch (b.kind) {
         .dot => return dot(context, b),
+        .pipeline => return pipeline(context, b),
         .equal, .greater, .less => {
             const left = try expressionAlloc(context, b.left.*);
             const right = try expressionAlloc(context, b.right.*);
