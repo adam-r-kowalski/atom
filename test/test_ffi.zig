@@ -4,7 +4,7 @@ const mantis = @import("mantis");
 test "tokenize import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", fn(msg: str) void)
+        \\print = foreign_import("console", "log", (msg: str) void)
     ;
     const actual = try mantis.testing.tokenize(allocator, source);
     defer allocator.free(actual);
@@ -17,7 +17,6 @@ test "tokenize import" {
         \\(delimiter ',')
         \\(string "log")
         \\(delimiter ',')
-        \\(keyword fn)
         \\(delimiter '(')
         \\(symbol msg)
         \\(operator :)
@@ -32,7 +31,7 @@ test "tokenize import" {
 test "parse import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", fn(msg: str) void)
+        \\print = foreign_import("console", "log", (msg: str) void)
     ;
     const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
@@ -45,9 +44,9 @@ test "parse import" {
 test "type check import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", fn(msg: str) void)
+        \\print = foreign_import("console", "log", (msg: str) void)
         \\
-        \\start = fn() void {
+        \\start = () void {
         \\    print("hello world")
         \\}
     ;
@@ -55,17 +54,17 @@ test "type check import" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = print, type = fn(str) void }
+        \\    name = symbol{ value = print, type = (str) void }
         \\    type = void
         \\    mutable = false
         \\    value =
         \\        foreign_import =
         \\            module = "console"
         \\            name = "log"
-        \\            type = fn(str) void
+        \\            type = (str) void
         \\
         \\define =
-        \\    name = symbol{ value = start, type = fn() void }
+        \\    name = symbol{ value = start, type = () void }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -73,7 +72,7 @@ test "type check import" {
         \\            return_type = void
         \\            body =
         \\                call =
-        \\                    function = symbol{ value = print, type = fn(str) void }
+        \\                    function = symbol{ value = print, type = (str) void }
         \\                    arguments =
         \\                        argument =
         \\                            mutable = false
@@ -86,9 +85,9 @@ test "type check import" {
 test "codegen import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", fn(x: i32) void)
+        \\print = foreign_import("console", "log", (x: i32) void)
         \\
-        \\start = fn() void { print(42) }
+        \\start = () void { print(42) }
     ;
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
@@ -112,7 +111,7 @@ test "codegen import" {
 test "tokenize export" {
     const allocator = std.testing.allocator;
     const source =
-        \\foreign_export("double", fn(x: i32) i32 {
+        \\foreign_export("double", (x: i32) i32 {
         \\    x * 2
         \\})
     ;
@@ -123,7 +122,6 @@ test "tokenize export" {
         \\(delimiter '(')
         \\(string "double")
         \\(delimiter ',')
-        \\(keyword fn)
         \\(delimiter '(')
         \\(symbol x)
         \\(operator :)
@@ -145,7 +143,7 @@ test "tokenize export" {
 test "parse export" {
     const allocator = std.testing.allocator;
     const source =
-        \\foreign_export("double", fn(x: i32) i32 {
+        \\foreign_export("double", (x: i32) i32 {
         \\    x * 2
         \\})
     ;
@@ -161,7 +159,7 @@ test "parse export" {
 test "parse named export" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = fn(x: i32) i32 {
+        \\double = (x: i32) i32 {
         \\    x * 2
         \\}
         \\
@@ -181,7 +179,7 @@ test "parse named export" {
 test "type check export" {
     const allocator = std.testing.allocator;
     const source =
-        \\foreign_export("double", fn(x: i32) i32 {
+        \\foreign_export("double", (x: i32) i32 {
         \\    x * 2
         \\})
     ;
@@ -211,7 +209,7 @@ test "type check export" {
 test "type check named export" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = fn(x: i32) i32 {
+        \\double = (x: i32) i32 {
         \\    x * 2
         \\}
         \\
@@ -221,7 +219,7 @@ test "type check named export" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = double, type = fn(i32) i32 }
+        \\    name = symbol{ value = double, type = (i32) i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -241,7 +239,7 @@ test "type check named export" {
         \\foreign_export =
         \\    name = "double"
         \\    value =
-        \\        symbol{ value = double, type = fn(i32) i32 }
+        \\        symbol{ value = double, type = (i32) i32 }
         \\    type = void
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -250,7 +248,7 @@ test "type check named export" {
 test "codegen foreign export" {
     const allocator = std.testing.allocator;
     const source =
-        \\foreign_export("double", fn(x: i32) i32 {
+        \\foreign_export("double", (x: i32) i32 {
         \\    x * 2
         \\})
     ;
@@ -275,7 +273,7 @@ test "codegen foreign export" {
 test "codegen named foreign export" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = fn(x: i32) i32 {
+        \\double = (x: i32) i32 {
         \\    x * 2
         \\}
         \\
@@ -302,11 +300,11 @@ test "codegen named foreign export" {
 test "codegen hello world" {
     const allocator = std.testing.allocator;
     const source =
-        \\fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, text: str, count: i32, out: i32) i32)
+        \\fd_write = foreign_import("wasi_unstable", "fd_write", (fd: i32, text: str, count: i32, out: i32) i32)
         \\
         \\stdout: i32 = 1
         \\
-        \\start = fn() i32 {
+        \\start = () i32 {
         \\    text = "Hello, World!"
         \\    mut nwritten: i32 = undefined
         \\    fd_write(stdout, text, 1, 200)
@@ -369,13 +367,13 @@ test "codegen hello world" {
 test "codegen echo" {
     const allocator = std.testing.allocator;
     const source =
-        \\fd_read = foreign_import("wasi_unstable", "fd_read", fn(fd: i32, mut iovs: str, iov_count: i32, mut nread: i32) i32)
-        \\fd_write = foreign_import("wasi_unstable", "fd_write", fn(fd: i32, iovs: str, iov_count: i32, mut nwritten: i32) i32)
+        \\fd_read = foreign_import("wasi_unstable", "fd_read", (fd: i32, mut iovs: str, iov_count: i32, mut nread: i32) i32)
+        \\fd_write = foreign_import("wasi_unstable", "fd_write", (fd: i32, iovs: str, iov_count: i32, mut nwritten: i32) i32)
         \\
         \\stdin: i32 = 0
         \\stdout: i32 = 1
         \\
-        \\start = fn() void {
+        \\start = () void {
         \\    mut text = empty(u8, 100)
         \\    mut nread = undefined
         \\    mut nwritten = undefined

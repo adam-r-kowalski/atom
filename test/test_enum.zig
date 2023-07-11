@@ -12,7 +12,7 @@ test "tokenize enum" {
         \\    f,
         \\}
         \\
-        \\start = fn() Grade {
+        \\start = () Grade {
         \\    Grade.a
         \\}
     ;
@@ -43,7 +43,6 @@ test "tokenize enum" {
         \\(new_line)
         \\(symbol start)
         \\(operator =)
-        \\(keyword fn)
         \\(delimiter '(')
         \\(delimiter ')')
         \\(symbol Grade)
@@ -69,7 +68,7 @@ test "parse enum" {
         \\    f,
         \\}
         \\
-        \\start = fn() Grade {
+        \\start = () Grade {
         \\    Grade.a
         \\}
     ;
@@ -100,7 +99,7 @@ test "type infer enum" {
         \\    f,
         \\}
         \\
-        \\start = fn() Grade {
+        \\start = () Grade {
         \\    Grade.a
         \\}
     ;
@@ -108,7 +107,7 @@ test "type infer enum" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = fn() enum{ a, b, c, d, f } }
+        \\    name = symbol{ value = start, type = () enum{ a, b, c, d, f } }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -134,7 +133,7 @@ test "codegen enum index 0" {
         \\    f,
         \\}
         \\
-        \\start = fn() Grade {
+        \\start = () Grade {
         \\    Grade.a
         \\}
     ;
@@ -165,7 +164,7 @@ test "codegen enum index 1" {
         \\    f,
         \\}
         \\
-        \\start = fn() Grade {
+        \\start = () Grade {
         \\    Grade.b
         \\}
     ;
@@ -196,7 +195,7 @@ test "codegen enum equality" {
         \\    f,
         \\}
         \\
-        \\start = fn() bool {
+        \\start = () bool {
         \\    Grade.a == Grade.b
         \\}
     ;
@@ -229,11 +228,11 @@ test "codegen enum passed to function" {
         \\    f,
         \\}
         \\
-        \\got_an_a = fn(grade: Grade) bool {
+        \\got_an_a = (grade: Grade) bool {
         \\    grade == Grade.a
         \\}
         \\
-        \\start = fn() bool {
+        \\start = () bool {
         \\    got_an_a(Grade.b)
         \\}
     ;

@@ -4,7 +4,7 @@ const mantis = @import("mantis");
 test "tokenize mutable binding" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn() i32 {
+        \\start = () i32 {
         \\    mut x: i32 = 0
         \\    x += 1
         \\    x
@@ -15,7 +15,6 @@ test "tokenize mutable binding" {
     const expected =
         \\(symbol start)
         \\(operator =)
-        \\(keyword fn)
         \\(delimiter '(')
         \\(delimiter ')')
         \\(symbol i32)
@@ -42,7 +41,7 @@ test "tokenize mutable binding" {
 test "parse mutable binding" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn() i32 {
+        \\start = () i32 {
         \\    mut x: i32 = 0
         \\    x += 1
         \\    x
@@ -63,7 +62,7 @@ test "parse mutable binding" {
 test "type infer mutable binding" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn() i32 {
+        \\start = () i32 {
         \\    mut x: i32 = 0
         \\    x += 1
         \\    x
@@ -73,7 +72,7 @@ test "type infer mutable binding" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = fn() i32 }
+        \\    name = symbol{ value = start, type = () i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -99,7 +98,7 @@ test "type infer mutable binding" {
 test "codegen plus equal" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn() i32 {
+        \\start = () i32 {
         \\    mut x: i32 = 0
         \\    x += 1
         \\    x
@@ -131,7 +130,7 @@ test "codegen plus equal" {
 test "codegen times equal" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn() i32 {
+        \\start = () i32 {
         \\    mut x: i32 = 5
         \\    x *= 2
         \\    x
@@ -163,11 +162,11 @@ test "codegen times equal" {
 test "parse mutable parameter" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = fn(mut x: i32) void {
+        \\double = (mut x: i32) void {
         \\    x *= 2
         \\}
         \\
-        \\start = fn() i32 {
+        \\start = () i32 {
         \\    mut x: i32 = 5
         \\    double(mut x)
         \\    x
@@ -191,11 +190,11 @@ test "parse mutable parameter" {
 test "type check mutable parameter" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = fn(mut x: i32) void {
+        \\double = (mut x: i32) void {
         \\    x *= 2
         \\}
         \\
-        \\start = fn() i32 {
+        \\start = () i32 {
         \\    mut x: i32 = 5
         \\    double(mut x)
         \\    x
@@ -205,7 +204,7 @@ test "type check mutable parameter" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = double, type = fn(mut i32) void }
+        \\    name = symbol{ value = double, type = (mut i32) void }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -221,7 +220,7 @@ test "type check mutable parameter" {
         \\                        int{ value = 2, type = i32 }
         \\
         \\define =
-        \\    name = symbol{ value = start, type = fn() i32 }
+        \\    name = symbol{ value = start, type = () i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -235,7 +234,7 @@ test "type check mutable parameter" {
         \\                    value =
         \\                        int{ value = 5, type = i32 }
         \\                call =
-        \\                    function = symbol{ value = double, type = fn(mut i32) void }
+        \\                    function = symbol{ value = double, type = (mut i32) void }
         \\                    arguments =
         \\                        argument =
         \\                            mutable = true
@@ -249,11 +248,11 @@ test "type check mutable parameter" {
 test "codegen mutable parameter" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = fn(mut x: i32) void {
+        \\double = (mut x: i32) void {
         \\    x *= 2
         \\}
         \\
-        \\start = fn() i32 {
+        \\start = () i32 {
         \\    mut x: i32 = 5
         \\    double(mut x)
         \\    x

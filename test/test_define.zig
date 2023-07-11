@@ -122,7 +122,7 @@ test "parse multi line define with type annotation" {
 test "infer type of define based on body" {
     const allocator = std.testing.allocator;
     const source =
-        \\sum_of_squares = fn(x: i32, y: i32) i32 {
+        \\sum_of_squares = (x: i32, y: i32) i32 {
         \\    a = x * x
         \\    b = y * y
         \\    a + b
@@ -132,7 +132,7 @@ test "infer type of define based on body" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = sum_of_squares, type = fn(i32, i32) i32 }
+        \\    name = symbol{ value = sum_of_squares, type = (i32, i32) i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -180,7 +180,7 @@ test "infer type of define based on body" {
 test "parse nested define" {
     const allocator = std.testing.allocator;
     const source =
-        \\f = fn(x: i32, y: i32) i32 {
+        \\f = (x: i32, y: i32) i32 {
         \\    a = block {
         \\        b = y * y
         \\        b + x
@@ -205,7 +205,7 @@ test "parse nested define" {
 test "type infer nested define" {
     const allocator = std.testing.allocator;
     const source =
-        \\f = fn(x: i32, y: i32) i32 {
+        \\f = (x: i32, y: i32) i32 {
         \\    a = block {
         \\        b = y * y
         \\        b + x
@@ -217,7 +217,7 @@ test "type infer nested define" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = f, type = fn(i32, i32) i32 }
+        \\    name = symbol{ value = f, type = (i32, i32) i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -265,7 +265,7 @@ test "type infer nested define" {
 test "codegen define" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn(x: i32, y: i32) i32 {
+        \\start = (x: i32, y: i32) i32 {
         \\    a = x * x
         \\    b = y * y
         \\    a + b
@@ -302,7 +302,7 @@ test "codegen define" {
 test "parse drop" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn() void {
+        \\start = () void {
         \\    _ = 5
         \\}
     ;
@@ -318,7 +318,7 @@ test "parse drop" {
 test "type infer drop" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn() void {
+        \\start = () void {
         \\    x: i32 = 5
         \\    _ = x
         \\}
@@ -327,7 +327,7 @@ test "type infer drop" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = fn() void }
+        \\    name = symbol{ value = start, type = () void }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -351,7 +351,7 @@ test "type infer drop" {
 test "codegen drop" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn() void {
+        \\start = () void {
         \\    x: i32 = 5
         \\    _ = x
         \\}
@@ -379,7 +379,7 @@ test "codegen drop" {
 test "type infer based on return type" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn() i32 {
+        \\start = () i32 {
         \\    x = 5
         \\    x
         \\}
@@ -388,7 +388,7 @@ test "type infer based on return type" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = fn() i32 }
+        \\    name = symbol{ value = start, type = () i32 }
         \\    type = void
         \\    mutable = false
         \\    value =

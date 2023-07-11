@@ -6,7 +6,7 @@ test "tokenize comment" {
     const source =
         \\# this is a comment
         \\
-        \\start = fn() void {
+        \\start = () void {
         \\    print("hello world") # write hello world to the stdout
         \\}
     ;
@@ -17,7 +17,6 @@ test "tokenize comment" {
         \\(new_line)
         \\(symbol start)
         \\(operator =)
-        \\(keyword fn)
         \\(delimiter '(')
         \\(delimiter ')')
         \\(symbol void)
@@ -39,7 +38,7 @@ test "parse comment" {
     const source =
         \\# comment before a function
         \\
-        \\start = fn() void { # comment before function body
+        \\start = () void { # comment before function body
         \\    print("hello world") # comment after expression
         \\    # comment after function body
         \\} # comment after function

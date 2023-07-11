@@ -49,9 +49,9 @@ test "parse dot call" {
 test "parse define then call" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = fn(x: i32) i32 { x * 2 }
+        \\double = (x: i32) i32 { x * 2 }
         \\
-        \\start = fn() i32 { double(2) }
+        \\start = () i32 { double(2) }
     ;
     const actual = try mantis.testing.parse(allocator, source);
     defer allocator.free(actual);
@@ -68,15 +68,15 @@ test "parse define then call" {
 test "type infer define then call" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = fn(x: i32) i32 { x * 2 }
+        \\double = (x: i32) i32 { x * 2 }
         \\
-        \\start = fn() i32 { double(2) }
+        \\start = () i32 { double(2) }
     ;
     const actual = try mantis.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = double, type = fn(i32) i32 }
+        \\    name = symbol{ value = double, type = (i32) i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -94,7 +94,7 @@ test "type infer define then call" {
         \\                    type = i32
         \\
         \\define =
-        \\    name = symbol{ value = start, type = fn() i32 }
+        \\    name = symbol{ value = start, type = () i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -102,7 +102,7 @@ test "type infer define then call" {
         \\            return_type = i32
         \\            body =
         \\                call =
-        \\                    function = symbol{ value = double, type = fn(i32) i32 }
+        \\                    function = symbol{ value = double, type = (i32) i32 }
         \\                    arguments =
         \\                        argument =
         \\                            mutable = false
@@ -115,9 +115,9 @@ test "type infer define then call" {
 test "codegen define then call" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = fn(x: i32) i32 { x * 2 }
+        \\double = (x: i32) i32 { x * 2 }
         \\
-        \\start = fn() i32 { double(2) }
+        \\start = () i32 { double(2) }
     ;
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
@@ -144,11 +144,11 @@ test "codegen define then call" {
 test "codegen recursive function" {
     const allocator = std.testing.allocator;
     const source =
-        \\factorial = fn(n: i32) i32 {
+        \\factorial = (n: i32) i32 {
         \\    if n == 0 { 1 } else { n * factorial(n - 1) }
         \\}
         \\
-        \\start = fn() i32 { factorial(5) }
+        \\start = () i32 { factorial(5) }
     ;
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
@@ -185,15 +185,15 @@ test "codegen recursive function" {
 test "type infer dot call" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = fn(x: i32) i32 { x * 2 }
+        \\double = (x: i32) i32 { x * 2 }
         \\
-        \\start = fn() i32 { 2.double() }
+        \\start = () i32 { 2.double() }
     ;
     const actual = try mantis.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = double, type = fn(i32) i32 }
+        \\    name = symbol{ value = double, type = (i32) i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -211,7 +211,7 @@ test "type infer dot call" {
         \\                    type = i32
         \\
         \\define =
-        \\    name = symbol{ value = start, type = fn() i32 }
+        \\    name = symbol{ value = start, type = () i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -219,7 +219,7 @@ test "type infer dot call" {
         \\            return_type = i32
         \\            body =
         \\                call =
-        \\                    function = symbol{ value = double, type = fn(i32) i32 }
+        \\                    function = symbol{ value = double, type = (i32) i32 }
         \\                    arguments =
         \\                        argument =
         \\                            mutable = false
@@ -267,14 +267,14 @@ test "tokenize multi line dot call" {
 test "parse call with multiple lines" {
     const allocator = std.testing.allocator;
     const source =
-        \\add = fn(
+        \\add = (
         \\    x: i32,
         \\    y: i32
         \\) i32 {
         \\    x + y
         \\}
         \\
-        \\start = fn() i32 {
+        \\start = () i32 {
         \\    add(
         \\        1,
         \\        2
@@ -296,7 +296,7 @@ test "parse call with multiple lines" {
 test "parse call with space before and after" {
     const allocator = std.testing.allocator;
     const source =
-        \\add = fn(
+        \\add = (
         \\    x: i32
         \\    ,
         \\    y: i32
@@ -304,7 +304,7 @@ test "parse call with space before and after" {
         \\    x + y
         \\}
         \\
-        \\start = fn() i32 {
+        \\start = () i32 {
         \\    add(
         \\        1
         \\        ,

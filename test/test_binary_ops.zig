@@ -99,12 +99,12 @@ test "parse grouped greater" {
 
 test "type infer add i32" {
     const allocator = std.testing.allocator;
-    const source = "add = fn(x: i32, y: i32) i32 { x + y }";
+    const source = "add = (x: i32, y: i32) i32 { x + y }";
     const actual = try mantis.testing.typeInfer(allocator, source, "add");
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = add, type = fn(i32, i32) i32 }
+        \\    name = symbol{ value = add, type = (i32, i32) i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -127,12 +127,12 @@ test "type infer add i32" {
 
 test "type infer binary op multiply" {
     const allocator = std.testing.allocator;
-    const source = "multiply = fn(x: i32, y: i32) i32 { x * y }";
+    const source = "multiply = (x: i32, y: i32) i32 { x * y }";
     const actual = try mantis.testing.typeInfer(allocator, source, "multiply");
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = multiply, type = fn(i32, i32) i32 }
+        \\    name = symbol{ value = multiply, type = (i32, i32) i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -155,12 +155,12 @@ test "type infer binary op multiply" {
 
 test "type infer divide i32" {
     const allocator = std.testing.allocator;
-    const source = "div = fn(x: i32, y: i32) i32 { x / y }";
+    const source = "div = (x: i32, y: i32) i32 { x / y }";
     const actual = try mantis.testing.typeInfer(allocator, source, "div");
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = div, type = fn(i32, i32) i32 }
+        \\    name = symbol{ value = div, type = (i32, i32) i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -183,12 +183,12 @@ test "type infer divide i32" {
 
 test "type infer binary op multiply then add" {
     const allocator = std.testing.allocator;
-    const source = "f = fn(x: i32, y: i32, z: i32) i32 { x * y + z }";
+    const source = "f = (x: i32, y: i32, z: i32) i32 { x * y + z }";
     const actual = try mantis.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = f, type = fn(i32, i32, i32) i32 }
+        \\    name = symbol{ value = f, type = (i32, i32, i32) i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -218,7 +218,7 @@ test "type infer binary op multiply then add" {
 
 test "codegen i32.add" {
     const allocator = std.testing.allocator;
-    const source = "start = fn() i32 { 42 + 29 }";
+    const source = "start = () i32 { 42 + 29 }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -239,7 +239,7 @@ test "codegen i32.add" {
 
 test "codegen i64.add" {
     const allocator = std.testing.allocator;
-    const source = "start = fn() i64 { 42 + 29 }";
+    const source = "start = () i64 { 42 + 29 }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -260,7 +260,7 @@ test "codegen i64.add" {
 
 test "codegen binary op i32.sub" {
     const allocator = std.testing.allocator;
-    const source = "start = fn() i32 { 42 - 29 }";
+    const source = "start = () i32 { 42 - 29 }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -281,7 +281,7 @@ test "codegen binary op i32.sub" {
 
 test "codegen binary op f32.add" {
     const allocator = std.testing.allocator;
-    const source = "start = fn() f32 { 42 + 29 }";
+    const source = "start = () f32 { 42 + 29 }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -302,7 +302,7 @@ test "codegen binary op f32.add" {
 
 test "codegen binary op f64.add" {
     const allocator = std.testing.allocator;
-    const source = "start = fn() f64 { 42 + 29 }";
+    const source = "start = () f64 { 42 + 29 }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -323,7 +323,7 @@ test "codegen binary op f64.add" {
 
 test "codegen binary op f32.sub" {
     const allocator = std.testing.allocator;
-    const source = "start = fn() f32 { 42 - 29 }";
+    const source = "start = () f32 { 42 - 29 }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -344,7 +344,7 @@ test "codegen binary op f32.sub" {
 
 test "codegen binary op i32.mul" {
     const allocator = std.testing.allocator;
-    const source = "start = fn() i32 { 42 * 29 }";
+    const source = "start = () i32 { 42 * 29 }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -365,7 +365,7 @@ test "codegen binary op i32.mul" {
 
 test "codegen binary op f32.mul" {
     const allocator = std.testing.allocator;
-    const source = "start = fn() f32 { 42 * 29 }";
+    const source = "start = () f32 { 42 * 29 }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -386,7 +386,7 @@ test "codegen binary op f32.mul" {
 
 test "codegen nested binary op f32.add and f32.mul" {
     const allocator = std.testing.allocator;
-    const source = "start = fn() f32 { 42 * 29 + 15 }";
+    const source = "start = () f32 { 42 * 29 + 15 }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -409,7 +409,7 @@ test "codegen nested binary op f32.add and f32.mul" {
 
 test "codegen i32.eq" {
     const allocator = std.testing.allocator;
-    const source = "start = fn(x: i32, y: i32) bool { x == y }";
+    const source = "start = (x: i32, y: i32) bool { x == y }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -430,7 +430,7 @@ test "codegen i32.eq" {
 
 test "codegen f32.eq" {
     const allocator = std.testing.allocator;
-    const source = "start = fn(x: f32, y: f32) bool { x == y }";
+    const source = "start = (x: f32, y: f32) bool { x == y }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -451,7 +451,7 @@ test "codegen f32.eq" {
 
 test "codegen i32.rem_s" {
     const allocator = std.testing.allocator;
-    const source = "start = fn(x: i32) bool { x % 2 == 0 }";
+    const source = "start = (x: i32) bool { x % 2 == 0 }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -474,7 +474,7 @@ test "codegen i32.rem_s" {
 
 test "codegen i32.or" {
     const allocator = std.testing.allocator;
-    const source = "start = fn(x: bool, y: bool) bool { x or y }";
+    const source = "start = (x: bool, y: bool) bool { x or y }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -495,7 +495,7 @@ test "codegen i32.or" {
 
 test "codegen i32.gt_s" {
     const allocator = std.testing.allocator;
-    const source = "start = fn(x: i32, y: i32) bool { x > y }";
+    const source = "start = (x: i32, y: i32) bool { x > y }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -516,7 +516,7 @@ test "codegen i32.gt_s" {
 
 test "codegen f32.gt" {
     const allocator = std.testing.allocator;
-    const source = "start = fn(x: f32, y: f32) bool { x > y }";
+    const source = "start = (x: f32, y: f32) bool { x > y }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -537,7 +537,7 @@ test "codegen f32.gt" {
 
 test "codegen i32.div_s" {
     const allocator = std.testing.allocator;
-    const source = "start = fn(x: i32, y: i32) i32 { x / y }";
+    const source = "start = (x: i32, y: i32) i32 { x / y }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =

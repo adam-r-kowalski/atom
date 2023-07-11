@@ -15,12 +15,12 @@ test "tokenize int literal followed by dot" {
 
 test "type infer int literal as i32" {
     const allocator = std.testing.allocator;
-    const source = "f = fn() i32 { 42 }";
+    const source = "f = () i32 { 42 }";
     const actual = try mantis.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = f, type = fn() i32 }
+        \\    name = symbol{ value = f, type = () i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -34,12 +34,12 @@ test "type infer int literal as i32" {
 
 test "type infer bool literal true" {
     const allocator = std.testing.allocator;
-    const source = "f = fn() bool { true }";
+    const source = "f = () bool { true }";
     const actual = try mantis.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = f, type = fn() bool }
+        \\    name = symbol{ value = f, type = () bool }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -53,12 +53,12 @@ test "type infer bool literal true" {
 
 test "type infer bool literal false" {
     const allocator = std.testing.allocator;
-    const source = "f = fn() bool { false }";
+    const source = "f = () bool { false }";
     const actual = try mantis.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = f, type = fn() bool }
+        \\    name = symbol{ value = f, type = () bool }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -72,12 +72,12 @@ test "type infer bool literal false" {
 
 test "type infer int literal as f32" {
     const allocator = std.testing.allocator;
-    const source = "f = fn() f32 { 42 }";
+    const source = "f = () f32 { 42 }";
     const actual = try mantis.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = f, type = fn() f32 }
+        \\    name = symbol{ value = f, type = () f32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -91,12 +91,12 @@ test "type infer int literal as f32" {
 
 test "type infer float literal as f32" {
     const allocator = std.testing.allocator;
-    const source = "f = fn() f32 { 42.3 }";
+    const source = "f = () f32 { 42.3 }";
     const actual = try mantis.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = f, type = fn() f32 }
+        \\    name = symbol{ value = f, type = () f32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -110,7 +110,7 @@ test "type infer float literal as f32" {
 
 test "codegen i32 with int literal" {
     const allocator = std.testing.allocator;
-    const source = "start = fn() i32 { 42 }";
+    const source = "start = () i32 { 42 }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -129,7 +129,7 @@ test "codegen i32 with int literal" {
 
 test "codegen f32 with int literal" {
     const allocator = std.testing.allocator;
-    const source = "start = fn() f32 { 42 }";
+    const source = "start = () f32 { 42 }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -148,7 +148,7 @@ test "codegen f32 with int literal" {
 
 test "codegen f32 with float literal" {
     const allocator = std.testing.allocator;
-    const source = "start = fn() f32 { 42.5 }";
+    const source = "start = () f32 { 42.5 }";
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -170,7 +170,7 @@ test "codegen i32 global constant" {
     const source =
         \\i: i32 = 42
         \\
-        \\start = fn() i32 { i }
+        \\start = () i32 { i }
     ;
     const actual = try mantis.testing.codegen(allocator, source);
     defer allocator.free(actual);
