@@ -101,6 +101,24 @@ pub fn expressionToMonoType(allocator: Allocator, scope: types.Scope, builtins: 
                 .span = p.span,
             } };
         },
+        .index => |i| {
+            switch (i.expression.*) {
+                .symbol => |s| {
+                    if (s.value.eql(builtins.vec)) {
+                        std.debug.assert(i.indices.len == 1);
+                        const element_type = try allocator.create(MonoType);
+                        element_type.* = try expressionToMonoType(allocator, scope, builtins, i.indices[0]);
+                        return .{ .array = .{
+                            .rank = 1,
+                            .element_type = element_type,
+                            .span = s.span,
+                        } };
+                    }
+                    std.debug.panic("\nCannot convert index {} to mono type", .{s.value});
+                },
+                else => |k| std.debug.panic("\nCannot convert index {} to mono type", .{k}),
+            }
+        },
         else => std.debug.panic("\nCannot convert expression {} to mono type", .{e}),
     }
 }
@@ -663,6 +681,28 @@ fn block(context: Context, b: parser.types.Block) !types.Block {
     };
 }
 
+fn array(context: Context, a: parser.types.Array) !types.Array {
+    const expressions = try context.allocator.alloc(types.Expression, a.expressions.len);
+    const element_type = try context.allocator.create(MonoType);
+    element_type.* = freshTypeVar(context.constraints, a.span);
+    for (a.expressions, expressions) |untyped_e, *typed_e| {
+        typed_e.* = try expression(context, untyped_e);
+        try context.constraints.equal.append(.{
+            .left = element_type.*,
+            .right = typeOf(typed_e.*),
+        });
+    }
+    return types.Array{
+        .expressions = expressions,
+        .span = a.span,
+        .type = .{ .array = .{
+            .rank = 1,
+            .element_type = element_type,
+            .span = a.span,
+        } },
+    };
+}
+
 fn expression(context: Context, e: parser.types.Expression) error{ OutOfMemory, CompileError }!types.Expression {
     switch (e) {
         .int => |i| return .{ .int = int(context, i) },
@@ -681,6 +721,7 @@ fn expression(context: Context, e: parser.types.Expression) error{ OutOfMemory, 
         .call => |c| return try call(context, c),
         .undefined => |u| return .{ .undefined = untypedUndefined(context, u) },
         .struct_literal => |s| return .{ .struct_literal = try structLiteral(context, s) },
+        .array => |a| return .{ .array = try array(context, a) },
         else => |k| std.debug.panic("\nUnsupported expression {}", .{k}),
     }
 }

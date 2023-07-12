@@ -257,6 +257,17 @@ fn structLiteral(allocator: Allocator, sub: types.Substitution, s: types.StructL
     };
 }
 
+fn array(allocator: Allocator, sub: types.Substitution, a: types.Array) !types.Array {
+    const expressions = try allocator.alloc(types.Expression, a.expressions.len);
+    for (a.expressions, expressions) |unapplied, *applied|
+        applied.* = try expression(allocator, sub, unapplied);
+    return .{
+        .expressions = expressions,
+        .span = a.span,
+        .type = try monotype(allocator, sub, a.type),
+    };
+}
+
 pub fn expression(allocator: Allocator, sub: types.Substitution, e: types.Expression) error{OutOfMemory}!types.Expression {
     return switch (e) {
         .symbol => |s| .{ .symbol = try symbol(allocator, sub, s) },
@@ -281,6 +292,7 @@ pub fn expression(allocator: Allocator, sub: types.Substitution, e: types.Expres
         .convert => e,
         .undefined => |u| .{ .undefined = try undef(allocator, sub, u) },
         .struct_literal => |s| .{ .struct_literal = try structLiteral(allocator, sub, s) },
+        .array => |a| .{ .array = try array(allocator, sub, a) },
     };
 }
 

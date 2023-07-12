@@ -373,6 +373,19 @@ pub fn structLiteral(s: types.StructLiteral, indent: Indent, writer: Writer) !vo
     try monotype(s.type, writer);
 }
 
+pub fn array(a: types.Array, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("array =");
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("expressions =");
+    for (a.expressions) |e| {
+        try newlineAndIndent(indent + 2, writer);
+        try expression(e, indent + 2, writer);
+    }
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("type = ");
+    try monotype(a.type, writer);
+}
+
 pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{OutOfMemory}!void {
     switch (e) {
         .int => |i| try int(i, writer),
@@ -397,6 +410,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .undefined => |u| try undefinedKeyword(u, indent, writer),
         .variant => |v| try variant(v, indent, writer),
         .struct_literal => |s| try structLiteral(s, indent, writer),
+        .array => |a| try array(a, indent, writer),
     }
 }
 

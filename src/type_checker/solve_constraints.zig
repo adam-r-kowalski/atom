@@ -68,6 +68,16 @@ pub fn set(s: *types.Substitution, t: types.TypeVar, m: types.MonoType, errors: 
                     else => return error.CompileError,
                 }
             },
+            .array => |a1| {
+                switch (result.value_ptr.*) {
+                    .typevar => |t1| try set(s, t1, m, errors),
+                    .array => |a2| {
+                        if (a1.rank != a2.rank) return error.CompileError;
+                        try equalConstraint(.{ .left = a1.element_type.*, .right = a2.element_type.* }, s, errors);
+                    },
+                    else => return error.CompileError,
+                }
+            },
             else => switch (result.value_ptr.*) {
                 .typevar => |t1| try set(s, t1, m, errors),
                 else => return error.CompileError,
