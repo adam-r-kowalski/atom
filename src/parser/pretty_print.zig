@@ -139,21 +139,12 @@ pub fn block(b: types.Block, indent: Indent, writer: Writer) !void {
 }
 
 pub fn array(a: types.Array, indent: Indent, writer: Writer) !void {
-    try newlineAndIndent(indent, writer);
+    try writer.writeAll("[");
     for (a.expressions) |expr| {
-        try newlineAndIndent(indent + 1, writer);
-        try expression(expr, indent + 1, writer);
+        try newlineAndIndent(indent, writer);
+        try expression(expr, indent, writer);
     }
     try writer.writeAll("]");
-}
-
-pub fn arrayOf(a: types.ArrayOf, indent: Indent, writer: Writer) !void {
-    if (a.size) |size| {
-        try writer.print("[{}]", .{size.value});
-    } else {
-        try writer.writeAll("[]");
-    }
-    try expression(a.element_type.*, indent, writer);
 }
 
 pub fn branch(b: types.Branch, indent: Indent, writer: Writer) !void {
@@ -185,6 +176,16 @@ pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
     try writer.writeAll(")");
 }
 
+pub fn index(i: types.Index, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("(index ");
+    try expression(i.expression.*, indent, writer);
+    for (i.indices) |e| {
+        try writer.writeAll(" ");
+        try expression(e, indent + 1, writer);
+    }
+    try writer.writeAll(")");
+}
+
 pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{OutOfMemory}!void {
     switch (e) {
         .int => |int| try writer.print("{}", .{int.value}),
@@ -207,6 +208,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .array => |a| try array(a, indent, writer),
         .branch => |b| try branch(b, indent, writer),
         .call => |c| try call(c, indent, writer),
+        .index => |i| try index(i, indent, writer),
         .undefined => |u| try writer.print("{}", .{u}),
     }
 }

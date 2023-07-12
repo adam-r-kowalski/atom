@@ -27,7 +27,7 @@ fn trim(cursor: *Cursor) void {
 
 fn reserved(c: u8) bool {
     return switch (c) {
-        ' ', '\n', '(', ')', '.', ':', ',' => true,
+        ' ', '\n', '(', ')', '<', '>', '[', ']', '.', ':', ',' => true,
         else => false,
     };
 }

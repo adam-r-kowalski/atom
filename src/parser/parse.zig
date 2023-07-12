@@ -135,7 +135,11 @@ fn array(context: Context, begin: tokenizer.types.Pos) !types.Array {
         switch (t) {
             .right_bracket => break,
             .new_line => context.tokens.advance(),
-            else => try exprs.append(try expression(withPrecedence(context, LOWEST))),
+            else => {
+                try exprs.append(try expression(withPrecedence(context, LOWEST)));
+                context.tokens.consumeNewLines();
+                context.tokens.maybeConsume(.comma);
+            },
         }
     }
     const end = tokenizer.span.token(context.tokens.consume(.right_bracket)).end;
@@ -538,32 +542,27 @@ fn call(context: Context, left: types.Expression) !types.Call {
     };
 }
 
-fn arrayOf(context: Context, left: types.Expression) !types.ArrayOf {
-    switch (left) {
-        .array => |a| {
-            const element_type = try expressionAlloc(context);
-            const span = types.Span{ .begin = spanOf(left).begin, .end = spanOf(element_type.*).end };
-            if (a.expressions.len == 0) {
-                return types.ArrayOf{
-                    .size = null,
-                    .element_type = element_type,
-                    .span = span,
-                };
-            }
-            if (a.expressions.len > 1) std.debug.panic("\nExpected array of size 1, found {}", .{a.expressions.len});
-            switch (a.expressions[0]) {
-                .int => |int| {
-                    return types.ArrayOf{
-                        .size = int,
-                        .element_type = element_type,
-                        .span = span,
-                    };
-                },
-                else => std.debug.panic("\nExpected array size to be int, found {}", .{a.expressions[0]}),
-            }
-        },
-        else => std.debug.panic("\nExpected array, found {}", .{left}),
+fn index(context: Context, left: types.Expression) !types.Index {
+    context.tokens.advance();
+    var indices = List(types.Expression).init(context.allocator);
+    while (context.tokens.peek()) |t| {
+        switch (t) {
+            .new_line => context.tokens.advance(),
+            .right_bracket => break,
+            else => {
+                const expr = try expression(withPrecedence(context, DEFINE + 1));
+                try indices.append(expr);
+                context.tokens.consumeNewLines();
+                context.tokens.maybeConsume(.comma);
+            },
+        }
     }
+    const end = context.tokens.next().?.right_bracket.span.end;
+    return types.Index{
+        .expression = try alloc(context, left),
+        .indices = try indices.toOwnedSlice(),
+        .span = types.Span{ .begin = spanOf(left).begin, .end = end },
+    };
 }
 
 const Infix = union(enum) {
@@ -572,6 +571,7 @@ const Infix = union(enum) {
     times_equal,
     annotate,
     call,
+    index,
     binary_op: types.BinaryOpKind,
 };
 
@@ -582,6 +582,7 @@ fn precedence(i: Infix) Precedence {
         .times_equal => DEFINE,
         .annotate => DEFINE,
         .call => CALL,
+        .index => CALL,
         .binary_op => |b| switch (b) {
             .add => ADD,
             .subtract => ADD,
@@ -606,6 +607,7 @@ fn associativity(i: Infix) Associativity {
         .times_equal => .right,
         .annotate => .right,
         .call => .left,
+        .index => .left,
         .binary_op => |b| switch (b) {
             .add => .left,
             .subtract => .left,
@@ -646,6 +648,7 @@ fn infix(context: Context, left: types.Expression) ?Infix {
                 .symbol => .call,
                 else => null,
             },
+            .left_bracket => .index,
             else => null,
         };
     }
@@ -659,6 +662,7 @@ fn parseInfix(parser: Infix, context: Context, left: types.Expression) !types.Ex
         .times_equal => .{ .times_equal = try timesEqual(context, left.symbol) },
         .annotate => .{ .define = try annotate(context, left.symbol) },
         .call => .{ .call = try call(context, left) },
+        .index => .{ .index = try index(context, left) },
         .binary_op => |kind| .{ .binary_op = try binaryOp(context, left, kind) },
     };
 }

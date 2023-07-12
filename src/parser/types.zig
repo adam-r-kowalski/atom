@@ -153,6 +153,12 @@ pub const Call = struct {
     span: Span,
 };
 
+pub const Index = struct {
+    expression: *const Expression,
+    indices: []const Expression,
+    span: Span,
+};
+
 pub const Expression = union(enum) {
     int: Int,
     float: Float,
@@ -174,6 +180,7 @@ pub const Expression = union(enum) {
     array: Array,
     branch: Branch,
     call: Call,
+    index: Index,
     undefined: Undefined,
 };
 
