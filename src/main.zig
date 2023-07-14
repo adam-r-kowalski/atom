@@ -127,6 +127,7 @@ const WasmModule = struct {
             .f64 => return .{ .f64 = results.data[0].of.f64 },
             .void => return .void,
             .structure => return .{ .i32 = results.data[0].of.i32 },
+            .array => return .{ .i32 = results.data[0].of.i32 },
             else => |k| std.debug.panic("\nUnsupported return type {}!\n", .{k}),
         }
     }
