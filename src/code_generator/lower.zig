@@ -487,6 +487,48 @@ fn structLiteral(context: Context, s: type_checker.types.StructLiteral) !types.E
     return .{ .block = types.Block{ .result = .i32, .expressions = exprs } };
 }
 
+fn array(context: Context, a: type_checker.types.Array) !types.Expression {
+    const element_type = a.type.array.element_type;
+    const size = size_of.monotype(element_type.*);
+    const len = @as(u32, @intCast(a.expressions.len));
+    const array_local = try freshLocalPointer(context, size * len);
+    const exprs = try context.allocator.alloc(types.Expression, a.expressions.len + 3);
+    const array_base = try context.allocator.create(types.Expression);
+    array_base.* = .{ .local_get = .{ .name = array_local } };
+    var offset: u32 = 0;
+    for (a.expressions, exprs[0..len]) |e, *ir| {
+        const result = try expressionAlloc(context, e);
+        const field_offset = try context.allocator.create(types.Expression);
+        field_offset.* = .{ .literal = .{ .u32 = offset } };
+        const field_address = blk: {
+            if (offset > 0) {
+                const ptr = try context.allocator.create(types.Expression);
+                ptr.* = .{ .binary_op = .{ .kind = .i32_add, .left = array_base, .right = field_offset } };
+                break :blk ptr;
+            }
+            break :blk array_base;
+        };
+        switch (element_type.*) {
+            .i32 => ir.* = .{ .binary_op = .{ .kind = .i32_store, .left = field_address, .right = result } },
+            else => |k| std.debug.panic("\nField type {} not allowed", .{k}),
+        }
+        offset += size;
+    }
+    const local = try freshLocalPointer(context, 8);
+    const local_get = try context.allocator.create(types.Expression);
+    local_get.* = .{ .local_get = .{ .name = local } };
+    exprs[len] = .{ .binary_op = .{ .kind = .i32_store, .left = local_get, .right = array_base } };
+    const binary_add = try context.allocator.create(types.Expression);
+    const literal_4 = try context.allocator.create(types.Expression);
+    literal_4.* = .{ .literal = .{ .u32 = 4 } };
+    binary_add.* = .{ .binary_op = .{ .kind = .i32_add, .left = local_get, .right = literal_4 } };
+    const literal_size = try context.allocator.create(types.Expression);
+    literal_size.* = .{ .literal = .{ .u32 = len } };
+    exprs[len + 1] = .{ .binary_op = .{ .kind = .i32_store, .left = binary_add, .right = literal_size } };
+    exprs[len + 2] = .{ .local_get = .{ .name = local } };
+    return .{ .block = types.Block{ .result = .i32, .expressions = exprs } };
+}
+
 fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMemory, InvalidCharacter, Overflow }!types.Expression {
     switch (e) {
         .int => |i| return try int(i),
@@ -506,6 +548,7 @@ fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMe
         .string => |s| return try string(context, s),
         .variant => |v| return try variant(v),
         .struct_literal => |s| return try structLiteral(context, s),
+        .array => |a| return try array(context, a),
         else => |k| std.debug.panic("\ntypes.Expression {} not yet supported", .{k}),
     }
 }

@@ -80,3 +80,67 @@ test "type infer array" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "codegen array" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = () vec[i32] {
+        \\    [1, 2, 3]
+        \\}
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (global $core/arena (mut i32) (i32.const 0))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
+        \\                (local.get $size))))
+        \\
+        \\    (func $start (result i32)
+        \\        (local $0 i32)
+        \\        (local $1 i32)
+        \\        (local.set $0
+        \\            (call $core/alloc
+        \\                (i32.const 12)))
+        \\        (local.set $1
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (block (result i32)
+        \\            (i32.store
+        \\                (local.get $0)
+        \\                (i32.const 1))
+        \\            (i32.store
+        \\                (i32.add
+        \\                    (local.get $0)
+        \\                    (i32.const 4))
+        \\                (i32.const 2))
+        \\            (i32.store
+        \\                (i32.add
+        \\                    (local.get $0)
+        \\                    (i32.const 8))
+        \\                (i32.const 3))
+        \\            (i32.store
+        \\                (local.get $1)
+        \\                (local.get $0))
+        \\            (i32.store
+        \\                (i32.add
+        \\                    (local.get $1)
+        \\                    (i32.const 4))
+        \\                (i32.const 3))
+        \\            (local.get $1)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
