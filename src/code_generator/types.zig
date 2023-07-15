@@ -32,6 +32,7 @@ pub const BinaryOpKind = enum {
     i32_mul,
     i32_div_s,
     i32_eq,
+    i32_ge_u,
     i32_gt_s,
     i32_lt_s,
     i32_rem_s,
@@ -167,6 +168,7 @@ pub const Expression = union(enum) {
     drop: Drop,
     memory_copy: MemoryCopy,
     nop,
+    unreachable_,
 };
 
 pub const Local = struct {

@@ -137,6 +137,7 @@ pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
         .i32_eq => try writer.writeAll("i32.eq"),
         .i32_rem_s => try writer.writeAll("i32.rem_s"),
         .i32_or => try writer.writeAll("i32.or"),
+        .i32_ge_u => try writer.writeAll("i32.ge_u"),
         .i32_gt_s => try writer.writeAll("i32.gt_s"),
         .i32_lt_s => try writer.writeAll("i32.lt_s"),
         .i32_store => try writer.writeAll("i32.store"),
@@ -231,6 +232,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .drop => |d| try drop(d, indent, writer),
         .memory_copy => |m| try memoryCopy(m, indent, writer),
         .nop => try writer.writeAll("(nop)"),
+        .unreachable_ => try writer.writeAll("(unreachable)"),
     }
 }
 
