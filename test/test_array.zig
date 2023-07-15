@@ -144,3 +144,64 @@ test "codegen array" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "parse array index" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = () i32 {
+        \\    xs = [1, 2, 3]
+        \\    xs[1]
+        \\}
+    ;
+    const actual = try mantis.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(def start (fn [] i32
+        \\    (block
+        \\        (def xs [
+        \\            1
+        \\            2
+        \\            3])
+        \\        (index xs 1))))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer array index" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = () i32 {
+        \\    xs = [1, 2, 3]
+        \\    xs[1]
+        \\}
+    ;
+    const actual = try mantis.testing.typeInfer(allocator, source, "start");
+    defer allocator.free(actual);
+    const expected =
+        \\define =
+        \\    name = symbol{ value = start, type = () i32 }
+        \\    type = void
+        \\    mutable = false
+        \\    value =
+        \\        function =
+        \\            return_type = i32
+        \\            body =
+        \\                define =
+        \\                    name = symbol{ value = xs, type = vec[i32] }
+        \\                    type = void
+        \\                    mutable = false
+        \\                    value =
+        \\                        array =
+        \\                            expressions =
+        \\                                int{ value = 1, type = i32 }
+        \\                                int{ value = 2, type = i32 }
+        \\                                int{ value = 3, type = i32 }
+        \\                            type = vec[i32]
+        \\                index =
+        \\                    expression = symbol{ value = xs, type = vec[i32] }
+        \\                    indices =
+        \\                        int{ value = 1, type = u32 }
+        \\                    type = i32
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

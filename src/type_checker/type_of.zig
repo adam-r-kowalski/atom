@@ -25,5 +25,6 @@ pub fn expression(e: types.Expression) types.MonoType {
         .variant => |v| v.type,
         .struct_literal => |s| s.type,
         .array => |a| a.type,
+        .index => |i| i.type,
     };
 }

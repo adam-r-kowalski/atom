@@ -140,6 +140,18 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
         try equalConstraint(constraint, s, errors);
         return;
     }
+    if (left_tag == .array and right_tag == .array) {
+        if (equal.left.array.rank != equal.right.array.rank) {
+            try errors.type_mismatch.append(.{ .left = equal.left, .right = equal.right });
+            return error.CompileError;
+        }
+        const constraint = types.EqualConstraint{
+            .left = equal.left.array.element_type.*,
+            .right = equal.right.array.element_type.*,
+        };
+        try equalConstraint(constraint, s, errors);
+        return;
+    }
     if (left_tag == right_tag) {
         return;
     }

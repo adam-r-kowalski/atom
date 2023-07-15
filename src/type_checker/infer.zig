@@ -703,6 +703,33 @@ fn array(context: Context, a: parser.types.Array) !types.Array {
     };
 }
 
+fn index(context: Context, i: parser.types.Index) !types.Index {
+    const expr = try expressionAlloc(context, i.expression.*);
+    const indices = try context.allocator.alloc(types.Expression, i.indices.len);
+    for (i.indices, indices) |untyped_i, *typed_i| {
+        typed_i.* = try expression(context, untyped_i);
+    }
+    if (indices.len != 1) std.debug.panic("\nInvalid index length {}", .{indices.len});
+    const element_type = try context.allocator.create(MonoType);
+    element_type.* = freshTypeVar(context.constraints, i.span);
+    try context.constraints.equal.appendSlice(&.{
+        .{
+            .left = typeOf(expr.*),
+            .right = .{ .array = .{ .rank = 1, .element_type = element_type, .span = null } },
+        },
+        .{
+            .left = typeOf(indices[0]),
+            .right = .{ .u32 = .{ .span = null } },
+        },
+    });
+    return types.Index{
+        .expression = expr,
+        .indices = indices,
+        .span = i.span,
+        .type = element_type.*,
+    };
+}
+
 fn expression(context: Context, e: parser.types.Expression) error{ OutOfMemory, CompileError }!types.Expression {
     switch (e) {
         .int => |i| return .{ .int = int(context, i) },
@@ -722,6 +749,7 @@ fn expression(context: Context, e: parser.types.Expression) error{ OutOfMemory, 
         .undefined => |u| return .{ .undefined = untypedUndefined(context, u) },
         .struct_literal => |s| return .{ .struct_literal = try structLiteral(context, s) },
         .array => |a| return .{ .array = try array(context, a) },
+        .index => |i| return .{ .index = try index(context, i) },
         else => |k| std.debug.panic("\nUnsupported expression {}", .{k}),
     }
 }
