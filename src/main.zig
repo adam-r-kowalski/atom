@@ -39,6 +39,7 @@ fn writeWat(allocator: Allocator, flags: Flags, wat_string: []const u8) !void {
 }
 
 const Value = union(enum) {
+    u8: u8,
     i32: i32,
     i64: i64,
     f32: f32,
@@ -49,6 +50,7 @@ const Value = union(enum) {
         _ = options;
         _ = fmt;
         switch (self) {
+            .u8 => |i| try writer.print("{c}", .{i}),
             .i32 => |i| try writer.print("{}", .{i}),
             .i64 => |i| try writer.print("{}", .{i}),
             .f32 => |f| try writer.print("{}", .{f}),
@@ -121,6 +123,7 @@ const WasmModule = struct {
             std.debug.panic("\nError calling start!\n", .{});
         }
         switch (return_type) {
+            .u8 => return .{ .u8 = @truncate(@as(u32, @intCast(results.data[0].of.i32))) },
             .i32 => return .{ .i32 = results.data[0].of.i32 },
             .i64 => return .{ .i64 = results.data[0].of.i64 },
             .f32 => return .{ .f32 = results.data[0].of.f32 },
