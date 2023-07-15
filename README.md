@@ -476,9 +476,10 @@ get("/customers", () {
         <body>
             <ul>
                 for i {
+                    customer = customers[i]
                     <li>
-                        <h3>customers[i].name</h3>
-                        <p>customers[i].age</p>
+                        <h3>customer.name</h3>
+                        <p>customer.age</p>
                     </li>
                 }
             </ul>
