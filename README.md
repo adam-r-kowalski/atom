@@ -93,7 +93,7 @@ Mantis has a straightforward syntax that is easy to read and write.
 Here is a simple Mantis program that defines a function to calculate the square of a number:
 
 ```mantis
-square = (x: i32) i32 { x^2 }
+square = (x: i32) i32 { x * x }
 
 test("function calls", () {
     assert(square(1) == 1)
@@ -124,7 +124,7 @@ square = (x: i32) i32 {
 
 # You can also place comments at the end of a line
 
-sum = (xs: vec[i32]) i32 { xs.fold(0, +) } # Here we calculate the sum of an array
+sum = (xs: vec[i32]) i32 { fold(xs, 0, +) } # Here we calculate the sum of an array
 ```
 
 ### Functions
@@ -390,12 +390,12 @@ Mantis provides for expressions to efficiently iterate through an array and buil
 
 ```mantis
 # Compute the dot product of two vectors
-dot = [T: Num](a: vec[T], b: vec[T]) T {
+dot = (a: vec[f32], b: vec[f32]) f32 {
     sum(for i { a[i] * b[i] })
 }
 
 # Perform matrix multiplication
-matmul = [T: Num](a: mat[T], b: mat[T]) mat[T] {
+matmul = (a: mat[f32], b: mat[f32]) mat[f32] {
     for i, j, k { sum(a[i, k] * b[k, j]) }
 }
 ```
