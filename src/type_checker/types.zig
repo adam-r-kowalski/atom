@@ -213,6 +213,19 @@ pub const StructLiteral = struct {
     span: Span,
 };
 
+pub const Array = struct {
+    expressions: []const Expression,
+    type: MonoType,
+    span: Span,
+};
+
+pub const Index = struct {
+    expression: *const Expression,
+    indices: []const Expression,
+    type: MonoType,
+    span: Span,
+};
+
 pub const Expression = union(enum) {
     int: Int,
     float: Float,
@@ -236,6 +249,8 @@ pub const Expression = union(enum) {
     convert: Convert,
     undefined: Undefined,
     struct_literal: StructLiteral,
+    array: Array,
+    index: Index,
 };
 
 pub const Untyped = Map(Interned, parser.types.Expression);

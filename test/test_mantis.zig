@@ -1,4 +1,5 @@
 const std = @import("std");
+pub const test_array = @import("test_array.zig");
 pub const test_binary_ops = @import("test_binary_ops.zig");
 pub const test_call = @import("test_call.zig");
 pub const test_comments = @import("test_comments.zig");

@@ -44,8 +44,13 @@ pub fn token(t: types.Token, writer: Writer) !void {
         .mut => try writer.writeAll("mut"),
         .undefined => try writer.writeAll("undefined"),
         .bar => try writer.writeAll("|"),
-        .bar_greater => try writer.writeAll("|>"),
-        .new_line => {},
+        .bar_greater => |b| {
+            if (b.span.end.line != b.span.begin.line) {
+                for (0..b.span.end.column - 3) |_| try writer.writeAll(" ");
+            }
+            try writer.writeAll("|>");
+        },
+        .new_line => |n| for (0..n.span.end.column - 1) |_| try writer.writeAll(" "),
     }
 }
 

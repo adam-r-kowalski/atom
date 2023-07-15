@@ -14,6 +14,7 @@ fn newlineAndIndent(indent: Indent, writer: Writer) !void {
 pub fn monotype(m: types.MonoType, writer: Writer) !void {
     switch (m) {
         .u8 => try writer.writeAll("u8"),
+        .u32 => try writer.writeAll("u32"),
         .i32 => try writer.writeAll("i32"),
         .i64 => try writer.writeAll("i64"),
         .f32 => try writer.writeAll("f32"),
@@ -373,6 +374,35 @@ pub fn structLiteral(s: types.StructLiteral, indent: Indent, writer: Writer) !vo
     try monotype(s.type, writer);
 }
 
+pub fn array(a: types.Array, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("array =");
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("expressions =");
+    for (a.expressions) |e| {
+        try newlineAndIndent(indent + 2, writer);
+        try expression(e, indent + 2, writer);
+    }
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("type = ");
+    try monotype(a.type, writer);
+}
+
+pub fn index(i: types.Index, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("index =");
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("expression = ");
+    try expression(i.expression.*, indent, writer);
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("indices =");
+    for (i.indices) |e| {
+        try newlineAndIndent(indent + 2, writer);
+        try expression(e, indent + 2, writer);
+    }
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("type = ");
+    try monotype(i.type, writer);
+}
+
 pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{OutOfMemory}!void {
     switch (e) {
         .int => |i| try int(i, writer),
@@ -397,6 +427,8 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .undefined => |u| try undefinedKeyword(u, indent, writer),
         .variant => |v| try variant(v, indent, writer),
         .struct_literal => |s| try structLiteral(s, indent, writer),
+        .array => |a| try array(a, indent, writer),
+        .index => |i| try index(i, indent, writer),
     }
 }
 

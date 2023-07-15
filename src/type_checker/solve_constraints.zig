@@ -68,6 +68,16 @@ pub fn set(s: *types.Substitution, t: types.TypeVar, m: types.MonoType, errors: 
                     else => return error.CompileError,
                 }
             },
+            .array => |a1| {
+                switch (result.value_ptr.*) {
+                    .typevar => |t1| try set(s, t1, m, errors),
+                    .array => |a2| {
+                        if (a1.rank != a2.rank) return error.CompileError;
+                        try equalConstraint(.{ .left = a1.element_type.*, .right = a2.element_type.* }, s, errors);
+                    },
+                    else => return error.CompileError,
+                }
+            },
             else => switch (result.value_ptr.*) {
                 .typevar => |t1| try set(s, t1, m, errors),
                 else => return error.CompileError,
@@ -126,6 +136,18 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
         const constraint = types.EqualConstraint{
             .left = equal.left.function.return_type.*,
             .right = equal.right.function.return_type.*,
+        };
+        try equalConstraint(constraint, s, errors);
+        return;
+    }
+    if (left_tag == .array and right_tag == .array) {
+        if (equal.left.array.rank != equal.right.array.rank) {
+            try errors.type_mismatch.append(.{ .left = equal.left, .right = equal.right });
+            return error.CompileError;
+        }
+        const constraint = types.EqualConstraint{
+            .left = equal.left.array.element_type.*,
+            .right = equal.right.array.element_type.*,
         };
         try equalConstraint(constraint, s, errors);
         return;
