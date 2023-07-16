@@ -346,12 +346,96 @@ test "codegen array index of string" {
         \\            (then
         \\                (unreachable))
         \\            (else
-        \\                (i32.load
+        \\                (i32.load8_u
         \\                    (i32.add
         \\                        (i32.load
         \\                            (local.get $xs))
         \\                        (i32.mul
         \\                            (i32.const 3)
+        \\                            (i32.const 1)))))))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen array of bool" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = () bool {
+        \\    xs = [true, false, true]
+        \\    xs[1]
+        \\}
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (global $core/arena (mut i32) (i32.const 0))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
+        \\                (local.get $size))))
+        \\
+        \\    (func $start (result i32)
+        \\        (local $xs i32)
+        \\        (local $0 i32)
+        \\        (local $1 i32)
+        \\        (local.set $0
+        \\            (call $core/alloc
+        \\                (i32.const 3)))
+        \\        (local.set $1
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (local.set $xs
+        \\            (block (result i32)
+        \\                (i32.store8
+        \\                    (local.get $0)
+        \\                    (i32.const 1))
+        \\                (i32.store8
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 1))
+        \\                    (i32.const 0))
+        \\                (i32.store8
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 2))
+        \\                    (i32.const 1))
+        \\                (i32.store
+        \\                    (local.get $1)
+        \\                    (local.get $0))
+        \\                (i32.store
+        \\                    (i32.add
+        \\                        (local.get $1)
+        \\                        (i32.const 4))
+        \\                    (i32.const 3))
+        \\                (local.get $1)))
+        \\        (if (result i32)
+        \\            (i32.ge_u
+        \\                (i32.const 1)
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $xs)
+        \\                        (i32.const 4))))
+        \\            (then
+        \\                (unreachable))
+        \\            (else
+        \\                (i32.load8_u
+        \\                    (i32.add
+        \\                        (i32.load
+        \\                            (local.get $xs))
+        \\                        (i32.mul
+        \\                            (i32.const 1)
         \\                            (i32.const 1)))))))
         \\
         \\    (export "_start" (func $start)))

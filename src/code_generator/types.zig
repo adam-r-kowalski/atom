@@ -77,6 +77,7 @@ const UnaryOpKind = enum {
     f64_sqrt,
     f64_convert_i64_s,
     i32_load,
+    i32_load8_u,
 };
 
 pub const UnaryOp = struct {
