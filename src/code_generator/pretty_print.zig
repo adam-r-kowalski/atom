@@ -122,6 +122,7 @@ pub fn unaryOp(u: types.UnaryOp, indent: Indent, writer: Writer) !void {
         .f64_convert_i64_s => try writer.writeAll("f64.convert_i64_s"),
         .i32_load => try writer.writeAll("i32.load"),
         .i32_load8_u => try writer.writeAll("i32.load8_u"),
+        .i64_load => try writer.writeAll("i64.load"),
     }
     try newlineAndIndent(indent + 1, writer);
     try expression(u.expression.*, indent + 1, writer);
@@ -151,6 +152,7 @@ pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
         .i64_rem_s => try writer.writeAll("i64.rem_s"),
         .i64_gt_s => try writer.writeAll("i64.gt_s"),
         .i64_lt_s => try writer.writeAll("i64.lt_s"),
+        .i64_store => try writer.writeAll("i64.store"),
         .f32_add => try writer.writeAll("f32.add"),
         .f32_sub => try writer.writeAll("f32.sub"),
         .f32_mul => try writer.writeAll("f32.mul"),

@@ -512,6 +512,7 @@ fn array(context: Context, a: type_checker.types.Array) !types.Expression {
         };
         switch (element_type.*) {
             .i32 => ir.* = .{ .binary_op = .{ .kind = .i32_store, .left = field_address, .right = result } },
+            .i64 => ir.* = .{ .binary_op = .{ .kind = .i64_store, .left = field_address, .right = result } },
             .bool => ir.* = .{ .binary_op = .{ .kind = .i32_store8, .left = field_address, .right = result } },
             else => |k| std.debug.panic("\nField type {} not allowed", .{k}),
         }
@@ -556,6 +557,7 @@ fn index(context: Context, i: type_checker.types.Index) !types.Expression {
         .bool => .{ .unary_op = .{ .kind = .i32_load8_u, .expression = address } },
         .u8 => .{ .unary_op = .{ .kind = .i32_load8_u, .expression = address } },
         .i32 => .{ .unary_op = .{ .kind = .i32_load, .expression = address } },
+        .i64 => .{ .unary_op = .{ .kind = .i64_load, .expression = address } },
         else => |k| std.debug.panic("\nIndex type {} not allowed", .{k}),
     };
     const then = try context.allocator.alloc(types.Expression, 1);
