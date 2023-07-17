@@ -512,6 +512,7 @@ fn array(context: Context, a: type_checker.types.Array) !types.Expression {
         };
         switch (element_type.*) {
             .bool => ir.* = .{ .binary_op = .{ .kind = .i32_store8, .left = field_address, .right = result } },
+            .u8 => ir.* = .{ .binary_op = .{ .kind = .i32_store8, .left = field_address, .right = result } },
             .i32 => ir.* = .{ .binary_op = .{ .kind = .i32_store, .left = field_address, .right = result } },
             .i64 => ir.* = .{ .binary_op = .{ .kind = .i64_store, .left = field_address, .right = result } },
             .f32 => ir.* = .{ .binary_op = .{ .kind = .f32_store, .left = field_address, .right = result } },
