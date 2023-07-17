@@ -118,9 +118,13 @@ pub fn unaryOp(u: types.UnaryOp, indent: Indent, writer: Writer) !void {
         .i64_trunc_f64_s => try writer.writeAll("i64.trunc_f64_s"),
         .f32_sqrt => try writer.writeAll("f32.sqrt"),
         .f32_convert_i32_s => try writer.writeAll("f32.convert_i32_s"),
+        .f32_load => try writer.writeAll("f32.load"),
         .f64_sqrt => try writer.writeAll("f64.sqrt"),
         .f64_convert_i64_s => try writer.writeAll("f64.convert_i64_s"),
+        .f64_load => try writer.writeAll("f64.load"),
         .i32_load => try writer.writeAll("i32.load"),
+        .i32_load8_u => try writer.writeAll("i32.load8_u"),
+        .i64_load => try writer.writeAll("i64.load"),
     }
     try newlineAndIndent(indent + 1, writer);
     try expression(u.expression.*, indent + 1, writer);
@@ -150,6 +154,7 @@ pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
         .i64_rem_s => try writer.writeAll("i64.rem_s"),
         .i64_gt_s => try writer.writeAll("i64.gt_s"),
         .i64_lt_s => try writer.writeAll("i64.lt_s"),
+        .i64_store => try writer.writeAll("i64.store"),
         .f32_add => try writer.writeAll("f32.add"),
         .f32_sub => try writer.writeAll("f32.sub"),
         .f32_mul => try writer.writeAll("f32.mul"),
@@ -157,6 +162,7 @@ pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
         .f32_eq => try writer.writeAll("f32.eq"),
         .f32_gt => try writer.writeAll("f32.gt"),
         .f32_lt => try writer.writeAll("f32.lt"),
+        .f32_store => try writer.writeAll("f32.store"),
         .f64_add => try writer.writeAll("f64.add"),
         .f64_sub => try writer.writeAll("f64.sub"),
         .f64_mul => try writer.writeAll("f64.mul"),
@@ -164,6 +170,7 @@ pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
         .f64_eq => try writer.writeAll("f64.eq"),
         .f64_gt => try writer.writeAll("f64.gt"),
         .f64_lt => try writer.writeAll("f64.lt"),
+        .f64_store => try writer.writeAll("f64.store"),
     }
     try newlineAndIndent(indent + 1, writer);
     try expression(b.left.*, indent + 1, writer);

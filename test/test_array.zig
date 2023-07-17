@@ -346,12 +346,432 @@ test "codegen array index of string" {
         \\            (then
         \\                (unreachable))
         \\            (else
-        \\                (i32.load
+        \\                (i32.load8_u
         \\                    (i32.add
         \\                        (i32.load
         \\                            (local.get $xs))
         \\                        (i32.mul
         \\                            (i32.const 3)
+        \\                            (i32.const 1)))))))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen array of bool" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = () bool {
+        \\    xs = [true, false, true]
+        \\    xs[1]
+        \\}
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (global $core/arena (mut i32) (i32.const 0))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
+        \\                (local.get $size))))
+        \\
+        \\    (func $start (result i32)
+        \\        (local $xs i32)
+        \\        (local $0 i32)
+        \\        (local $1 i32)
+        \\        (local.set $0
+        \\            (call $core/alloc
+        \\                (i32.const 3)))
+        \\        (local.set $1
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (local.set $xs
+        \\            (block (result i32)
+        \\                (i32.store8
+        \\                    (local.get $0)
+        \\                    (i32.const 1))
+        \\                (i32.store8
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 1))
+        \\                    (i32.const 0))
+        \\                (i32.store8
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 2))
+        \\                    (i32.const 1))
+        \\                (i32.store
+        \\                    (local.get $1)
+        \\                    (local.get $0))
+        \\                (i32.store
+        \\                    (i32.add
+        \\                        (local.get $1)
+        \\                        (i32.const 4))
+        \\                    (i32.const 3))
+        \\                (local.get $1)))
+        \\        (if (result i32)
+        \\            (i32.ge_u
+        \\                (i32.const 1)
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $xs)
+        \\                        (i32.const 4))))
+        \\            (then
+        \\                (unreachable))
+        \\            (else
+        \\                (i32.load8_u
+        \\                    (i32.add
+        \\                        (i32.load
+        \\                            (local.get $xs))
+        \\                        (i32.mul
+        \\                            (i32.const 1)
+        \\                            (i32.const 1)))))))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen array of i64" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = () i64 {
+        \\    xs = [3, 7, 11]
+        \\    xs[1]
+        \\}
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (global $core/arena (mut i32) (i32.const 0))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
+        \\                (local.get $size))))
+        \\
+        \\    (func $start (result i64)
+        \\        (local $xs i32)
+        \\        (local $0 i32)
+        \\        (local $1 i32)
+        \\        (local.set $0
+        \\            (call $core/alloc
+        \\                (i32.const 24)))
+        \\        (local.set $1
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (local.set $xs
+        \\            (block (result i32)
+        \\                (i64.store
+        \\                    (local.get $0)
+        \\                    (i64.const 3))
+        \\                (i64.store
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 8))
+        \\                    (i64.const 7))
+        \\                (i64.store
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 16))
+        \\                    (i64.const 11))
+        \\                (i32.store
+        \\                    (local.get $1)
+        \\                    (local.get $0))
+        \\                (i32.store
+        \\                    (i32.add
+        \\                        (local.get $1)
+        \\                        (i32.const 4))
+        \\                    (i32.const 3))
+        \\                (local.get $1)))
+        \\        (if (result i64)
+        \\            (i32.ge_u
+        \\                (i32.const 1)
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $xs)
+        \\                        (i32.const 4))))
+        \\            (then
+        \\                (unreachable))
+        \\            (else
+        \\                (i64.load
+        \\                    (i32.add
+        \\                        (i32.load
+        \\                            (local.get $xs))
+        \\                        (i32.mul
+        \\                            (i32.const 1)
+        \\                            (i32.const 8)))))))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen array of f32" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = () f32 {
+        \\    xs = [3.14, 2.718, 1.618]
+        \\    xs[1]
+        \\}
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (global $core/arena (mut i32) (i32.const 0))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
+        \\                (local.get $size))))
+        \\
+        \\    (func $start (result f32)
+        \\        (local $xs i32)
+        \\        (local $0 i32)
+        \\        (local $1 i32)
+        \\        (local.set $0
+        \\            (call $core/alloc
+        \\                (i32.const 12)))
+        \\        (local.set $1
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (local.set $xs
+        \\            (block (result i32)
+        \\                (f32.store
+        \\                    (local.get $0)
+        \\                    (f32.const 3.14000010e+00))
+        \\                (f32.store
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 4))
+        \\                    (f32.const 2.71799993e+00))
+        \\                (f32.store
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 8))
+        \\                    (f32.const 1.61800003e+00))
+        \\                (i32.store
+        \\                    (local.get $1)
+        \\                    (local.get $0))
+        \\                (i32.store
+        \\                    (i32.add
+        \\                        (local.get $1)
+        \\                        (i32.const 4))
+        \\                    (i32.const 3))
+        \\                (local.get $1)))
+        \\        (if (result f32)
+        \\            (i32.ge_u
+        \\                (i32.const 1)
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $xs)
+        \\                        (i32.const 4))))
+        \\            (then
+        \\                (unreachable))
+        \\            (else
+        \\                (f32.load
+        \\                    (i32.add
+        \\                        (i32.load
+        \\                            (local.get $xs))
+        \\                        (i32.mul
+        \\                            (i32.const 1)
+        \\                            (i32.const 4)))))))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen array of f64" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = () f64 {
+        \\    xs = [3.14, 2.718, 1.618]
+        \\    xs[1]
+        \\}
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (global $core/arena (mut i32) (i32.const 0))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
+        \\                (local.get $size))))
+        \\
+        \\    (func $start (result f64)
+        \\        (local $xs i32)
+        \\        (local $0 i32)
+        \\        (local $1 i32)
+        \\        (local.set $0
+        \\            (call $core/alloc
+        \\                (i32.const 24)))
+        \\        (local.set $1
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (local.set $xs
+        \\            (block (result i32)
+        \\                (f64.store
+        \\                    (local.get $0)
+        \\                    (f64.const 3.14e+00))
+        \\                (f64.store
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 8))
+        \\                    (f64.const 2.718e+00))
+        \\                (f64.store
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 16))
+        \\                    (f64.const 1.618e+00))
+        \\                (i32.store
+        \\                    (local.get $1)
+        \\                    (local.get $0))
+        \\                (i32.store
+        \\                    (i32.add
+        \\                        (local.get $1)
+        \\                        (i32.const 4))
+        \\                    (i32.const 3))
+        \\                (local.get $1)))
+        \\        (if (result f64)
+        \\            (i32.ge_u
+        \\                (i32.const 1)
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $xs)
+        \\                        (i32.const 4))))
+        \\            (then
+        \\                (unreachable))
+        \\            (else
+        \\                (f64.load
+        \\                    (i32.add
+        \\                        (i32.load
+        \\                            (local.get $xs))
+        \\                        (i32.mul
+        \\                            (i32.const 1)
+        \\                            (i32.const 8)))))))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen array of u8" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = () u8 {
+        \\    xs = [2, 4, 7]
+        \\    xs[1]
+        \\}
+    ;
+    const actual = try mantis.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (global $core/arena (mut i32) (i32.const 0))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
+        \\                (local.get $size))))
+        \\
+        \\    (func $start (result i32)
+        \\        (local $xs i32)
+        \\        (local $0 i32)
+        \\        (local $1 i32)
+        \\        (local.set $0
+        \\            (call $core/alloc
+        \\                (i32.const 3)))
+        \\        (local.set $1
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (local.set $xs
+        \\            (block (result i32)
+        \\                (i32.store8
+        \\                    (local.get $0)
+        \\                    (i32.const 2))
+        \\                (i32.store8
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 1))
+        \\                    (i32.const 4))
+        \\                (i32.store8
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 2))
+        \\                    (i32.const 7))
+        \\                (i32.store
+        \\                    (local.get $1)
+        \\                    (local.get $0))
+        \\                (i32.store
+        \\                    (i32.add
+        \\                        (local.get $1)
+        \\                        (i32.const 4))
+        \\                    (i32.const 3))
+        \\                (local.get $1)))
+        \\        (if (result i32)
+        \\            (i32.ge_u
+        \\                (i32.const 1)
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $xs)
+        \\                        (i32.const 4))))
+        \\            (then
+        \\                (unreachable))
+        \\            (else
+        \\                (i32.load8_u
+        \\                    (i32.add
+        \\                        (i32.load
+        \\                            (local.get $xs))
+        \\                        (i32.mul
+        \\                            (i32.const 1)
         \\                            (i32.const 1)))))))
         \\
         \\    (export "_start" (func $start)))

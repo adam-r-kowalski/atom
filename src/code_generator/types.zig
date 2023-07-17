@@ -47,6 +47,7 @@ pub const BinaryOpKind = enum {
     i64_gt_s,
     i64_lt_s,
     i64_rem_s,
+    i64_store,
     f32_add,
     f32_sub,
     f32_mul,
@@ -54,6 +55,7 @@ pub const BinaryOpKind = enum {
     f32_eq,
     f32_gt,
     f32_lt,
+    f32_store,
     f64_add,
     f64_sub,
     f64_mul,
@@ -61,6 +63,7 @@ pub const BinaryOpKind = enum {
     f64_eq,
     f64_gt,
     f64_lt,
+    f64_store,
 };
 
 pub const BinaryOp = struct {
@@ -74,9 +77,13 @@ const UnaryOpKind = enum {
     i64_trunc_f64_s,
     f32_sqrt,
     f32_convert_i32_s,
+    f32_load,
     f64_sqrt,
     f64_convert_i64_s,
+    f64_load,
     i32_load,
+    i32_load8_u,
+    i64_load,
 };
 
 pub const UnaryOp = struct {

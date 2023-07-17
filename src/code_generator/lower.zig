@@ -511,7 +511,12 @@ fn array(context: Context, a: type_checker.types.Array) !types.Expression {
             break :blk array_base;
         };
         switch (element_type.*) {
+            .bool => ir.* = .{ .binary_op = .{ .kind = .i32_store8, .left = field_address, .right = result } },
+            .u8 => ir.* = .{ .binary_op = .{ .kind = .i32_store8, .left = field_address, .right = result } },
             .i32 => ir.* = .{ .binary_op = .{ .kind = .i32_store, .left = field_address, .right = result } },
+            .i64 => ir.* = .{ .binary_op = .{ .kind = .i64_store, .left = field_address, .right = result } },
+            .f32 => ir.* = .{ .binary_op = .{ .kind = .f32_store, .left = field_address, .right = result } },
+            .f64 => ir.* = .{ .binary_op = .{ .kind = .f64_store, .left = field_address, .right = result } },
             else => |k| std.debug.panic("\nField type {} not allowed", .{k}),
         }
         offset += size;
@@ -550,8 +555,16 @@ fn index(context: Context, i: type_checker.types.Index) !types.Expression {
     offset.* = .{ .binary_op = .{ .kind = .i32_mul, .left = first_index, .right = size } };
     const address = try context.allocator.create(types.Expression);
     address.* = .{ .binary_op = .{ .kind = .i32_add, .left = base, .right = offset } };
-    const result = .{ .unary_op = .{ .kind = .i32_load, .expression = address } };
     const result_type = mapType(i.type);
+    const result: types.Expression = switch (i.type) {
+        .bool => .{ .unary_op = .{ .kind = .i32_load8_u, .expression = address } },
+        .u8 => .{ .unary_op = .{ .kind = .i32_load8_u, .expression = address } },
+        .i32 => .{ .unary_op = .{ .kind = .i32_load, .expression = address } },
+        .i64 => .{ .unary_op = .{ .kind = .i64_load, .expression = address } },
+        .f32 => .{ .unary_op = .{ .kind = .f32_load, .expression = address } },
+        .f64 => .{ .unary_op = .{ .kind = .f64_load, .expression = address } },
+        else => |k| std.debug.panic("\nIndex type {} not allowed", .{k}),
+    };
     const then = try context.allocator.alloc(types.Expression, 1);
     then[0] = .unreachable_;
     const else_ = try context.allocator.alloc(types.Expression, 1);
