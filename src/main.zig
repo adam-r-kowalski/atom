@@ -1,7 +1,7 @@
 const std = @import("std");
 const wasmer = @cImport(@cInclude("wasmer.h"));
 const Allocator = std.mem.Allocator;
-const mantis = @import("mantis");
+const pulse = @import("pulse");
 
 const List = std.ArrayList;
 
@@ -16,8 +16,8 @@ const Flags = struct {
                 \\
                 \\Correct usage:
                 \\
-                \\mantis <input file>.mantis
-                \\this will compile and run the mantis program using the wasmer runtime
+                \\pulse <input file>.pulse
+                \\this will compile and run the pulse program using the wasmer runtime
             , .{});
         }
         const file_name = std.mem.span(std.os.argv[1]);
@@ -36,6 +36,14 @@ fn writeWat(allocator: Allocator, flags: Flags, wat_string: []const u8) !void {
     const file_name_wat = try std.fmt.allocPrint(allocator, "{s}.wat", .{file_name_no_suffix});
     const file = try std.fs.cwd().createFile(file_name_wat, .{});
     try file.writer().writeAll(wat_string);
+}
+
+fn writeWasm(allocator: Allocator, flags: Flags, wasm_bytes: wasmer.wasm_byte_vec_t) !void {
+    const file_name_no_suffix = flags.file_name[0 .. flags.file_name.len - 7];
+    const file_name_wasm = try std.fmt.allocPrint(allocator, "{s}.wasm", .{file_name_no_suffix});
+    const file = try std.fs.cwd().createFile(file_name_wasm, .{});
+    const bytes = wasm_bytes.data[0..wasm_bytes.size];
+    try file.writer().writeAll(bytes);
 }
 
 const Value = union(enum) {
@@ -62,20 +70,24 @@ const Value = union(enum) {
     }
 };
 
+fn wat2wasm(wat_string: []const u8) wasmer.wasm_byte_vec_t {
+    var wat: wasmer.wasm_byte_vec_t = undefined;
+    wasmer.wasm_byte_vec_new(&wat, wat_string.len, wat_string.ptr);
+    var wasm_bytes: wasmer.wasm_byte_vec_t = undefined;
+    wasmer.wat2wasm(&wat, &wasm_bytes);
+    return wasm_bytes;
+}
+
 const WasmModule = struct {
     allocator: Allocator,
-    ast: mantis.type_checker.types.Module,
+    ast: pulse.type_checker.types.Module,
     engine: *wasmer.wasm_engine_t,
     store: *wasmer.wasm_store_t,
     module: *wasmer.wasm_module_t,
     instance: *wasmer.wasm_instance_t,
     exports: wasmer.wasm_extern_vec_t,
 
-    fn init(allocator: Allocator, ast: mantis.type_checker.types.Module, wat_string: []const u8) WasmModule {
-        var wat: wasmer.wasm_byte_vec_t = undefined;
-        wasmer.wasm_byte_vec_new(&wat, wat_string.len, wat_string.ptr);
-        var wasm_bytes: wasmer.wasm_byte_vec_t = undefined;
-        wasmer.wat2wasm(&wat, &wasm_bytes);
+    fn init(allocator: Allocator, ast: pulse.type_checker.types.Module, wasm_bytes: wasmer.wasm_byte_vec_t) WasmModule {
         const engine = wasmer.wasm_engine_new();
         const store = wasmer.wasm_store_new(engine);
         const module = wasmer.wasm_module_new(store, &wasm_bytes);
@@ -103,7 +115,7 @@ const WasmModule = struct {
         };
     }
 
-    fn run(self: WasmModule, name: mantis.interner.Interned) !Value {
+    fn run(self: WasmModule, name: pulse.interner.Interned) !Value {
         const func = wasmer.wasi_get_start_function(self.instance);
         if (func == null) std.debug.panic("\nError getting start!\n", .{});
         var args_val = [0]wasmer.wasm_val_t{};
@@ -139,39 +151,50 @@ const WasmModule = struct {
     }
 };
 
-fn compileAndRun(allocator: Allocator, intern: *mantis.interner.Intern, errors: *mantis.error_reporter.types.Errors, flags: Flags, source: []const u8) !void {
-    const builtins = try mantis.Builtins.init(intern);
-    const tokens = try mantis.tokenizer.tokenize(allocator, intern, builtins, source);
-    const untyped_ast = try mantis.parser.parse(allocator, builtins, tokens);
-    var constraints = mantis.type_checker.types.Constraints{
-        .equal = List(mantis.type_checker.types.EqualConstraint).init(allocator),
+fn compileAndRun(allocator: Allocator, intern: *pulse.interner.Intern, errors: *pulse.error_reporter.types.Errors, flags: Flags, source: []const u8) !void {
+    const builtins = try pulse.Builtins.init(intern);
+    const tokens = try pulse.tokenizer.tokenize(allocator, intern, builtins, source);
+    const untyped_ast = try pulse.parser.parse(allocator, builtins, tokens);
+    var constraints = pulse.type_checker.types.Constraints{
+        .equal = List(pulse.type_checker.types.EqualConstraint).init(allocator),
         .next_type_var = 0,
     };
-    var ast = try mantis.type_checker.infer.module(allocator, &constraints, builtins, untyped_ast);
+    var ast = try pulse.type_checker.infer.module(allocator, &constraints, builtins, untyped_ast);
     const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
     if (export_count == 0) ast.foreign_exports = &.{start};
-    for (ast.foreign_exports) |foreign_export| try mantis.type_checker.infer.topLevel(&ast, foreign_export, errors);
-    const substitution = try mantis.type_checker.solve_constraints.constraints(allocator, constraints, errors);
-    ast = try mantis.type_checker.apply_substitution.module(allocator, substitution, ast);
-    var ir = try mantis.code_generator.lower.module(allocator, builtins, ast, intern);
+    for (ast.foreign_exports) |foreign_export| try pulse.type_checker.infer.topLevel(&ast, foreign_export, errors);
+    const substitution = try pulse.type_checker.solve_constraints.constraints(allocator, constraints, errors);
+    ast = try pulse.type_checker.apply_substitution.module(allocator, substitution, ast);
+    var ir = try pulse.code_generator.lower.module(allocator, builtins, ast, intern);
     if (export_count == 0) {
         const alias = try intern.store("_start");
         ir.foreign_exports = &.{.{ .name = start, .alias = alias }};
     }
     var result = List(u8).init(allocator);
-    try mantis.code_generator.pretty_print.module(ir, result.writer());
+    try pulse.code_generator.pretty_print.module(ir, result.writer());
     const wat_string = try result.toOwnedSlice();
-    if (flags.contains("--wat")) try writeWat(allocator, flags, wat_string);
+    const wasm_bytes = wat2wasm(wat_string);
+    if (flags.contains("--wat")) {
+        try writeWat(allocator, flags, wat_string);
+        return;
+    }
+    if (flags.contains("--wasm")) {
+        try writeWasm(allocator, flags, wasm_bytes);
+        return;
+    }
     if (export_count > 0) {
         try writeWat(allocator, flags, wat_string);
         return;
     }
-    const wasm_module = WasmModule.init(allocator, ast, wat_string);
+    const wasm_module = WasmModule.init(allocator, ast, wasm_bytes);
     const value = try wasm_module.run(start);
     const stdout = std.io.getStdOut();
     const writer = stdout.writer();
-    try writer.print("{}", .{value});
+    switch (value) {
+        .void => {},
+        else => try writer.print("⚡ {}", .{value}),
+    }
 }
 
 pub fn main() !void {
@@ -180,13 +203,13 @@ pub fn main() !void {
     const allocator = arena.allocator();
     const flags = try Flags.init(allocator);
     const source = try std.fs.cwd().readFileAlloc(allocator, flags.file_name, std.math.maxInt(usize));
-    var intern = mantis.interner.Intern.init(allocator);
-    var errors = mantis.error_reporter.types.Errors{
+    var intern = pulse.interner.Intern.init(allocator);
+    var errors = pulse.error_reporter.types.Errors{
         .allocator = arena.allocator(),
-        .undefined_variable = List(mantis.error_reporter.types.UndefinedVariable).init(arena.allocator()),
-        .type_mismatch = List(mantis.error_reporter.types.TypeMismatch).init(arena.allocator()),
-        .mutability_mismatch = List(mantis.error_reporter.types.MutabilityMismatch).init(arena.allocator()),
-        .reassigning_immutable = List(mantis.error_reporter.types.ReassigningImmutable).init(arena.allocator()),
+        .undefined_variable = List(pulse.error_reporter.types.UndefinedVariable).init(arena.allocator()),
+        .type_mismatch = List(pulse.error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .mutability_mismatch = List(pulse.error_reporter.types.MutabilityMismatch).init(arena.allocator()),
+        .reassigning_immutable = List(pulse.error_reporter.types.ReassigningImmutable).init(arena.allocator()),
         .source = source,
     };
     compileAndRun(allocator, &intern, &errors, flags, source) catch |e| switch (e) {
@@ -194,7 +217,7 @@ pub fn main() !void {
             const stdout = std.io.getStdOut();
             const writer = stdout.writer();
             var result = List(u8).init(allocator);
-            try mantis.error_reporter.pretty_print.errors(errors, result.writer());
+            try pulse.error_reporter.pretty_print.errors(errors, result.writer());
             try writer.print("{s}", .{result.items});
         },
         else => return e,

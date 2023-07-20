@@ -1,8 +1,6 @@
-# Mantis Programming Language
+# ⚡ Pulse Programming Language
 
-![Mantis Shrimp](images/mantis.jpeg)
-
-Mantis is a statically typed, high-performance programming language designed for machine learning and high-performance computing.
+Pulse is a statically typed, high-performance programming language designed for machine learning and high-performance computing.
 It compiles to WebAssembly, allowing your code to run anywhere WebAssembly is supported, including web browsers and server environments.
 
 ## Getting Started
@@ -11,35 +9,35 @@ It compiles to WebAssembly, allowing your code to run anywhere WebAssembly is su
 
 #### Prerequisites
 
-Before installing Mantis, please ensure that you have installed [zig 0.11.0-dev.3859+88284c124](https://ziglang.org/) and [wasmer](https://wasmer.io/).
-Zig is a fast and reliable language that we've used to develop Mantis's compiler,
-and Wasmer is the WebAssembly runtime that Mantis relies on for executing your code.
+Before installing Pulse, please ensure that you have installed [zig 0.11.0-dev.3859+88284c124](https://ziglang.org/) and [wasmer](https://wasmer.io/).
+Zig is a fast and reliable language that we've used to develop Pulse's compiler,
+and Wasmer is the WebAssembly runtime that Pulse relies on for executing your code.
 
 #### Compiling From Source
 
-Follow the steps below to compile Mantis from its source code:
+Follow the steps below to compile Pulse from its source code:
 
 1. Clone the repository:
 
-First, you'll need to clone the Mantis repository from GitHub. You can do this using Git with the following command:
+First, you'll need to clone the Pulse repository from GitHub. You can do this using Git with the following command:
 
 ```bash
-git clone git@github.com:adam-r-kowalski/mantis.git
+git clone git@github.com:adam-r-kowalski/pulse.git
 ```
 
-This command creates a copy of the Mantis repository on your local machine.
+This command creates a copy of the Pulse repository on your local machine.
 
 2. Navigate into the repository directory:
 
 Use the following command to navigate into the directory of the repository you just cloned:
 
 ```bash
-cd mantis
+cd pulse
 ```
 
 3. Run the tests:
 
-Before proceeding, it's a good idea to run the Mantis tests to ensure that everything is functioning as expected. You can do this with the following command:
+Before proceeding, it's a good idea to run the Pulse tests to ensure that everything is functioning as expected. You can do this with the following command:
 
 ```bash
 zig build test
@@ -49,37 +47,37 @@ This command runs the tests and outputs the results. If all tests pass, you're g
 
 4. Build the compiler:
 
-Once the tests have passed, you can build the Mantis compiler. Use the following command to do this:
+Once the tests have passed, you can build the Pulse compiler. Use the following command to do this:
 
 ```bash
 zig build
 ```
 
-This command builds the Mantis compiler from the source code.
+This command builds the Pulse compiler from the source code.
 
 5. Add the compiler to your PATH:
 
-The final step is to add the Mantis compiler to your PATH so that you can use it from any location on your system. Here is how you can do it:
+The final step is to add the Pulse compiler to your PATH so that you can use it from any location on your system. Here is how you can do it:
 
 ```bash
 export PATH=$PATH:`pwd`/zig-out/bin/
 ```
 
-This command adds the directory containing the Mantis compiler to your system's PATH.
+This command adds the directory containing the Pulse compiler to your system's PATH.
 
-Now, you have Mantis installed on your system, and you're ready to start coding!
+Now, you have Pulse installed on your system, and you're ready to start coding!
 
-### Running a Mantis program
+### Running a Pulse program
 
 ```bash
-mantis source.mantis
+pulse source.pulse
 ```
 
-This will compile your Mantis code into web assembly and then execute it using the wasmer runtime.
+This will compile your Pulse code into web assembly and then execute it using the wasmer runtime.
 To see the generated wat code add `--wat` to the compile command.
 
 ```bash
-mantis source.mantis --wat
+pulse source.pulse --wat
 ```
 
 Look at the code in the `examples` folder for inspiration.
@@ -87,12 +85,12 @@ This compiler is a work in progress so expect bugs and incomplete features.
 You should NOT be using this in production yet.
 However, code in the examples folder should compile and run.
 
-### Your first Mantis program
+### Your first Pulse program
 
-Mantis has a straightforward syntax that is easy to read and write.
-Here is a simple Mantis program that defines a function to calculate the square of a number:
+Pulse has a straightforward syntax that is easy to read and write.
+Here is a simple Pulse program that defines a function to calculate the square of a number:
 
-```mantis
+```pulse
 square = (x: i32) i32 { x * x }
 
 test("function calls", () {
@@ -108,13 +106,13 @@ This program defines a function `square` and a set of tests to verify its behavi
 
 ### Comments
 
-In Mantis, you can insert comments in your code to provide explanations or annotations.
+In Pulse, you can insert comments in your code to provide explanations or annotations.
 Comments are ignored by the compiler and do not affect the execution of the program.
 You can add a comment by starting the line with a hash (`#`).
 
 Here's an example:
 
-```mantis
+```pulse
 # This is a single line comment
 
 square = (x: i32) i32 {
@@ -129,9 +127,9 @@ sum = (xs: vec[i32]) i32 { fold(xs, 0, +) } # Here we calculate the sum of an ar
 
 ### Functions
 
-In Mantis, you define a function using the `fn` keyword, followed by a list of parameters and their types, the return type, and then the function body.
+In Pulse, you define a function using the `fn` keyword, followed by a list of parameters and their types, the return type, and then the function body.
 
-```mantis
+```pulse
 max = (x: i32, y: i32) i32 {
     if x > y { x } else { y }
 }
@@ -150,9 +148,9 @@ This is a function `max` that takes two parameters, `x` and `y`, and returns the
 
 ### Control Structures
 
-Mantis supports conditional logic with `if`, `else if` and `else` expressions.
+Pulse supports conditional logic with `if`, `else if` and `else` expressions.
 
-```mantis
+```pulse
 clamp = (value: i32, low: i32, high: i32) i32 {
     if value < low { low }
     else if value > high { high }
@@ -170,9 +168,9 @@ This `clamp` function ensures that a value stays within a specific range.
 
 ### Named Parameters
 
-Mantis supports named parameters, which can improve the readability of your code. Here is an example of using named parameters:
+Pulse supports named parameters, which can improve the readability of your code. Here is an example of using named parameters:
 
-```mantis
+```pulse
 test("named parameters", () {
     assert(clamp(value=1, low=3, high=5) == 3)
     assert(clamp(value=7, low=3, high=5) == 5)
@@ -189,10 +187,10 @@ This can make your code more readable by clearly associating a function with the
 
 ### Pattern Matching
 
-Mantis supports pattern matching, which is a way of checking a given sequence of tokens for the presence of the constituents of some pattern.
+Pulse supports pattern matching, which is a way of checking a given sequence of tokens for the presence of the constituents of some pattern.
 It's a powerful tool for working with complex data structures.
 
-```mantis
+```pulse
 # pattern matching is done with `match expression`
 sum = (xs: vec[i32]) i32 {
     match xs {
@@ -213,12 +211,12 @@ result of the recursive call to `sum` on the rest of the list.
 
 ### Destructuring
 
-Destructuring in Mantis allows you to bind a set of variables to a corresponding set of values provided in a complex data structure,
+Destructuring in Pulse allows you to bind a set of variables to a corresponding set of values provided in a complex data structure,
 such as a struct or array. It provides a convenient way to extract multiple values from data stored in (possibly nested) objects and arrays.
 
 For example, consider the `Square` struct and the implementation of `Shape` interface for it:
 
-```mantis
+```pulse
 Square = struct {
     width: f32,
     height: f32
@@ -238,7 +236,7 @@ it binds the variables `width` and `height` to the respective values in the pass
 
 Another example of destructuring can be found in array pattern matching:
 
-```mantis
+```pulse
 # pattern matching with destructuring
 sum = (xs: vec[i32]) i32 {
     match xs {
@@ -255,13 +253,13 @@ Destructuring can make your code more readable and less error-prone by avoiding 
 
 ### Shadowing
 
-Shadowing in Mantis allows you to declare a new variable with the same name as a previously declared variable.
+Shadowing in Pulse allows you to declare a new variable with the same name as a previously declared variable.
 The new variable shadows the previous one within its scope, meaning the previous variable cannot be accessed.
-This is not an error in Mantis; it's a feature of the language.
+This is not an error in Pulse; it's a feature of the language.
 
 Here's an example:
 
-```mantis
+```pulse
 x = 5
 
 if true {
@@ -279,16 +277,16 @@ Shadowing can be useful when you want to reuse variable names, but be careful, a
 
 ### Importing from other files
 
-Mantis supports importing other files and calling functions in them
+Pulse supports importing other files and calling functions in them
 
-```mantis
-# math.mantis
+```pulse
+# math.pulse
 pi: f64 = 3.14
 ```
 
-```mantis
-# circle.mantis
-math = import("math.mantis")
+```pulse
+# circle.pulse
+math = import("math.pulse")
 
 Circle = struct {
     radius: f64
@@ -305,16 +303,16 @@ test("area of a circle", () {
 
 ### Foreign Function Interface
 
-Mantis supports importing and exporting functions from the host environment.
+Pulse supports importing and exporting functions from the host environment.
 
-```mantis
+```pulse
 # Import a function from the host
 log = foreign_import("console", "log", (x: str) void)
 
 # Export a function to the host
 foreign_export("double", (x: i32) i32 { x * 2 })
 
-# call the log function from Mantis
+# call the log function from Pulse
 start = () void {
     log("hello world")
 }
@@ -329,9 +327,9 @@ that we'll be proposing for standardization.
 It's designed to be independent of browsers, so it doesn't depend on Web APIs or JS, and isn't limited by the need to be compatible with JS.
 And it has integrated capability-based security, so it extends WebAssembly's characteristic sandboxing to include I/O.
 
-It is a first class citizen in Mantis and by targeting this API you can ensure that your programs work across as many platforms as possible.
+It is a first class citizen in Pulse and by targeting this API you can ensure that your programs work across as many platforms as possible.
 
-```mantis
+```pulse
 fd_write = foreign_import(
     "wasi_unstable",
     "fd_write",
@@ -353,9 +351,9 @@ start = () void {
 
 ### Built-in Data Structures and Algorithms
 
-Mantis includes built-in support for arrays and powerful operations over them.
+Pulse includes built-in support for arrays and powerful operations over them.
 
-```mantis
+```pulse
 # Create an array
 xs = [1, 2, 3, 4, 5]
 
@@ -371,9 +369,9 @@ Here, `xs` is an array of integers, and `sum` is a function that computes the su
 
 ### Pipelines
 
-Mantis supports a pipeline syntax allowing you to pass the output of one function as the input for the next
+Pulse supports a pipeline syntax allowing you to pass the output of one function as the input for the next
 
-```mantis
+```pulse
 test("sum of first ten even squares", () {
     result = naturals()
         |> map((x) { x ^ 2 })
@@ -386,9 +384,9 @@ test("sum of first ten even squares", () {
 
 ### For expressions
 
-Mantis provides for expressions to efficiently iterate through an array and build up a new one.
+Pulse provides for expressions to efficiently iterate through an array and build up a new one.
 
-```mantis
+```pulse
 # Compute the dot product of two vectors
 dot = (a: vec[f32], b: vec[f32]) f32 {
     sum(for i { a[i] * b[i] })
@@ -402,10 +400,10 @@ matmul = (a: mat[f32], b: mat[f32]) mat[f32] {
 
 ### Machine Learning
 
-Mantis is designed with machine learning in mind. For expressions allow you to express how models work across a
-single example rather than dealing with batches. Here is a simple linear model implemented in Mantis:
+Pulse is designed with machine learning in mind. For expressions allow you to express how models work across a
+single example rather than dealing with batches. Here is a simple linear model implemented in Pulse:
 
-```mantis
+```pulse
 Linear = struct {
     m: f64,
     b: f64
@@ -448,10 +446,10 @@ test("gradient descent", () {
 
 ### HTML
 
-Mantis is built to be a citizen of the web. We want to ensure you can build services which can render html
+Pulse is built to be a citizen of the web. We want to ensure you can build services which can render html
 on the server side or client side.
 
-```mantis
+```pulse
 Customer = struct {
     name: str,
     age: u8,
@@ -468,27 +466,26 @@ customers: vec[Customer] = [
     }
 ]
 
-get("/customers", () {
+start = () str {
     <html>
         <head>
             <title>Customers</title>
         </head>
         <body>
             <ul>
-                for i {
-                    customer = customers[i]
+                for customer in customers {
                     <li>
-                        <h3>customer.name</h3>
-                        <p>customer.age</p>
+                        <h3>{customer.name}</h3>
+                        <p>{customer.age}</p>
                     </li>
                 }
             </ul>
         </body>
     </html>
-})
+}
 ```
 
 ## Community
 
-Mantis is open-source and community-driven. We welcome contributions of any kind: code, documentation, design, etc.
-Join our community and help us make Mantis the best language for machine learning and high-performance computing!
+Pulse is open-source and community-driven. We welcome contributions of any kind: code, documentation, design, etc.
+Join our community and help us make Pulse the best language for machine learning and high-performance computing!

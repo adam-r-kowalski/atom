@@ -1,3 +1,3 @@
-1. Compile your onload.mantis to a wat file `mantis onload.mantis`
+1. Compile your onload.pulse to a wat file `pulse onload.pulse`
 
 2. Run a web server, for example: `python -m http.server`

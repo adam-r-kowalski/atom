@@ -1,5 +1,5 @@
 const std = @import("std");
-const mantis = @import("mantis");
+const pulse = @import("pulse");
 
 test "type infer sqrt f32" {
     const allocator = std.testing.allocator;
@@ -8,7 +8,7 @@ test "type infer sqrt f32" {
         \\    sqrt(x)
         \\}
     ;
-    const actual = try mantis.testing.typeInfer(allocator, source, "start");
+    const actual = try pulse.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -39,7 +39,7 @@ test "codegen sqrt f32" {
         \\    sqrt(x)
         \\}
     ;
-    const actual = try mantis.testing.codegen(allocator, source);
+    const actual = try pulse.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module

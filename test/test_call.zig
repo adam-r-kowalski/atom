@@ -1,10 +1,10 @@
 const std = @import("std");
-const mantis = @import("mantis");
+const pulse = @import("pulse");
 
 test "tokenize call" {
     const allocator = std.testing.allocator;
     const source = "f(x, y, z)";
-    const actual = try mantis.testing.tokenize(allocator, source);
+    const actual = try pulse.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol f)
@@ -22,7 +22,7 @@ test "tokenize call" {
 test "parse call" {
     const allocator = std.testing.allocator;
     const source = "f(x, y, z)";
-    const actual = try mantis.testing.parse(allocator, source);
+    const actual = try pulse.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(f x y z)";
     try std.testing.expectEqualStrings(expected, actual);
@@ -31,7 +31,7 @@ test "parse call" {
 test "parse call with expression" {
     const allocator = std.testing.allocator;
     const source = "f(x + y, z)";
-    const actual = try mantis.testing.parse(allocator, source);
+    const actual = try pulse.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(f (+ x y) z)";
     try std.testing.expectEqualStrings(expected, actual);
@@ -40,7 +40,7 @@ test "parse call with expression" {
 test "parse pipeline call" {
     const allocator = std.testing.allocator;
     const source = "x |> f(y, z)";
-    const actual = try mantis.testing.parse(allocator, source);
+    const actual = try pulse.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(|> x (f y z))";
     try std.testing.expectEqualStrings(expected, actual);
@@ -53,7 +53,7 @@ test "parse define then call" {
         \\
         \\start = () i32 { double(2) }
     ;
-    const actual = try mantis.testing.parse(allocator, source);
+    const actual = try pulse.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def double (fn [(x i32)] i32
@@ -72,7 +72,7 @@ test "type infer define then call" {
         \\
         \\start = () i32 { double(2) }
     ;
-    const actual = try mantis.testing.typeInfer(allocator, source, "start");
+    const actual = try pulse.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -119,7 +119,7 @@ test "codegen define then call" {
         \\
         \\start = () i32 { double(2) }
     ;
-    const actual = try mantis.testing.codegen(allocator, source);
+    const actual = try pulse.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -150,7 +150,7 @@ test "codegen recursive function" {
         \\
         \\start = () i32 { factorial(5) }
     ;
-    const actual = try mantis.testing.codegen(allocator, source);
+    const actual = try pulse.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -189,7 +189,7 @@ test "type infer pipeline call" {
         \\
         \\start = () i32 { 2 |> double() }
     ;
-    const actual = try mantis.testing.typeInfer(allocator, source, "start");
+    const actual = try pulse.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -232,7 +232,7 @@ test "type infer pipeline call" {
 test "tokenize single line pipeline call" {
     const allocator = std.testing.allocator;
     const source = "x |> f(y)";
-    const actual = try mantis.testing.tokenize(allocator, source);
+    const actual = try pulse.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol x)
@@ -251,7 +251,7 @@ test "tokenize multi line pipeline call" {
         \\x
         \\    |> f(y)
     ;
-    const actual = try mantis.testing.tokenize(allocator, source);
+    const actual = try pulse.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol x)
@@ -281,7 +281,7 @@ test "parse call with multiple lines" {
         \\    )
         \\}
     ;
-    const actual = try mantis.testing.parse(allocator, source);
+    const actual = try pulse.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def add (fn [(x i32) (y i32)] i32
@@ -312,7 +312,7 @@ test "parse call with space before and after" {
         \\    )
         \\}
     ;
-    const actual = try mantis.testing.parse(allocator, source);
+    const actual = try pulse.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def add (fn [(x i32) (y i32)] i32
