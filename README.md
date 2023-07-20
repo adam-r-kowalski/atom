@@ -466,22 +466,28 @@ customers: vec[Customer] = [
     }
 ]
 
+customer_info = (customer: Customer) str {
+    html`
+        <li>
+            <h3>${customer.name}</h3>
+            <p>${customer.age}</p>
+        </li>
+    `
+}
+
 start = () str {
-    <html>
-        <head>
-            <title>Customers</title>
-        </head>
-        <body>
-            <ul>
-                for customer in customers {
-                    <li>
-                        <h3>{customer.name}</h3>
-                        <p>{customer.age}</p>
-                    </li>
-                }
-            </ul>
-        </body>
-    </html>
+    html`
+        <html>
+            <head>
+                <title>Customers</title>
+            </head>
+            <body>
+                <ul>
+                    ${map(customers, customer_info)}
+                </ul>
+            </body>
+        </html>
+    `
 }
 ```
 
