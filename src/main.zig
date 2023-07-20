@@ -1,7 +1,7 @@
 const std = @import("std");
 const wasmer = @cImport(@cInclude("wasmer.h"));
 const Allocator = std.mem.Allocator;
-const pulse = @import("pulse");
+const zap = @import("zap");
 
 const List = std.ArrayList;
 
@@ -16,8 +16,8 @@ const Flags = struct {
                 \\
                 \\Correct usage:
                 \\
-                \\pulse <input file>.pulse
-                \\this will compile and run the pulse program using the wasmer runtime
+                \\zap <input file>.zap
+                \\this will compile and run the zap program using the wasmer runtime
             , .{});
         }
         const file_name = std.mem.span(std.os.argv[1]);
@@ -80,14 +80,14 @@ fn wat2wasm(wat_string: []const u8) wasmer.wasm_byte_vec_t {
 
 const WasmModule = struct {
     allocator: Allocator,
-    ast: pulse.type_checker.types.Module,
+    ast: zap.type_checker.types.Module,
     engine: *wasmer.wasm_engine_t,
     store: *wasmer.wasm_store_t,
     module: *wasmer.wasm_module_t,
     instance: *wasmer.wasm_instance_t,
     exports: wasmer.wasm_extern_vec_t,
 
-    fn init(allocator: Allocator, ast: pulse.type_checker.types.Module, wasm_bytes: wasmer.wasm_byte_vec_t) WasmModule {
+    fn init(allocator: Allocator, ast: zap.type_checker.types.Module, wasm_bytes: wasmer.wasm_byte_vec_t) WasmModule {
         const engine = wasmer.wasm_engine_new();
         const store = wasmer.wasm_store_new(engine);
         const module = wasmer.wasm_module_new(store, &wasm_bytes);
@@ -115,7 +115,7 @@ const WasmModule = struct {
         };
     }
 
-    fn run(self: WasmModule, name: pulse.interner.Interned) !Value {
+    fn run(self: WasmModule, name: zap.interner.Interned) !Value {
         const func = wasmer.wasi_get_start_function(self.instance);
         if (func == null) std.debug.panic("\nError getting start!\n", .{});
         var args_val = [0]wasmer.wasm_val_t{};
@@ -151,28 +151,28 @@ const WasmModule = struct {
     }
 };
 
-fn compileAndRun(allocator: Allocator, intern: *pulse.interner.Intern, errors: *pulse.error_reporter.types.Errors, flags: Flags, source: []const u8) !void {
-    const builtins = try pulse.Builtins.init(intern);
-    const tokens = try pulse.tokenizer.tokenize(allocator, intern, builtins, source);
-    const untyped_ast = try pulse.parser.parse(allocator, builtins, tokens);
-    var constraints = pulse.type_checker.types.Constraints{
-        .equal = List(pulse.type_checker.types.EqualConstraint).init(allocator),
+fn compileAndRun(allocator: Allocator, intern: *zap.interner.Intern, errors: *zap.error_reporter.types.Errors, flags: Flags, source: []const u8) !void {
+    const builtins = try zap.Builtins.init(intern);
+    const tokens = try zap.tokenizer.tokenize(allocator, intern, builtins, source);
+    const untyped_ast = try zap.parser.parse(allocator, builtins, tokens);
+    var constraints = zap.type_checker.types.Constraints{
+        .equal = List(zap.type_checker.types.EqualConstraint).init(allocator),
         .next_type_var = 0,
     };
-    var ast = try pulse.type_checker.infer.module(allocator, &constraints, builtins, untyped_ast);
+    var ast = try zap.type_checker.infer.module(allocator, &constraints, builtins, untyped_ast);
     const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
     if (export_count == 0) ast.foreign_exports = &.{start};
-    for (ast.foreign_exports) |foreign_export| try pulse.type_checker.infer.topLevel(&ast, foreign_export, errors);
-    const substitution = try pulse.type_checker.solve_constraints.constraints(allocator, constraints, errors);
-    ast = try pulse.type_checker.apply_substitution.module(allocator, substitution, ast);
-    var ir = try pulse.code_generator.lower.module(allocator, builtins, ast, intern);
+    for (ast.foreign_exports) |foreign_export| try zap.type_checker.infer.topLevel(&ast, foreign_export, errors);
+    const substitution = try zap.type_checker.solve_constraints.constraints(allocator, constraints, errors);
+    ast = try zap.type_checker.apply_substitution.module(allocator, substitution, ast);
+    var ir = try zap.code_generator.lower.module(allocator, builtins, ast, intern);
     if (export_count == 0) {
         const alias = try intern.store("_start");
         ir.foreign_exports = &.{.{ .name = start, .alias = alias }};
     }
     var result = List(u8).init(allocator);
-    try pulse.code_generator.pretty_print.module(ir, result.writer());
+    try zap.code_generator.pretty_print.module(ir, result.writer());
     const wat_string = try result.toOwnedSlice();
     const wasm_bytes = wat2wasm(wat_string);
     if (flags.contains("--wat")) {
@@ -203,13 +203,13 @@ pub fn main() !void {
     const allocator = arena.allocator();
     const flags = try Flags.init(allocator);
     const source = try std.fs.cwd().readFileAlloc(allocator, flags.file_name, std.math.maxInt(usize));
-    var intern = pulse.interner.Intern.init(allocator);
-    var errors = pulse.error_reporter.types.Errors{
+    var intern = zap.interner.Intern.init(allocator);
+    var errors = zap.error_reporter.types.Errors{
         .allocator = arena.allocator(),
-        .undefined_variable = List(pulse.error_reporter.types.UndefinedVariable).init(arena.allocator()),
-        .type_mismatch = List(pulse.error_reporter.types.TypeMismatch).init(arena.allocator()),
-        .mutability_mismatch = List(pulse.error_reporter.types.MutabilityMismatch).init(arena.allocator()),
-        .reassigning_immutable = List(pulse.error_reporter.types.ReassigningImmutable).init(arena.allocator()),
+        .undefined_variable = List(zap.error_reporter.types.UndefinedVariable).init(arena.allocator()),
+        .type_mismatch = List(zap.error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .mutability_mismatch = List(zap.error_reporter.types.MutabilityMismatch).init(arena.allocator()),
+        .reassigning_immutable = List(zap.error_reporter.types.ReassigningImmutable).init(arena.allocator()),
         .source = source,
     };
     compileAndRun(allocator, &intern, &errors, flags, source) catch |e| switch (e) {
@@ -217,7 +217,7 @@ pub fn main() !void {
             const stdout = std.io.getStdOut();
             const writer = stdout.writer();
             var result = List(u8).init(allocator);
-            try pulse.error_reporter.pretty_print.errors(errors, result.writer());
+            try zap.error_reporter.pretty_print.errors(errors, result.writer());
             try writer.print("{s}", .{result.items});
         },
         else => return e,

@@ -1,5 +1,5 @@
 const std = @import("std");
-const pulse = @import("pulse");
+const zap = @import("zap");
 
 test "tokenize comment" {
     const allocator = std.testing.allocator;
@@ -10,7 +10,7 @@ test "tokenize comment" {
         \\    print("hello world") # write hello world to the stdout
         \\}
     ;
-    const actual = try pulse.testing.tokenize(allocator, source);
+    const actual = try zap.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(comment # this is a comment)
@@ -45,7 +45,7 @@ test "parse comment" {
         \\
         \\# comment after function
     ;
-    const actual = try pulse.testing.parse(allocator, source);
+    const actual = try zap.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def start (fn [] void

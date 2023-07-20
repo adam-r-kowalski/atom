@@ -1,5 +1,5 @@
 const std = @import("std");
-const pulse = @import("pulse");
+const zap = @import("zap");
 
 test "tokenize struct" {
     const allocator = std.testing.allocator;
@@ -16,7 +16,7 @@ test "tokenize struct" {
         \\    }
         \\}
     ;
-    const actual = try pulse.testing.tokenize(allocator, source);
+    const actual = try zap.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol Person)
@@ -77,7 +77,7 @@ test "parse struct" {
         \\    }
         \\}
     ;
-    const actual = try pulse.testing.parse(allocator, source);
+    const actual = try zap.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def Person (struct
@@ -107,7 +107,7 @@ test "type infer struct" {
         \\    }
         \\}
     ;
-    const actual = try pulse.testing.typeInfer(allocator, source, "start");
+    const actual = try zap.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -139,7 +139,7 @@ test "codegen struct" {
         \\    }
         \\}
     ;
-    const actual = try pulse.testing.codegen(allocator, source);
+    const actual = try zap.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
