@@ -11,6 +11,7 @@ const types = @import("types.zig");
 const Cursor = struct {
     source: []const u8,
     pos: types.Pos,
+    in_template_literal: bool,
 };
 
 fn trim(cursor: *Cursor) void {
@@ -27,7 +28,7 @@ fn trim(cursor: *Cursor) void {
 
 fn reserved(c: u8) bool {
     return switch (c) {
-        ' ', '\n', '(', ')', '<', '>', '[', ']', '.', ':', ',' => true,
+        ' ', '\n', '(', ')', '<', '>', '[', ']', '{', '}', '.', ':', ',', '`' => true,
         else => false,
     };
 }
@@ -86,6 +87,64 @@ fn string(intern: *Intern, cursor: *Cursor) !types.Token {
     const span = types.Span{ .begin = begin, .end = cursor.pos };
     const interned = try intern.store(contents);
     return .{ .string = .{ .value = interned, .span = span } };
+}
+
+fn templateLiteral(intern: *Intern, cursor: *Cursor) !types.Token {
+    cursor.in_template_literal = true;
+    const begin = cursor.pos;
+    var i: u64 = 1;
+    while (i < cursor.source.len) : (i += 1) {
+        switch (cursor.source[i]) {
+            '`' => {
+                i += 1;
+                const contents = cursor.source[0..i];
+                _ = advance(cursor, i);
+                const span = types.Span{ .begin = begin, .end = cursor.pos };
+                const interned = try intern.store(contents);
+                return .{ .template_literal = .{ .value = interned, .span = span } };
+            },
+            '$' => {
+                if (i + 1 < cursor.source.len and cursor.source[i + 1] == '{') {
+                    const contents = cursor.source[1..i];
+                    _ = advance(cursor, i + 2);
+                    const span = types.Span{ .begin = begin, .end = cursor.pos };
+                    const interned = try intern.store(contents);
+                    return .{ .template_literal_begin = .{ .value = interned, .span = span } };
+                }
+            },
+            else => {},
+        }
+    }
+    std.debug.panic("\nunterminated template literal", .{});
+}
+
+fn continueTemplateLiteral(intern: *Intern, cursor: *Cursor) !types.Token {
+    const begin = cursor.pos;
+    var i: u64 = 1;
+    while (i < cursor.source.len) : (i += 1) {
+        switch (cursor.source[i]) {
+            '`' => {
+                const contents = cursor.source[1..i];
+                _ = advance(cursor, i);
+                const span = types.Span{ .begin = begin, .end = cursor.pos };
+                _ = advance(cursor, 1);
+                const interned = try intern.store(contents);
+                cursor.in_template_literal = false;
+                return .{ .template_literal_end = .{ .value = interned, .span = span } };
+            },
+            '$' => {
+                if (i + 1 < cursor.source.len and cursor.source[i + 1] == '{') {
+                    const contents = cursor.source[1..i];
+                    _ = advance(cursor, i + 2);
+                    const span = types.Span{ .begin = begin, .end = cursor.pos };
+                    const interned = try intern.store(contents);
+                    return .{ .template_literal_middle = .{ .value = interned, .span = span } };
+                }
+            },
+            else => {},
+        }
+    }
+    std.debug.panic("\nunterminated template literal", .{});
 }
 
 const Tag = std.meta.Tag(types.Token);
@@ -174,6 +233,7 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?types.Token
     return switch (cursor.source[0]) {
         '0'...'9', '-', '.' => try number(intern, cursor),
         '"' => try string(intern, cursor),
+        '`' => try templateLiteral(intern, cursor),
         '=' => either(cursor, .equal, '=', .equal_equal),
         ':' => exact(cursor, .colon),
         '+' => either(cursor, .plus, '=', .plus_equal),
@@ -187,7 +247,10 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?types.Token
         '(' => exact(cursor, .left_paren),
         ')' => exact(cursor, .right_paren),
         '{' => exact(cursor, .left_brace),
-        '}' => exact(cursor, .right_brace),
+        '}' => {
+            if (cursor.in_template_literal) return try continueTemplateLiteral(intern, cursor);
+            return exact(cursor, .right_brace);
+        },
         '[' => exact(cursor, .left_bracket),
         ']' => exact(cursor, .right_bracket),
         ',' => exact(cursor, .comma),
@@ -201,6 +264,7 @@ pub fn tokenize(allocator: Allocator, intern: *Intern, builtins: Builtins, sourc
     var cursor = Cursor{
         .source = source,
         .pos = .{ .line = 1, .column = 1 },
+        .in_template_literal = false,
     };
     var tokens = List(types.Token).init(allocator);
     while (try nextToken(&cursor, intern, builtins)) |t| try tokens.append(t);
