@@ -100,6 +100,7 @@ fn templateLiteral(intern: *Intern, cursor: *Cursor) !types.Token {
                 _ = advance(cursor, i + 1);
                 const span = types.Span{ .begin = begin, .end = cursor.pos };
                 const interned = try intern.store(contents);
+                cursor.in_template_literal = false;
                 return .{ .template_literal = .{ .value = interned, .span = span } };
             },
             '$' => {

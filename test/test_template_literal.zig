@@ -159,3 +159,70 @@ test "parse template literal with two interpolations and no tag" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "tokenize template literal in function" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = fn() str {
+        \\    html`<h1>Hello World!</h1>`
+        \\}
+    ;
+    const actual = try zap.testing.tokenize(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(symbol start)
+        \\(operator =)
+        \\(symbol fn)
+        \\(delimiter '(')
+        \\(delimiter ')')
+        \\(symbol str)
+        \\(delimiter '{')
+        \\(new_line)
+        \\(symbol html)
+        \\(template_literal `<h1>Hello World!</h1>`)
+        \\(new_line)
+        \\(delimiter '}')
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse template literal in function" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = () str {
+        \\    html`<h1>Hello World!</h1>`
+        \\}
+    ;
+    const actual = try zap.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(def start (fn [] str
+        \\    (template_literal
+        \\            function: html
+        \\            strings: [
+        \\                "<h1>Hello World!</h1>"
+        \\            ]
+        \\            arguments: [])))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+// test "type infer template literal" {
+//     const allocator = std.testing.allocator;
+//     const source =
+//         \\start = fn() str {
+//         \\    html`<h1>Hello World!</h1>`
+//         \\}
+//     ;
+//     const actual = try zap.testing.parse(allocator, source);
+//     defer allocator.free(actual);
+//     const expected =
+//         \\(template_literal
+//         \\    function: html
+//         \\    strings: [
+//         \\        "<h1>Hello World!</h1>"
+//         \\    ]
+//         \\    arguments: [])
+//     ;
+//     try std.testing.expectEqualStrings(expected, actual);
+// }
