@@ -15,6 +15,7 @@ pub const test_intrinsic = @import("test_intrinsic.zig");
 pub const test_literals = @import("test_literals.zig");
 pub const test_mutable = @import("test_mutable.zig");
 pub const test_struct = @import("test_struct.zig");
+pub const test_template_literal = @import("test_template_literal.zig");
 
 test "run all tests" {
     std.testing.refAllDecls(@This());

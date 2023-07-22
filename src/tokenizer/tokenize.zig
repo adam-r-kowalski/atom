@@ -96,9 +96,8 @@ fn templateLiteral(intern: *Intern, cursor: *Cursor) !types.Token {
     while (i < cursor.source.len) : (i += 1) {
         switch (cursor.source[i]) {
             '`' => {
-                i += 1;
-                const contents = cursor.source[0..i];
-                _ = advance(cursor, i);
+                const contents = cursor.source[1..i];
+                _ = advance(cursor, i + 1);
                 const span = types.Span{ .begin = begin, .end = cursor.pos };
                 const interned = try intern.store(contents);
                 return .{ .template_literal = .{ .value = interned, .span = span } };

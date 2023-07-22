@@ -23,6 +23,7 @@ pub fn expression(e: types.Expression) types.Span {
         .branch => |b| b.span,
         .call => |c| c.span,
         .index => |i| i.span,
+        .template_literal => |t| t.span,
         .undefined => |u| u.span,
     };
 }

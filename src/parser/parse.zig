@@ -28,6 +28,7 @@ const MULTIPLY: Precedence = ADD + DELTA;
 const EXPONENTIATE: Precedence = MULTIPLY + DELTA;
 const PIPELINE: Precedence = EXPONENTIATE + DELTA;
 const DOT: Precedence = PIPELINE + DELTA;
+const TEMPLATE_LITERAL: Precedence = DOT;
 const CALL: Precedence = DOT + DELTA;
 const HIGHEST: Precedence = CALL + DELTA;
 
@@ -565,6 +566,18 @@ fn index(context: Context, left: types.Expression) !types.Index {
     };
 }
 
+fn templateLiteral(context: Context, left: types.Symbol, t: tokenizer.types.TemplateLiteral) !types.TemplateLiteral {
+    context.tokens.advance();
+    const strings = try context.allocator.alloc(types.String, 1);
+    strings[0] = .{ .value = t.value, .span = t.span };
+    return types.TemplateLiteral{
+        .function = left,
+        .strings = strings,
+        .arguments = &.{},
+        .span = types.Span{ .begin = left.span.begin, .end = t.span.end },
+    };
+}
+
 const Infix = union(enum) {
     define,
     plus_equal,
@@ -573,6 +586,7 @@ const Infix = union(enum) {
     call,
     index,
     binary_op: types.BinaryOpKind,
+    template_literal: tokenizer.types.TemplateLiteral,
 };
 
 fn precedence(i: Infix) Precedence {
@@ -597,6 +611,7 @@ fn precedence(i: Infix) Precedence {
             .dot => DOT,
             .pipeline => DOT,
         },
+        .template_literal => TEMPLATE_LITERAL,
     };
 }
 
@@ -622,6 +637,7 @@ fn associativity(i: Infix) Associativity {
             .dot => .left,
             .pipeline => .left,
         },
+        .template_literal => .left,
     };
 }
 
@@ -649,6 +665,10 @@ fn infix(context: Context, left: types.Expression) ?Infix {
                 else => null,
             },
             .left_bracket => .index,
+            .template_literal => |l| switch (left) {
+                .symbol => .{ .template_literal = l },
+                else => null,
+            },
             else => null,
         };
     }
@@ -664,6 +684,7 @@ fn parseInfix(parser: Infix, context: Context, left: types.Expression) !types.Ex
         .call => .{ .call = try call(context, left) },
         .index => .{ .index = try index(context, left) },
         .binary_op => |kind| .{ .binary_op = try binaryOp(context, left, kind) },
+        .template_literal => |t| .{ .template_literal = try templateLiteral(context, left.symbol, t) },
     };
 }
 

@@ -46,3 +46,19 @@ test "tokenize template literal with two interpolations" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "parse template literal" {
+    const allocator = std.testing.allocator;
+    const source = "html`<h1>Hello World!</h1>`";
+    const actual = try zap.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(template_literal
+        \\    function: html
+        \\    strings: [
+        \\        "<h1>Hello World!</h1>"
+        \\    ]
+        \\    arguments: [])
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
