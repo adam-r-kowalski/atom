@@ -420,6 +420,8 @@ fn prefix(context: Context) !types.Expression {
         .left_bracket => |l| return .{ .array = try array(context, l.span.begin) },
         .mut => |m| return .{ .define = try mutable(context, m.span.begin) },
         .undefined => |u| return .{ .undefined = u },
+        .template_literal => |t| return .{ .template_literal = try templateLiteral(context, null, t) },
+        .template_literal_begin => |t| return .{ .template_literal = try templateLiteralBegin(context, null, t) },
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),
     }
 }
@@ -566,20 +568,28 @@ fn index(context: Context, left: types.Expression) !types.Index {
     };
 }
 
-fn templateLiteral(context: Context, left: types.Symbol, t: tokenizer.types.TemplateLiteral) !types.TemplateLiteral {
+fn templateLiteral(context: Context, left: ?types.Symbol, t: tokenizer.types.TemplateLiteral) !types.TemplateLiteral {
     context.tokens.advance();
     const strings = try context.allocator.alloc(types.String, 1);
     strings[0] = .{ .value = t.value, .span = t.span };
+    if (left) |f| {
+        return types.TemplateLiteral{
+            .function = f,
+            .strings = strings,
+            .arguments = &.{},
+            .span = types.Span{ .begin = f.span.begin, .end = t.span.end },
+        };
+    }
     return types.TemplateLiteral{
-        .function = left,
+        .function = null,
         .strings = strings,
         .arguments = &.{},
-        .span = types.Span{ .begin = left.span.begin, .end = t.span.end },
+        .span = t.span,
     };
 }
 
-fn templateLiteralBegin(context: Context, left: types.Symbol, b: tokenizer.types.TemplateLiteralBegin) !types.TemplateLiteral {
-    context.tokens.advance();
+fn templateLiteralBegin(context: Context, left: ?types.Symbol, b: tokenizer.types.TemplateLiteralBegin) !types.TemplateLiteral {
+    if (left) |_| context.tokens.advance();
     var strings = List(types.String).init(context.allocator);
     try strings.append(.{ .value = b.value, .span = b.span });
     var arguments = List(types.Expression).init(context.allocator);
@@ -588,11 +598,19 @@ fn templateLiteralBegin(context: Context, left: types.Symbol, b: tokenizer.types
             .template_literal_end => |e| {
                 context.tokens.advance();
                 try strings.append(.{ .value = e.value, .span = e.span });
+                if (left) |f| {
+                    return types.TemplateLiteral{
+                        .function = f,
+                        .strings = try strings.toOwnedSlice(),
+                        .arguments = try arguments.toOwnedSlice(),
+                        .span = types.Span{ .begin = f.span.begin, .end = e.span.end },
+                    };
+                }
                 return types.TemplateLiteral{
-                    .function = left,
+                    .function = null,
                     .strings = try strings.toOwnedSlice(),
                     .arguments = try arguments.toOwnedSlice(),
-                    .span = types.Span{ .begin = left.span.begin, .end = e.span.end },
+                    .span = types.Span{ .begin = b.span.begin, .end = e.span.end },
                 };
             },
             .template_literal_middle => |e| {
