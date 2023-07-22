@@ -62,3 +62,45 @@ test "parse template literal" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "parse template literal with interpolation" {
+    const allocator = std.testing.allocator;
+    const source = "html`<h1>Hello ${name}!</h1>`";
+    const actual = try zap.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(template_literal
+        \\    function: html
+        \\    strings: [
+        \\        "<h1>Hello "
+        \\        "!</h1>"
+        \\    ]
+        \\    arguments: [
+        \\        name
+        \\    ])
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse template literal with two interpolations" {
+    const allocator = std.testing.allocator;
+    const source = "html`<h1>${x} + ${y} == ${x + y}</h1>`";
+    const actual = try zap.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(template_literal
+        \\    function: html
+        \\    strings: [
+        \\        "<h1>"
+        \\        " + "
+        \\        " == "
+        \\        "</h1>"
+        \\    ]
+        \\    arguments: [
+        \\        x
+        \\        y
+        \\        (+ x y)
+        \\    ])
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
