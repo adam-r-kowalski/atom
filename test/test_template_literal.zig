@@ -163,7 +163,7 @@ test "parse template literal with two interpolations and no tag" {
 test "tokenize template literal in function" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = fn() str {
+        \\start = () str {
         \\    html`<h1>Hello World!</h1>`
         \\}
     ;
@@ -172,7 +172,6 @@ test "tokenize template literal in function" {
     const expected =
         \\(symbol start)
         \\(operator =)
-        \\(symbol fn)
         \\(delimiter '(')
         \\(delimiter ')')
         \\(symbol str)
@@ -207,22 +206,29 @@ test "parse template literal in function" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-// test "type infer template literal" {
-//     const allocator = std.testing.allocator;
-//     const source =
-//         \\start = fn() str {
-//         \\    html`<h1>Hello World!</h1>`
-//         \\}
-//     ;
-//     const actual = try zap.testing.parse(allocator, source);
-//     defer allocator.free(actual);
-//     const expected =
-//         \\(template_literal
-//         \\    function: html
-//         \\    strings: [
-//         \\        "<h1>Hello World!</h1>"
-//         \\    ]
-//         \\    arguments: [])
-//     ;
-//     try std.testing.expectEqualStrings(expected, actual);
-// }
+test "type infer template literal" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = () str {
+        \\    html`<h1>Hello World!</h1>`
+        \\}
+    ;
+    const actual = try zap.testing.typeInfer(allocator, source, "start");
+    defer allocator.free(actual);
+    const expected =
+        \\define =
+        \\    name = symbol{ value = start, type = () str }
+        \\    type = void
+        \\    mutable = false
+        \\    value =
+        \\        function =
+        \\            return_type = str
+        \\            body =
+        \\                template_literal =
+        \\                    function = symbol{ value = html, type = () str }
+        \\                    strings =
+        \\                        string{ value = <h1>Hello World!</h1>, type = str }
+        \\                    type = str
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

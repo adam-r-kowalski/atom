@@ -730,6 +730,59 @@ fn index(context: Context, i: parser.types.Index) !types.Index {
     };
 }
 
+fn templateLiteral(context: Context, t: parser.types.TemplateLiteral) !types.TemplateLiteral {
+    const strings = try context.allocator.alloc(types.String, t.strings.len);
+    for (t.strings, strings) |untyped_s, *typed_s| {
+        typed_s.* = try string(context, untyped_s);
+    }
+    const arguments = try context.allocator.alloc(types.Expression, t.arguments.len);
+    for (t.arguments, arguments) |untyped_a, *typed_a| {
+        typed_a.* = try expression(context, untyped_a);
+    }
+    const element_type = try context.allocator.create(MonoType);
+    element_type.* = .{ .u8 = .{ .span = null } };
+    const mono = .{ .array = .{ .rank = 1, .element_type = element_type, .span = t.span } };
+    if (t.function) |f| {
+        const parameters = try context.allocator.alloc(monotype.Parameter, t.arguments.len);
+        for (arguments, parameters) |a, *p| {
+            p.* = .{ .type = typeOf(a), .mutable = false };
+        }
+        const return_type = try context.allocator.create(MonoType);
+        return_type.* = mono;
+        const f_type = .{ .function = .{
+            .parameters = parameters,
+            .return_type = return_type,
+            .span = null,
+        } };
+        const binding = .{
+            .type = f_type,
+            .global = false,
+            .mutable = false,
+            .span = f.span,
+        };
+        const sym = types.Symbol{
+            .value = f.value,
+            .span = f.span,
+            .type = f_type,
+            .binding = binding,
+        };
+        return types.TemplateLiteral{
+            .function = sym,
+            .strings = strings,
+            .arguments = arguments,
+            .type = mono,
+            .span = t.span,
+        };
+    }
+    return types.TemplateLiteral{
+        .function = null,
+        .strings = strings,
+        .arguments = arguments,
+        .type = mono,
+        .span = t.span,
+    };
+}
+
 fn expression(context: Context, e: parser.types.Expression) error{ OutOfMemory, CompileError }!types.Expression {
     switch (e) {
         .int => |i| return .{ .int = int(context, i) },
@@ -750,6 +803,7 @@ fn expression(context: Context, e: parser.types.Expression) error{ OutOfMemory, 
         .struct_literal => |s| return .{ .struct_literal = try structLiteral(context, s) },
         .array => |a| return .{ .array = try array(context, a) },
         .index => |i| return .{ .index = try index(context, i) },
+        .template_literal => |t| return .{ .template_literal = try templateLiteral(context, t) },
         else => |k| std.debug.panic("\nUnsupported expression {}", .{k}),
     }
 }
