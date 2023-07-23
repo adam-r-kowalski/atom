@@ -253,8 +253,17 @@ pub fn foreignImport(i: types.ForeignImport, writer: Writer) !void {
 pub fn dataSegment(d: types.DataSegment, writer: Writer) !void {
     if (d.data.items.len == 0) return;
     try writer.writeAll("\n");
-    for (d.data.items) |i|
-        try writer.print("\n    (data (i32.const {}) \"{s}\")", .{ i.offset, i.bytes });
+    for (d.data.items) |i| {
+        try writer.print("\n    (data (i32.const {}) \"", .{i.offset});
+        for (i.bytes) |b| {
+            if (b == '\n') {
+                try writer.writeAll("\\n");
+            } else {
+                try writer.writeByte(b);
+            }
+        }
+        try writer.writeAll("\")");
+    }
 }
 
 pub fn global(g: types.Global, writer: Writer) !void {
