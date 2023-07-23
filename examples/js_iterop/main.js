@@ -1,7 +1,7 @@
 let memory = undefined;
 let instance = undefined;
 
-let elements = [];
+const elements = [];
 
 const readString = (memory, string) => {
   const bytes = new Uint8Array(memory);
@@ -11,7 +11,7 @@ const readString = (memory, string) => {
   return new TextDecoder().decode(bytes.slice(ptr, ptr + len));
 };
 
-const imports = {
+const importObject = {
   document: {
     create_element: (tag) => {
       const string = readString(memory, tag);
@@ -67,13 +67,9 @@ const imports = {
 };
 
 const onload = async () => {
-  const wabt = await WabtModule();
-  const wat = await fetch("onload.wat");
-  const text = await wat.text();
-  const wasm = await wabt.parseWat("onload.wat", text);
-  const result = await WebAssembly.instantiate(
-    wasm.toBinary({}).buffer,
-    imports
+  const result = await WebAssembly.instantiateStreaming(
+    fetch("onload.wasm"),
+    importObject,
   );
   instance = result.instance;
   memory = instance.exports.memory.buffer;

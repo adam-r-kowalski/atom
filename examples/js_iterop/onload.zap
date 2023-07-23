@@ -51,4 +51,3 @@ foreign_export("onload", () i32 {
                 |> child(point("90", "81"))
         )
 })
-
