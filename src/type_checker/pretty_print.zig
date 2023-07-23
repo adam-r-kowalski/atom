@@ -107,7 +107,7 @@ pub fn symbol(s: types.Symbol, writer: Writer) !void {
 }
 
 pub fn string(s: types.String, writer: Writer) !void {
-    try writer.print("string{{ value = {}, type = ", .{s.value});
+    try writer.print("string{{ value = \"{}\", type = ", .{s.value});
     try monotype(s.type, writer);
     try writer.writeAll(" }");
 }
@@ -313,11 +313,9 @@ pub fn group(g: types.Group, indent: Indent, writer: Writer) !void {
 pub fn foreignImport(f: types.ForeignImport, indent: Indent, writer: Writer) !void {
     try writer.writeAll("foreign_import =");
     try newlineAndIndent(indent + 1, writer);
-    try writer.writeAll("module = ");
-    try writer.writeAll(f.module.string());
+    try writer.print("module = \"{s}\"", .{f.module.string()});
     try newlineAndIndent(indent + 1, writer);
-    try writer.writeAll("name = ");
-    try writer.writeAll(f.name.string());
+    try writer.print("name = \"{s}\"", .{f.name.string()});
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("type = ");
     try monotype(f.type, writer);
@@ -327,8 +325,7 @@ pub fn foreignExport(f: types.ForeignExport, indent: Indent, writer: Writer) !vo
     try newlineAndIndent(indent, writer);
     try writer.writeAll("foreign_export =");
     try newlineAndIndent(indent + 1, writer);
-    try writer.writeAll("name = ");
-    try writer.writeAll(f.name.string());
+    try writer.print("name = \"{s}\"", .{f.name.string()});
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("value =");
     try newlineAndIndent(indent + 2, writer);
@@ -403,6 +400,34 @@ pub fn index(i: types.Index, indent: Indent, writer: Writer) !void {
     try monotype(i.type, writer);
 }
 
+pub fn templateLiteral(t: types.TemplateLiteral, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("template_literal =");
+    if (t.function) |f| {
+        try newlineAndIndent(indent + 1, writer);
+        try writer.writeAll("function = ");
+        try symbol(f, writer);
+    }
+    if (t.strings.len > 0) {
+        try newlineAndIndent(indent + 1, writer);
+        try writer.writeAll("strings =");
+        for (t.strings) |s| {
+            try newlineAndIndent(indent + 2, writer);
+            try string(s, writer);
+        }
+    }
+    if (t.arguments.len > 0) {
+        try newlineAndIndent(indent + 1, writer);
+        try writer.writeAll("arguments =");
+        for (t.arguments) |a| {
+            try newlineAndIndent(indent + 2, writer);
+            try expression(a, indent + 2, writer);
+        }
+    }
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("type = ");
+    try monotype(t.type, writer);
+}
+
 pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{OutOfMemory}!void {
     switch (e) {
         .int => |i| try int(i, writer),
@@ -429,6 +454,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .struct_literal => |s| try structLiteral(s, indent, writer),
         .array => |a| try array(a, indent, writer),
         .index => |i| try index(i, indent, writer),
+        .template_literal => |t| try templateLiteral(t, indent, writer),
     }
 }
 

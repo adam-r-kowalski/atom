@@ -31,15 +31,18 @@ const Flags = struct {
     }
 };
 
+const language_name = "zap";
+const extension_length = language_name.len + 1;
+
 fn writeWat(allocator: Allocator, flags: Flags, wat_string: []const u8) !void {
-    const file_name_no_suffix = flags.file_name[0 .. flags.file_name.len - 7];
+    const file_name_no_suffix = flags.file_name[0 .. flags.file_name.len - extension_length];
     const file_name_wat = try std.fmt.allocPrint(allocator, "{s}.wat", .{file_name_no_suffix});
     const file = try std.fs.cwd().createFile(file_name_wat, .{});
     try file.writer().writeAll(wat_string);
 }
 
 fn writeWasm(allocator: Allocator, flags: Flags, wasm_bytes: wasmer.wasm_byte_vec_t) !void {
-    const file_name_no_suffix = flags.file_name[0 .. flags.file_name.len - 7];
+    const file_name_no_suffix = flags.file_name[0 .. flags.file_name.len - extension_length];
     const file_name_wasm = try std.fmt.allocPrint(allocator, "{s}.wasm", .{file_name_no_suffix});
     const file = try std.fs.cwd().createFile(file_name_wasm, .{});
     const bytes = wasm_bytes.data[0..wasm_bytes.size];
@@ -159,7 +162,7 @@ fn compileAndRun(allocator: Allocator, intern: *zap.interner.Intern, errors: *za
         .equal = List(zap.type_checker.types.EqualConstraint).init(allocator),
         .next_type_var = 0,
     };
-    var ast = try zap.type_checker.infer.module(allocator, &constraints, builtins, untyped_ast);
+    var ast = try zap.type_checker.infer.module(allocator, &constraints, builtins, intern, untyped_ast);
     const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
     if (export_count == 0) ast.foreign_exports = &.{start};
@@ -185,6 +188,7 @@ fn compileAndRun(allocator: Allocator, intern: *zap.interner.Intern, errors: *za
     }
     if (export_count > 0) {
         try writeWat(allocator, flags, wat_string);
+        try writeWasm(allocator, flags, wasm_bytes);
         return;
     }
     const wasm_module = WasmModule.init(allocator, ast, wasm_bytes);

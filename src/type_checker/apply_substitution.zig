@@ -281,6 +281,29 @@ fn index(allocator: Allocator, sub: types.Substitution, i: types.Index) !types.I
     };
 }
 
+fn templateLiteral(allocator: Allocator, sub: types.Substitution, t: types.TemplateLiteral) !types.TemplateLiteral {
+    const arguments = try allocator.alloc(types.Expression, t.arguments.len);
+    for (t.arguments, arguments) |unapplied, *applied|
+        applied.* = try expression(allocator, sub, unapplied);
+    const mono = try monotype(allocator, sub, t.type);
+    if (t.function) |f| {
+        return .{
+            .function = try symbol(allocator, sub, f),
+            .strings = t.strings,
+            .arguments = arguments,
+            .type = mono,
+            .span = t.span,
+        };
+    }
+    return .{
+        .function = null,
+        .strings = t.strings,
+        .arguments = arguments,
+        .type = mono,
+        .span = t.span,
+    };
+}
+
 pub fn expression(allocator: Allocator, sub: types.Substitution, e: types.Expression) error{OutOfMemory}!types.Expression {
     return switch (e) {
         .symbol => |s| .{ .symbol = try symbol(allocator, sub, s) },
@@ -307,6 +330,7 @@ pub fn expression(allocator: Allocator, sub: types.Substitution, e: types.Expres
         .struct_literal => |s| .{ .struct_literal = try structLiteral(allocator, sub, s) },
         .array => |a| .{ .array = try array(allocator, sub, a) },
         .index => |i| .{ .index = try index(allocator, sub, i) },
+        .template_literal => |t| .{ .template_literal = try templateLiteral(allocator, sub, t) },
     };
 }
 

@@ -186,12 +186,37 @@ pub fn index(i: types.Index, indent: Indent, writer: Writer) !void {
     try writer.writeAll(")");
 }
 
+pub fn templateLiteral(t: types.TemplateLiteral, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("(template_literal");
+    if (t.function) |f| {
+        try newlineAndIndent(indent + 1, writer);
+        try writer.print("function: {}", .{f.value});
+    }
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("strings: [");
+    for (t.strings) |s| {
+        try newlineAndIndent(indent + 2, writer);
+        try writer.print("\"{}\"", .{s.value});
+    }
+    if (t.strings.len > 0) try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("]");
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("arguments: [");
+    for (t.arguments) |a| {
+        try newlineAndIndent(indent + 2, writer);
+        try expression(a, indent + 2, writer);
+    }
+    if (t.arguments.len > 0) try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("]");
+    try writer.writeAll(")");
+}
+
 pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{OutOfMemory}!void {
     switch (e) {
         .int => |int| try writer.print("{}", .{int.value}),
         .float => |f| try writer.print("{}", .{f.value}),
         .symbol => |s| try writer.print("{}", .{s.value}),
-        .string => |s| try writer.print("{}", .{s.value}),
+        .string => |s| try writer.print("\"{}\"", .{s.value}),
         .bool => |b| try writer.print("{}", .{b.value}),
         .define => |d| try define(d, indent, writer),
         .drop => |d| try drop(d, indent, writer),
@@ -209,6 +234,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .branch => |b| try branch(b, indent, writer),
         .call => |c| try call(c, indent, writer),
         .index => |i| try index(i, indent, writer),
+        .template_literal => |t| try templateLiteral(t, indent, writer),
         .undefined => |u| try writer.print("{}", .{u}),
     }
 }

@@ -28,6 +28,7 @@ const MULTIPLY: Precedence = ADD + DELTA;
 const EXPONENTIATE: Precedence = MULTIPLY + DELTA;
 const PIPELINE: Precedence = EXPONENTIATE + DELTA;
 const DOT: Precedence = PIPELINE + DELTA;
+const TEMPLATE_LITERAL: Precedence = DOT;
 const CALL: Precedence = DOT + DELTA;
 const HIGHEST: Precedence = CALL + DELTA;
 
@@ -419,6 +420,8 @@ fn prefix(context: Context) !types.Expression {
         .left_bracket => |l| return .{ .array = try array(context, l.span.begin) },
         .mut => |m| return .{ .define = try mutable(context, m.span.begin) },
         .undefined => |u| return .{ .undefined = u },
+        .template_literal => |t| return .{ .template_literal = try templateLiteral(context, null, t) },
+        .template_literal_begin => |t| return .{ .template_literal = try templateLiteralBegin(context, null, t) },
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),
     }
 }
@@ -565,6 +568,66 @@ fn index(context: Context, left: types.Expression) !types.Index {
     };
 }
 
+fn templateLiteral(context: Context, left: ?types.Symbol, t: tokenizer.types.TemplateLiteral) !types.TemplateLiteral {
+    context.tokens.advance();
+    const strings = try context.allocator.alloc(types.String, 1);
+    strings[0] = .{ .value = t.value, .span = t.span };
+    if (left) |f| {
+        return types.TemplateLiteral{
+            .function = f,
+            .strings = strings,
+            .arguments = &.{},
+            .span = types.Span{ .begin = f.span.begin, .end = t.span.end },
+        };
+    }
+    return types.TemplateLiteral{
+        .function = null,
+        .strings = strings,
+        .arguments = &.{},
+        .span = t.span,
+    };
+}
+
+fn templateLiteralBegin(context: Context, left: ?types.Symbol, b: tokenizer.types.TemplateLiteralBegin) !types.TemplateLiteral {
+    if (left) |_| context.tokens.advance();
+    var strings = List(types.String).init(context.allocator);
+    try strings.append(.{ .value = b.value, .span = b.span });
+    var arguments = List(types.Expression).init(context.allocator);
+    while (context.tokens.peek()) |t| {
+        switch (t) {
+            .template_literal_end => |e| {
+                context.tokens.advance();
+                try strings.append(.{ .value = e.value, .span = e.span });
+                if (left) |f| {
+                    return types.TemplateLiteral{
+                        .function = f,
+                        .strings = try strings.toOwnedSlice(),
+                        .arguments = try arguments.toOwnedSlice(),
+                        .span = types.Span{ .begin = f.span.begin, .end = e.span.end },
+                    };
+                }
+                return types.TemplateLiteral{
+                    .function = null,
+                    .strings = try strings.toOwnedSlice(),
+                    .arguments = try arguments.toOwnedSlice(),
+                    .span = types.Span{ .begin = b.span.begin, .end = e.span.end },
+                };
+            },
+            .template_literal_middle => |e| {
+                context.tokens.advance();
+                try strings.append(.{ .value = e.value, .span = e.span });
+            },
+            else => {
+                const expr = try expression(withPrecedence(context, DEFINE + 1));
+                try arguments.append(expr);
+                context.tokens.consumeNewLines();
+                context.tokens.maybeConsume(.comma);
+            },
+        }
+    }
+    std.debug.panic("\nUnterminated template literal", .{});
+}
+
 const Infix = union(enum) {
     define,
     plus_equal,
@@ -573,6 +636,8 @@ const Infix = union(enum) {
     call,
     index,
     binary_op: types.BinaryOpKind,
+    template_literal: tokenizer.types.TemplateLiteral,
+    template_literal_begin: tokenizer.types.TemplateLiteralBegin,
 };
 
 fn precedence(i: Infix) Precedence {
@@ -597,6 +662,8 @@ fn precedence(i: Infix) Precedence {
             .dot => DOT,
             .pipeline => DOT,
         },
+        .template_literal => TEMPLATE_LITERAL,
+        .template_literal_begin => TEMPLATE_LITERAL,
     };
 }
 
@@ -622,6 +689,8 @@ fn associativity(i: Infix) Associativity {
             .dot => .left,
             .pipeline => .left,
         },
+        .template_literal => .left,
+        .template_literal_begin => .left,
     };
 }
 
@@ -649,6 +718,14 @@ fn infix(context: Context, left: types.Expression) ?Infix {
                 else => null,
             },
             .left_bracket => .index,
+            .template_literal => |l| switch (left) {
+                .symbol => .{ .template_literal = l },
+                else => null,
+            },
+            .template_literal_begin => |l| switch (left) {
+                .symbol => .{ .template_literal_begin = l },
+                else => null,
+            },
             else => null,
         };
     }
@@ -664,6 +741,8 @@ fn parseInfix(parser: Infix, context: Context, left: types.Expression) !types.Ex
         .call => .{ .call = try call(context, left) },
         .index => .{ .index = try index(context, left) },
         .binary_op => |kind| .{ .binary_op = try binaryOp(context, left, kind) },
+        .template_literal => |t| .{ .template_literal = try templateLiteral(context, left.symbol, t) },
+        .template_literal_begin => |t| .{ .template_literal = try templateLiteralBegin(context, left.symbol, t) },
     };
 }
 

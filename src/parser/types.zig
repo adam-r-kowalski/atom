@@ -159,6 +159,13 @@ pub const Index = struct {
     span: Span,
 };
 
+pub const TemplateLiteral = struct {
+    function: ?Symbol,
+    strings: []const String,
+    arguments: []const Expression,
+    span: Span,
+};
+
 pub const Expression = union(enum) {
     int: Int,
     float: Float,
@@ -181,6 +188,7 @@ pub const Expression = union(enum) {
     branch: Branch,
     call: Call,
     index: Index,
+    template_literal: TemplateLiteral,
     undefined: Undefined,
 };
 

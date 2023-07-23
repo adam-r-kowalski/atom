@@ -418,7 +418,7 @@ fn string(context: Context, s: type_checker.types.String) !types.Expression {
     const bytes = s.value.string();
     const offset = context.data_segment.offset;
     try context.data_segment.data.append(.{ .offset = offset, .bytes = bytes });
-    context.data_segment.offset += @intCast(bytes.len - 2);
+    context.data_segment.offset += @intCast(bytes.len);
     const exprs = try context.allocator.alloc(types.Expression, 3);
     const local_get = try context.allocator.create(types.Expression);
     local_get.* = .{ .local_get = .{ .name = local } };
@@ -579,6 +579,31 @@ fn index(context: Context, i: type_checker.types.Index) !types.Expression {
     };
 }
 
+fn templateLiteral(context: Context, t: type_checker.types.TemplateLiteral) !types.Expression {
+    if (t.strings.len != 1) std.debug.panic("\nTemplate literal must have one string only for now", .{});
+    if (t.arguments.len != 0) std.debug.panic("\nTemplate literal must no arguments for now", .{});
+    const local = try freshLocalPointer(context, 8);
+    const bytes = t.strings[0].value.string();
+    const offset = context.data_segment.offset;
+    try context.data_segment.data.append(.{ .offset = offset, .bytes = bytes });
+    context.data_segment.offset += @intCast(bytes.len - 2);
+    const exprs = try context.allocator.alloc(types.Expression, 3);
+    const local_get = try context.allocator.create(types.Expression);
+    local_get.* = .{ .local_get = .{ .name = local } };
+    const literal_offset = try context.allocator.create(types.Expression);
+    literal_offset.* = .{ .literal = .{ .u32 = offset } };
+    exprs[0] = .{ .binary_op = .{ .kind = .i32_store, .left = local_get, .right = literal_offset } };
+    const literal_4 = try context.allocator.create(types.Expression);
+    literal_4.* = .{ .literal = .{ .u32 = 4 } };
+    const binary_add = try context.allocator.create(types.Expression);
+    binary_add.* = .{ .binary_op = .{ .kind = .i32_add, .left = local_get, .right = literal_4 } };
+    const literal_length = try context.allocator.create(types.Expression);
+    literal_length.* = .{ .literal = .{ .u32 = context.data_segment.offset - offset } };
+    exprs[1] = .{ .binary_op = .{ .kind = .i32_store, .left = binary_add, .right = literal_length } };
+    exprs[2] = .{ .local_get = .{ .name = local } };
+    return .{ .block = types.Block{ .result = .i32, .expressions = exprs } };
+}
+
 fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMemory, InvalidCharacter, Overflow }!types.Expression {
     switch (e) {
         .int => |i| return try int(i),
@@ -600,6 +625,7 @@ fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMe
         .struct_literal => |s| return try structLiteral(context, s),
         .array => |a| return try array(context, a),
         .index => |i| return try index(context, i),
+        .template_literal => |t| return try templateLiteral(context, t),
         else => |k| std.debug.panic("\ntypes.Expression {} not yet supported", .{k}),
     }
 }
@@ -740,7 +766,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                 },
                 .foreign_export => |e| {
                     const name_string = e.name.string();
-                    const trimmed = try intern.store(name_string[1 .. name_string.len - 1]);
+                    const trimmed = try intern.store(name_string);
                     switch (e.value.*) {
                         .function => |f| {
                             const lowered = try function(allocator, builtins, &data_segment, &uses_memory, &intrinsics, intern, trimmed, f);

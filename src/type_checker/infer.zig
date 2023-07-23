@@ -4,6 +4,7 @@ const List = std.ArrayList;
 const Map = std.AutoHashMap;
 
 const Interned = @import("../interner.zig").Interned;
+const Intern = @import("../interner.zig").Intern;
 const Builtins = @import("../builtins.zig").Builtins;
 const types = @import("types.zig");
 const spanOf = @import("span.zig").expression;
@@ -730,6 +731,59 @@ fn index(context: Context, i: parser.types.Index) !types.Index {
     };
 }
 
+fn templateLiteral(context: Context, t: parser.types.TemplateLiteral) !types.TemplateLiteral {
+    const strings = try context.allocator.alloc(types.String, t.strings.len);
+    for (t.strings, strings) |untyped_s, *typed_s| {
+        typed_s.* = try string(context, untyped_s);
+    }
+    const arguments = try context.allocator.alloc(types.Expression, t.arguments.len);
+    for (t.arguments, arguments) |untyped_a, *typed_a| {
+        typed_a.* = try expression(context, untyped_a);
+    }
+    const element_type = try context.allocator.create(MonoType);
+    element_type.* = .{ .u8 = .{ .span = null } };
+    const mono = .{ .array = .{ .rank = 1, .element_type = element_type, .span = t.span } };
+    if (t.function) |f| {
+        const parameters = try context.allocator.alloc(monotype.Parameter, t.arguments.len);
+        for (arguments, parameters) |a, *p| {
+            p.* = .{ .type = typeOf(a), .mutable = false };
+        }
+        const return_type = try context.allocator.create(MonoType);
+        return_type.* = mono;
+        const f_type = .{ .function = .{
+            .parameters = parameters,
+            .return_type = return_type,
+            .span = null,
+        } };
+        const binding = .{
+            .type = f_type,
+            .global = false,
+            .mutable = false,
+            .span = f.span,
+        };
+        const sym = types.Symbol{
+            .value = f.value,
+            .span = f.span,
+            .type = f_type,
+            .binding = binding,
+        };
+        return types.TemplateLiteral{
+            .function = sym,
+            .strings = strings,
+            .arguments = arguments,
+            .type = mono,
+            .span = t.span,
+        };
+    }
+    return types.TemplateLiteral{
+        .function = null,
+        .strings = strings,
+        .arguments = arguments,
+        .type = mono,
+        .span = t.span,
+    };
+}
+
 fn expression(context: Context, e: parser.types.Expression) error{ OutOfMemory, CompileError }!types.Expression {
     switch (e) {
         .int => |i| return .{ .int = int(context, i) },
@@ -750,6 +804,7 @@ fn expression(context: Context, e: parser.types.Expression) error{ OutOfMemory, 
         .struct_literal => |s| return .{ .struct_literal = try structLiteral(context, s) },
         .array => |a| return .{ .array = try array(context, a) },
         .index => |i| return .{ .index = try index(context, i) },
+        .template_literal => |t| return .{ .template_literal = try templateLiteral(context, t) },
         else => |k| std.debug.panic("\nUnsupported expression {}", .{k}),
     }
 }
@@ -792,7 +847,7 @@ pub fn topLevel(m: *types.Module, name: Interned, errors: *Errors) !void {
     }
 }
 
-pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, ast: parser.types.Module) !types.Module {
+pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, intern: *Intern, ast: parser.types.Module) !types.Module {
     var order = List(Interned).init(allocator);
     var untyped = types.Untyped.init(allocator);
     var typed = types.Typed.init(allocator);
@@ -904,9 +959,11 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
         if (c.arguments.len != 2) std.debug.panic("\nForeign export call expects 2 arguments received {}", .{c.arguments.len});
         switch (c.arguments[0].value) {
             .string => |str| {
-                try order.append(str.value);
-                try untyped.putNoClobber(str.value, .{ .call = c });
-                try foreign_exports.append(str.value);
+                const full_name = try std.fmt.allocPrint(allocator, "\"{s}\"", .{str.value.string()});
+                const interned = try intern.store(full_name);
+                try order.append(interned);
+                try untyped.putNoClobber(interned, .{ .call = c });
+                try foreign_exports.append(interned);
             },
             else => |k| std.debug.panic("\nInvalid foreign export call {}", .{k}),
         }

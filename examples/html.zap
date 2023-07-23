@@ -1,24 +1,17 @@
-css`
-    body {
-        background-color: #000;
-        color: #fff;
-    }
-`
-
-name: str = "joe"
-
-html`
-    <html>
-        <head>
-            <title>Test</title>
-        </head>
-        <body>
-            <h1>Hi ${name}</h1>
-        </body>
-    </html>
-`
-
-sql`
-    SELECT * FROM users
-    WHERE id = 1
-`
+start = () str {
+    html`
+        <html>
+            <head>
+                <title>Test</title>
+            </head>
+            <body>
+                <ul>
+                    <li>First</li>
+                    <li>Second</li>
+                    <li>Third</li>
+                    <li>Fourth</li>
+                </ul>
+            </body>
+        </html>
+    `
+}

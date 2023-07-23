@@ -8,6 +8,10 @@ pub const Symbol = struct { value: Interned, span: Span };
 pub const Int = struct { value: Interned, span: Span };
 pub const Float = struct { value: Interned, span: Span };
 pub const String = struct { value: Interned, span: Span };
+pub const TemplateLiteral = struct { value: Interned, span: Span };
+pub const TemplateLiteralBegin = struct { value: Interned, span: Span };
+pub const TemplateLiteralMiddle = struct { value: Interned, span: Span };
+pub const TemplateLiteralEnd = struct { value: Interned, span: Span };
 pub const Bool = struct { value: bool, span: Span };
 pub const Equal = struct { span: Span };
 pub const EqualEqual = struct { span: Span };
@@ -49,6 +53,10 @@ pub const Token = union(enum) {
     int: Int,
     float: Float,
     string: String,
+    template_literal: TemplateLiteral,
+    template_literal_begin: TemplateLiteralBegin,
+    template_literal_middle: TemplateLiteralMiddle,
+    template_literal_end: TemplateLiteralEnd,
     bool: Bool,
     equal: Equal,
     equal_equal: EqualEqual,
