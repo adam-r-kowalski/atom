@@ -82,7 +82,7 @@ fn string(intern: *Intern, cursor: *Cursor) !types.Token {
             break;
         }
     }
-    const contents = cursor.source[0..i];
+    const contents = cursor.source[1 .. i - 1];
     _ = advance(cursor, i);
     const span = types.Span{ .begin = begin, .end = cursor.pos };
     const interned = try intern.store(contents);

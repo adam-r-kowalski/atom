@@ -227,7 +227,7 @@ test "type infer template literal" {
         \\                template_literal =
         \\                    function = symbol{ value = html, type = () str }
         \\                    strings =
-        \\                        string{ value = <h1>Hello World!</h1>, type = str }
+        \\                        string{ value = "<h1>Hello World!</h1>", type = str }
         \\                    type = str
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -261,11 +261,60 @@ test "type infer template literal with interpolation" {
         \\                template_literal =
         \\                    function = symbol{ value = html, type = (str) str }
         \\                    strings =
-        \\                        string{ value = <h1>Hello , type = str }
-        \\                        string{ value = !</h1>, type = str }
+        \\                        string{ value = "<h1>Hello ", type = str }
+        \\                        string{ value = "!</h1>", type = str }
         \\                    arguments =
         \\                        symbol{ value = name, type = str }
         \\                    type = str
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen template literal" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = () str {
+        \\    html`<h1>Hello World!</h1>`
+        \\}
+    ;
+    const actual = try zap.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (data (i32.const 0) "<h1>Hello World!</h1>")
+        \\
+        \\    (global $core/arena (mut i32) (i32.const 19))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
+        \\                (local.get $size))))
+        \\
+        \\    (func $start (result i32)
+        \\        (local $0 i32)
+        \\        (local.set $0
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (block (result i32)
+        \\            (i32.store
+        \\                (local.get $0)
+        \\                (i32.const 0))
+        \\            (i32.store
+        \\                (i32.add
+        \\                    (local.get $0)
+        \\                    (i32.const 4))
+        \\                (i32.const 19))
+        \\            (local.get $0)))
+        \\
+        \\    (export "_start" (func $start)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

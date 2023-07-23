@@ -10,7 +10,7 @@ pub fn token(t: types.Token, writer: Writer) !void {
         .symbol => |s| try writer.print("(symbol {})", .{s.value}),
         .int => |i| try writer.print("(int {})", .{i.value}),
         .float => |f| try writer.print("(float {})", .{f.value}),
-        .string => |s| try writer.print("(string {})", .{s.value}),
+        .string => |s| try writer.print("(string \"{}\")", .{s.value}),
         .template_literal => |s| try writer.print("(template_literal `{}`)", .{s.value}),
         .template_literal_begin => |s| try writer.print("(template_literal_begin `{}`)", .{s.value}),
         .template_literal_middle => |s| try writer.print("(template_literal_middle `{}`)", .{s.value}),

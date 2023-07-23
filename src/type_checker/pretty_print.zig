@@ -107,7 +107,7 @@ pub fn symbol(s: types.Symbol, writer: Writer) !void {
 }
 
 pub fn string(s: types.String, writer: Writer) !void {
-    try writer.print("string{{ value = {}, type = ", .{s.value});
+    try writer.print("string{{ value = \"{}\", type = ", .{s.value});
     try monotype(s.type, writer);
     try writer.writeAll(" }");
 }
@@ -313,11 +313,9 @@ pub fn group(g: types.Group, indent: Indent, writer: Writer) !void {
 pub fn foreignImport(f: types.ForeignImport, indent: Indent, writer: Writer) !void {
     try writer.writeAll("foreign_import =");
     try newlineAndIndent(indent + 1, writer);
-    try writer.writeAll("module = ");
-    try writer.writeAll(f.module.string());
+    try writer.print("module = \"{s}\"", .{f.module.string()});
     try newlineAndIndent(indent + 1, writer);
-    try writer.writeAll("name = ");
-    try writer.writeAll(f.name.string());
+    try writer.print("name = \"{s}\"", .{f.name.string()});
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("type = ");
     try monotype(f.type, writer);
@@ -327,8 +325,7 @@ pub fn foreignExport(f: types.ForeignExport, indent: Indent, writer: Writer) !vo
     try newlineAndIndent(indent, writer);
     try writer.writeAll("foreign_export =");
     try newlineAndIndent(indent + 1, writer);
-    try writer.writeAll("name = ");
-    try writer.writeAll(f.name.string());
+    try writer.print("name = \"{s}\"", .{f.name.string()});
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("value =");
     try newlineAndIndent(indent + 2, writer);

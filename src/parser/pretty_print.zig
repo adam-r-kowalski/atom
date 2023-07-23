@@ -216,7 +216,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .int => |int| try writer.print("{}", .{int.value}),
         .float => |f| try writer.print("{}", .{f.value}),
         .symbol => |s| try writer.print("{}", .{s.value}),
-        .string => |s| try writer.print("{}", .{s.value}),
+        .string => |s| try writer.print("\"{}\"", .{s.value}),
         .bool => |b| try writer.print("{}", .{b.value}),
         .define => |d| try define(d, indent, writer),
         .drop => |d| try drop(d, indent, writer),

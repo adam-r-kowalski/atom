@@ -4,6 +4,7 @@ const List = std.ArrayList;
 const Map = std.AutoHashMap;
 
 const Interned = @import("../interner.zig").Interned;
+const Intern = @import("../interner.zig").Intern;
 const Builtins = @import("../builtins.zig").Builtins;
 const types = @import("types.zig");
 const spanOf = @import("span.zig").expression;
@@ -846,7 +847,7 @@ pub fn topLevel(m: *types.Module, name: Interned, errors: *Errors) !void {
     }
 }
 
-pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, ast: parser.types.Module) !types.Module {
+pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, intern: *Intern, ast: parser.types.Module) !types.Module {
     var order = List(Interned).init(allocator);
     var untyped = types.Untyped.init(allocator);
     var typed = types.Typed.init(allocator);
@@ -959,8 +960,10 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
         switch (c.arguments[0].value) {
             .string => |str| {
                 try order.append(str.value);
-                try untyped.putNoClobber(str.value, .{ .call = c });
-                try foreign_exports.append(str.value);
+                const full_name = try std.fmt.allocPrint(allocator, "\"{s}\"", .{str.value.string()});
+                const interned = try intern.store(full_name);
+                try untyped.putNoClobber(interned, .{ .call = c });
+                try foreign_exports.append(interned);
             },
             else => |k| std.debug.panic("\nInvalid foreign export call {}", .{k}),
         }
