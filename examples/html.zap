@@ -1,3 +1,17 @@
 start = () str {
-    html`<h1>hello world</h1>`
+    html`
+        <html>
+            <head>
+                <title>Test</title>
+            </head>
+            <body>
+                <ul>
+                    <li>First</li>
+                    <li>Second</li>
+                    <li>Third</li>
+                    <li>Fourth</li>
+                </ul>
+            </body>
+        </html>
+    `
 }
