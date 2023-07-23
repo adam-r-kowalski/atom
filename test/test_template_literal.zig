@@ -232,3 +232,40 @@ test "type infer template literal" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "type infer template literal with interpolation" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = () str {
+        \\    name = "Joe"
+        \\    html`<h1>Hello ${name}!</h1>`
+        \\}
+    ;
+    const actual = try zap.testing.typeInfer(allocator, source, "start");
+    defer allocator.free(actual);
+    const expected =
+        \\define =
+        \\    name = symbol{ value = start, type = () str }
+        \\    type = void
+        \\    mutable = false
+        \\    value =
+        \\        function =
+        \\            return_type = str
+        \\            body =
+        \\                define =
+        \\                    name = symbol{ value = name, type = str }
+        \\                    type = void
+        \\                    mutable = false
+        \\                    value =
+        \\                        string{ value = "Joe", type = str }
+        \\                template_literal =
+        \\                    function = symbol{ value = html, type = (str) str }
+        \\                    strings =
+        \\                        string{ value = <h1>Hello , type = str }
+        \\                        string{ value = !</h1>, type = str }
+        \\                    arguments =
+        \\                        symbol{ value = name, type = str }
+        \\                    type = str
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
