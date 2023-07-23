@@ -766,7 +766,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                 },
                 .foreign_export => |e| {
                     const name_string = e.name.string();
-                    const trimmed = try intern.store(name_string[1 .. name_string.len - 1]);
+                    const trimmed = try intern.store(name_string);
                     switch (e.value.*) {
                         .function => |f| {
                             const lowered = try function(allocator, builtins, &data_segment, &uses_memory, &intrinsics, intern, trimmed, f);

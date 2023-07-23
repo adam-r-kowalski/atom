@@ -959,9 +959,9 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
         if (c.arguments.len != 2) std.debug.panic("\nForeign export call expects 2 arguments received {}", .{c.arguments.len});
         switch (c.arguments[0].value) {
             .string => |str| {
-                try order.append(str.value);
                 const full_name = try std.fmt.allocPrint(allocator, "\"{s}\"", .{str.value.string()});
                 const interned = try intern.store(full_name);
+                try order.append(interned);
                 try untyped.putNoClobber(interned, .{ .call = c });
                 try foreign_exports.append(interned);
             },
