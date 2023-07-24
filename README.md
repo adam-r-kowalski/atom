@@ -1,4 +1,4 @@
-# ⚡ Moose Programming Language
+# 🫎 Moose Programming Language
 
 Moose is a statically typed, high-performance programming language designed for machine learning and high-performance computing.
 It compiles to WebAssembly, allowing your code to run anywhere WebAssembly is supported, including web browsers and server environments.
