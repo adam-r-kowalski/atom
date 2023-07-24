@@ -256,10 +256,10 @@ pub fn dataSegment(d: types.DataSegment, writer: Writer) !void {
     for (d.data.items) |i| {
         try writer.print("\n    (data (i32.const {}) \"", .{i.offset});
         for (i.bytes) |b| {
-            if (b == '\n') {
-                try writer.writeAll("\\n");
-            } else {
-                try writer.writeByte(b);
+            switch (b) {
+                '\n' => try writer.writeAll("\\n"),
+                '"' => try writer.writeAll("\\\""),
+                else => try writer.writeByte(b),
             }
         }
         try writer.writeAll("\")");
