@@ -1,7 +1,7 @@
 const std = @import("std");
 const wasmer = @cImport(@cInclude("wasmer.h"));
 const Allocator = std.mem.Allocator;
-const zap = @import("zap");
+const moose = @import("moose");
 
 const List = std.ArrayList;
 
@@ -16,8 +16,8 @@ const Flags = struct {
                 \\
                 \\Correct usage:
                 \\
-                \\zap <input file>.zap
-                \\this will compile and run the zap program using the wasmer runtime
+                \\moose <input file>.moose
+                \\this will compile and run the moose program using the wasmer runtime
             , .{});
         }
         const file_name = std.mem.span(std.os.argv[1]);
@@ -31,7 +31,7 @@ const Flags = struct {
     }
 };
 
-const language_name = "zap";
+const language_name = "moose";
 const extension_length = language_name.len + 1;
 
 fn writeWat(allocator: Allocator, flags: Flags, wat_string: []const u8) !void {
@@ -83,14 +83,14 @@ fn wat2wasm(wat_string: []const u8) wasmer.wasm_byte_vec_t {
 
 const WasmModule = struct {
     allocator: Allocator,
-    ast: zap.type_checker.types.Module,
+    ast: moose.type_checker.types.Module,
     engine: *wasmer.wasm_engine_t,
     store: *wasmer.wasm_store_t,
     module: *wasmer.wasm_module_t,
     instance: *wasmer.wasm_instance_t,
     exports: wasmer.wasm_extern_vec_t,
 
-    fn init(allocator: Allocator, ast: zap.type_checker.types.Module, wasm_bytes: wasmer.wasm_byte_vec_t) WasmModule {
+    fn init(allocator: Allocator, ast: moose.type_checker.types.Module, wasm_bytes: wasmer.wasm_byte_vec_t) WasmModule {
         const engine = wasmer.wasm_engine_new();
         const store = wasmer.wasm_store_new(engine);
         const module = wasmer.wasm_module_new(store, &wasm_bytes);
@@ -118,7 +118,7 @@ const WasmModule = struct {
         };
     }
 
-    fn run(self: WasmModule, name: zap.interner.Interned) !Value {
+    fn run(self: WasmModule, name: moose.interner.Interned) !Value {
         const func = wasmer.wasi_get_start_function(self.instance);
         if (func == null) std.debug.panic("\nError getting start!\n", .{});
         var args_val = [0]wasmer.wasm_val_t{};
@@ -154,28 +154,28 @@ const WasmModule = struct {
     }
 };
 
-fn compileAndRun(allocator: Allocator, intern: *zap.interner.Intern, errors: *zap.error_reporter.types.Errors, flags: Flags, source: []const u8) !void {
-    const builtins = try zap.Builtins.init(intern);
-    const tokens = try zap.tokenizer.tokenize(allocator, intern, builtins, source);
-    const untyped_ast = try zap.parser.parse(allocator, builtins, tokens);
-    var constraints = zap.type_checker.types.Constraints{
-        .equal = List(zap.type_checker.types.EqualConstraint).init(allocator),
+fn compileAndRun(allocator: Allocator, intern: *moose.interner.Intern, errors: *moose.error_reporter.types.Errors, flags: Flags, source: []const u8) !void {
+    const builtins = try moose.Builtins.init(intern);
+    const tokens = try moose.tokenizer.tokenize(allocator, intern, builtins, source);
+    const untyped_ast = try moose.parser.parse(allocator, builtins, tokens);
+    var constraints = moose.type_checker.types.Constraints{
+        .equal = List(moose.type_checker.types.EqualConstraint).init(allocator),
         .next_type_var = 0,
     };
-    var ast = try zap.type_checker.infer.module(allocator, &constraints, builtins, intern, untyped_ast);
+    var ast = try moose.type_checker.infer.module(allocator, &constraints, builtins, intern, untyped_ast);
     const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
     if (export_count == 0) ast.foreign_exports = &.{start};
-    for (ast.foreign_exports) |foreign_export| try zap.type_checker.infer.topLevel(&ast, foreign_export, errors);
-    const substitution = try zap.type_checker.solve_constraints.constraints(allocator, constraints, errors);
-    ast = try zap.type_checker.apply_substitution.module(allocator, substitution, ast);
-    var ir = try zap.code_generator.lower.module(allocator, builtins, ast, intern);
+    for (ast.foreign_exports) |foreign_export| try moose.type_checker.infer.topLevel(&ast, foreign_export, errors);
+    const substitution = try moose.type_checker.solve_constraints.constraints(allocator, constraints, errors);
+    ast = try moose.type_checker.apply_substitution.module(allocator, substitution, ast);
+    var ir = try moose.code_generator.lower.module(allocator, builtins, ast, intern);
     if (export_count == 0) {
         const alias = try intern.store("_start");
         ir.foreign_exports = &.{.{ .name = start, .alias = alias }};
     }
     var result = List(u8).init(allocator);
-    try zap.code_generator.pretty_print.module(ir, result.writer());
+    try moose.code_generator.pretty_print.module(ir, result.writer());
     const wat_string = try result.toOwnedSlice();
     const wasm_bytes = wat2wasm(wat_string);
     if (flags.contains("--wat")) {
@@ -197,7 +197,7 @@ fn compileAndRun(allocator: Allocator, intern: *zap.interner.Intern, errors: *za
     const writer = stdout.writer();
     switch (value) {
         .void => {},
-        else => try writer.print("⚡ {}", .{value}),
+        else => try writer.print("🫎 {}", .{value}),
     }
 }
 
@@ -207,13 +207,13 @@ pub fn main() !void {
     const allocator = arena.allocator();
     const flags = try Flags.init(allocator);
     const source = try std.fs.cwd().readFileAlloc(allocator, flags.file_name, std.math.maxInt(usize));
-    var intern = zap.interner.Intern.init(allocator);
-    var errors = zap.error_reporter.types.Errors{
+    var intern = moose.interner.Intern.init(allocator);
+    var errors = moose.error_reporter.types.Errors{
         .allocator = arena.allocator(),
-        .undefined_variable = List(zap.error_reporter.types.UndefinedVariable).init(arena.allocator()),
-        .type_mismatch = List(zap.error_reporter.types.TypeMismatch).init(arena.allocator()),
-        .mutability_mismatch = List(zap.error_reporter.types.MutabilityMismatch).init(arena.allocator()),
-        .reassigning_immutable = List(zap.error_reporter.types.ReassigningImmutable).init(arena.allocator()),
+        .undefined_variable = List(moose.error_reporter.types.UndefinedVariable).init(arena.allocator()),
+        .type_mismatch = List(moose.error_reporter.types.TypeMismatch).init(arena.allocator()),
+        .mutability_mismatch = List(moose.error_reporter.types.MutabilityMismatch).init(arena.allocator()),
+        .reassigning_immutable = List(moose.error_reporter.types.ReassigningImmutable).init(arena.allocator()),
         .source = source,
     };
     compileAndRun(allocator, &intern, &errors, flags, source) catch |e| switch (e) {
@@ -221,7 +221,7 @@ pub fn main() !void {
             const stdout = std.io.getStdOut();
             const writer = stdout.writer();
             var result = List(u8).init(allocator);
-            try zap.error_reporter.pretty_print.errors(errors, result.writer());
+            try moose.error_reporter.pretty_print.errors(errors, result.writer());
             try writer.print("{s}", .{result.items});
         },
         else => return e,

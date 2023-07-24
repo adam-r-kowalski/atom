@@ -38,17 +38,17 @@ pub fn build(b: *std.build.Builder) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
-    const zap = b.createModule(.{ .source_file = .{ .path = "src/zap.zig" } });
+    const moose = b.createModule(.{ .source_file = .{ .path = "src/moose.zig" } });
 
     const exe = b.addExecutable(.{
-        .name = "zap",
+        .name = "moose",
         // In this case the main source file is merely a path, however, in more
         // complicated build scripts, this could be a generated file.
         .root_source_file = .{ .path = "src/main.zig" },
         .target = target,
         .optimize = optimize,
     });
-    exe.addModule("zap", zap);
+    exe.addModule("moose", moose);
     linkWasmer(b.allocator, exe);
 
     // This declares intent for the executable to be installed into the
@@ -83,14 +83,14 @@ pub fn build(b: *std.build.Builder) void {
     // but does not run it.
     const filter = b.option([]const u8, "test-filter", "Filter unit tests by name");
     const file = b.option([]const u8, "test-file", "Run unit tests in the specified file");
-    const path = if (file) |f| f else "test/test_zap.zig";
+    const path = if (file) |f| f else "test/test_moose.zig";
     const unit_tests = b.addTest(.{
         .root_source_file = .{ .path = path },
         .target = target,
         .optimize = optimize,
         .filter = filter,
     });
-    unit_tests.addModule("zap", zap);
+    unit_tests.addModule("moose", moose);
 
     const run_unit_tests = b.addRunArtifact(unit_tests);
 

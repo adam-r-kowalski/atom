@@ -1,12 +1,12 @@
 const std = @import("std");
-const zap = @import("zap");
+const moose = @import("moose");
 
 test "tokenize import" {
     const allocator = std.testing.allocator;
     const source =
         \\print = foreign_import("console", "log", (msg: str) void)
     ;
-    const actual = try zap.testing.tokenize(allocator, source);
+    const actual = try moose.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol print)
@@ -33,7 +33,7 @@ test "parse import" {
     const source =
         \\print = foreign_import("console", "log", (msg: str) void)
     ;
-    const actual = try zap.testing.parse(allocator, source);
+    const actual = try moose.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def print (foreign_import "console" "log" (fn [(msg str)] void)))
@@ -50,7 +50,7 @@ test "type check import" {
         \\    print("hello world")
         \\}
     ;
-    const actual = try zap.testing.typeInfer(allocator, source, "start");
+    const actual = try moose.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -89,7 +89,7 @@ test "codegen import" {
         \\
         \\start = () void { print(42) }
     ;
-    const actual = try zap.testing.codegen(allocator, source);
+    const actual = try moose.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -115,7 +115,7 @@ test "tokenize export" {
         \\    x * 2
         \\})
     ;
-    const actual = try zap.testing.tokenize(allocator, source);
+    const actual = try moose.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol foreign_export)
@@ -147,7 +147,7 @@ test "parse export" {
         \\    x * 2
         \\})
     ;
-    const actual = try zap.testing.parse(allocator, source);
+    const actual = try moose.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(foreign_export "double" (fn [(x i32)] i32
@@ -165,7 +165,7 @@ test "parse named export" {
         \\
         \\foreign_export("double", double)
     ;
-    const actual = try zap.testing.parse(allocator, source);
+    const actual = try moose.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def double (fn [(x i32)] i32
@@ -183,7 +183,7 @@ test "type check export" {
         \\    x * 2
         \\})
     ;
-    const actual = try zap.testing.typeInfer(allocator, source, "\"double\"");
+    const actual = try moose.testing.typeInfer(allocator, source, "\"double\"");
     defer allocator.free(actual);
     const expected =
         \\foreign_export =
@@ -215,7 +215,7 @@ test "type check named export" {
         \\
         \\foreign_export("double", double)
     ;
-    const actual = try zap.testing.typeInfer(allocator, source, "\"double\"");
+    const actual = try moose.testing.typeInfer(allocator, source, "\"double\"");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -252,7 +252,7 @@ test "codegen foreign export" {
         \\    x * 2
         \\})
     ;
-    const actual = try zap.testing.codegen(allocator, source);
+    const actual = try moose.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -279,7 +279,7 @@ test "codegen named foreign export" {
         \\
         \\foreign_export("double", double)
     ;
-    const actual = try zap.testing.codegen(allocator, source);
+    const actual = try moose.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -310,7 +310,7 @@ test "codegen hello world" {
         \\    fd_write(stdout, text, 1, 200)
         \\}
     ;
-    const actual = try zap.testing.codegen(allocator, source);
+    const actual = try moose.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -381,7 +381,7 @@ test "codegen echo" {
         \\    _ = stdout |> fd_write(text, 1, mut nwritten)
         \\}
     ;
-    const actual = try zap.testing.codegen(allocator, source);
+    const actual = try moose.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
