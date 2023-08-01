@@ -287,7 +287,7 @@ test "codegen template literal" {
         \\
         \\    (data (i32.const 0) "<h1>Hello World!</h1>")
         \\
-        \\    (global $core/arena (mut i32) (i32.const 19))
+        \\    (global $core/arena (mut i32) (i32.const 21))
         \\
         \\    (func $core/alloc (param $size i32) (result i32)
         \\        (local $ptr i32)
@@ -311,7 +311,7 @@ test "codegen template literal" {
         \\                (i32.add
         \\                    (local.get $0)
         \\                    (i32.const 4))
-        \\                (i32.const 19))
+        \\                (i32.const 21))
         \\            (local.get $0)))
         \\
         \\    (export "_start" (func $start)))
@@ -342,7 +342,7 @@ test "codegen template literal with new lines" {
         \\
         \\    (data (i32.const 0) "\n        <ul>\n            <li>First</li>\n            <li>Second</li>\n            <li>Third</li>\n        </ul>\n    ")
         \\
-        \\    (global $core/arena (mut i32) (i32.const 112))
+        \\    (global $core/arena (mut i32) (i32.const 114))
         \\
         \\    (func $core/alloc (param $size i32) (result i32)
         \\        (local $ptr i32)
@@ -366,7 +366,7 @@ test "codegen template literal with new lines" {
         \\                (i32.add
         \\                    (local.get $0)
         \\                    (i32.const 4))
-        \\                (i32.const 112))
+        \\                (i32.const 114))
         \\            (local.get $0)))
         \\
         \\    (export "_start" (func $start)))
@@ -391,7 +391,7 @@ test "codegen template literal with string" {
         \\
         \\    (data (i32.const 0) "Hi \"Joe\"")
         \\
-        \\    (global $core/arena (mut i32) (i32.const 6))
+        \\    (global $core/arena (mut i32) (i32.const 8))
         \\
         \\    (func $core/alloc (param $size i32) (result i32)
         \\        (local $ptr i32)
@@ -415,7 +415,7 @@ test "codegen template literal with string" {
         \\                (i32.add
         \\                    (local.get $0)
         \\                    (i32.const 4))
-        \\                (i32.const 6))
+        \\                (i32.const 8))
         \\            (local.get $0)))
         \\
         \\    (export "_start" (func $start)))
