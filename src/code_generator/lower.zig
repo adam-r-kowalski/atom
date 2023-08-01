@@ -583,21 +583,84 @@ fn templateLiteral(context: Context, t: type_checker.types.TemplateLiteral) !typ
     if (t.strings.len == 1) {
         return try string(context, t.strings[0]);
     }
-    const strings = try context.allocator.alloc(types.Expression, t.strings.len + t.arguments.len);
-    strings[0] = try string(context, t.strings[0]);
+    const result = try freshLocalPointer(context, 8);
+    const locals = try context.allocator.alloc(Interned, t.strings.len + t.arguments.len);
+    for (locals) |*l| l.* = try freshLocal(context, .i32);
+    var exprs = List(types.Expression).init(context.allocator);
+    {
+        const value = try context.allocator.create(types.Expression);
+        value.* = try string(context, t.strings[0]);
+        try exprs.append(.{ .local_set = .{ .name = locals[0], .value = value } });
+    }
     for (t.strings[1..], t.arguments, 1..) |s, a, i| {
         switch (type_checker.type_of.expression(a)) {
             .array => |arr| {
                 switch (arr.element_type.*) {
-                    .u8 => strings[i] = try expression(context, a),
+                    .u8 => {
+                        const value = try context.allocator.create(types.Expression);
+                        value.* = try expression(context, a);
+                        try exprs.append(.{ .local_set = .{ .name = locals[i], .value = value } });
+                    },
                     else => |k| std.debug.panic("\nTemplate literal array with element type {} not yet supported", .{k}),
                 }
             },
             else => |k| std.debug.panic("\nTemplate literal argument type {} not yet supported", .{k}),
         }
-        strings[i + 1] = try string(context, s);
+        const value = try context.allocator.create(types.Expression);
+        value.* = try string(context, s);
+        try exprs.append(.{ .local_set = .{ .name = locals[i + 1], .value = value } });
     }
-    return .{ .block = types.Block{ .result = .i32, .expressions = strings } };
+    const destination = try freshLocal(context, .i32);
+    const get_arena = try context.allocator.create(types.Expression);
+    get_arena.* = .{ .global_get = .{ .name = context.builtins.core_arena } };
+    try exprs.append(.{ .local_set = .{ .name = destination, .value = get_arena } });
+    const get_destination = try context.allocator.create(types.Expression);
+    get_destination.* = .{ .local_get = .{ .name = destination } };
+    const total_length = try freshLocal(context, .i32);
+    const get_total_length = try context.allocator.create(types.Expression);
+    get_total_length.* = .{ .local_get = .{ .name = total_length } };
+    const four = try context.allocator.create(types.Expression);
+    four.* = .{ .literal = .{ .u32 = 4 } };
+    for (locals, 0..) |l, i| {
+        const base = try context.allocator.create(types.Expression);
+        base.* = .{ .local_get = .{ .name = l } };
+        const ptr = try context.allocator.create(types.Expression);
+        ptr.* = .{ .unary_op = .{ .kind = .i32_load, .expression = base } };
+        const binary_op = try context.allocator.create(types.Expression);
+        binary_op.* = .{ .binary_op = .{ .kind = .i32_add, .left = base, .right = four } };
+        const length = try context.allocator.create(types.Expression);
+        length.* = .{ .unary_op = .{ .kind = .i32_load, .expression = binary_op } };
+        if (i == 0) {
+            try exprs.append(.{ .memory_copy = .{
+                .destination = get_destination,
+                .source = ptr,
+                .size = length,
+            } });
+            try exprs.append(.{ .local_set = .{ .name = total_length, .value = length } });
+        } else {
+            const new_length = try context.allocator.create(types.Expression);
+            new_length.* = .{ .binary_op = .{ .kind = .i32_add, .left = get_total_length, .right = length } };
+            const new_destination = try context.allocator.create(types.Expression);
+            new_destination.* = .{ .binary_op = .{ .kind = .i32_add, .left = get_destination, .right = get_total_length } };
+            try exprs.append(.{ .memory_copy = .{
+                .destination = new_destination,
+                .source = ptr,
+                .size = length,
+            } });
+            try exprs.append(.{ .local_set = .{ .name = total_length, .value = new_length } });
+        }
+    }
+    const get_result = try context.allocator.create(types.Expression);
+    get_result.* = .{ .local_get = .{ .name = result } };
+    try exprs.append(.{ .binary_op = .{ .kind = .i32_store, .left = get_result, .right = get_destination } });
+    const length_address = try context.allocator.create(types.Expression);
+    length_address.* = .{ .binary_op = .{ .kind = .i32_add, .left = get_result, .right = four } };
+    try exprs.append(.{ .binary_op = .{ .kind = .i32_store, .left = length_address, .right = get_total_length } });
+    const new_arena = try context.allocator.create(types.Expression);
+    new_arena.* = .{ .binary_op = .{ .kind = .i32_add, .left = get_destination, .right = get_total_length } };
+    try exprs.append(.{ .global_set = .{ .name = context.builtins.core_arena, .value = new_arena } });
+    try exprs.append(.{ .local_get = .{ .name = result } });
+    return .{ .block = types.Block{ .result = .i32, .expressions = try exprs.toOwnedSlice() } };
 }
 
 fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMemory, InvalidCharacter, Overflow }!types.Expression {
