@@ -193,7 +193,10 @@ fn function(context: Context, begin: types.Pos, parameters: *List(types.Paramete
     const return_type = try expressionAlloc(withPrecedence(context, DEFINE + 1));
     if (context.tokens.peek()) |t| {
         if (t == .left_brace) {
-            const body = try block(withPrecedence(context, LOWEST), tokenizer.span.token(context.tokens.consume(.left_brace)).begin);
+            const body = try block(
+                withPrecedence(context, LOWEST),
+                tokenizer.span.token(context.tokens.consume(.left_brace)).begin,
+            );
             const end = body.span.end;
             return types.Expression{
                 .function = .{
@@ -569,7 +572,7 @@ fn index(context: Context, left: types.Expression) !types.Index {
 }
 
 fn templateLiteral(context: Context, left: ?types.Symbol, t: tokenizer.types.TemplateLiteral) !types.TemplateLiteral {
-    context.tokens.advance();
+    if (left) |_| context.tokens.advance();
     const strings = try context.allocator.alloc(types.String, 1);
     strings[0] = .{ .value = t.value, .span = t.span };
     if (left) |f| {

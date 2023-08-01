@@ -422,3 +422,53 @@ test "codegen template literal with string" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+// test "codegen template literal with interpolation" {
+//     const allocator = std.testing.allocator;
+//     const source =
+//         \\start = () str {
+//         \\    name = "Joe"
+//         \\    html`<h1>Hello ${name}</h1>`
+//         \\}
+//     ;
+//     const actual = try moose.testing.codegen(allocator, source);
+//     defer allocator.free(actual);
+//     const expected =
+//         \\(module
+//         \\
+//         \\    (memory 1)
+//         \\    (export "memory" (memory 0))
+//         \\
+//         \\    (data (i32.const 0) "\n        <ul>\n            <li>First</li>\n            <li>Second</li>\n            <li>Third</li>\n        </ul>\n    ")
+//         \\
+//         \\    (global $core/arena (mut i32) (i32.const 112))
+//         \\
+//         \\    (func $core/alloc (param $size i32) (result i32)
+//         \\        (local $ptr i32)
+//         \\        (local.tee $ptr
+//         \\            (global.get $core/arena))
+//         \\        (global.set $core/arena
+//         \\            (i32.add
+//         \\                (local.get $ptr)
+//         \\                (local.get $size))))
+//         \\
+//         \\    (func $start (result i32)
+//         \\        (local $0 i32)
+//         \\        (local.set $0
+//         \\            (call $core/alloc
+//         \\                (i32.const 8)))
+//         \\        (block (result i32)
+//         \\            (i32.store
+//         \\                (local.get $0)
+//         \\                (i32.const 0))
+//         \\            (i32.store
+//         \\                (i32.add
+//         \\                    (local.get $0)
+//         \\                    (i32.const 4))
+//         \\                (i32.const 112))
+//         \\            (local.get $0)))
+//         \\
+//         \\    (export "_start" (func $start)))
+//     ;
+//     try std.testing.expectEqualStrings(expected, actual);
+// }
