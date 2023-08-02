@@ -1,39 +1,39 @@
 const std = @import("std");
-const moose = @import("moose");
+const atom = @import("atom");
 
 test "edit distance of transposition" {
     const allocator = std.testing.allocator;
-    const distance = try moose.edit_distance.editDistance(allocator, "test", "tset");
+    const distance = try atom.edit_distance.editDistance(allocator, "test", "tset");
     try std.testing.expectEqual(distance, 1);
 }
 
 test "edit distance have multiple different characters" {
     const allocator = std.testing.allocator;
-    const distance = try moose.edit_distance.editDistance(allocator, "test", "asdf");
+    const distance = try atom.edit_distance.editDistance(allocator, "test", "asdf");
     try std.testing.expectEqual(distance, 4);
 }
 
 test "edit distance identical strings" {
     const allocator = std.testing.allocator;
-    const distance = try moose.edit_distance.editDistance(allocator, "test", "test");
+    const distance = try atom.edit_distance.editDistance(allocator, "test", "test");
     try std.testing.expectEqual(distance, 0);
 }
 
 test "edit distance right string is empty" {
     const allocator = std.testing.allocator;
-    const distance = try moose.edit_distance.editDistance(allocator, "test", "");
+    const distance = try atom.edit_distance.editDistance(allocator, "test", "");
     try std.testing.expectEqual(distance, 4);
 }
 
 test "edit distance left string is empty" {
     const allocator = std.testing.allocator;
-    const distance = try moose.edit_distance.editDistance(allocator, "", "test");
+    const distance = try atom.edit_distance.editDistance(allocator, "", "test");
     try std.testing.expectEqual(distance, 4);
 }
 
 test "sort by edit distance" {
     const allocator = std.testing.allocator;
-    const sorted = try moose.edit_distance.sort(allocator, "banna", &.{
+    const sorted = try atom.edit_distance.sort(allocator, "banna", &.{
         "baner",
         "apple",
         "banana",
