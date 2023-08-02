@@ -461,6 +461,7 @@ test "codegen template literal with interpolation" {
         \\        (local $4 i32)
         \\        (local $7 i32)
         \\        (local $8 i32)
+        \\        (local $9 i32)
         \\        (local $0 i32)
         \\        (local $1 i32)
         \\        (local $5 i32)
@@ -515,18 +516,22 @@ test "codegen template literal with interpolation" {
         \\                    (local.get $6)))
         \\            (local.set $7
         \\                (global.get $core/arena))
-        \\            (memory.copy
-        \\                (local.get $7)
-        \\                (i32.load
-        \\                    (local.get $2))
+        \\            (local.set $9
         \\                (i32.load
         \\                    (i32.add
         \\                        (local.get $2)
         \\                        (i32.const 4))))
+        \\            (memory.copy
+        \\                (local.get $7)
+        \\                (i32.load
+        \\                    (local.get $2))
+        \\                (local.get $9))
         \\            (local.set $8
+        \\                (local.get $9))
+        \\            (local.set $9
         \\                (i32.load
         \\                    (i32.add
-        \\                        (local.get $2)
+        \\                        (local.get $3)
         \\                        (i32.const 4))))
         \\            (memory.copy
         \\                (i32.add
@@ -534,34 +539,27 @@ test "codegen template literal with interpolation" {
         \\                    (local.get $8))
         \\                (i32.load
         \\                    (local.get $3))
-        \\                (i32.load
-        \\                    (i32.add
-        \\                        (local.get $3)
-        \\                        (i32.const 4))))
+        \\                (local.get $9))
         \\            (local.set $8
         \\                (i32.add
         \\                    (local.get $8)
-        \\                    (i32.load
-        \\                        (i32.add
-        \\                            (local.get $3)
-        \\                            (i32.const 4)))))
+        \\                    (local.get $9)))
+        \\            (local.set $9
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $4)
+        \\                        (i32.const 4))))
         \\            (memory.copy
         \\                (i32.add
         \\                    (local.get $7)
         \\                    (local.get $8))
         \\                (i32.load
         \\                    (local.get $4))
-        \\                (i32.load
-        \\                    (i32.add
-        \\                        (local.get $4)
-        \\                        (i32.const 4))))
+        \\                (local.get $9))
         \\            (local.set $8
         \\                (i32.add
         \\                    (local.get $8)
-        \\                    (i32.load
-        \\                        (i32.add
-        \\                            (local.get $4)
-        \\                            (i32.const 4)))))
+        \\                    (local.get $9)))
         \\            (i32.store
         \\                (local.get $1)
         \\                (local.get $7))
@@ -625,6 +623,7 @@ test "codegen template literal with two interpolations" {
         \\        (local $7 i32)
         \\        (local $11 i32)
         \\        (local $12 i32)
+        \\        (local $13 i32)
         \\        (local $0 i32)
         \\        (local $1 i32)
         \\        (local $2 i32)
@@ -711,18 +710,22 @@ test "codegen template literal with two interpolations" {
         \\                    (local.get $10)))
         \\            (local.set $11
         \\                (global.get $core/arena))
-        \\            (memory.copy
-        \\                (local.get $11)
-        \\                (i32.load
-        \\                    (local.get $3))
+        \\            (local.set $13
         \\                (i32.load
         \\                    (i32.add
         \\                        (local.get $3)
         \\                        (i32.const 4))))
+        \\            (memory.copy
+        \\                (local.get $11)
+        \\                (i32.load
+        \\                    (local.get $3))
+        \\                (local.get $13))
         \\            (local.set $12
+        \\                (local.get $13))
+        \\            (local.set $13
         \\                (i32.load
         \\                    (i32.add
-        \\                        (local.get $3)
+        \\                        (local.get $4)
         \\                        (i32.const 4))))
         \\            (memory.copy
         \\                (i32.add
@@ -730,68 +733,59 @@ test "codegen template literal with two interpolations" {
         \\                    (local.get $12))
         \\                (i32.load
         \\                    (local.get $4))
-        \\                (i32.load
-        \\                    (i32.add
-        \\                        (local.get $4)
-        \\                        (i32.const 4))))
+        \\                (local.get $13))
         \\            (local.set $12
         \\                (i32.add
         \\                    (local.get $12)
-        \\                    (i32.load
-        \\                        (i32.add
-        \\                            (local.get $4)
-        \\                            (i32.const 4)))))
+        \\                    (local.get $13)))
+        \\            (local.set $13
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $5)
+        \\                        (i32.const 4))))
         \\            (memory.copy
         \\                (i32.add
         \\                    (local.get $11)
         \\                    (local.get $12))
         \\                (i32.load
         \\                    (local.get $5))
-        \\                (i32.load
-        \\                    (i32.add
-        \\                        (local.get $5)
-        \\                        (i32.const 4))))
+        \\                (local.get $13))
         \\            (local.set $12
         \\                (i32.add
         \\                    (local.get $12)
-        \\                    (i32.load
-        \\                        (i32.add
-        \\                            (local.get $5)
-        \\                            (i32.const 4)))))
+        \\                    (local.get $13)))
+        \\            (local.set $13
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $6)
+        \\                        (i32.const 4))))
         \\            (memory.copy
         \\                (i32.add
         \\                    (local.get $11)
         \\                    (local.get $12))
         \\                (i32.load
         \\                    (local.get $6))
-        \\                (i32.load
-        \\                    (i32.add
-        \\                        (local.get $6)
-        \\                        (i32.const 4))))
+        \\                (local.get $13))
         \\            (local.set $12
         \\                (i32.add
         \\                    (local.get $12)
-        \\                    (i32.load
-        \\                        (i32.add
-        \\                            (local.get $6)
-        \\                            (i32.const 4)))))
+        \\                    (local.get $13)))
+        \\            (local.set $13
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $7)
+        \\                        (i32.const 4))))
         \\            (memory.copy
         \\                (i32.add
         \\                    (local.get $11)
         \\                    (local.get $12))
         \\                (i32.load
         \\                    (local.get $7))
-        \\                (i32.load
-        \\                    (i32.add
-        \\                        (local.get $7)
-        \\                        (i32.const 4))))
+        \\                (local.get $13))
         \\            (local.set $12
         \\                (i32.add
         \\                    (local.get $12)
-        \\                    (i32.load
-        \\                        (i32.add
-        \\                            (local.get $7)
-        \\                            (i32.const 4)))))
+        \\                    (local.get $13)))
         \\            (i32.store
         \\                (local.get $2)
         \\                (local.get $11))
