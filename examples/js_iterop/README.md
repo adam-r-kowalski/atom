@@ -1,3 +1,3 @@
-1. Compile your onload.moose to a wat file `moose onload.moose`
+1. Compile your onload.rocket to a wat file `rocket onload.rocket`
 
 2. Run a web server, for example: `python -m http.server`

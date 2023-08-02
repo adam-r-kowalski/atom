@@ -623,6 +623,9 @@ fn templateLiteral(context: Context, t: type_checker.types.TemplateLiteral) !typ
     get_total_length.* = .{ .local_get = .{ .name = total_length } };
     const four = try context.allocator.create(types.Expression);
     four.* = .{ .literal = .{ .u32 = 4 } };
+    const current_length = try freshLocal(context, .i32);
+    const get_current_length = try context.allocator.create(types.Expression);
+    get_current_length.* = .{ .local_get = .{ .name = current_length } };
     for (locals, 0..) |l, i| {
         const base = try context.allocator.create(types.Expression);
         base.* = .{ .local_get = .{ .name = l } };
@@ -632,22 +635,23 @@ fn templateLiteral(context: Context, t: type_checker.types.TemplateLiteral) !typ
         binary_op.* = .{ .binary_op = .{ .kind = .i32_add, .left = base, .right = four } };
         const length = try context.allocator.create(types.Expression);
         length.* = .{ .unary_op = .{ .kind = .i32_load, .expression = binary_op } };
+        try exprs.append(.{ .local_set = .{ .name = current_length, .value = length } });
         if (i == 0) {
             try exprs.append(.{ .memory_copy = .{
                 .destination = get_destination,
                 .source = ptr,
-                .size = length,
+                .size = get_current_length,
             } });
-            try exprs.append(.{ .local_set = .{ .name = total_length, .value = length } });
+            try exprs.append(.{ .local_set = .{ .name = total_length, .value = get_current_length } });
         } else {
             const new_length = try context.allocator.create(types.Expression);
-            new_length.* = .{ .binary_op = .{ .kind = .i32_add, .left = get_total_length, .right = length } };
+            new_length.* = .{ .binary_op = .{ .kind = .i32_add, .left = get_total_length, .right = get_current_length } };
             const new_destination = try context.allocator.create(types.Expression);
             new_destination.* = .{ .binary_op = .{ .kind = .i32_add, .left = get_destination, .right = get_total_length } };
             try exprs.append(.{ .memory_copy = .{
                 .destination = new_destination,
                 .source = ptr,
-                .size = length,
+                .size = get_current_length,
             } });
             try exprs.append(.{ .local_set = .{ .name = total_length, .value = new_length } });
         }

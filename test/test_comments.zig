@@ -1,5 +1,5 @@
 const std = @import("std");
-const moose = @import("moose");
+const rocket = @import("rocket");
 
 test "tokenize comment" {
     const allocator = std.testing.allocator;
@@ -10,7 +10,7 @@ test "tokenize comment" {
         \\    print("hello world") # write hello world to the stdout
         \\}
     ;
-    const actual = try moose.testing.tokenize(allocator, source);
+    const actual = try rocket.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(comment # this is a comment)
@@ -45,7 +45,7 @@ test "parse comment" {
         \\
         \\# comment after function
     ;
-    const actual = try moose.testing.parse(allocator, source);
+    const actual = try rocket.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def start (fn [] void
