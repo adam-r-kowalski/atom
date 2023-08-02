@@ -592,14 +592,15 @@ fn templateLiteral(context: Context, t: type_checker.types.TemplateLiteral) !typ
         value.* = try string(context, t.strings[0]);
         try exprs.append(.{ .local_set = .{ .name = locals[0], .value = value } });
     }
-    for (t.strings[1..], t.arguments, 1..) |s, a, i| {
+    var local_index: u64 = 1;
+    for (t.strings[1..], t.arguments) |s, a| {
         switch (type_checker.type_of.expression(a)) {
             .array => |arr| {
                 switch (arr.element_type.*) {
                     .u8 => {
                         const value = try context.allocator.create(types.Expression);
                         value.* = try expression(context, a);
-                        try exprs.append(.{ .local_set = .{ .name = locals[i], .value = value } });
+                        try exprs.append(.{ .local_set = .{ .name = locals[local_index], .value = value } });
                     },
                     else => |k| std.debug.panic("\nTemplate literal array with element type {} not yet supported", .{k}),
                 }
@@ -608,7 +609,8 @@ fn templateLiteral(context: Context, t: type_checker.types.TemplateLiteral) !typ
         }
         const value = try context.allocator.create(types.Expression);
         value.* = try string(context, s);
-        try exprs.append(.{ .local_set = .{ .name = locals[i + 1], .value = value } });
+        try exprs.append(.{ .local_set = .{ .name = locals[local_index + 1], .value = value } });
+        local_index += 2;
     }
     const destination = try freshLocal(context, .i32);
     const get_arena = try context.allocator.create(types.Expression);

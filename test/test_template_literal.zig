@@ -580,3 +580,233 @@ test "codegen template literal with interpolation" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "codegen template literal with two interpolations" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\start = () str {
+        \\    first = "Joe"
+        \\    last = "Smith"
+        \\    html`<h1>Hello ${first} ${last}</h1>`
+        \\}
+    ;
+    const actual = try moose.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (data (i32.const 0) "Joe")
+        \\    (data (i32.const 3) "Smith")
+        \\    (data (i32.const 8) "<h1>Hello ")
+        \\    (data (i32.const 18) " ")
+        \\    (data (i32.const 19) "</h1>")
+        \\
+        \\    (global $core/arena (mut i32) (i32.const 24))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
+        \\                (local.get $size))))
+        \\
+        \\    (func $start (result i32)
+        \\        (local $first i32)
+        \\        (local $last i32)
+        \\        (local $3 i32)
+        \\        (local $4 i32)
+        \\        (local $5 i32)
+        \\        (local $6 i32)
+        \\        (local $7 i32)
+        \\        (local $11 i32)
+        \\        (local $12 i32)
+        \\        (local $0 i32)
+        \\        (local $1 i32)
+        \\        (local $2 i32)
+        \\        (local $8 i32)
+        \\        (local $9 i32)
+        \\        (local $10 i32)
+        \\        (local.set $0
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (local.set $1
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (local.set $2
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (local.set $8
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (local.set $9
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (local.set $10
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (local.set $first
+        \\            (block (result i32)
+        \\                (i32.store
+        \\                    (local.get $0)
+        \\                    (i32.const 0))
+        \\                (i32.store
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 4))
+        \\                    (i32.const 3))
+        \\                (local.get $0)))
+        \\        (local.set $last
+        \\            (block (result i32)
+        \\                (i32.store
+        \\                    (local.get $1)
+        \\                    (i32.const 3))
+        \\                (i32.store
+        \\                    (i32.add
+        \\                        (local.get $1)
+        \\                        (i32.const 4))
+        \\                    (i32.const 5))
+        \\                (local.get $1)))
+        \\        (block (result i32)
+        \\            (local.set $3
+        \\                (block (result i32)
+        \\                    (i32.store
+        \\                        (local.get $8)
+        \\                        (i32.const 8))
+        \\                    (i32.store
+        \\                        (i32.add
+        \\                            (local.get $8)
+        \\                            (i32.const 4))
+        \\                        (i32.const 10))
+        \\                    (local.get $8)))
+        \\            (local.set $4
+        \\                (local.get $first))
+        \\            (local.set $5
+        \\                (block (result i32)
+        \\                    (i32.store
+        \\                        (local.get $9)
+        \\                        (i32.const 18))
+        \\                    (i32.store
+        \\                        (i32.add
+        \\                            (local.get $9)
+        \\                            (i32.const 4))
+        \\                        (i32.const 1))
+        \\                    (local.get $9)))
+        \\            (local.set $6
+        \\                (local.get $last))
+        \\            (local.set $7
+        \\                (block (result i32)
+        \\                    (i32.store
+        \\                        (local.get $10)
+        \\                        (i32.const 19))
+        \\                    (i32.store
+        \\                        (i32.add
+        \\                            (local.get $10)
+        \\                            (i32.const 4))
+        \\                        (i32.const 5))
+        \\                    (local.get $10)))
+        \\            (local.set $11
+        \\                (global.get $core/arena))
+        \\            (memory.copy
+        \\                (local.get $11)
+        \\                (i32.load
+        \\                    (local.get $3))
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $3)
+        \\                        (i32.const 4))))
+        \\            (local.set $12
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $3)
+        \\                        (i32.const 4))))
+        \\            (memory.copy
+        \\                (i32.add
+        \\                    (local.get $11)
+        \\                    (local.get $12))
+        \\                (i32.load
+        \\                    (local.get $4))
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $4)
+        \\                        (i32.const 4))))
+        \\            (local.set $12
+        \\                (i32.add
+        \\                    (local.get $12)
+        \\                    (i32.load
+        \\                        (i32.add
+        \\                            (local.get $4)
+        \\                            (i32.const 4)))))
+        \\            (memory.copy
+        \\                (i32.add
+        \\                    (local.get $11)
+        \\                    (local.get $12))
+        \\                (i32.load
+        \\                    (local.get $5))
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $5)
+        \\                        (i32.const 4))))
+        \\            (local.set $12
+        \\                (i32.add
+        \\                    (local.get $12)
+        \\                    (i32.load
+        \\                        (i32.add
+        \\                            (local.get $5)
+        \\                            (i32.const 4)))))
+        \\            (memory.copy
+        \\                (i32.add
+        \\                    (local.get $11)
+        \\                    (local.get $12))
+        \\                (i32.load
+        \\                    (local.get $6))
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $6)
+        \\                        (i32.const 4))))
+        \\            (local.set $12
+        \\                (i32.add
+        \\                    (local.get $12)
+        \\                    (i32.load
+        \\                        (i32.add
+        \\                            (local.get $6)
+        \\                            (i32.const 4)))))
+        \\            (memory.copy
+        \\                (i32.add
+        \\                    (local.get $11)
+        \\                    (local.get $12))
+        \\                (i32.load
+        \\                    (local.get $7))
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $7)
+        \\                        (i32.const 4))))
+        \\            (local.set $12
+        \\                (i32.add
+        \\                    (local.get $12)
+        \\                    (i32.load
+        \\                        (i32.add
+        \\                            (local.get $7)
+        \\                            (i32.const 4)))))
+        \\            (i32.store
+        \\                (local.get $2)
+        \\                (local.get $11))
+        \\            (i32.store
+        \\                (i32.add
+        \\                    (local.get $2)
+        \\                    (i32.const 4))
+        \\                (local.get $12))
+        \\            (global.set $core/arena
+        \\                (i32.add
+        \\                    (local.get $11)
+        \\                    (local.get $12)))
+        \\            (local.get $2)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
