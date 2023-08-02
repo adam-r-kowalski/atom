@@ -1,10 +1,10 @@
 const std = @import("std");
-const rocket = @import("rocket");
+const atom = @import("atom");
 
 test "tokenize function definition" {
     const allocator = std.testing.allocator;
     const source = "double = (x: i32) i32 { x + x }";
-    const actual = try rocket.testing.tokenize(allocator, source);
+    const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol double)
@@ -31,7 +31,7 @@ test "tokenize function definition with new lines and tabs" {
         \\    x + x
         \\}
     ;
-    const actual = try rocket.testing.tokenize(allocator, source);
+    const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol double)
@@ -56,7 +56,7 @@ test "tokenize function definition with new lines and tabs" {
 test "parse function definition" {
     const allocator = std.testing.allocator;
     const source = "double = (x: i32) i32 { x + x }";
-    const actual = try rocket.testing.parse(allocator, source);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def double (fn [(x i32)] i32
@@ -68,7 +68,7 @@ test "parse function definition" {
 test "parse multiple parameters" {
     const allocator = std.testing.allocator;
     const source = "add = (x: i32, y: i32) i32 { x + y }";
-    const actual = try rocket.testing.parse(allocator, source);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def add (fn [(x i32) (y i32)] i32
@@ -86,7 +86,7 @@ test "tokenize multi line function" {
         \\    x_squared + y_squared
         \\}
     ;
-    const actual = try rocket.testing.tokenize(allocator, source);
+    const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol sum_squares)
@@ -133,7 +133,7 @@ test "parse multi line function" {
         \\    x_squared + y_squared
         \\}
     ;
-    const actual = try rocket.testing.parse(allocator, source);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def sum_squares (fn [(x i32) (y i32)] i32
@@ -148,7 +148,7 @@ test "parse multi line function" {
 test "type infer function body" {
     const allocator = std.testing.allocator;
     const source = "id = (x: i32) i32 { x }";
-    const actual = try rocket.testing.typeInfer(allocator, source, "id");
+    const actual = try atom.testing.typeInfer(allocator, source, "id");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -176,7 +176,7 @@ test "codegen drops unused returns" {
         \\    double(4)
         \\}
     ;
-    const actual = try rocket.testing.codegen(allocator, source);
+    const actual = try atom.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module

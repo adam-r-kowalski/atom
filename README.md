@@ -1,6 +1,6 @@
-# 🚀 Rocket Programming Language
+# ⚛️ Atom Programming Language
 
-Rocket is a statically typed, high-performance programming language designed for machine learning and high-performance computing.
+Atom is a statically typed, high-performance programming language designed for machine learning and high-performance computing.
 It compiles to WebAssembly, allowing your code to run anywhere WebAssembly is supported, including web browsers and server environments.
 
 ## Getting Started
@@ -9,35 +9,35 @@ It compiles to WebAssembly, allowing your code to run anywhere WebAssembly is su
 
 #### Prerequisites
 
-Before installing Rocket, please ensure that you have installed [zig 0.11.0-dev.3859+88284c124](https://ziglang.org/) and [wasmer](https://wasmer.io/).
-Zig is a fast and reliable language that we've used to develop Rocket's compiler,
-and Wasmer is the WebAssembly runtime that Rocket relies on for executing your code.
+Before installing Atom, please ensure that you have installed [zig 0.11.0-dev.3859+88284c124](https://ziglang.org/) and [wasmer](https://wasmer.io/).
+Zig is a fast and reliable language that we've used to develop Atom's compiler,
+and Wasmer is the WebAssembly runtime that Atom relies on for executing your code.
 
 #### Compiling From Source
 
-Follow the steps below to compile Rocket from its source code:
+Follow the steps below to compile Atom from its source code:
 
 1. Clone the repository:
 
-First, you'll need to clone the Rocket repository from GitHub. You can do this using Git with the following command:
+First, you'll need to clone the Atom repository from GitHub. You can do this using Git with the following command:
 
 ```bash
-git clone git@github.com:adam-r-kowalski/rocket.git
+git clone git@github.com:adam-r-kowalski/atom.git
 ```
 
-This command creates a copy of the Rocket repository on your local machine.
+This command creates a copy of the Atom repository on your local machine.
 
 2. Navigate into the repository directory:
 
 Use the following command to navigate into the directory of the repository you just cloned:
 
 ```bash
-cd rocket
+cd atom
 ```
 
 3. Run the tests:
 
-Before proceeding, it's a good idea to run the Rocket tests to ensure that everything is functioning as expected. You can do this with the following command:
+Before proceeding, it's a good idea to run the Atom tests to ensure that everything is functioning as expected. You can do this with the following command:
 
 ```bash
 zig build test
@@ -47,37 +47,37 @@ This command runs the tests and outputs the results. If all tests pass, you're g
 
 4. Build the compiler:
 
-Once the tests have passed, you can build the Rocket compiler. Use the following command to do this:
+Once the tests have passed, you can build the Atom compiler. Use the following command to do this:
 
 ```bash
 zig build
 ```
 
-This command builds the Rocket compiler from the source code.
+This command builds the Atom compiler from the source code.
 
 5. Add the compiler to your PATH:
 
-The final step is to add the Rocket compiler to your PATH so that you can use it from any location on your system. Here is how you can do it:
+The final step is to add the Atom compiler to your PATH so that you can use it from any location on your system. Here is how you can do it:
 
 ```bash
 export PATH=$PATH:`pwd`/zig-out/bin/
 ```
 
-This command adds the directory containing the Rocket compiler to your system's PATH.
+This command adds the directory containing the Atom compiler to your system's PATH.
 
-Now, you have Rocket installed on your system, and you're ready to start coding!
+Now, you have Atom installed on your system, and you're ready to start coding!
 
-### Running a Rocket program
+### Running a Atom program
 
 ```bash
-rocket source.rocket
+atom source.atom
 ```
 
-This will compile your Rocket code into web assembly and then execute it using the wasmer runtime.
+This will compile your Atom code into web assembly and then execute it using the wasmer runtime.
 To see the generated wat code add `--wat` to the compile command.
 
 ```bash
-rocket source.rocket --wat
+atom source.atom --wat
 ```
 
 Look at the code in the `examples` folder for inspiration.
@@ -85,12 +85,12 @@ This compiler is a work in progress so expect bugs and incomplete features.
 You should NOT be using this in production yet.
 However, code in the examples folder should compile and run.
 
-### Your first Rocket program
+### Your first Atom program
 
-Rocket has a straightforward syntax that is easy to read and write.
-Here is a simple Rocket program that defines a function to calculate the square of a number:
+Atom has a straightforward syntax that is easy to read and write.
+Here is a simple Atom program that defines a function to calculate the square of a number:
 
-```rocket
+```atom
 square = (x: i32) i32 { x * x }
 
 test("function calls", () {
@@ -106,13 +106,13 @@ This program defines a function `square` and a set of tests to verify its behavi
 
 ### Comments
 
-In Rocket, you can insert comments in your code to provide explanations or annotations.
+In Atom, you can insert comments in your code to provide explanations or annotations.
 Comments are ignored by the compiler and do not affect the execution of the program.
 You can add a comment by starting the line with a hash (`#`).
 
 Here's an example:
 
-```rocket
+```atom
 # This is a single line comment
 
 square = (x: i32) i32 {
@@ -127,9 +127,9 @@ sum = (xs: vec[i32]) i32 { fold(xs, 0, +) } # Here we calculate the sum of an ar
 
 ### Functions
 
-In Rocket, you define a function using the `fn` keyword, followed by a list of parameters and their types, the return type, and then the function body.
+In Atom, you define a function using the `fn` keyword, followed by a list of parameters and their types, the return type, and then the function body.
 
-```rocket
+```atom
 max = (x: i32, y: i32) i32 {
     if x > y { x } else { y }
 }
@@ -148,9 +148,9 @@ This is a function `max` that takes two parameters, `x` and `y`, and returns the
 
 ### Control Structures
 
-Rocket supports conditional logic with `if`, `else if` and `else` expressions.
+Atom supports conditional logic with `if`, `else if` and `else` expressions.
 
-```rocket
+```atom
 clamp = (value: i32, low: i32, high: i32) i32 {
     if value < low { low }
     else if value > high { high }
@@ -168,9 +168,9 @@ This `clamp` function ensures that a value stays within a specific range.
 
 ### Named Parameters
 
-Rocket supports named parameters, which can improve the readability of your code. Here is an example of using named parameters:
+Atom supports named parameters, which can improve the readability of your code. Here is an example of using named parameters:
 
-```rocket
+```atom
 test("named parameters", () {
     assert(clamp(value=1, low=3, high=5) == 3)
     assert(clamp(value=7, low=3, high=5) == 5)
@@ -187,10 +187,10 @@ This can make your code more readable by clearly associating a function with the
 
 ### Pattern Matching
 
-Rocket supports pattern matching, which is a way of checking a given sequence of tokens for the presence of the constituents of some pattern.
+Atom supports pattern matching, which is a way of checking a given sequence of tokens for the presence of the constituents of some pattern.
 It's a powerful tool for working with complex data structures.
 
-```rocket
+```atom
 # pattern matching is done with `match expression`
 sum = (xs: vec[i32]) i32 {
     match xs {
@@ -211,12 +211,12 @@ result of the recursive call to `sum` on the rest of the list.
 
 ### Destructuring
 
-Destructuring in Rocket allows you to bind a set of variables to a corresponding set of values provided in a complex data structure,
+Destructuring in Atom allows you to bind a set of variables to a corresponding set of values provided in a complex data structure,
 such as a struct or array. It provides a convenient way to extract multiple values from data stored in (possibly nested) objects and arrays.
 
 For example, consider the `Square` struct and the implementation of `Shape` interface for it:
 
-```rocket
+```atom
 Square = struct {
     width: f32,
     height: f32
@@ -236,7 +236,7 @@ it binds the variables `width` and `height` to the respective values in the pass
 
 Another example of destructuring can be found in array pattern matching:
 
-```rocket
+```atom
 # pattern matching with destructuring
 sum = (xs: vec[i32]) i32 {
     match xs {
@@ -253,13 +253,13 @@ Destructuring can make your code more readable and less error-prone by avoiding 
 
 ### Shadowing
 
-Shadowing in Rocket allows you to declare a new variable with the same name as a previously declared variable.
+Shadowing in Atom allows you to declare a new variable with the same name as a previously declared variable.
 The new variable shadows the previous one within its scope, meaning the previous variable cannot be accessed.
-This is not an error in Rocket; it's a feature of the language.
+This is not an error in Atom; it's a feature of the language.
 
 Here's an example:
 
-```rocket
+```atom
 x = 5
 
 if true {
@@ -277,16 +277,16 @@ Shadowing can be useful when you want to reuse variable names, but be careful, a
 
 ### Importing from other files
 
-Rocket supports importing other files and calling functions in them
+Atom supports importing other files and calling functions in them
 
-```rocket
-# math.rocket
+```atom
+# math.atom
 pi: f64 = 3.14
 ```
 
-```rocket
-# circle.rocket
-math = import("math.rocket")
+```atom
+# circle.atom
+math = import("math.atom")
 
 Circle = struct {
     radius: f64
@@ -303,16 +303,16 @@ test("area of a circle", () {
 
 ### Foreign Function Interface
 
-Rocket supports importing and exporting functions from the host environment.
+Atom supports importing and exporting functions from the host environment.
 
-```rocket
+```atom
 # Import a function from the host
 log = foreign_import("console", "log", (x: str) void)
 
 # Export a function to the host
 foreign_export("double", (x: i32) i32 { x * 2 })
 
-# call the log function from Rocket
+# call the log function from Atom
 start = () void {
     log("hello world")
 }
@@ -327,9 +327,9 @@ that we'll be proposing for standardization.
 It's designed to be independent of browsers, so it doesn't depend on Web APIs or JS, and isn't limited by the need to be compatible with JS.
 And it has integrated capability-based security, so it extends WebAssembly's characteristic sandboxing to include I/O.
 
-It is a first class citizen in Rocket and by targeting this API you can ensure that your programs work across as many platforms as possible.
+It is a first class citizen in Atom and by targeting this API you can ensure that your programs work across as many platforms as possible.
 
-```rocket
+```atom
 fd_write = foreign_import(
     "wasi_unstable",
     "fd_write",
@@ -351,9 +351,9 @@ start = () void {
 
 ### Built-in Data Structures and Algorithms
 
-Rocket includes built-in support for arrays and powerful operations over them.
+Atom includes built-in support for arrays and powerful operations over them.
 
-```rocket
+```atom
 # Create an array
 xs = [1, 2, 3, 4, 5]
 
@@ -369,9 +369,9 @@ Here, `xs` is an array of integers, and `sum` is a function that computes the su
 
 ### Pipelines
 
-Rocket supports a pipeline syntax allowing you to pass the output of one function as the input for the next
+Atom supports a pipeline syntax allowing you to pass the output of one function as the input for the next
 
-```rocket
+```atom
 test("sum of first ten even squares", () {
     result = naturals()
         |> map((x) { x ^ 2 })
@@ -384,9 +384,9 @@ test("sum of first ten even squares", () {
 
 ### For expressions
 
-Rocket provides for expressions to efficiently iterate through an array and build up a new one.
+Atom provides for expressions to efficiently iterate through an array and build up a new one.
 
-```rocket
+```atom
 # Compute the dot product of two vectors
 dot = (a: vec[f32], b: vec[f32]) f32 {
     sum(for i { a[i] * b[i] })
@@ -400,10 +400,10 @@ matmul = (a: mat[f32], b: mat[f32]) mat[f32] {
 
 ### Machine Learning
 
-Rocket is designed with machine learning in mind. For expressions allow you to express how models work across a
-single example rather than dealing with batches. Here is a simple linear model implemented in Rocket:
+Atom is designed with machine learning in mind. For expressions allow you to express how models work across a
+single example rather than dealing with batches. Here is a simple linear model implemented in Atom:
 
-```rocket
+```atom
 Linear = struct {
     m: f64,
     b: f64
@@ -446,10 +446,10 @@ test("gradient descent", () {
 
 ### HTML
 
-Rocket is built to be a citizen of the web. We want to ensure you can build services which can render html
+Atom is built to be a citizen of the web. We want to ensure you can build services which can render html
 on the server side or client side.
 
-```rocket
+```atom
 Customer = struct {
     name: str,
     age: u8,
@@ -493,5 +493,5 @@ start = () str {
 
 ## Community
 
-Rocket is open-source and community-driven. We welcome contributions of any kind: code, documentation, design, etc.
-Join our community and help us make Rocket the best language for machine learning and high-performance computing!
+Atom is open-source and community-driven. We welcome contributions of any kind: code, documentation, design, etc.
+Join our community and help us make Atom the best language for machine learning and high-performance computing!

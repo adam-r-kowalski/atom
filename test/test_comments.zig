@@ -1,5 +1,5 @@
 const std = @import("std");
-const rocket = @import("rocket");
+const atom = @import("atom");
 
 test "tokenize comment" {
     const allocator = std.testing.allocator;
@@ -10,7 +10,7 @@ test "tokenize comment" {
         \\    print("hello world") # write hello world to the stdout
         \\}
     ;
-    const actual = try rocket.testing.tokenize(allocator, source);
+    const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(comment # this is a comment)
@@ -45,7 +45,7 @@ test "parse comment" {
         \\
         \\# comment after function
     ;
-    const actual = try rocket.testing.parse(allocator, source);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def start (fn [] void

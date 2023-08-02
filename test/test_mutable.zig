@@ -1,5 +1,5 @@
 const std = @import("std");
-const rocket = @import("rocket");
+const atom = @import("atom");
 
 test "tokenize mutable binding" {
     const allocator = std.testing.allocator;
@@ -10,7 +10,7 @@ test "tokenize mutable binding" {
         \\    x
         \\}
     ;
-    const actual = try rocket.testing.tokenize(allocator, source);
+    const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol start)
@@ -47,7 +47,7 @@ test "parse mutable binding" {
         \\    x
         \\}
     ;
-    const actual = try rocket.testing.parse(allocator, source);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def start (fn [] i32
@@ -68,7 +68,7 @@ test "type infer mutable binding" {
         \\    x
         \\}
     ;
-    const actual = try rocket.testing.typeInfer(allocator, source, "start");
+    const actual = try atom.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -104,7 +104,7 @@ test "codegen plus equal" {
         \\    x
         \\}
     ;
-    const actual = try rocket.testing.codegen(allocator, source);
+    const actual = try atom.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -136,7 +136,7 @@ test "codegen times equal" {
         \\    x
         \\}
     ;
-    const actual = try rocket.testing.codegen(allocator, source);
+    const actual = try atom.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -172,7 +172,7 @@ test "parse mutable parameter" {
         \\    x
         \\}
     ;
-    const actual = try rocket.testing.parse(allocator, source);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def double (fn [(mut x i32)] void
@@ -200,7 +200,7 @@ test "type check mutable parameter" {
         \\    x
         \\}
     ;
-    const actual = try rocket.testing.typeInfer(allocator, source, "start");
+    const actual = try atom.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -258,7 +258,7 @@ test "codegen mutable parameter" {
         \\    x
         \\}
     ;
-    const actual = try rocket.testing.codegen(allocator, source);
+    const actual = try atom.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
