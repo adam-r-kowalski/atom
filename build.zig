@@ -16,9 +16,9 @@ fn linkWasmer(allocator: Allocator, exe: *std.build.Step.Compile) void {
         std.debug.panic("\nFailed to execute `wasmer config --includedir`: {}", .{e});
     };
     const include_dir = std.mem.trimRight(u8, include_dir_result.stdout, "\r\n");
-    exe.addLibraryPath(lib_dir);
-    exe.addRPath(lib_dir);
-    exe.addIncludePath(include_dir);
+    exe.addLibraryPath(.{ .path = lib_dir });
+    exe.addRPath(.{ .path = lib_dir });
+    exe.addIncludePath(.{ .path = include_dir });
     exe.linkSystemLibrary("wasmer");
     exe.linkLibC();
 }
