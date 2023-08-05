@@ -1,5 +1,5 @@
 const std = @import("std");
-const atom = @import("atom");
+const goat = @import("goat");
 
 test "tokenize array" {
     const allocator = std.testing.allocator;
@@ -8,7 +8,7 @@ test "tokenize array" {
         \\    [1, 2, 3]
         \\}
     ;
-    const actual = try atom.testing.tokenize(allocator, source);
+    const actual = try goat.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol start)
@@ -41,7 +41,7 @@ test "parse array" {
         \\    [1, 2, 3]
         \\}
     ;
-    const actual = try atom.testing.parse(allocator, source);
+    const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def start (fn [] (index vec i32)
@@ -60,7 +60,7 @@ test "type infer array" {
         \\    [1, 2, 3]
         \\}
     ;
-    const actual = try atom.testing.typeInfer(allocator, source, "start");
+    const actual = try goat.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -88,7 +88,7 @@ test "codegen array" {
         \\    [1, 2, 3]
         \\}
     ;
-    const actual = try atom.testing.codegen(allocator, source);
+    const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -153,7 +153,7 @@ test "parse array index" {
         \\    xs[1]
         \\}
     ;
-    const actual = try atom.testing.parse(allocator, source);
+    const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def start (fn [] i32
@@ -175,7 +175,7 @@ test "type infer array index" {
         \\    xs[1]
         \\}
     ;
-    const actual = try atom.testing.typeInfer(allocator, source, "start");
+    const actual = try goat.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -214,7 +214,7 @@ test "codegen array index" {
         \\    xs[1]
         \\}
     ;
-    const actual = try atom.testing.codegen(allocator, source);
+    const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -298,7 +298,7 @@ test "codegen array index of string" {
         \\    xs[3]
         \\}
     ;
-    const actual = try atom.testing.codegen(allocator, source);
+    const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -367,7 +367,7 @@ test "codegen array of bool" {
         \\    xs[1]
         \\}
     ;
-    const actual = try atom.testing.codegen(allocator, source);
+    const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -451,7 +451,7 @@ test "codegen array of i64" {
         \\    xs[1]
         \\}
     ;
-    const actual = try atom.testing.codegen(allocator, source);
+    const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -535,7 +535,7 @@ test "codegen array of f32" {
         \\    xs[1]
         \\}
     ;
-    const actual = try atom.testing.codegen(allocator, source);
+    const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -619,7 +619,7 @@ test "codegen array of f64" {
         \\    xs[1]
         \\}
     ;
-    const actual = try atom.testing.codegen(allocator, source);
+    const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -703,7 +703,7 @@ test "codegen array of u8" {
         \\    xs[1]
         \\}
     ;
-    const actual = try atom.testing.codegen(allocator, source);
+    const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module

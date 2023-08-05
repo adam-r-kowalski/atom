@@ -1,10 +1,10 @@
 const std = @import("std");
-const atom = @import("atom");
+const goat = @import("goat");
 
 test "tokenize call with named arguments" {
     const allocator = std.testing.allocator;
     const source = "clamp(value=5, low=0, high=10)";
-    const actual = try atom.testing.tokenize(allocator, source);
+    const actual = try goat.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol clamp)
@@ -28,7 +28,7 @@ test "tokenize call with named arguments" {
 test "parse call with named arguments" {
     const allocator = std.testing.allocator;
     const source = "clamp(value=5, low=0, high=10)";
-    const actual = try atom.testing.parse(allocator, source);
+    const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(clamp :value 5 :low 0 :high 10)";
     try std.testing.expectEqualStrings(expected, actual);

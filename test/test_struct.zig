@@ -1,5 +1,5 @@
 const std = @import("std");
-const atom = @import("atom");
+const goat = @import("goat");
 
 test "tokenize struct" {
     const allocator = std.testing.allocator;
@@ -16,7 +16,7 @@ test "tokenize struct" {
         \\    }
         \\}
     ;
-    const actual = try atom.testing.tokenize(allocator, source);
+    const actual = try goat.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol Person)
@@ -77,7 +77,7 @@ test "parse struct" {
         \\    }
         \\}
     ;
-    const actual = try atom.testing.parse(allocator, source);
+    const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def Person (struct
@@ -107,7 +107,7 @@ test "type infer struct" {
         \\    }
         \\}
     ;
-    const actual = try atom.testing.typeInfer(allocator, source, "start");
+    const actual = try goat.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -139,7 +139,7 @@ test "codegen struct" {
         \\    }
         \\}
     ;
-    const actual = try atom.testing.codegen(allocator, source);
+    const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module

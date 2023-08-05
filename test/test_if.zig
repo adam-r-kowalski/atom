@@ -1,10 +1,10 @@
 const std = @import("std");
-const atom = @import("atom");
+const goat = @import("goat");
 
 test "tokenize if" {
     const allocator = std.testing.allocator;
     const source = "if x { y } else { z }";
-    const actual = try atom.testing.tokenize(allocator, source);
+    const actual = try goat.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(keyword if)
@@ -27,7 +27,7 @@ test "parse if" {
         \\    if x { y } else { z }
         \\}
     ;
-    const actual = try atom.testing.parse(allocator, source);
+    const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def f (fn [(x bool) (y i32) (z i32)] i32
@@ -51,7 +51,7 @@ test "parse multiple line if" {
         \\    }
         \\}
     ;
-    const actual = try atom.testing.parse(allocator, source);
+    const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def f (fn [(x bool) (y i32) (z i32)] i32
@@ -76,7 +76,7 @@ test "parse if multi line then else" {
         \\    }
         \\}
     ;
-    const actual = try atom.testing.parse(allocator, source);
+    const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def f (fn [(x bool) (y i32) (z i32)] i32
@@ -103,7 +103,7 @@ test "parse if then multi line else" {
         \\    }
         \\}
     ;
-    const actual = try atom.testing.parse(allocator, source);
+    const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def f (fn [(x bool) (y i32) (z i32)] i32
@@ -128,7 +128,7 @@ test "parse let on result of if then else" {
         \\        a * 5
         \\    }
     ;
-    const actual = try atom.testing.parse(allocator, source);
+    const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def b (branch
@@ -157,7 +157,7 @@ test "parse nested if then else" {
         \\    }
         \\}
     ;
-    const actual = try atom.testing.parse(allocator, source);
+    const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def f (fn [(x i32) (y i32)] i32
@@ -181,7 +181,7 @@ test "type infer if then else" {
         \\    if c { x } else { y }
         \\}
     ;
-    const actual = try atom.testing.typeInfer(allocator, source, "f");
+    const actual = try goat.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -215,7 +215,7 @@ test "codegen if" {
         \\    if true { 10 } else { 20 }
         \\}
     ;
-    const actual = try atom.testing.codegen(allocator, source);
+    const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -245,7 +245,7 @@ test "codegen if with void result" {
         \\    if true { print(10) } else { print(20) }
         \\}
     ;
-    const actual = try atom.testing.codegen(allocator, source);
+    const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -279,7 +279,7 @@ test "codegen if with empty else block" {
         \\    if true { print(10) } else { }
         \\}
     ;
-    const actual = try atom.testing.codegen(allocator, source);
+    const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -312,7 +312,7 @@ test "codegen if with no else block" {
         \\    }
         \\}
     ;
-    const actual = try atom.testing.codegen(allocator, source);
+    const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -343,7 +343,7 @@ test "parse multi arm if" {
         \\    else { x }
         \\}
     ;
-    const actual = try atom.testing.parse(allocator, source);
+    const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def clamp (fn [(x i32) (lb i32) (ub i32)] i32
@@ -367,7 +367,7 @@ test "type infer multi arm if" {
         \\    else { x }
         \\}
     ;
-    const actual = try atom.testing.typeInfer(allocator, source, "clamp");
+    const actual = try goat.testing.typeInfer(allocator, source, "clamp");
     defer allocator.free(actual);
     const expected =
         \\define =
@@ -423,7 +423,7 @@ test "codegen multi arm if" {
         \\    clamp(5, 10, 20)
         \\}
     ;
-    const actual = try atom.testing.codegen(allocator, source);
+    const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
