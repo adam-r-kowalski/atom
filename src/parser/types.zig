@@ -150,6 +150,7 @@ pub const Argument = struct {
 pub const Call = struct {
     function: *const Expression,
     arguments: []const Argument,
+    named_arguments: Map(Interned, Argument),
     span: Span,
 };
 

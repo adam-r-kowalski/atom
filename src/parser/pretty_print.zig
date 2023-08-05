@@ -173,6 +173,18 @@ pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
             try expression(a.value, indent + 1, writer);
         }
     }
+    var iterator = c.named_arguments.iterator();
+    while (iterator.next()) |entry| {
+        try writer.print(" :{s} ", .{entry.key_ptr.*.string()});
+        const a = entry.value_ptr.*;
+        if (a.mutable) {
+            try writer.writeAll("(mut ");
+            try expression(a.value, indent + 1, writer);
+            try writer.writeAll(")");
+        } else {
+            try expression(a.value, indent + 1, writer);
+        }
+    }
     try writer.writeAll(")");
 }
 

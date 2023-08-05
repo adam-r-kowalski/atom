@@ -514,6 +514,7 @@ fn binaryOp(context: Context, left: types.Expression, kind: types.BinaryOpKind) 
 fn call(context: Context, left: types.Expression) !types.Call {
     context.tokens.advance();
     var arguments = List(types.Argument).init(context.allocator);
+    var named_arguments = Map(Interned, types.Argument).init(context.allocator);
     while (context.tokens.peek()) |t| {
         switch (t) {
             .new_line => context.tokens.advance(),
@@ -533,10 +534,30 @@ fn call(context: Context, left: types.Expression) !types.Call {
                 context.tokens.maybeConsume(.comma);
             },
             else => {
-                const value = try expression(withPrecedence(context, DEFINE + 1));
-                try arguments.append(.{ .value = value, .mutable = false, .span = spanOf(value) });
-                context.tokens.consumeNewLines();
-                context.tokens.maybeConsume(.comma);
+                const name_or_value = try expression(withPrecedence(context, DEFINE + 1));
+                if (context.tokens.peek()) |t2| {
+                    switch (t2) {
+                        .equal => {
+                            context.tokens.advance();
+                            const value = try expression(withPrecedence(context, DEFINE + 1));
+                            try named_arguments.putNoClobber(name_or_value.symbol.value, .{
+                                .value = value,
+                                .mutable = false,
+                                .span = types.Span{
+                                    .begin = spanOf(name_or_value).begin,
+                                    .end = spanOf(value).end,
+                                },
+                            });
+                            context.tokens.consumeNewLines();
+                            context.tokens.maybeConsume(.comma);
+                        },
+                        else => {
+                            try arguments.append(.{ .value = name_or_value, .mutable = false, .span = spanOf(name_or_value) });
+                            context.tokens.consumeNewLines();
+                            context.tokens.maybeConsume(.comma);
+                        },
+                    }
+                }
             },
         }
     }
@@ -544,6 +565,7 @@ fn call(context: Context, left: types.Expression) !types.Call {
     return types.Call{
         .function = try alloc(context, left),
         .arguments = try arguments.toOwnedSlice(),
+        .named_arguments = named_arguments,
         .span = types.Span{ .begin = spanOf(left).begin, .end = end },
     };
 }

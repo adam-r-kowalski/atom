@@ -300,6 +300,7 @@ fn pipeline(context: Context, b: parser.types.BinaryOp) !types.Expression {
             const new_call = parser.types.Call{
                 .function = c.function,
                 .arguments = arguments,
+                .named_arguments = c.named_arguments,
                 .span = b.span,
             };
             return try call(context, new_call);
