@@ -116,13 +116,13 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
             else => return e,
         };
     }
-    if (left_tag == .function and right_tag == .function) {
-        if (equal.left.function.parameters.len != equal.right.function.parameters.len)
+    if (left_tag == .function and right_tag == .call) {
+        if (equal.left.function.parameters.len != equal.right.call.arguments.len)
             std.debug.panic("\nFunction arity mismatch: {} != {}\n", .{
                 equal.left.function.parameters.len,
-                equal.right.function.parameters.len,
+                equal.right.call.arguments.len,
             });
-        for (equal.left.function.parameters, equal.right.function.parameters) |left, right| {
+        for (equal.left.function.parameters, equal.right.call.arguments) |left, right| {
             const constraint = types.EqualConstraint{ .left = left.type, .right = right.type };
             try equalConstraint(constraint, s, errors);
             if (left.mutable != right.mutable) {
@@ -135,7 +135,7 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
         }
         const constraint = types.EqualConstraint{
             .left = equal.left.function.return_type.*,
-            .right = equal.right.function.return_type.*,
+            .right = equal.right.call.return_type.*,
         };
         try equalConstraint(constraint, s, errors);
         return;

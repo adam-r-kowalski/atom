@@ -391,7 +391,7 @@ Goat is built to be a citizen of the web. We want to ensure you can build servic
 on the server side or client side.
 
 ```goat
-Customer = struct {
+struct Customer {
     name: str,
     age: u8,
 }
@@ -407,7 +407,7 @@ customers: []Customer = [
     }
 ]
 
-customer_info = (customer: Customer) str {
+fn customer_info(customer: Customer) -> str {
     html`
         <li>
             <h3>${customer.name}</h3>
@@ -416,7 +416,7 @@ customer_info = (customer: Customer) str {
     `
 }
 
-start = () str {
+fn start() -> str {
     html`
         <html>
             <head>
@@ -424,7 +424,7 @@ start = () str {
             </head>
             <body>
                 <ul>
-                    ${map(customers, customer_info)}
+                    ${for i { customer_info(customers[i])}}
                 </ul>
             </body>
         </html>

@@ -34,6 +34,18 @@ pub fn monotype(m: types.MonoType, writer: Writer) !void {
             try writer.writeAll(") ");
             try monotype(f.return_type.*, writer);
         },
+        .call => |f| {
+            try writer.writeAll("(");
+            for (f.arguments, 0..) |p, i| {
+                if (i > 0) {
+                    try writer.writeAll(", ");
+                }
+                if (p.mutable) try writer.writeAll("mut ");
+                try monotype(p.type, writer);
+            }
+            try writer.writeAll(") ");
+            try monotype(f.return_type.*, writer);
+        },
         .array => |a| {
             switch (a.rank) {
                 1 => {

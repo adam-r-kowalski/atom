@@ -33,3 +33,20 @@ test "parse call with named arguments" {
     const expected = "(clamp :value 5 :low 0 :high 10)";
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+// test "type check call with named arguments" {
+//     const allocator = std.testing.allocator;
+//     const source =
+//         \\clamp = (value: i32, low: i32, high: i32) i32 {
+//         \\    value
+//         \\}
+//         \\
+//         \\start = () i32 {
+//         \\    clamp(value=5, low=0, high=10)
+//         \\}
+//     ;
+//     const actual = try goat.testing.typeInfer(allocator, source, "start");
+//     defer allocator.free(actual);
+//     const expected = "(clamp :value 5 :low 0 :high 10)";
+//     try std.testing.expectEqualStrings(expected, actual);
+// }

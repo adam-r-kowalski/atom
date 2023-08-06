@@ -556,9 +556,9 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
             if (s.value.eql(context.builtins.empty)) return try callEmpty(context, c);
             const f = try symbol(context.scopes.*, s);
             const len = c.arguments.len;
-            const parameters = try context.allocator.alloc(monotype.Parameter, len);
+            const argument_types = try context.allocator.alloc(monotype.Argument, len);
             const arguments = try context.allocator.alloc(types.Argument, len);
-            for (c.arguments, arguments, parameters) |untyped_arg, *typed_arg, *parameter| {
+            for (c.arguments, arguments, argument_types) |untyped_arg, *typed_arg, *arg_type| {
                 typed_arg.value = try expression(context, untyped_arg.value);
                 if (untyped_arg.mutable) {
                     switch (typed_arg.value) {
@@ -581,7 +581,7 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
                     }
                 }
                 typed_arg.mutable = untyped_arg.mutable;
-                parameter.* = .{
+                arg_type.* = .{
                     .type = monotype.withSpan(typeOf(typed_arg.value), untyped_arg.span),
                     .mutable = untyped_arg.mutable,
                 };
@@ -590,8 +590,8 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
             return_type.* = freshTypeVar(context.constraints, null);
             try context.constraints.equal.append(.{
                 .left = f.type,
-                .right = .{ .function = .{
-                    .parameters = parameters,
+                .right = .{ .call = .{
+                    .arguments = argument_types,
                     .return_type = return_type,
                     .span = null,
                 } },

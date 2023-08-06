@@ -25,6 +25,17 @@ pub const Function = struct {
     span: ?Span,
 };
 
+pub const Argument = struct {
+    type: MonoType,
+    mutable: bool,
+};
+
+pub const Call = struct {
+    arguments: []const Argument,
+    return_type: *const MonoType,
+    span: ?Span,
+};
+
 pub const Array = struct {
     rank: u32,
     element_type: *const MonoType,
@@ -67,6 +78,7 @@ pub const MonoType = union(enum) {
     bool: Bool,
     typevar: TypeVar,
     function: Function,
+    call: Call,
     array: Array,
     enumeration: Enumeration,
     enumeration_instance: EnumerationInstance,
@@ -86,6 +98,7 @@ pub fn span(monotype: MonoType) ?Span {
         .bool => |b| b.span,
         .typevar => |t| t.span,
         .function => |f| f.span,
+        .call => |c| c.span,
         .array => |a| a.span,
         .enumeration => |e| e.span,
         .enumeration_instance => |e| e.span,
@@ -106,6 +119,7 @@ pub fn withSpan(monotype: MonoType, s: Span) MonoType {
         .bool => .{ .bool = .{ .span = s } },
         .typevar => |t| .{ .typevar = .{ .value = t.value, .span = s } },
         .function => |f| .{ .function = .{ .parameters = f.parameters, .return_type = f.return_type, .span = s } },
+        .call => |c| .{ .call = .{ .arguments = c.arguments, .return_type = c.return_type, .span = s } },
         .array => |a| .{ .array = .{ .rank = a.rank, .element_type = a.element_type, .span = s } },
         .enumeration => |e| .{ .enumeration = .{ .variants = e.variants, .span = s } },
         .enumeration_instance => |e| .{ .enumeration_instance = .{ .name = e.name, .span = s } },
