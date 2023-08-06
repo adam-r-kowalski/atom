@@ -12,7 +12,7 @@ test "type infer sqrt f32" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = (f32) f32 }
+        \\    name = symbol{ value = start, type = fn(x: f32) -> f32 }
         \\    type = void
         \\    mutable = false
         \\    value =

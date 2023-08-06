@@ -119,7 +119,7 @@ test "parse multi line define with type annotation" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "infer type of define based on body" {
+test "type infer define based on body" {
     const allocator = std.testing.allocator;
     const source =
         \\sum_of_squares = (x: i32, y: i32) i32 {
@@ -132,7 +132,7 @@ test "infer type of define based on body" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = sum_of_squares, type = (i32, i32) i32 }
+        \\    name = symbol{ value = sum_of_squares, type = fn(x: i32, y: i32) -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -217,7 +217,7 @@ test "type infer nested define" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = f, type = (i32, i32) i32 }
+        \\    name = symbol{ value = f, type = fn(x: i32, y: i32) -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -327,7 +327,7 @@ test "type infer drop" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = () void }
+        \\    name = symbol{ value = start, type = fn() -> void }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -388,7 +388,7 @@ test "type infer based on return type" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = () i32 }
+        \\    name = symbol{ value = start, type = fn() -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =

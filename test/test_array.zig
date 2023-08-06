@@ -64,19 +64,19 @@ test "type infer array" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = () vec[i32] }
+        \\    name = symbol{ value = start, type = fn() -> []i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
         \\        function =
-        \\            return_type = vec[i32]
+        \\            return_type = []i32
         \\            body =
         \\                array =
         \\                    expressions =
         \\                        int{ value = 1, type = i32 }
         \\                        int{ value = 2, type = i32 }
         \\                        int{ value = 3, type = i32 }
-        \\                    type = vec[i32]
+        \\                    type = []i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -179,7 +179,7 @@ test "type infer array index" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = () i32 }
+        \\    name = symbol{ value = start, type = fn() -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -187,7 +187,7 @@ test "type infer array index" {
         \\            return_type = i32
         \\            body =
         \\                define =
-        \\                    name = symbol{ value = xs, type = vec[i32] }
+        \\                    name = symbol{ value = xs, type = []i32 }
         \\                    type = void
         \\                    mutable = false
         \\                    value =
@@ -196,9 +196,9 @@ test "type infer array index" {
         \\                                int{ value = 1, type = i32 }
         \\                                int{ value = 2, type = i32 }
         \\                                int{ value = 3, type = i32 }
-        \\                            type = vec[i32]
+        \\                            type = []i32
         \\                index =
-        \\                    expression = symbol{ value = xs, type = vec[i32] }
+        \\                    expression = symbol{ value = xs, type = []i32 }
         \\                    indices =
         \\                        int{ value = 1, type = u32 }
         \\                    type = i32

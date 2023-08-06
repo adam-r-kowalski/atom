@@ -72,7 +72,7 @@ test "type infer mutable binding" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = () i32 }
+        \\    name = symbol{ value = start, type = fn() -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -187,7 +187,7 @@ test "parse mutable parameter" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "type check mutable parameter" {
+test "type infer mutable parameter" {
     const allocator = std.testing.allocator;
     const source =
         \\double = (mut x: i32) void {
@@ -204,7 +204,7 @@ test "type check mutable parameter" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = double, type = (mut i32) void }
+        \\    name = symbol{ value = double, type = fn(mut x: i32) -> void }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -220,7 +220,7 @@ test "type check mutable parameter" {
         \\                        int{ value = 2, type = i32 }
         \\
         \\define =
-        \\    name = symbol{ value = start, type = () i32 }
+        \\    name = symbol{ value = start, type = fn() -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -234,7 +234,7 @@ test "type check mutable parameter" {
         \\                    value =
         \\                        int{ value = 5, type = i32 }
         \\                call =
-        \\                    function = symbol{ value = double, type = (mut i32) void }
+        \\                    function = symbol{ value = double, type = fn(mut x: i32) -> void }
         \\                    arguments =
         \\                        argument =
         \\                            mutable = true

@@ -20,7 +20,7 @@ test "type infer int literal as i32" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = f, type = () i32 }
+        \\    name = symbol{ value = f, type = fn() -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -39,7 +39,7 @@ test "type infer bool literal true" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = f, type = () bool }
+        \\    name = symbol{ value = f, type = fn() -> bool }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -58,7 +58,7 @@ test "type infer bool literal false" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = f, type = () bool }
+        \\    name = symbol{ value = f, type = fn() -> bool }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -77,7 +77,7 @@ test "type infer int literal as f32" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = f, type = () f32 }
+        \\    name = symbol{ value = f, type = fn() -> f32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -96,7 +96,7 @@ test "type infer float literal as f32" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = f, type = () f32 }
+        \\    name = symbol{ value = f, type = fn() -> f32 }
         \\    type = void
         \\    mutable = false
         \\    value =

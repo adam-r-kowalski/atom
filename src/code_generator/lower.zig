@@ -243,8 +243,8 @@ fn call(context: Context, c: type_checker.types.Call) !types.Expression {
         .symbol => |s| {
             var exprs = List(types.Expression).init(context.allocator);
             var deferred = List(types.Expression).init(context.allocator);
-            const arguments = try context.allocator.alloc(types.Expression, c.arguments.len);
-            for (c.arguments, arguments) |arg, *ir_arg| {
+            var arguments = List(types.Expression).init(context.allocator);
+            for (c.arguments) |arg| {
                 if (arg.mutable) {
                     switch (arg.value) {
                         .symbol => |symbol_arg| {
@@ -259,22 +259,31 @@ fn call(context: Context, c: type_checker.types.Call) !types.Expression {
                                     const i32_load = try context.allocator.create(types.Expression);
                                     i32_load.* = .{ .unary_op = .{ .kind = .i32_load, .expression = local_get_ptr } };
                                     try deferred.append(.{ .local_set = .{ .name = symbol_arg.value, .value = i32_load } });
-                                    ir_arg.* = .{ .local_get = .{ .name = pointer } };
+                                    try arguments.append(.{ .local_get = .{ .name = pointer } });
                                 },
-                                .array => ir_arg.* = try expression(context, arg.value),
+                                .array => try arguments.append(try expression(context, arg.value)),
                                 else => |k| std.debug.panic("\nMutable argument type {} not yet supported", .{k}),
                             }
                         },
                         else => |k| std.debug.panic("\nMutable argument type {} not yet supported", .{k}),
                     }
                 } else {
-                    ir_arg.* = try expression(context, arg.value);
+                    try arguments.append(try expression(context, arg.value));
+                }
+            }
+            const f_type = type_checker.type_of.expression(c.function.*).function;
+            for (c.named_arguments_order) |name| {
+                for (f_type.parameters) |param| {
+                    if (param.name.eql(name)) {
+                        const arg = c.named_arguments.get(name).?;
+                        try arguments.append(try expression(context, arg.value));
+                    }
                 }
             }
             try exprs.append(.{
                 .call = .{
                     .function = s.value,
-                    .arguments = arguments,
+                    .arguments = try arguments.toOwnedSlice(),
                 },
             });
             for (deferred.items) |expr| {

@@ -36,7 +36,7 @@ pub fn monotype(m: types.MonoType, writer: Writer) !void {
             try monotype(f.return_type.*, writer);
         },
         .call => |f| {
-            try writer.writeAll("(");
+            try writer.writeAll("fn(");
             for (f.arguments, 0..) |p, i| {
                 if (i > 0) {
                     try writer.writeAll(", ");
@@ -44,7 +44,7 @@ pub fn monotype(m: types.MonoType, writer: Writer) !void {
                 if (p.mutable) try writer.writeAll("mut ");
                 try monotype(p.type, writer);
             }
-            try writer.writeAll(") ");
+            try writer.writeAll(") -> ");
             try monotype(f.return_type.*, writer);
         },
         .array => |a| {
@@ -53,9 +53,8 @@ pub fn monotype(m: types.MonoType, writer: Writer) !void {
                     switch (a.element_type.*) {
                         .u8 => try writer.writeAll("str"),
                         else => {
-                            try writer.writeAll("vec[");
+                            try writer.writeAll("[]");
                             try monotype(a.element_type.*, writer);
-                            try writer.writeAll("]");
                         },
                     }
                 },

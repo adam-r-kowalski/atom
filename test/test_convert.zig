@@ -12,7 +12,7 @@ test "type infer convert i32 to f32" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = (i32) f32 }
+        \\    name = symbol{ value = start, type = fn(x: i32) -> f32 }
         \\    type = void
         \\    mutable = false
         \\    value =

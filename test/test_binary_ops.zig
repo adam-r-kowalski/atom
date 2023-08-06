@@ -104,7 +104,7 @@ test "type infer add i32" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = add, type = (i32, i32) i32 }
+        \\    name = symbol{ value = add, type = fn(x: i32, y: i32) -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -132,7 +132,7 @@ test "type infer binary op multiply" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = multiply, type = (i32, i32) i32 }
+        \\    name = symbol{ value = multiply, type = fn(x: i32, y: i32) -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -160,7 +160,7 @@ test "type infer divide i32" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = div, type = (i32, i32) i32 }
+        \\    name = symbol{ value = div, type = fn(x: i32, y: i32) -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -188,7 +188,7 @@ test "type infer binary op multiply then add" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = f, type = (i32, i32, i32) i32 }
+        \\    name = symbol{ value = f, type = fn(x: i32, y: i32, z: i32) -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =

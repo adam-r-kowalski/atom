@@ -152,7 +152,7 @@ test "type infer function body" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = id, type = (i32) i32 }
+        \\    name = symbol{ value = id, type = fn(x: i32) -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =

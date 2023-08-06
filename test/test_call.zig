@@ -76,7 +76,7 @@ test "type infer define then call" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = double, type = (i32) i32 }
+        \\    name = symbol{ value = double, type = fn(x: i32) -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -94,7 +94,7 @@ test "type infer define then call" {
         \\                    type = i32
         \\
         \\define =
-        \\    name = symbol{ value = start, type = () i32 }
+        \\    name = symbol{ value = start, type = fn() -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -102,7 +102,7 @@ test "type infer define then call" {
         \\            return_type = i32
         \\            body =
         \\                call =
-        \\                    function = symbol{ value = double, type = (i32) i32 }
+        \\                    function = symbol{ value = double, type = fn(x: i32) -> i32 }
         \\                    arguments =
         \\                        argument =
         \\                            mutable = false
@@ -193,7 +193,7 @@ test "type infer pipeline call" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = double, type = (i32) i32 }
+        \\    name = symbol{ value = double, type = fn(x: i32) -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -211,7 +211,7 @@ test "type infer pipeline call" {
         \\                    type = i32
         \\
         \\define =
-        \\    name = symbol{ value = start, type = () i32 }
+        \\    name = symbol{ value = start, type = fn() -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -219,7 +219,7 @@ test "type infer pipeline call" {
         \\            return_type = i32
         \\            body =
         \\                call =
-        \\                    function = symbol{ value = double, type = (i32) i32 }
+        \\                    function = symbol{ value = double, type = fn(x: i32) -> i32 }
         \\                    arguments =
         \\                        argument =
         \\                            mutable = false

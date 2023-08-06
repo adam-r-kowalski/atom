@@ -185,7 +185,7 @@ test "type infer if then else" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = f, type = (bool, i32, i32) i32 }
+        \\    name = symbol{ value = f, type = fn(c: bool, x: i32, y: i32) -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -371,7 +371,7 @@ test "type infer multi arm if" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = clamp, type = (i32, i32, i32) i32 }
+        \\    name = symbol{ value = clamp, type = fn(x: i32, lb: i32, ub: i32) -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =

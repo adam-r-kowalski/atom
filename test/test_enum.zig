@@ -107,7 +107,7 @@ test "type infer enum" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = () enum{ a, b, c, d, f } }
+        \\    name = symbol{ value = start, type = fn() -> enum{ a, b, c, d, f } }
         \\    type = void
         \\    mutable = false
         \\    value =

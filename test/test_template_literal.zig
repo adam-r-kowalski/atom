@@ -217,7 +217,7 @@ test "type infer template literal" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = () str }
+        \\    name = symbol{ value = start, type = fn() -> str }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -225,7 +225,7 @@ test "type infer template literal" {
         \\            return_type = str
         \\            body =
         \\                template_literal =
-        \\                    function = symbol{ value = html, type = () str }
+        \\                    function = symbol{ value = html, type = fn() -> str }
         \\                    strings =
         \\                        string{ value = "<h1>Hello World!</h1>", type = str }
         \\                    type = str
@@ -245,7 +245,7 @@ test "type infer template literal with interpolation" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = () str }
+        \\    name = symbol{ value = start, type = fn() -> str }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -259,7 +259,7 @@ test "type infer template literal with interpolation" {
         \\                    value =
         \\                        string{ value = "Joe", type = str }
         \\                template_literal =
-        \\                    function = symbol{ value = html, type = (str) str }
+        \\                    function = symbol{ value = html, type = fn(str) -> str }
         \\                    strings =
         \\                        string{ value = "<h1>Hello ", type = str }
         \\                        string{ value = "!</h1>", type = str }

@@ -111,7 +111,7 @@ test "type infer struct" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = start, type = () struct{ name: str, age: u8 } }
+        \\    name = symbol{ value = start, type = fn() -> struct{ name: str, age: u8 } }
         \\    type = void
         \\    mutable = false
         \\    value =

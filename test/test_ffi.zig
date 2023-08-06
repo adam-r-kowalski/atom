@@ -41,7 +41,7 @@ test "parse import" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "type check import" {
+test "type infer import" {
     const allocator = std.testing.allocator;
     const source =
         \\print = foreign_import("console", "log", (msg: str) void)
@@ -54,17 +54,17 @@ test "type check import" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = print, type = (str) void }
+        \\    name = symbol{ value = print, type = fn(msg: str) -> void }
         \\    type = void
         \\    mutable = false
         \\    value =
         \\        foreign_import =
         \\            module = "console"
         \\            name = "log"
-        \\            type = (str) void
+        \\            type = fn(msg: str) -> void
         \\
         \\define =
-        \\    name = symbol{ value = start, type = () void }
+        \\    name = symbol{ value = start, type = fn() -> void }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -72,7 +72,7 @@ test "type check import" {
         \\            return_type = void
         \\            body =
         \\                call =
-        \\                    function = symbol{ value = print, type = (str) void }
+        \\                    function = symbol{ value = print, type = fn(msg: str) -> void }
         \\                    arguments =
         \\                        argument =
         \\                            mutable = false
@@ -176,7 +176,7 @@ test "parse named export" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "type check export" {
+test "type infer export" {
     const allocator = std.testing.allocator;
     const source =
         \\foreign_export("double", (x: i32) i32 {
@@ -206,7 +206,7 @@ test "type check export" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "type check named export" {
+test "type infer named export" {
     const allocator = std.testing.allocator;
     const source =
         \\double = (x: i32) i32 {
@@ -219,7 +219,7 @@ test "type check named export" {
     defer allocator.free(actual);
     const expected =
         \\define =
-        \\    name = symbol{ value = double, type = (i32) i32 }
+        \\    name = symbol{ value = double, type = fn(x: i32) -> i32 }
         \\    type = void
         \\    mutable = false
         \\    value =
@@ -239,7 +239,7 @@ test "type check named export" {
         \\foreign_export =
         \\    name = "double"
         \\    value =
-        \\        symbol{ value = double, type = (i32) i32 }
+        \\        symbol{ value = double, type = fn(x: i32) -> i32 }
         \\    type = void
     ;
     try std.testing.expectEqualStrings(expected, actual);
