@@ -173,10 +173,9 @@ pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
             try expression(a.value, indent + 1, writer);
         }
     }
-    var iterator = c.named_arguments.iterator();
-    while (iterator.next()) |entry| {
-        try writer.print(" :{s} ", .{entry.key_ptr.*.string()});
-        const a = entry.value_ptr.*;
+    for (c.named_arguments_order) |name| {
+        try writer.print(" :{s} ", .{name.string()});
+        const a = c.named_arguments.get(name).?;
         if (a.mutable) {
             try writer.writeAll("(mut ");
             try expression(a.value, indent + 1, writer);

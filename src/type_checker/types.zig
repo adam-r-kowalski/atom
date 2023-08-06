@@ -149,6 +149,8 @@ pub const Argument = struct {
 pub const Call = struct {
     function: *const Expression,
     arguments: []Argument,
+    named_arguments: Map(Interned, Argument),
+    named_arguments_order: []const Interned,
     span: Span,
     type: MonoType,
 };

@@ -302,6 +302,7 @@ fn pipeline(context: Context, b: parser.types.BinaryOp) !types.Expression {
                 .function = c.function,
                 .arguments = arguments,
                 .named_arguments = c.named_arguments,
+                .named_arguments_order = c.named_arguments_order,
                 .span = b.span,
             };
             return try call(context, new_call);
@@ -587,15 +588,29 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
                     .mutable = untyped_arg.mutable,
                 };
             }
-            var named_arguments = Map(Interned, monotype.Argument).init(context.allocator);
-            // TODO: named arguments
+            var named_argument_types = Map(Interned, monotype.Argument).init(context.allocator);
+            var named_arguments = Map(Interned, types.Argument).init(context.allocator);
+            var iterator = c.named_arguments.iterator();
+            while (iterator.next()) |entry| {
+                const name = entry.key_ptr.*;
+                const untyped_arg = entry.value_ptr.*;
+                const type_arg = try expression(context, untyped_arg.value);
+                try named_argument_types.putNoClobber(name, .{
+                    .type = monotype.withSpan(typeOf(type_arg), untyped_arg.span),
+                    .mutable = untyped_arg.mutable,
+                });
+                try named_arguments.putNoClobber(name, .{
+                    .value = type_arg,
+                    .mutable = untyped_arg.mutable,
+                });
+            }
             const return_type = try context.allocator.create(MonoType);
             return_type.* = freshTypeVar(context.constraints, null);
             try context.constraints.equal.append(.{
                 .left = f.type,
                 .right = .{ .call = .{
                     .arguments = argument_types,
-                    .named_arguments = named_arguments,
+                    .named_arguments = named_argument_types,
                     .return_type = return_type,
                     .span = null,
                 } },
@@ -604,6 +619,8 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
                 .call = .{
                     .function = try alloc(context.allocator, .{ .symbol = f }),
                     .arguments = arguments,
+                    .named_arguments = named_arguments,
+                    .named_arguments_order = c.named_arguments_order,
                     .span = c.span,
                     .type = return_type.*,
                 },

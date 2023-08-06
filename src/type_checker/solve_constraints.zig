@@ -117,12 +117,15 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
         };
     }
     if (left_tag == .function and right_tag == .call) {
-        if (equal.left.function.parameters.len != equal.right.call.arguments.len)
+        const call = equal.right.call;
+        const total_arguments = call.arguments.len + call.named_arguments.count();
+        const func = equal.left.function;
+        if (func.parameters.len != total_arguments)
             std.debug.panic("\nFunction arity mismatch: {} != {}\n", .{
-                equal.left.function.parameters.len,
-                equal.right.call.arguments.len,
+                func.parameters.len,
+                total_arguments,
             });
-        for (equal.left.function.parameters, equal.right.call.arguments) |left, right| {
+        for (func.parameters[0..call.arguments.len], call.arguments) |left, right| {
             const constraint = types.EqualConstraint{ .left = left.type, .right = right.type };
             try equalConstraint(constraint, s, errors);
             if (left.mutable != right.mutable) {
@@ -133,9 +136,27 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
                 return error.CompileError;
             }
         }
+        var iterator = call.named_arguments.iterator();
+        while (iterator.next()) |entry| {
+            const name = entry.key_ptr.*;
+            for (func.parameters[call.arguments.len..]) |left| {
+                if (left.name.eql(name)) {
+                    const right = entry.value_ptr.*;
+                    const constraint = types.EqualConstraint{ .left = left.type, .right = right.type };
+                    try equalConstraint(constraint, s, errors);
+                    if (left.mutable != right.mutable) {
+                        try errors.mutability_mismatch.append(.{
+                            .left = .{ .mutable = left.mutable, .span = monotype.span(left.type) },
+                            .right = .{ .mutable = right.mutable, .span = monotype.span(right.type) },
+                        });
+                        return error.CompileError;
+                    }
+                }
+            }
+        }
         const constraint = types.EqualConstraint{
-            .left = equal.left.function.return_type.*,
-            .right = equal.right.call.return_type.*,
+            .left = func.return_type.*,
+            .right = call.return_type.*,
         };
         try equalConstraint(constraint, s, errors);
         return;

@@ -1,9 +1,11 @@
 const std = @import("std");
+const Map = std.AutoHashMap;
 const Allocator = std.mem.Allocator;
 const types = @import("types.zig");
 const Parameter = @import("monotype.zig").Parameter;
 const MonoType = @import("monotype.zig").MonoType;
 const Fields = @import("monotype.zig").Fields;
+const Interned = @import("../interner.zig").Interned;
 
 fn monotype(allocator: Allocator, sub: types.Substitution, m: MonoType) !MonoType {
     switch (m) {
@@ -152,9 +154,21 @@ fn call(allocator: Allocator, sub: types.Substitution, c: types.Call) !types.Cal
             .value = try expression(allocator, sub, unapplied.value),
             .mutable = unapplied.mutable,
         };
+    var named_arguments = Map(Interned, types.Argument).init(allocator);
+    var iterator = c.named_arguments.iterator();
+    while (iterator.next()) |entry| {
+        const unapplied = entry.value_ptr.*;
+        const applied = .{
+            .value = try expression(allocator, sub, unapplied.value),
+            .mutable = unapplied.mutable,
+        };
+        try named_arguments.putNoClobber(entry.key_ptr.*, applied);
+    }
     return .{
         .function = try expressionAlloc(allocator, sub, c.function.*),
         .arguments = arguments,
+        .named_arguments = named_arguments,
+        .named_arguments_order = c.named_arguments_order,
         .span = c.span,
         .type = try monotype(allocator, sub, c.type),
     };

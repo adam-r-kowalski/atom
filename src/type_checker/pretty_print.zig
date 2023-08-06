@@ -23,15 +23,16 @@ pub fn monotype(m: types.MonoType, writer: Writer) !void {
         .void => try writer.writeAll("void"),
         .typevar => |t| try writer.print("${}", .{t.value}),
         .function => |f| {
-            try writer.writeAll("(");
+            try writer.writeAll("fn(");
             for (f.parameters, 0..) |p, i| {
                 if (i > 0) {
                     try writer.writeAll(", ");
                 }
                 if (p.mutable) try writer.writeAll("mut ");
+                try writer.print("{s}: ", .{p.name.string()});
                 try monotype(p.type, writer);
             }
-            try writer.writeAll(") ");
+            try writer.writeAll(") -> ");
             try monotype(f.return_type.*, writer);
         },
         .call => |f| {
@@ -190,15 +191,32 @@ pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
     try writer.writeAll("function = ");
     try expression(c.function.*, indent + 2, writer);
     try newlineAndIndent(indent + 1, writer);
-    try writer.writeAll("arguments =");
-    for (c.arguments) |a| {
-        try newlineAndIndent(indent + 2, writer);
-        try writer.writeAll("argument =");
-        try newlineAndIndent(indent + 3, writer);
-        try writer.print("mutable = {}", .{a.mutable});
-        try newlineAndIndent(indent + 3, writer);
-        try writer.writeAll("value = ");
-        try expression(a.value, indent + 4, writer);
+    if (c.arguments.len > 0) {
+        try writer.writeAll("arguments =");
+        for (c.arguments) |a| {
+            try newlineAndIndent(indent + 2, writer);
+            try writer.writeAll("argument =");
+            try newlineAndIndent(indent + 3, writer);
+            try writer.print("mutable = {}", .{a.mutable});
+            try newlineAndIndent(indent + 3, writer);
+            try writer.writeAll("value = ");
+            try expression(a.value, indent + 4, writer);
+        }
+    }
+    if (c.named_arguments.count() > 0) {
+        try writer.writeAll("named_arguments =");
+        for (c.named_arguments_order) |name| {
+            const a = c.named_arguments.get(name).?;
+            try newlineAndIndent(indent + 2, writer);
+            try writer.writeAll("argument =");
+            try newlineAndIndent(indent + 3, writer);
+            try writer.print("name = {s}", .{name.string()});
+            try newlineAndIndent(indent + 3, writer);
+            try writer.print("mutable = {}", .{a.mutable});
+            try newlineAndIndent(indent + 3, writer);
+            try writer.writeAll("value = ");
+            try expression(a.value, indent + 4, writer);
+        }
     }
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("type = ");

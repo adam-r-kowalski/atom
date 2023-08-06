@@ -515,6 +515,7 @@ fn call(context: Context, left: types.Expression) !types.Call {
     context.tokens.advance();
     var arguments = List(types.Argument).init(context.allocator);
     var named_arguments = Map(Interned, types.Argument).init(context.allocator);
+    var named_arguments_order = List(Interned).init(context.allocator);
     while (context.tokens.peek()) |t| {
         switch (t) {
             .new_line => context.tokens.advance(),
@@ -548,6 +549,7 @@ fn call(context: Context, left: types.Expression) !types.Call {
                                     .end = spanOf(value).end,
                                 },
                             });
+                            try named_arguments_order.append(name_or_value.symbol.value);
                             context.tokens.consumeNewLines();
                             context.tokens.maybeConsume(.comma);
                         },
@@ -566,6 +568,7 @@ fn call(context: Context, left: types.Expression) !types.Call {
         .function = try alloc(context, left),
         .arguments = try arguments.toOwnedSlice(),
         .named_arguments = named_arguments,
+        .named_arguments_order = try named_arguments_order.toOwnedSlice(),
         .span = types.Span{ .begin = spanOf(left).begin, .end = end },
     };
 }
