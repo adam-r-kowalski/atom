@@ -90,6 +90,7 @@ pub fn expressionToMonoType(allocator: Allocator, scope: types.Scope, builtins: 
             for (p.parameters, parameters) |param, *t| {
                 const mono = try expressionToMonoType(allocator, scope, builtins, param.type);
                 t.* = .{
+                    .name = param.name.value,
                     .type = monotype.withSpan(mono, param.span),
                     .mutable = param.mutable,
                 };
@@ -586,12 +587,15 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
                     .mutable = untyped_arg.mutable,
                 };
             }
+            var named_arguments = Map(Interned, monotype.Argument).init(context.allocator);
+            // TODO: named arguments
             const return_type = try context.allocator.create(MonoType);
             return_type.* = freshTypeVar(context.constraints, null);
             try context.constraints.equal.append(.{
                 .left = f.type,
                 .right = .{ .call = .{
                     .arguments = argument_types,
+                    .named_arguments = named_arguments,
                     .return_type = return_type,
                     .span = null,
                 } },
@@ -636,6 +640,7 @@ fn function(context: Context, f: parser.types.Function) !types.Function {
         };
         try putInScope(context.scopes, name_symbol, binding);
         t.* = .{
+            .name = name_symbol,
             .type = p_type,
             .mutable = untyped_p.mutable,
         };
@@ -745,14 +750,15 @@ fn templateLiteral(context: Context, t: parser.types.TemplateLiteral) !types.Tem
     element_type.* = .{ .u8 = .{ .span = null } };
     const mono = .{ .array = .{ .rank = 1, .element_type = element_type, .span = t.span } };
     if (t.function) |f| {
-        const parameters = try context.allocator.alloc(monotype.Parameter, t.arguments.len);
-        for (arguments, parameters) |a, *p| {
-            p.* = .{ .type = typeOf(a), .mutable = false };
+        const argument_types = try context.allocator.alloc(monotype.Argument, t.arguments.len);
+        for (arguments, argument_types) |a, *arg_type| {
+            arg_type.* = .{ .type = typeOf(a), .mutable = false };
         }
         const return_type = try context.allocator.create(MonoType);
         return_type.* = mono;
-        const f_type = .{ .function = .{
-            .parameters = parameters,
+        const f_type = .{ .call = .{
+            .arguments = argument_types,
+            .named_arguments = Map(Interned, monotype.Argument).init(context.allocator),
             .return_type = return_type,
             .span = null,
         } };
@@ -922,6 +928,7 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
         for (f.function.parameters, parameters) |p, *t| {
             const m = try expressionToMonoType(allocator, scope, builtins, p.type);
             t.* = .{
+                .name = p.name.value,
                 .type = monotype.withSpan(m, p.span),
                 .mutable = p.mutable,
             };

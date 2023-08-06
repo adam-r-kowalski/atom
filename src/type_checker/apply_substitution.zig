@@ -11,6 +11,7 @@ fn monotype(allocator: Allocator, sub: types.Substitution, m: MonoType) !MonoTyp
             const parameters = try allocator.alloc(Parameter, f.parameters.len);
             for (f.parameters, parameters) |unapplied, *applied|
                 applied.* = .{
+                    .name = unapplied.name,
                     .type = try monotype(allocator, sub, unapplied.type),
                     .mutable = unapplied.mutable,
                 };

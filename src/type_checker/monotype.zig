@@ -15,6 +15,7 @@ pub const Bool = struct { span: ?Span };
 pub const TypeVar = struct { value: u64, span: ?Span };
 
 pub const Parameter = struct {
+    name: Interned,
     type: MonoType,
     mutable: bool,
 };
@@ -32,6 +33,7 @@ pub const Argument = struct {
 
 pub const Call = struct {
     arguments: []const Argument,
+    named_arguments: Map(Interned, Argument),
     return_type: *const MonoType,
     span: ?Span,
 };
@@ -118,8 +120,17 @@ pub fn withSpan(monotype: MonoType, s: Span) MonoType {
         .f64 => .{ .f64 = .{ .span = s } },
         .bool => .{ .bool = .{ .span = s } },
         .typevar => |t| .{ .typevar = .{ .value = t.value, .span = s } },
-        .function => |f| .{ .function = .{ .parameters = f.parameters, .return_type = f.return_type, .span = s } },
-        .call => |c| .{ .call = .{ .arguments = c.arguments, .return_type = c.return_type, .span = s } },
+        .function => |f| .{ .function = .{
+            .parameters = f.parameters,
+            .return_type = f.return_type,
+            .span = s,
+        } },
+        .call => |c| .{ .call = .{
+            .arguments = c.arguments,
+            .named_arguments = c.named_arguments,
+            .return_type = c.return_type,
+            .span = s,
+        } },
         .array => |a| .{ .array = .{ .rank = a.rank, .element_type = a.element_type, .span = s } },
         .enumeration => |e| .{ .enumeration = .{ .variants = e.variants, .span = s } },
         .enumeration_instance => |e| .{ .enumeration_instance = .{ .name = e.name, .span = s } },
