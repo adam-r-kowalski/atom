@@ -300,6 +300,9 @@ pub fn timesEqual(t: types.TimesEqual, indent: Indent, writer: Writer) !void {
 
 pub fn function(f: types.Function, indent: Indent, writer: Writer) !void {
     try writer.writeAll("function =");
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("name = ");
+    try symbol(f.name, writer);
     if (f.parameters.len != 0) {
         try newlineAndIndent(indent + 1, writer);
         try writer.writeAll("parameters =");

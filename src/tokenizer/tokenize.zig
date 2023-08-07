@@ -58,7 +58,13 @@ fn number(intern: *Intern, cursor: *Cursor) !types.Token {
     const contents = cursor.source[0..i];
     if (contents.len == 1) {
         switch (contents[0]) {
-            '-' => return exact(cursor, .minus),
+            '-' => {
+                if (cursor.source.len > 1 and cursor.source[1] == '>') {
+                    _ = advance(cursor, 2);
+                    return .{ .right_arrow = .{ .span = .{ .begin = begin, .end = cursor.pos } } };
+                }
+                return exact(cursor, .minus);
+            },
             '.' => {
                 _ = advance(cursor, i);
                 return .{ .dot = .{ .span = .{ .begin = begin, .end = cursor.pos } } };
@@ -174,6 +180,7 @@ fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !types.Token {
     if (interned.eql(builtins.or_)) return .{ .or_ = .{ .span = span } };
     if (interned.eql(builtins.mut)) return .{ .mut = .{ .span = span } };
     if (interned.eql(builtins.undefined)) return .{ .undefined = .{ .span = span } };
+    if (interned.eql(builtins.fn_)) return .{ .fn_ = .{ .span = span } };
     return .{ .symbol = .{ .value = interned, .span = span } };
 }
 

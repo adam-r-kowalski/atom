@@ -24,6 +24,7 @@ pub fn token(t: types.Token, writer: Writer) !void {
         .plus => try writer.writeAll("+"),
         .plus_equal => try writer.writeAll("+="),
         .minus => try writer.writeAll("-"),
+        .right_arrow => try writer.writeAll("->"),
         .times => try writer.writeAll("*"),
         .times_equal => try writer.writeAll("*="),
         .slash => try writer.writeAll("/"),

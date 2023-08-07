@@ -58,6 +58,7 @@ pub const Array = struct {
 };
 
 pub const Function = struct {
+    name: Symbol,
     parameters: []const Parameter,
     return_type: *const Expression,
     body: Block,
@@ -65,6 +66,7 @@ pub const Function = struct {
 };
 
 pub const Prototype = struct {
+    name: Symbol,
     parameters: []const Parameter,
     return_type: *const Expression,
     span: Span,
@@ -208,13 +210,6 @@ pub const TopLevelEnumeration = struct {
     span: Span,
 };
 
-pub const TopLevelFunction = struct {
-    name: Symbol,
-    type: ?*const Expression,
-    function: Function,
-    span: Span,
-};
-
 pub const TopLevelForeignImport = struct {
     name: Symbol,
     type: ?*const Expression,
@@ -226,7 +221,7 @@ pub const Module = struct {
     foreign_imports: []const TopLevelForeignImport,
     structures: []const TopLevelStructure,
     enumerations: []const TopLevelEnumeration,
-    functions: []const TopLevelFunction,
+    functions: []const Function,
     defines: []const Define,
     foreign_exports: []const Call,
     ignored: []const Expression,

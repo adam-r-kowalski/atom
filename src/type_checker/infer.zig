@@ -669,16 +669,30 @@ fn function(context: Context, f: parser.types.Function) !types.Function {
         .left = return_type.*,
         .right = body.type,
     });
+    const mono = .{ .function = .{
+        .parameters = function_parameters,
+        .return_type = return_type,
+        .span = f.span,
+    } };
+    const binding = types.Binding{
+        .type = mono,
+        .global = false,
+        .mutable = false,
+        .span = f.name.span,
+    };
+    const name = types.Symbol{
+        .value = f.name.value,
+        .span = f.name.span,
+        .type = monotype.withSpan(mono, f.name.span),
+        .binding = binding,
+    };
     return types.Function{
+        .name = name,
         .parameters = parameters,
         .return_type = return_type.*,
         .body = body,
         .span = f.span,
-        .type = .{ .function = .{
-            .parameters = function_parameters,
-            .return_type = return_type,
-            .span = f.span,
-        } },
+        .type = mono,
     };
 }
 
@@ -932,17 +946,11 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
         const name = f.name.value;
         try order.append(name);
         const value = try allocator.create(parser.types.Expression);
-        value.* = .{ .function = f.function };
-        try untyped.putNoClobber(name, .{ .define = .{
-            .name = f.name,
-            .type = f.type,
-            .value = value,
-            .mutable = false,
-            .span = f.span,
-        } });
-        const len = f.function.parameters.len;
+        value.* = .{ .function = f };
+        try untyped.putNoClobber(name, .{ .function = f });
+        const len = f.parameters.len;
         const parameters = try allocator.alloc(monotype.Parameter, len);
-        for (f.function.parameters, parameters) |p, *t| {
+        for (f.parameters, parameters) |p, *t| {
             const m = try expressionToMonoType(allocator, scope, builtins, p.type);
             t.* = .{
                 .name = p.name.value,
@@ -951,7 +959,7 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
             };
         }
         const return_type = try allocator.create(MonoType);
-        return_type.* = try expressionToMonoType(allocator, scope, builtins, f.function.return_type.*);
+        return_type.* = try expressionToMonoType(allocator, scope, builtins, f.return_type.*);
         const mono = MonoType{ .function = .{
             .parameters = parameters,
             .return_type = return_type,

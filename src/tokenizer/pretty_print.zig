@@ -23,6 +23,7 @@ pub fn token(t: types.Token, writer: Writer) !void {
         .plus => try writer.writeAll("(operator +)"),
         .plus_equal => try writer.writeAll("(operator +=)"),
         .minus => try writer.writeAll("(operator -)"),
+        .right_arrow => try writer.writeAll("(operator ->)"),
         .times => try writer.writeAll("(operator *)"),
         .times_equal => try writer.writeAll("(operator *=)"),
         .slash => try writer.writeAll("(operator /)"),

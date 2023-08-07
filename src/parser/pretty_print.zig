@@ -43,7 +43,7 @@ pub fn timesEqual(t: types.TimesEqual, indent: Indent, writer: Writer) !void {
 }
 
 pub fn function(f: types.Function, indent: Indent, writer: Writer) !void {
-    try writer.writeAll("(fn [");
+    try writer.print("(fn {s} [", .{f.name.value.string()});
     for (f.parameters, 0..) |param, j| {
         if (j > 0) try writer.writeAll(" ");
         try writer.writeAll("(");
@@ -54,7 +54,7 @@ pub fn function(f: types.Function, indent: Indent, writer: Writer) !void {
     }
     try writer.writeAll("] ");
     try expression(f.return_type.*, indent, writer);
-    try block(f.body, indent, writer);
+    try block(f.body, indent + 1, writer);
     try writer.writeAll(")");
 }
 

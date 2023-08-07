@@ -3,6 +3,7 @@ const Intern = interner.Intern;
 const Interned = interner.Interned;
 
 pub const Builtins = struct {
+    fn_: Interned,
     enum_: Interned,
     struct_: Interned,
     block: Interned,
@@ -33,6 +34,7 @@ pub const Builtins = struct {
 
     pub fn init(intern: *Intern) !Builtins {
         return Builtins{
+            .fn_ = try intern.store("fn"),
             .enum_ = try intern.store("enum"),
             .struct_ = try intern.store("struct"),
             .block = try intern.store("block"),
