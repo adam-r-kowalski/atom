@@ -163,17 +163,18 @@ test "parse template literal with two interpolations and no tag" {
 test "tokenize template literal in function" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () str {
+        \\fn start() -> str {
         \\    html`<h1>Hello World!</h1>`
         \\}
     ;
     const actual = try goat.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
+        \\(keyword fn)
         \\(symbol start)
-        \\(operator =)
         \\(delimiter '(')
         \\(delimiter ')')
+        \\(operator ->)
         \\(symbol str)
         \\(delimiter '{')
         \\(new_line)
@@ -188,20 +189,20 @@ test "tokenize template literal in function" {
 test "parse template literal in function" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () str {
+        \\fn start() -> str {
         \\    html`<h1>Hello World!</h1>`
         \\}
     ;
     const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def start (fn [] str
+        \\(fn start [] str
         \\    (template_literal
         \\            function: html
         \\            strings: [
         \\                "<h1>Hello World!</h1>"
         \\            ]
-        \\            arguments: [])))
+        \\            arguments: []))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -209,26 +210,22 @@ test "parse template literal in function" {
 test "type infer template literal" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () str {
+        \\fn start() -> str {
         \\    html`<h1>Hello World!</h1>`
         \\}
     ;
     const actual = try goat.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = start, type = fn() -> str }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            return_type = str
-        \\            body =
-        \\                template_literal =
-        \\                    function = symbol{ value = html, type = fn() -> str }
-        \\                    strings =
-        \\                        string{ value = "<h1>Hello World!</h1>", type = str }
-        \\                    type = str
+        \\    return_type = str
+        \\    body =
+        \\        template_literal =
+        \\            function = symbol{ value = html, type = fn() -> str }
+        \\            strings =
+        \\                string{ value = "<h1>Hello World!</h1>", type = str }
+        \\            type = str
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -236,7 +233,7 @@ test "type infer template literal" {
 test "type infer template literal with interpolation" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () str {
+        \\fn start() -> str {
         \\    name = "Joe"
         \\    html`<h1>Hello ${name}!</h1>`
         \\}
@@ -244,28 +241,24 @@ test "type infer template literal with interpolation" {
     const actual = try goat.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = start, type = fn() -> str }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            return_type = str
-        \\            body =
-        \\                define =
-        \\                    name = symbol{ value = name, type = str }
-        \\                    type = void
-        \\                    mutable = false
-        \\                    value =
-        \\                        string{ value = "Joe", type = str }
-        \\                template_literal =
-        \\                    function = symbol{ value = html, type = fn(str) -> str }
-        \\                    strings =
-        \\                        string{ value = "<h1>Hello ", type = str }
-        \\                        string{ value = "!</h1>", type = str }
-        \\                    arguments =
-        \\                        symbol{ value = name, type = str }
-        \\                    type = str
+        \\    return_type = str
+        \\    body =
+        \\        define =
+        \\            name = symbol{ value = name, type = str }
+        \\            type = void
+        \\            mutable = false
+        \\            value =
+        \\                string{ value = "Joe", type = str }
+        \\        template_literal =
+        \\            function = symbol{ value = html, type = fn(str) -> str }
+        \\            strings =
+        \\                string{ value = "<h1>Hello ", type = str }
+        \\                string{ value = "!</h1>", type = str }
+        \\            arguments =
+        \\                symbol{ value = name, type = str }
+        \\            type = str
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -273,7 +266,7 @@ test "type infer template literal with interpolation" {
 test "codegen template literal" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () str {
+        \\fn start() -> str {
         \\    html`<h1>Hello World!</h1>`
         \\}
     ;
@@ -322,7 +315,7 @@ test "codegen template literal" {
 test "codegen template literal with new lines" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () str {
+        \\fn start() -> str {
         \\    html`
         \\        <ul>
         \\            <li>First</li>
@@ -377,7 +370,7 @@ test "codegen template literal with new lines" {
 test "codegen template literal with string" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () str {
+        \\fn start() -> str {
         \\    `Hi "Joe"`
         \\}
     ;
@@ -426,7 +419,7 @@ test "codegen template literal with string" {
 test "codegen template literal with interpolation" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () str {
+        \\fn start() -> str {
         \\    name = "Joe"
         \\    html`<h1>Hello ${name}</h1>`
         \\}
@@ -582,7 +575,7 @@ test "codegen template literal with interpolation" {
 test "codegen template literal with two interpolations" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () str {
+        \\fn start() -> str {
         \\    first = "Joe"
         \\    last = "Smith"
         \\    html`<h1>Hello ${first} ${last}</h1>`

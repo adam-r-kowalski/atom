@@ -15,102 +15,82 @@ test "tokenize int literal followed by dot" {
 
 test "type infer int literal as i32" {
     const allocator = std.testing.allocator;
-    const source = "f = () i32 { 42 }";
+    const source = "fn f() -> i32 { 42 }";
     const actual = try goat.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = f, type = fn() -> i32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            return_type = i32
-        \\            body =
-        \\                int{ value = 42, type = i32 }
+        \\    return_type = i32
+        \\    body =
+        \\        int{ value = 42, type = i32 }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "type infer bool literal true" {
     const allocator = std.testing.allocator;
-    const source = "f = () bool { true }";
+    const source = "fn f() -> bool { true }";
     const actual = try goat.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = f, type = fn() -> bool }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            return_type = bool
-        \\            body =
-        \\                bool{ value = true, type = bool }
+        \\    return_type = bool
+        \\    body =
+        \\        bool{ value = true, type = bool }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "type infer bool literal false" {
     const allocator = std.testing.allocator;
-    const source = "f = () bool { false }";
+    const source = "fn f() -> bool { false }";
     const actual = try goat.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = f, type = fn() -> bool }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            return_type = bool
-        \\            body =
-        \\                bool{ value = false, type = bool }
+        \\    return_type = bool
+        \\    body =
+        \\        bool{ value = false, type = bool }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "type infer int literal as f32" {
     const allocator = std.testing.allocator;
-    const source = "f = () f32 { 42 }";
+    const source = "fn f() -> f32 { 42 }";
     const actual = try goat.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = f, type = fn() -> f32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            return_type = f32
-        \\            body =
-        \\                int{ value = 42, type = f32 }
+        \\    return_type = f32
+        \\    body =
+        \\        int{ value = 42, type = f32 }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "type infer float literal as f32" {
     const allocator = std.testing.allocator;
-    const source = "f = () f32 { 42.3 }";
+    const source = "fn f() -> f32 { 42.3 }";
     const actual = try goat.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = f, type = fn() -> f32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            return_type = f32
-        \\            body =
-        \\                float{ value = 42.3, type = f32 }
+        \\    return_type = f32
+        \\    body =
+        \\        float{ value = 42.3, type = f32 }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "codegen i32 with int literal" {
     const allocator = std.testing.allocator;
-    const source = "start = () i32 { 42 }";
+    const source = "fn start() -> i32 { 42 }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -129,7 +109,7 @@ test "codegen i32 with int literal" {
 
 test "codegen f32 with int literal" {
     const allocator = std.testing.allocator;
-    const source = "start = () f32 { 42 }";
+    const source = "fn start() -> f32 { 42 }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -148,7 +128,7 @@ test "codegen f32 with int literal" {
 
 test "codegen f32 with float literal" {
     const allocator = std.testing.allocator;
-    const source = "start = () f32 { 42.5 }";
+    const source = "fn start() -> f32 { 42.5 }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -170,7 +150,7 @@ test "codegen i32 global constant" {
     const source =
         \\i: i32 = 42
         \\
-        \\start = () i32 { i }
+        \\fn start() -> i32 { i }
     ;
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
@@ -193,7 +173,7 @@ test "codegen i32 global constant" {
 test "codegen str with string literal" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () str { "hi" }
+        \\fn start() -> str { "hi" }
     ;
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
@@ -240,7 +220,7 @@ test "codegen str with string literal" {
 test "codegen str with template literal" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () str { `hi` }
+        \\fn start() -> str { `hi` }
     ;
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);

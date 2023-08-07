@@ -4,24 +4,25 @@ const goat = @import("goat");
 test "tokenize import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", (msg: str) void)
+        \\foreign_import("console", "log", fn log(msg: str) -> void)
     ;
     const actual = try goat.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(symbol print)
-        \\(operator =)
         \\(symbol foreign_import)
         \\(delimiter '(')
         \\(string "console")
         \\(delimiter ',')
         \\(string "log")
         \\(delimiter ',')
+        \\(keyword fn)
+        \\(symbol log)
         \\(delimiter '(')
         \\(symbol msg)
         \\(operator :)
         \\(symbol str)
         \\(delimiter ')')
+        \\(operator ->)
         \\(symbol void)
         \\(delimiter ')')
     ;
@@ -31,7 +32,7 @@ test "tokenize import" {
 test "parse import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", (msg: str) void)
+        \\print = foreign_import("console", "log", fn print(msg: str) -> void)
     ;
     const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
@@ -44,9 +45,9 @@ test "parse import" {
 test "type infer import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", (msg: str) void)
+        \\print = foreign_import("console", "log", fn print(msg: str) -> void)
         \\
-        \\start = () void {
+        \\fn start() -> void {
         \\    print("hello world")
         \\}
     ;
@@ -63,21 +64,17 @@ test "type infer import" {
         \\            name = "log"
         \\            type = fn(msg: str) -> void
         \\
-        \\define =
+        \\function =
         \\    name = symbol{ value = start, type = fn() -> void }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            return_type = void
-        \\            body =
-        \\                call =
-        \\                    function = symbol{ value = print, type = fn(msg: str) -> void }
-        \\                    arguments =
-        \\                        argument =
-        \\                            mutable = false
-        \\                            value = string{ value = "hello world", type = str }
-        \\                    type = void
+        \\    return_type = void
+        \\    body =
+        \\        call =
+        \\            function = symbol{ value = print, type = fn(msg: str) -> void }
+        \\            arguments =
+        \\                argument =
+        \\                    mutable = false
+        \\                    value = string{ value = "hello world", type = str }
+        \\            type = void
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -85,9 +82,9 @@ test "type infer import" {
 test "codegen import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", (x: i32) void)
+        \\print = foreign_import("console", "log", fn print(x: i32) -> void)
         \\
-        \\start = () void { print(42) }
+        \\fn start() -> void { print(42) }
     ;
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
@@ -111,7 +108,7 @@ test "codegen import" {
 test "tokenize export" {
     const allocator = std.testing.allocator;
     const source =
-        \\foreign_export("double", (x: i32) i32 {
+        \\foreign_export("double", fn double(x: i32) -> i32 {
         \\    x * 2
         \\})
     ;
@@ -122,11 +119,14 @@ test "tokenize export" {
         \\(delimiter '(')
         \\(string "double")
         \\(delimiter ',')
+        \\(keyword fn)
+        \\(symbol double)
         \\(delimiter '(')
         \\(symbol x)
         \\(operator :)
         \\(symbol i32)
         \\(delimiter ')')
+        \\(operator ->)
         \\(symbol i32)
         \\(delimiter '{')
         \\(new_line)
@@ -143,15 +143,15 @@ test "tokenize export" {
 test "parse export" {
     const allocator = std.testing.allocator;
     const source =
-        \\foreign_export("double", (x: i32) i32 {
+        \\foreign_export("double", fn double(x: i32) -> i32 {
         \\    x * 2
         \\})
     ;
     const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(foreign_export "double" (fn [(x i32)] i32
-        \\    (* x 2)))
+        \\(foreign_export "double" (fn double [(x i32)] i32
+        \\        (* x 2)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -159,7 +159,7 @@ test "parse export" {
 test "parse named export" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = (x: i32) i32 {
+        \\fn double(x: i32) -> i32 {
         \\    x * 2
         \\}
         \\
@@ -168,8 +168,8 @@ test "parse named export" {
     const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def double (fn [(x i32)] i32
-        \\    (* x 2)))
+        \\(fn double [(x i32)] i32
+        \\    (* x 2))
         \\
         \\(foreign_export "double" double)
     ;
@@ -179,7 +179,7 @@ test "parse named export" {
 test "type infer export" {
     const allocator = std.testing.allocator;
     const source =
-        \\foreign_export("double", (x: i32) i32 {
+        \\foreign_export("double", fn double(x: i32) -> i32 {
         \\    x * 2
         \\})
     ;
@@ -190,6 +190,7 @@ test "type infer export" {
         \\    name = "double"
         \\    value =
         \\        function =
+        \\            name = symbol{ value = double, type = fn(x: i32) -> i32 }
         \\            parameters =
         \\                symbol{ value = x, type = i32 }
         \\            return_type = i32
@@ -209,7 +210,7 @@ test "type infer export" {
 test "type infer named export" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = (x: i32) i32 {
+        \\fn double(x: i32) -> i32 {
         \\    x * 2
         \\}
         \\
@@ -218,23 +219,19 @@ test "type infer named export" {
     const actual = try goat.testing.typeInfer(allocator, source, "\"double\"");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = double, type = fn(x: i32) -> i32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            parameters =
+        \\    parameters =
+        \\        symbol{ value = x, type = i32 }
+        \\    return_type = i32
+        \\    body =
+        \\        binary_op =
+        \\            kind = *
+        \\            left =
         \\                symbol{ value = x, type = i32 }
-        \\            return_type = i32
-        \\            body =
-        \\                binary_op =
-        \\                    kind = *
-        \\                    left =
-        \\                        symbol{ value = x, type = i32 }
-        \\                    right =
-        \\                        int{ value = 2, type = i32 }
-        \\                    type = i32
+        \\            right =
+        \\                int{ value = 2, type = i32 }
+        \\            type = i32
         \\
         \\foreign_export =
         \\    name = "double"
@@ -248,7 +245,7 @@ test "type infer named export" {
 test "codegen foreign export" {
     const allocator = std.testing.allocator;
     const source =
-        \\foreign_export("double", (x: i32) i32 {
+        \\foreign_export("double", fn double(x: i32) -> i32 {
         \\    x * 2
         \\})
     ;
@@ -273,7 +270,7 @@ test "codegen foreign export" {
 test "codegen named foreign export" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = (x: i32) i32 {
+        \\fn double(x: i32) -> i32 {
         \\    x * 2
         \\}
         \\
@@ -300,11 +297,11 @@ test "codegen named foreign export" {
 test "codegen hello world" {
     const allocator = std.testing.allocator;
     const source =
-        \\fd_write = foreign_import("wasi_unstable", "fd_write", (fd: i32, text: str, count: i32, out: i32) i32)
+        \\fd_write = foreign_import("wasi_unstable", "fd_write", fn fd_write(fd: i32, text: str, count: i32, out: i32) -> i32)
         \\
         \\stdout: i32 = 1
         \\
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    text = "Hello, World!"
         \\    mut nwritten: i32 = undefined
         \\    fd_write(stdout, text, 1, 200)
@@ -367,13 +364,13 @@ test "codegen hello world" {
 test "codegen echo" {
     const allocator = std.testing.allocator;
     const source =
-        \\fd_read = foreign_import("wasi_unstable", "fd_read", (fd: i32, mut iovs: str, iov_count: i32, mut nread: i32) i32)
-        \\fd_write = foreign_import("wasi_unstable", "fd_write", (fd: i32, iovs: str, iov_count: i32, mut nwritten: i32) i32)
+        \\fd_read = foreign_import("wasi_unstable", "fd_read", fn fd_read(fd: i32, mut iovs: str, iov_count: i32, mut nread: i32) -> i32)
+        \\fd_write = foreign_import("wasi_unstable", "fd_write", fn fd_write(fd: i32, iovs: str, iov_count: i32, mut nwritten: i32) -> i32)
         \\
         \\stdin: i32 = 0
         \\stdout: i32 = 1
         \\
-        \\start = () void {
+        \\fn start() -> void {
         \\    mut text = empty(u8, 100)
         \\    mut nread = undefined
         \\    mut nwritten = undefined

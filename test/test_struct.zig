@@ -9,7 +9,7 @@ test "tokenize struct" {
         \\    age: u8,
         \\}
         \\
-        \\start = () Person {
+        \\fn start() -> Person {
         \\    {
         \\        name: "Bob",
         \\        age: 42,
@@ -36,10 +36,11 @@ test "tokenize struct" {
         \\(new_line)
         \\(delimiter '}')
         \\(new_line)
+        \\(keyword fn)
         \\(symbol start)
-        \\(operator =)
         \\(delimiter '(')
         \\(delimiter ')')
+        \\(operator ->)
         \\(symbol Person)
         \\(delimiter '{')
         \\(new_line)
@@ -70,7 +71,7 @@ test "parse struct" {
         \\    age: u8,
         \\}
         \\
-        \\start = () Person {
+        \\fn start() -> Person {
         \\    {
         \\        name: "Bob",
         \\        age: 42,
@@ -84,10 +85,10 @@ test "parse struct" {
         \\    name str
         \\    age u8))
         \\
-        \\(def start (fn [] Person
+        \\(fn start [] Person
         \\    (struct_literal
         \\        name "Bob"
-        \\        age 42)))
+        \\        age 42))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -100,7 +101,7 @@ test "type infer struct" {
         \\    age: u8,
         \\}
         \\
-        \\start = () Person {
+        \\fn start() -> Person {
         \\    {
         \\        name: "Bob",
         \\        age: 42,
@@ -110,16 +111,12 @@ test "type infer struct" {
     const actual = try goat.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = start, type = fn() -> struct{ name: str, age: u8 } }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            return_type = struct{ name: str, age: u8 }
-        \\            body =
-        \\                struct_literal =
-        \\                    type = struct_literal{ name: str, age: u8 } as struct{ name: str, age: u8 }
+        \\    return_type = struct{ name: str, age: u8 }
+        \\    body =
+        \\        struct_literal =
+        \\            type = struct_literal{ name: str, age: u8 } as struct{ name: str, age: u8 }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -132,7 +129,7 @@ test "codegen struct" {
         \\    age: u8,
         \\}
         \\
-        \\start = () Person {
+        \\fn start() -> Person {
         \\    {
         \\        name: "Bob",
         \\        age: 42,

@@ -4,7 +4,7 @@ const goat = @import("goat");
 test "tokenize mutable binding" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    mut x: i32 = 0
         \\    x += 1
         \\    x
@@ -13,10 +13,11 @@ test "tokenize mutable binding" {
     const actual = try goat.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
+        \\(keyword fn)
         \\(symbol start)
-        \\(operator =)
         \\(delimiter '(')
         \\(delimiter ')')
+        \\(operator ->)
         \\(symbol i32)
         \\(delimiter '{')
         \\(new_line)
@@ -41,7 +42,7 @@ test "tokenize mutable binding" {
 test "parse mutable binding" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    mut x: i32 = 0
         \\    x += 1
         \\    x
@@ -50,11 +51,11 @@ test "parse mutable binding" {
     const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def start (fn [] i32
+        \\(fn start [] i32
         \\    (block
         \\        (def mut x i32 0)
         \\        (+= x 1)
-        \\        x)))
+        \\        x))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -62,7 +63,7 @@ test "parse mutable binding" {
 test "type infer mutable binding" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    mut x: i32 = 0
         \\    x += 1
         \\    x
@@ -71,26 +72,22 @@ test "type infer mutable binding" {
     const actual = try goat.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = start, type = fn() -> i32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            return_type = i32
-        \\            body =
-        \\                define =
-        \\                    name = symbol{ value = x, type = i32 }
-        \\                    type = void
-        \\                    mutable = true
-        \\                    value =
-        \\                        int{ value = 0, type = i32 }
-        \\                plus_equal =
-        \\                    name = symbol{ value = x, type = i32 }
-        \\                    type = void
-        \\                    value =
-        \\                        int{ value = 1, type = i32 }
-        \\                symbol{ value = x, type = i32 }
+        \\    return_type = i32
+        \\    body =
+        \\        define =
+        \\            name = symbol{ value = x, type = i32 }
+        \\            type = void
+        \\            mutable = true
+        \\            value =
+        \\                int{ value = 0, type = i32 }
+        \\        plus_equal =
+        \\            name = symbol{ value = x, type = i32 }
+        \\            type = void
+        \\            value =
+        \\                int{ value = 1, type = i32 }
+        \\        symbol{ value = x, type = i32 }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -98,7 +95,7 @@ test "type infer mutable binding" {
 test "codegen plus equal" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    mut x: i32 = 0
         \\    x += 1
         \\    x
@@ -130,7 +127,7 @@ test "codegen plus equal" {
 test "codegen times equal" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    mut x: i32 = 5
         \\    x *= 2
         \\    x
@@ -162,11 +159,11 @@ test "codegen times equal" {
 test "parse mutable parameter" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = (mut x: i32) void {
+        \\fn double(mut x: i32) -> void {
         \\    x *= 2
         \\}
         \\
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    mut x: i32 = 5
         \\    double(mut x)
         \\    x
@@ -175,14 +172,14 @@ test "parse mutable parameter" {
     const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def double (fn [(mut x i32)] void
-        \\    (*= x 2)))
+        \\(fn double [(mut x i32)] void
+        \\    (*= x 2))
         \\
-        \\(def start (fn [] i32
+        \\(fn start [] i32
         \\    (block
         \\        (def mut x i32 5)
         \\        (double (mut x))
-        \\        x)))
+        \\        x))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -190,11 +187,11 @@ test "parse mutable parameter" {
 test "type infer mutable parameter" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = (mut x: i32) void {
+        \\fn double(mut x: i32) -> void {
         \\    x *= 2
         \\}
         \\
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    mut x: i32 = 5
         \\    double(mut x)
         \\    x
@@ -203,44 +200,36 @@ test "type infer mutable parameter" {
     const actual = try goat.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = double, type = fn(mut x: i32) -> void }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            parameters =
-        \\                mut symbol{ value = x, type = i32 }
-        \\            return_type = void
-        \\            body =
-        \\                times_equal =
-        \\                    name = symbol{ value = x, type = i32 }
-        \\                    type = void
-        \\                    value =
-        \\                        int{ value = 2, type = i32 }
+        \\    parameters =
+        \\        mut symbol{ value = x, type = i32 }
+        \\    return_type = void
+        \\    body =
+        \\        times_equal =
+        \\            name = symbol{ value = x, type = i32 }
+        \\            type = void
+        \\            value =
+        \\                int{ value = 2, type = i32 }
         \\
-        \\define =
+        \\function =
         \\    name = symbol{ value = start, type = fn() -> i32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            return_type = i32
-        \\            body =
-        \\                define =
-        \\                    name = symbol{ value = x, type = i32 }
-        \\                    type = void
+        \\    return_type = i32
+        \\    body =
+        \\        define =
+        \\            name = symbol{ value = x, type = i32 }
+        \\            type = void
+        \\            mutable = true
+        \\            value =
+        \\                int{ value = 5, type = i32 }
+        \\        call =
+        \\            function = symbol{ value = double, type = fn(mut x: i32) -> void }
+        \\            arguments =
+        \\                argument =
         \\                    mutable = true
-        \\                    value =
-        \\                        int{ value = 5, type = i32 }
-        \\                call =
-        \\                    function = symbol{ value = double, type = fn(mut x: i32) -> void }
-        \\                    arguments =
-        \\                        argument =
-        \\                            mutable = true
-        \\                            value = symbol{ value = x, type = i32 }
-        \\                    type = void
-        \\                symbol{ value = x, type = i32 }
+        \\                    value = symbol{ value = x, type = i32 }
+        \\            type = void
+        \\        symbol{ value = x, type = i32 }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -248,11 +237,11 @@ test "type infer mutable parameter" {
 test "codegen mutable parameter" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = (mut x: i32) void {
+        \\fn double(mut x: i32) -> void {
         \\    x *= 2
         \\}
         \\
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    mut x: i32 = 5
         \\    double(mut x)
         \\    x

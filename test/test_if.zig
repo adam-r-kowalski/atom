@@ -23,19 +23,19 @@ test "tokenize if" {
 test "parse if" {
     const allocator = std.testing.allocator;
     const source =
-        \\f = (x: bool, y: i32, z: i32) i32 {
+        \\fn f(x: bool, y: i32, z: i32) -> i32 {
         \\    if x { y } else { z }
         \\}
     ;
     const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def f (fn [(x bool) (y i32) (z i32)] i32
+        \\(fn f [(x bool) (y i32) (z i32)] i32
         \\    (branch
         \\        x
         \\            y
         \\        else
-        \\            z)))
+        \\            z))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -43,7 +43,7 @@ test "parse if" {
 test "parse multiple line if" {
     const allocator = std.testing.allocator;
     const source =
-        \\f = (x: bool, y: i32, z: i32) i32 {
+        \\fn f(x: bool, y: i32, z: i32) -> i32 {
         \\    if x {
         \\        y
         \\    } else {
@@ -54,12 +54,12 @@ test "parse multiple line if" {
     const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def f (fn [(x bool) (y i32) (z i32)] i32
+        \\(fn f [(x bool) (y i32) (z i32)] i32
         \\    (branch
         \\        x
         \\            y
         \\        else
-        \\            z)))
+        \\            z))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -67,7 +67,7 @@ test "parse multiple line if" {
 test "parse if multi line then else" {
     const allocator = std.testing.allocator;
     const source =
-        \\f = (x: bool, y: i32, z: i32) i32 {
+        \\fn f(x: bool, y: i32, z: i32) -> i32 {
         \\    if x {
         \\        a = y ^ 2
         \\        a * 5
@@ -79,14 +79,14 @@ test "parse if multi line then else" {
     const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def f (fn [(x bool) (y i32) (z i32)] i32
+        \\(fn f [(x bool) (y i32) (z i32)] i32
         \\    (branch
         \\        x
         \\            (block
         \\                (def a (^ y 2))
         \\                (* a 5))
         \\        else
-        \\            z)))
+        \\            z))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -94,7 +94,7 @@ test "parse if multi line then else" {
 test "parse if then multi line else" {
     const allocator = std.testing.allocator;
     const source =
-        \\f = (x: bool, y: i32, z: i32) i32 {
+        \\fn f(x: bool, y: i32, z: i32) -> i32 {
         \\    if x {
         \\        y
         \\    } else {
@@ -106,14 +106,14 @@ test "parse if then multi line else" {
     const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def f (fn [(x bool) (y i32) (z i32)] i32
+        \\(fn f [(x bool) (y i32) (z i32)] i32
         \\    (branch
         \\        x
         \\            y
         \\        else
         \\            (block
         \\                (def a (^ z 2))
-        \\                (* a 5)))))
+        \\                (* a 5))))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -145,7 +145,7 @@ test "parse let on result of if then else" {
 test "parse nested if then else" {
     const allocator = std.testing.allocator;
     const source =
-        \\f = (x: i32, y: i32) i32 {
+        \\fn f(x: i32, y: i32) -> i32 {
         \\    if x > y {
         \\        1
         \\    } else {
@@ -160,7 +160,7 @@ test "parse nested if then else" {
     const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def f (fn [(x i32) (y i32)] i32
+        \\(fn f [(x i32) (y i32)] i32
         \\    (branch
         \\        (> x y)
         \\            1
@@ -169,7 +169,7 @@ test "parse nested if then else" {
         \\                (< x y)
         \\                    -1
         \\                else
-        \\                    0))))
+        \\                    0)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -177,33 +177,29 @@ test "parse nested if then else" {
 test "type infer if then else" {
     const allocator = std.testing.allocator;
     const source =
-        \\f = (c: bool, x: i32, y: i32) i32 {
+        \\fn f(c: bool, x: i32, y: i32) -> i32 {
         \\    if c { x } else { y }
         \\}
     ;
     const actual = try goat.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = f, type = fn(c: bool, x: i32, y: i32) -> i32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            parameters =
+        \\    parameters =
+        \\        symbol{ value = c, type = bool }
+        \\        symbol{ value = x, type = i32 }
+        \\        symbol{ value = y, type = i32 }
+        \\    return_type = i32
+        \\    body =
+        \\        branch =
+        \\            condition =
         \\                symbol{ value = c, type = bool }
+        \\            then =
         \\                symbol{ value = x, type = i32 }
+        \\            else =
         \\                symbol{ value = y, type = i32 }
-        \\            return_type = i32
-        \\            body =
-        \\                branch =
-        \\                    condition =
-        \\                        symbol{ value = c, type = bool }
-        \\                    then =
-        \\                        symbol{ value = x, type = i32 }
-        \\                    else =
-        \\                        symbol{ value = y, type = i32 }
-        \\                    type = i32
+        \\            type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -211,7 +207,7 @@ test "type infer if then else" {
 test "codegen if" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    if true { 10 } else { 20 }
         \\}
     ;
@@ -239,9 +235,9 @@ test "codegen if" {
 test "codegen if with void result" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("stdout", "print", (x: i32) void)
+        \\print = foreign_import("stdout", "print", fn print(x: i32) -> void)
         \\
-        \\start = () void {
+        \\fn start() -> void {
         \\    if true { print(10) } else { print(20) }
         \\}
     ;
@@ -273,9 +269,9 @@ test "codegen if with void result" {
 test "codegen if with empty else block" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("stdout", "print", (x: i32) void)
+        \\print = foreign_import("stdout", "print", fn print(x: i32) -> void)
         \\
-        \\start = () void {
+        \\fn start() -> void {
         \\    if true { print(10) } else { }
         \\}
     ;
@@ -304,9 +300,9 @@ test "codegen if with empty else block" {
 test "codegen if with no else block" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("stdout", "print", (x: i32) void)
+        \\print = foreign_import("stdout", "print", fn print(x: i32) -> void)
         \\
-        \\start = () void {
+        \\fn start() -> void {
         \\    if true {
         \\        print(10)
         \\    }
@@ -337,7 +333,7 @@ test "codegen if with no else block" {
 test "parse multi arm if" {
     const allocator = std.testing.allocator;
     const source =
-        \\clamp = (x: i32, lb: i32, ub: i32) i32 {
+        \\fn clamp(x: i32, lb: i32, ub: i32) -> i32 {
         \\    if x < lb { lb }
         \\    else if x > ub { ub }
         \\    else { x }
@@ -346,14 +342,14 @@ test "parse multi arm if" {
     const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def clamp (fn [(x i32) (lb i32) (ub i32)] i32
+        \\(fn clamp [(x i32) (lb i32) (ub i32)] i32
         \\    (branch
         \\        (< x lb)
         \\            lb
         \\        (> x ub)
         \\            ub
         \\        else
-        \\            x)))
+        \\            x))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -361,7 +357,7 @@ test "parse multi arm if" {
 test "type infer multi arm if" {
     const allocator = std.testing.allocator;
     const source =
-        \\clamp = (x: i32, lb: i32, ub: i32) i32 {
+        \\fn clamp(x: i32, lb: i32, ub: i32) -> i32 {
         \\    if x < lb { lb }
         \\    else if x > ub { ub }
         \\    else { x }
@@ -370,42 +366,38 @@ test "type infer multi arm if" {
     const actual = try goat.testing.typeInfer(allocator, source, "clamp");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = clamp, type = fn(x: i32, lb: i32, ub: i32) -> i32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            parameters =
-        \\                symbol{ value = x, type = i32 }
-        \\                symbol{ value = lb, type = i32 }
-        \\                symbol{ value = ub, type = i32 }
-        \\            return_type = i32
-        \\            body =
-        \\                branch =
-        \\                    condition =
-        \\                        binary_op =
-        \\                            kind = <
-        \\                            left =
-        \\                                symbol{ value = x, type = i32 }
-        \\                            right =
-        \\                                symbol{ value = lb, type = i32 }
-        \\                            type = bool
-        \\                    then =
-        \\                        symbol{ value = lb, type = i32 }
-        \\                    condition =
-        \\                        binary_op =
-        \\                            kind = >
-        \\                            left =
-        \\                                symbol{ value = x, type = i32 }
-        \\                            right =
-        \\                                symbol{ value = ub, type = i32 }
-        \\                            type = bool
-        \\                    then =
-        \\                        symbol{ value = ub, type = i32 }
-        \\                    else =
+        \\    parameters =
+        \\        symbol{ value = x, type = i32 }
+        \\        symbol{ value = lb, type = i32 }
+        \\        symbol{ value = ub, type = i32 }
+        \\    return_type = i32
+        \\    body =
+        \\        branch =
+        \\            condition =
+        \\                binary_op =
+        \\                    kind = <
+        \\                    left =
         \\                        symbol{ value = x, type = i32 }
-        \\                    type = i32
+        \\                    right =
+        \\                        symbol{ value = lb, type = i32 }
+        \\                    type = bool
+        \\            then =
+        \\                symbol{ value = lb, type = i32 }
+        \\            condition =
+        \\                binary_op =
+        \\                    kind = >
+        \\                    left =
+        \\                        symbol{ value = x, type = i32 }
+        \\                    right =
+        \\                        symbol{ value = ub, type = i32 }
+        \\                    type = bool
+        \\            then =
+        \\                symbol{ value = ub, type = i32 }
+        \\            else =
+        \\                symbol{ value = x, type = i32 }
+        \\            type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -413,13 +405,13 @@ test "type infer multi arm if" {
 test "codegen multi arm if" {
     const allocator = std.testing.allocator;
     const source =
-        \\clamp = (x: i32, lb: i32, ub: i32) i32 {
+        \\fn clamp(x: i32, lb: i32, ub: i32) -> i32 {
         \\    if x < lb { lb }
         \\    else if x > ub { ub }
         \\    else { x }
         \\}
         \\
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    clamp(5, 10, 20)
         \\}
     ;
