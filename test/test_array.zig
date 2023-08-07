@@ -4,17 +4,18 @@ const goat = @import("goat");
 test "tokenize array" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () vec[i32] {
+        \\fn start() -> vec[i32] {
         \\    [1, 2, 3]
         \\}
     ;
     const actual = try goat.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
+        \\(keyword fn)
         \\(symbol start)
-        \\(operator =)
         \\(delimiter '(')
         \\(delimiter ')')
+        \\(operator ->)
         \\(symbol vec)
         \\(delimiter '[')
         \\(symbol i32)
@@ -37,18 +38,18 @@ test "tokenize array" {
 test "parse array" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () vec[i32] {
+        \\fn start() -> vec[i32] {
         \\    [1, 2, 3]
         \\}
     ;
     const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def start (fn [] (index vec i32)
+        \\(fn start [] (index vec i32)
         \\    [
         \\        1
         \\        2
-        \\        3]))
+        \\        3])
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -56,27 +57,23 @@ test "parse array" {
 test "type infer array" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () vec[i32] {
+        \\fn start() -> vec[i32] {
         \\    [1, 2, 3]
         \\}
     ;
     const actual = try goat.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = start, type = fn() -> []i32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            return_type = []i32
-        \\            body =
-        \\                array =
-        \\                    expressions =
-        \\                        int{ value = 1, type = i32 }
-        \\                        int{ value = 2, type = i32 }
-        \\                        int{ value = 3, type = i32 }
-        \\                    type = []i32
+        \\    return_type = []i32
+        \\    body =
+        \\        array =
+        \\            expressions =
+        \\                int{ value = 1, type = i32 }
+        \\                int{ value = 2, type = i32 }
+        \\                int{ value = 3, type = i32 }
+        \\            type = []i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -84,7 +81,7 @@ test "type infer array" {
 test "codegen array" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () vec[i32] {
+        \\fn start() -> vec[i32] {
         \\    [1, 2, 3]
         \\}
     ;
@@ -148,7 +145,7 @@ test "codegen array" {
 test "parse array index" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    xs = [1, 2, 3]
         \\    xs[1]
         \\}
@@ -156,13 +153,13 @@ test "parse array index" {
     const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def start (fn [] i32
+        \\(fn start [] i32
         \\    (block
         \\        (def xs [
         \\            1
         \\            2
         \\            3])
-        \\        (index xs 1))))
+        \\        (index xs 1)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -170,7 +167,7 @@ test "parse array index" {
 test "type infer array index" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    xs = [1, 2, 3]
         \\    xs[1]
         \\}
@@ -178,30 +175,26 @@ test "type infer array index" {
     const actual = try goat.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = start, type = fn() -> i32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            return_type = i32
-        \\            body =
-        \\                define =
-        \\                    name = symbol{ value = xs, type = []i32 }
-        \\                    type = void
-        \\                    mutable = false
-        \\                    value =
-        \\                        array =
-        \\                            expressions =
-        \\                                int{ value = 1, type = i32 }
-        \\                                int{ value = 2, type = i32 }
-        \\                                int{ value = 3, type = i32 }
-        \\                            type = []i32
-        \\                index =
-        \\                    expression = symbol{ value = xs, type = []i32 }
-        \\                    indices =
-        \\                        int{ value = 1, type = u32 }
-        \\                    type = i32
+        \\    return_type = i32
+        \\    body =
+        \\        define =
+        \\            name = symbol{ value = xs, type = []i32 }
+        \\            type = void
+        \\            mutable = false
+        \\            value =
+        \\                array =
+        \\                    expressions =
+        \\                        int{ value = 1, type = i32 }
+        \\                        int{ value = 2, type = i32 }
+        \\                        int{ value = 3, type = i32 }
+        \\                    type = []i32
+        \\        index =
+        \\            expression = symbol{ value = xs, type = []i32 }
+        \\            indices =
+        \\                int{ value = 1, type = u32 }
+        \\            type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -209,7 +202,7 @@ test "type infer array index" {
 test "codegen array index" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    xs = [1, 2, 3]
         \\    xs[1]
         \\}
@@ -293,7 +286,7 @@ test "codegen array index" {
 test "codegen array index of string" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () u8 {
+        \\fn start() -> u8 {
         \\    xs = "hello world"
         \\    xs[3]
         \\}
@@ -362,7 +355,7 @@ test "codegen array index of string" {
 test "codegen array of bool" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () bool {
+        \\fn start() -> bool {
         \\    xs = [true, false, true]
         \\    xs[1]
         \\}
@@ -446,7 +439,7 @@ test "codegen array of bool" {
 test "codegen array of i64" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () i64 {
+        \\fn start() -> i64 {
         \\    xs = [3, 7, 11]
         \\    xs[1]
         \\}
@@ -530,7 +523,7 @@ test "codegen array of i64" {
 test "codegen array of f32" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () f32 {
+        \\fn start() -> f32 {
         \\    xs = [3.14, 2.718, 1.618]
         \\    xs[1]
         \\}
@@ -614,7 +607,7 @@ test "codegen array of f32" {
 test "codegen array of f64" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () f64 {
+        \\fn start() -> f64 {
         \\    xs = [3.14, 2.718, 1.618]
         \\    xs[1]
         \\}
@@ -698,7 +691,7 @@ test "codegen array of f64" {
 test "codegen array of u8" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () u8 {
+        \\fn start() -> u8 {
         \\    xs = [2, 4, 7]
         \\    xs[1]
         \\}
