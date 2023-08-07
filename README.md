@@ -91,15 +91,15 @@ Goat has a straightforward syntax that is easy to read and write.
 Here is a simple Goat program that defines a function to calculate the square of a number:
 
 ```goat
-fn square(x: i32) -> i32 {
+square = fn(x: i32) -> i32 {
     x * x
 }
 
-test "function calls" {
+test("function calls", fn() {
     assert(square(1) == 1)
     assert(square(2) == 4)
     assert(square(3) == 9)
-}
+})
 ```
 
 This program defines a function `square` and a set of tests to verify its behavior.
@@ -118,7 +118,7 @@ Here's an example:
 # This is a single line comment
 
 # This function calculates the square of a number
-fn square(x: i32) -> i32 {
+square = fn(x: i32) -> i32 {
     x * x # Comments can come at the end of the line
 }
 ```
@@ -128,18 +128,18 @@ fn square(x: i32) -> i32 {
 In Goat, you define a function using the `fn` keyword, followed by a list of parameters and their types, the return type, and then the function body.
 
 ```goat
-fn max(x: i32, y: i32) -> i32 {
+max = fn(x: i32, y: i32) -> i32 {
     if x > y { x } else { y }
 }
 
-fn min(x: i32, y: i32) -> i32 {
+min = fn(x: i32, y: i32) -> i32 {
     if x < y { x } else { y }
 }
 
-test "if else" {
+test("if else", fn() {
     assert(max(5, 3) == 5)
     assert(min(5, 3) == 3)
-}
+})
 ```
 
 This is a function `max` that takes two parameters, `x` and `y`, and returns the greater of the two.
@@ -149,17 +149,17 @@ This is a function `max` that takes two parameters, `x` and `y`, and returns the
 Goat supports conditional logic with `if`, `else if` and `else` expressions.
 
 ```goat
-fn clamp(value: i32, low: i32, high: i32) -> i32 {
+clamp = fn(value: i32, low: i32, high: i32) -> i32 {
     if value < low { low }
     else if value > high { high }
     else { value }
 }
 
-test "multi arm if" {
+test("multi arm if", fn() {
     assert(clamp(1, 3, 5) == 3)
     assert(clamp(7, 3, 5) == 5)
     assert(clamp(4, 3, 5) == 4)
-}
+})
 ```
 
 This `clamp` function ensures that a value stays within a specific range.
@@ -169,11 +169,11 @@ This `clamp` function ensures that a value stays within a specific range.
 Goat supports named arguments, which can improve the readability of your code. Here is an example of using named arguments:
 
 ```goat
-test "named arguments" {
+test("named arguments", fn() {
     assert(clamp(value=1, low=3, high=5) == 3)
     assert(clamp(value=7, low=3, high=5) == 5)
     assert(clamp(value=4, low=3, high=5) == 4)
-}
+})
 ```
 
 In this example, we are calling the `clamp` function with named parameters `value`, `low`, and `high`.
@@ -190,16 +190,16 @@ It's a powerful tool for working with complex data structures.
 
 ```goat
 # pattern matching is done with `match expression`
-fn sum(xs: []i32) -> i32 {
+sum = fn(xs: []i32) -> i32 {
     match xs {
         [] { 0 }
         [x, ...xs] { x + sum(xs) }
     }
 }
 
-test "sum" {
+test("sum", fn() {
     assert(sum([1, 2, 3]) == 6)
-}
+})
 ```
 
 In the above code, `sum` is a function that takes a list of integers and returns the sum of all elements in the list.
@@ -215,18 +215,18 @@ such as a struct or array. It provides a convenient way to extract multiple valu
 For example, consider the `Square` struct and the implementation of `Shape` interface for it:
 
 ```goat
-struct Square {
+Square = struct {
     width: f32,
     height: f32
 }
 
-fn area({width, height}: Square) -> f32 {
+area = fn({width, height}: Square) -> f32 {
     width * height
 }
 
-test "area of square" {
+test("area of square", fn() {
     assert(area({ width: 10, height: 5 }) == 50)
-}
+})
 ```
 
 In the `area` function for `Square`, `{width, height}` is a destructuring assignment:
@@ -236,7 +236,7 @@ Another example of destructuring can be found in array pattern matching:
 
 ```goat
 # pattern matching with destructuring
-fn sum(xs: []i32) -> i32 {
+sum = fn(xs: []i32) -> i32 {
     match xs {
         [] { 0 }
         [x, ...rest] { x + sum(rest) }
@@ -260,7 +260,7 @@ Here's an example:
 ```goat
 x = 5
 
-when true {
+if true {
     x = 10 # This x shadows the x declared outside the if block
     log(x) # This will print 10
 }
@@ -279,18 +279,15 @@ Goat supports importing and exporting functions from the host environment.
 
 ```goat
 # Import a function from the host
-@import("console", "log")
-fn log(x: str) -> void
+log = foreign_import("console", "log", fn(x: str) -> void)
 
 # Export a function to the host
-@export("double")
-fn double(x: i32) -> i32 {
+export("double", fn(x: i32) -> i32 {
     x * 2
-}
+})
 
 # call the log function from Goat
-@export("start_")
-fn start() -> void {
+start = fn() -> void {
     log("hello world")
 }
 ```
@@ -307,17 +304,20 @@ And it has integrated capability-based security, so it extends WebAssembly's cha
 It is a first class citizen in Goat and by targeting this API you can ensure that your programs work across as many platforms as possible.
 
 ```goat
-@import("wasi_unstable", "fd_write")
-fn fd_write(fd: i32, iovs: str, iovs_len: i32, mut nwritten: i32) -> i32
+fd_write = foreign_import(
+    "wasi_unstable",
+    "fd_write",
+    fn(fd: i32, iovs: str, iovs_len: i32, mut nwritten: i32) -> i32
+)
 
 stdout: i32 = 1
 
-fn print(text: str) -> void {
+print = fn(text: str) -> void {
     mut nwritten: i32 = undefined
     fd_write(stdout, text, 1, mut nwritten)
 }
 
-fn start() -> void {
+start = fn() -> void {
     print("Hello, World!\n")
     print("Goodbye!")
 }
@@ -329,12 +329,12 @@ Goat provides for expressions to efficiently iterate through an array and build 
 
 ```goat
 # Compute the dot product of two vectors
-fn dot(a: []f32, b: []f32) -> f32 {
+dot = fn(a: []f32, b: []f32) -> f32 {
     sum(for i { a[i] * b[i] })
 }
 
 # Perform matrix multiplication
-fn matmul(a: [][]f32, b: [][]f32) -> [][]f32 {
+matmul = fn(a: [][]f32, b: [][]f32) -> [][]f32 {
     for i, j, k { sum(a[i][k] * b[k][j]) }
 }
 ```
@@ -345,35 +345,35 @@ Goat is designed with machine learning in mind. For expressions allow you to exp
 single example rather than dealing with batches. Here is a simple linear model implemented in Goat:
 
 ```goat
-struct Linear {
+Linear = struct {
     m: f64,
     b: f64
 }
 
-fn predict({m, b}: Linear, x: f64) -> f64 {
+predict = fn({m, b}: Linear, x: f64) -> f64 {
     m * x + b
 }
 
-fn sse(model: Linear, x: []f64, y: []f64) -> f64 {
+sse = fn(model: Linear, x: []f64, y: []f64) -> f64 {
     sum(for i {
         y_hat = predict(model, x[i])
         (y_hat - y[i]) ^ 2
     })
 }
 
-fn update(model: Linear, gradient: Linear, learning_rate: f64) -> Linear {
+update = fn(model: Linear, gradient: Linear, learning_rate: f64) -> Linear {
     {
         m: model.m - gradient.m * learning_rate,
         b: model.b - gradient.b * learning_rate,
     }
 }
 
-fn step(model: Linear, learning_rate: f64, x: []f64, y: []f64) -> Linear {
+step = fn(model: Linear, learning_rate: f64, x: []f64, y: []f64) -> Linear {
     gradient = grad(sse)(model, x, y)
     update(model, gradient, learning_rate)
 }
 
-test "gradient descent" {
+test("gradient descent", fn() {
     model = { m: 1.0, b: 0.0 }
     learning_rate = 0.01
     x = [1.0, 2.0, 3.0, 4.0]
@@ -382,7 +382,7 @@ test "gradient descent" {
     model = step(model, learning_rate, x, y)
     updated_loss = sse(model, x, y)
     assert(updated_loss < initial_loss)
-}
+})
 ```
 
 ### HTML
@@ -391,7 +391,7 @@ Goat is built to be a citizen of the web. We want to ensure you can build servic
 on the server side or client side.
 
 ```goat
-struct Customer {
+Customer = struct {
     name: str,
     age: u8,
 }
@@ -407,7 +407,7 @@ customers: []Customer = [
     }
 ]
 
-fn customer_info(customer: Customer) -> str {
+customer_info = fn(customer: Customer) -> str {
     html`
         <li>
             <h3>${customer.name}</h3>
@@ -416,7 +416,7 @@ fn customer_info(customer: Customer) -> str {
     `
 }
 
-fn start() -> str {
+start = fn() -> str {
     html`
         <html>
             <head>
