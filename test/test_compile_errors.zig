@@ -6,7 +6,7 @@ const CLEAR = goat.error_reporter.pretty_print.CLEAR;
 test "use of undefined variable" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () f32 {
+        \\fn start() -> f32 {
         \\    fib(5)
         \\}
     ;
@@ -17,7 +17,7 @@ test "use of undefined variable" {
         \\
         \\Cannot find variable `fib`.
         \\
-        \\1 | start = () f32 {{
+        \\1 | fn start() -> f32 {{
         \\2 |     {s}fib{s}(5)
         \\3 | }}
         \\
@@ -33,7 +33,7 @@ test "use of undefined variable" {
 test "type error of if" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = (x: i32, y: f64) f32 {
+        \\fn start(x: i32, y: f64) -> f32 {
         \\    if x == y {
         \\        x
         \\    } else {
@@ -48,14 +48,14 @@ test "type error of if" {
         \\
         \\Here the inferred type is i32
         \\
-        \\1 | start = (x: i32, y: f64) f32 {{
+        \\1 | fn start(x: i32, y: f64) -> f32 {{
         \\2 |     if {s}x{s} == y {{
         \\3 |         x
         \\
         \\
         \\Here the inferred type is f64
         \\
-        \\1 | start = (x: i32, y: f64) f32 {{
+        \\1 | fn start(x: i32, y: f64) -> f32 {{
         \\2 |     if x == {s}y{s} {{
         \\3 |         x
         \\
@@ -71,7 +71,7 @@ test "type error of if" {
 test "type error of define" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () f32 {
+        \\fn start() -> f32 {
         \\    x: f64 = 5
         \\    x
         \\}
@@ -83,7 +83,7 @@ test "type error of define" {
         \\
         \\Here the inferred type is f32
         \\
-        \\1 | start = () {s}f32{s} {{
+        \\1 | fn start() -> {s}f32{s} {{
         \\2 |     x: f64 = 5
         \\
         \\
@@ -105,11 +105,11 @@ test "type error of define" {
 test "type type mismatch between parameter and argument" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = (x: i32) i32 {
+        \\fn double(x: i32) -> i32 {
         \\    x * 2
         \\}
         \\
-        \\start = () f32 {
+        \\fn start() -> f32 {
         \\    y: f32 = 0
         \\    double(y)
         \\}
@@ -121,7 +121,7 @@ test "type type mismatch between parameter and argument" {
         \\
         \\Here the inferred type is i32
         \\
-        \\1 | double = ({s}x: i32{s}) i32 {{
+        \\1 | fn double({s}x: i32{s}) -> i32 {{
         \\2 |     x * 2
         \\
         \\
@@ -143,11 +143,11 @@ test "type type mismatch between parameter and argument" {
 test "mutability mismatch between parameter and argument" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = (mut x: i32) void {
+        \\fn double(mut x: i32) -> void {
         \\    x *= 2
         \\}
         \\
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    x: i32 = 0
         \\    double(x)
         \\    x
@@ -160,7 +160,7 @@ test "mutability mismatch between parameter and argument" {
         \\
         \\Here we have a mutable value
         \\
-        \\1 | double = ({s}mut x: i32{s}) void {{
+        \\1 | fn double({s}mut x: i32{s}) -> void {{
         \\2 |     x *= 2
         \\
         \\
@@ -182,7 +182,7 @@ test "mutability mismatch between parameter and argument" {
 test "mutability mismatch between binding and assignment" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    x: i32 = 0
         \\    x += 1
         \\    x
@@ -210,11 +210,11 @@ test "mutability mismatch between binding and assignment" {
 test "mutability mismatch between binding and argument" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = (mut x: i32) void {
+        \\fn double(mut x: i32) -> void {
         \\    x *= 2
         \\}
         \\
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    x: i32 = 5
         \\    double(mut x)
         \\    x
@@ -227,7 +227,7 @@ test "mutability mismatch between binding and argument" {
         \\
         \\Here we have a immutable value
         \\
-        \\5 | start = () i32 {{
+        \\5 | fn start() -> i32 {{
         \\6 |     {s}x{s}: i32 = 5
         \\7 |     double(mut x)
         \\
@@ -250,7 +250,7 @@ test "mutability mismatch between binding and argument" {
 test "undefined variable sorted by edit distance" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () f32 {
+        \\fn start() -> f32 {
         \\    apple: f32 = 5
         \\    banana: f32 = 10
         \\    banna

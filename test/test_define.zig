@@ -122,7 +122,7 @@ test "parse multi line define with type annotation" {
 test "type infer define based on body" {
     const allocator = std.testing.allocator;
     const source =
-        \\sum_of_squares = (x: i32, y: i32) i32 {
+        \\fn sum_of_squares(x: i32, y: i32) -> i32 {
         \\    a = x * x
         \\    b = y * y
         \\    a + b
@@ -131,29 +131,99 @@ test "type infer define based on body" {
     const actual = try goat.testing.typeInfer(allocator, source, "sum_of_squares");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = sum_of_squares, type = fn(x: i32, y: i32) -> i32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            parameters =
-        \\                symbol{ value = x, type = i32 }
-        \\                symbol{ value = y, type = i32 }
-        \\            return_type = i32
-        \\            body =
-        \\                define =
-        \\                    name = symbol{ value = a, type = i32 }
-        \\                    type = void
-        \\                    mutable = false
-        \\                    value =
-        \\                        binary_op =
-        \\                            kind = *
-        \\                            left =
-        \\                                symbol{ value = x, type = i32 }
-        \\                            right =
-        \\                                symbol{ value = x, type = i32 }
-        \\                            type = i32
+        \\    parameters =
+        \\        symbol{ value = x, type = i32 }
+        \\        symbol{ value = y, type = i32 }
+        \\    return_type = i32
+        \\    body =
+        \\        define =
+        \\            name = symbol{ value = a, type = i32 }
+        \\            type = void
+        \\            mutable = false
+        \\            value =
+        \\                binary_op =
+        \\                    kind = *
+        \\                    left =
+        \\                        symbol{ value = x, type = i32 }
+        \\                    right =
+        \\                        symbol{ value = x, type = i32 }
+        \\                    type = i32
+        \\        define =
+        \\            name = symbol{ value = b, type = i32 }
+        \\            type = void
+        \\            mutable = false
+        \\            value =
+        \\                binary_op =
+        \\                    kind = *
+        \\                    left =
+        \\                        symbol{ value = y, type = i32 }
+        \\                    right =
+        \\                        symbol{ value = y, type = i32 }
+        \\                    type = i32
+        \\        binary_op =
+        \\            kind = +
+        \\            left =
+        \\                symbol{ value = a, type = i32 }
+        \\            right =
+        \\                symbol{ value = b, type = i32 }
+        \\            type = i32
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse nested define" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\fn f(x: i32, y: i32) -> i32 {
+        \\    a = block {
+        \\        b = y * y
+        \\        b + x
+        \\    }
+        \\    a + x
+        \\}
+    ;
+    const actual = try goat.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(fn f [(x i32) (y i32)] i32
+        \\    (block
+        \\        (def a 
+        \\            (block
+        \\                (def b (* y y))
+        \\                (+ b x)))
+        \\        (+ a x)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer nested define" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\fn f(x: i32, y: i32) -> i32 {
+        \\    a = block {
+        \\        b = y * y
+        \\        b + x
+        \\    }
+        \\    a + x
+        \\}
+    ;
+    const actual = try goat.testing.typeInfer(allocator, source, "f");
+    defer allocator.free(actual);
+    const expected =
+        \\function =
+        \\    name = symbol{ value = f, type = fn(x: i32, y: i32) -> i32 }
+        \\    parameters =
+        \\        symbol{ value = x, type = i32 }
+        \\        symbol{ value = y, type = i32 }
+        \\    return_type = i32
+        \\    body =
+        \\        define =
+        \\            name = symbol{ value = a, type = i32 }
+        \\            type = void
+        \\            mutable = false
+        \\            value =
         \\                define =
         \\                    name = symbol{ value = b, type = i32 }
         \\                    type = void
@@ -169,95 +239,17 @@ test "type infer define based on body" {
         \\                binary_op =
         \\                    kind = +
         \\                    left =
-        \\                        symbol{ value = a, type = i32 }
-        \\                    right =
         \\                        symbol{ value = b, type = i32 }
-        \\                    type = i32
-    ;
-    try std.testing.expectEqualStrings(expected, actual);
-}
-
-test "parse nested define" {
-    const allocator = std.testing.allocator;
-    const source =
-        \\f = (x: i32, y: i32) i32 {
-        \\    a = block {
-        \\        b = y * y
-        \\        b + x
-        \\    }
-        \\    a + x
-        \\}
-    ;
-    const actual = try goat.testing.parse(allocator, source);
-    defer allocator.free(actual);
-    const expected =
-        \\(def f (fn [(x i32) (y i32)] i32
-        \\    (block
-        \\        (def a 
-        \\            (block
-        \\                (def b (* y y))
-        \\                (+ b x)))
-        \\        (+ a x))))
-    ;
-    try std.testing.expectEqualStrings(expected, actual);
-}
-
-test "type infer nested define" {
-    const allocator = std.testing.allocator;
-    const source =
-        \\f = (x: i32, y: i32) i32 {
-        \\    a = block {
-        \\        b = y * y
-        \\        b + x
-        \\    }
-        \\    a + x
-        \\}
-    ;
-    const actual = try goat.testing.typeInfer(allocator, source, "f");
-    defer allocator.free(actual);
-    const expected =
-        \\define =
-        \\    name = symbol{ value = f, type = fn(x: i32, y: i32) -> i32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            parameters =
-        \\                symbol{ value = x, type = i32 }
-        \\                symbol{ value = y, type = i32 }
-        \\            return_type = i32
-        \\            body =
-        \\                define =
-        \\                    name = symbol{ value = a, type = i32 }
-        \\                    type = void
-        \\                    mutable = false
-        \\                    value =
-        \\                        define =
-        \\                            name = symbol{ value = b, type = i32 }
-        \\                            type = void
-        \\                            mutable = false
-        \\                            value =
-        \\                                binary_op =
-        \\                                    kind = *
-        \\                                    left =
-        \\                                        symbol{ value = y, type = i32 }
-        \\                                    right =
-        \\                                        symbol{ value = y, type = i32 }
-        \\                                    type = i32
-        \\                        binary_op =
-        \\                            kind = +
-        \\                            left =
-        \\                                symbol{ value = b, type = i32 }
-        \\                            right =
-        \\                                symbol{ value = x, type = i32 }
-        \\                            type = i32
-        \\                binary_op =
-        \\                    kind = +
-        \\                    left =
-        \\                        symbol{ value = a, type = i32 }
         \\                    right =
         \\                        symbol{ value = x, type = i32 }
         \\                    type = i32
+        \\        binary_op =
+        \\            kind = +
+        \\            left =
+        \\                symbol{ value = a, type = i32 }
+        \\            right =
+        \\                symbol{ value = x, type = i32 }
+        \\            type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -265,7 +257,7 @@ test "type infer nested define" {
 test "codegen define" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = (x: i32, y: i32) i32 {
+        \\fn start(x: i32, y: i32) -> i32 {
         \\    a = x * x
         \\    b = y * y
         \\    a + b
@@ -302,15 +294,15 @@ test "codegen define" {
 test "parse drop" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () void {
+        \\fn start() -> void {
         \\    _ = 5
         \\}
     ;
     const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def start (fn [] void
-        \\    (drop 5)))
+        \\(fn start [] void
+        \\    (drop 5))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -318,7 +310,7 @@ test "parse drop" {
 test "type infer drop" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () void {
+        \\fn start() -> void {
         \\    x: i32 = 5
         \\    _ = x
         \\}
@@ -326,24 +318,20 @@ test "type infer drop" {
     const actual = try goat.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = start, type = fn() -> void }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            return_type = void
-        \\            body =
-        \\                define =
-        \\                    name = symbol{ value = x, type = i32 }
-        \\                    type = void
-        \\                    mutable = false
-        \\                    value =
-        \\                        int{ value = 5, type = i32 }
-        \\                drop =
-        \\                    type = void
-        \\                    value =
-        \\                        symbol{ value = x, type = i32 }
+        \\    return_type = void
+        \\    body =
+        \\        define =
+        \\            name = symbol{ value = x, type = i32 }
+        \\            type = void
+        \\            mutable = false
+        \\            value =
+        \\                int{ value = 5, type = i32 }
+        \\        drop =
+        \\            type = void
+        \\            value =
+        \\                symbol{ value = x, type = i32 }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -351,7 +339,7 @@ test "type infer drop" {
 test "codegen drop" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () void {
+        \\fn start() -> void {
         \\    x: i32 = 5
         \\    _ = x
         \\}
@@ -379,7 +367,7 @@ test "codegen drop" {
 test "type infer based on return type" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    x = 5
         \\    x
         \\}
@@ -387,21 +375,17 @@ test "type infer based on return type" {
     const actual = try goat.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = start, type = fn() -> i32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            return_type = i32
-        \\            body =
-        \\                define =
-        \\                    name = symbol{ value = x, type = i32 }
-        \\                    type = void
-        \\                    mutable = false
-        \\                    value =
-        \\                        int{ value = 5, type = i32 }
-        \\                symbol{ value = x, type = i32 }
+        \\    return_type = i32
+        \\    body =
+        \\        define =
+        \\            name = symbol{ value = x, type = i32 }
+        \\            type = void
+        \\            mutable = false
+        \\            value =
+        \\                int{ value = 5, type = i32 }
+        \\        symbol{ value = x, type = i32 }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
