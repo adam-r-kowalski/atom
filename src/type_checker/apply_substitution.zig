@@ -219,6 +219,7 @@ fn function(allocator: Allocator, sub: types.Substitution, f: types.Function) !t
             .mutable = unapplied.mutable,
         };
     return .{
+        .name = try symbol(allocator, sub, f.name),
         .parameters = parameters,
         .return_type = try monotype(allocator, sub, f.return_type),
         .body = try block(allocator, sub, f.body),

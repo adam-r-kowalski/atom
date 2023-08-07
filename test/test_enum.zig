@@ -12,7 +12,7 @@ test "tokenize enum" {
         \\    f,
         \\}
         \\
-        \\start = () Grade {
+        \\fn start() -> Grade {
         \\    Grade.a
         \\}
     ;
@@ -41,10 +41,11 @@ test "tokenize enum" {
         \\(new_line)
         \\(delimiter '}')
         \\(new_line)
+        \\(keyword fn)
         \\(symbol start)
-        \\(operator =)
         \\(delimiter '(')
         \\(delimiter ')')
+        \\(operator ->)
         \\(symbol Grade)
         \\(delimiter '{')
         \\(new_line)
@@ -68,7 +69,7 @@ test "parse enum" {
         \\    f,
         \\}
         \\
-        \\start = () Grade {
+        \\fn start() -> Grade {
         \\    Grade.a
         \\}
     ;
@@ -82,8 +83,8 @@ test "parse enum" {
         \\    d
         \\    f))
         \\
-        \\(def start (fn [] Grade
-        \\    (. Grade a)))
+        \\(fn start [] Grade
+        \\    (. Grade a))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -99,25 +100,21 @@ test "type infer enum" {
         \\    f,
         \\}
         \\
-        \\start = () Grade {
+        \\fn start() -> Grade {
         \\    Grade.a
         \\}
     ;
     const actual = try goat.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = start, type = fn() -> enum{ a, b, c, d, f } }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            return_type = enum{ a, b, c, d, f }
-        \\            body =
-        \\                variant =
-        \\                    value = a
-        \\                    index = 0
-        \\                    type = enum{ a, b, c, d, f }
+        \\    return_type = enum{ a, b, c, d, f }
+        \\    body =
+        \\        variant =
+        \\            value = a
+        \\            index = 0
+        \\            type = enum{ a, b, c, d, f }
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -133,7 +130,7 @@ test "codegen enum index 0" {
         \\    f,
         \\}
         \\
-        \\start = () Grade {
+        \\fn start() -> Grade {
         \\    Grade.a
         \\}
     ;
@@ -164,7 +161,7 @@ test "codegen enum index 1" {
         \\    f,
         \\}
         \\
-        \\start = () Grade {
+        \\fn start() -> Grade {
         \\    Grade.b
         \\}
     ;
@@ -195,7 +192,7 @@ test "codegen enum equality" {
         \\    f,
         \\}
         \\
-        \\start = () bool {
+        \\fn start() -> bool {
         \\    Grade.a == Grade.b
         \\}
     ;
@@ -228,11 +225,11 @@ test "codegen enum passed to function" {
         \\    f,
         \\}
         \\
-        \\got_an_a = (grade: Grade) bool {
+        \\fn got_an_a(grade: Grade) -> bool {
         \\    grade == Grade.a
         \\}
         \\
-        \\start = () bool {
+        \\fn start() -> bool {
         \\    got_an_a(Grade.b)
         \\}
     ;

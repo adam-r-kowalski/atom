@@ -43,7 +43,7 @@ pub fn timesEqual(t: types.TimesEqual, indent: Indent, writer: Writer) !void {
 }
 
 pub fn function(f: types.Function, indent: Indent, writer: Writer) !void {
-    try writer.writeAll("(fn [");
+    try writer.print("(fn {s} [", .{f.name.value.string()});
     for (f.parameters, 0..) |param, j| {
         if (j > 0) try writer.writeAll(" ");
         try writer.writeAll("(");
@@ -54,7 +54,7 @@ pub fn function(f: types.Function, indent: Indent, writer: Writer) !void {
     }
     try writer.writeAll("] ");
     try expression(f.return_type.*, indent, writer);
-    try block(f.body, indent, writer);
+    try block(f.body, indent + 1, writer);
     try writer.writeAll(")");
 }
 
@@ -283,17 +283,6 @@ pub fn topLevelEnumeration(e: types.TopLevelEnumeration, indent: Indent, writer:
     try writer.writeAll(")");
 }
 
-pub fn topLevelFunction(f: types.TopLevelFunction, indent: Indent, writer: Writer) !void {
-    try writer.print("(def {s}", .{f.name.value.string()});
-    if (f.type) |t| {
-        try writer.writeAll(" ");
-        try expression(t.*, indent, writer);
-    }
-    try writer.writeAll(" ");
-    try function(f.function, indent + 1, writer);
-    try writer.writeAll(")");
-}
-
 pub fn module(m: types.Module, writer: Writer) !void {
     var i: usize = 0;
     for (m.foreign_imports) |f| {
@@ -313,7 +302,7 @@ pub fn module(m: types.Module, writer: Writer) !void {
     }
     for (m.functions) |f| {
         if (i > 0) try writer.writeAll("\n\n");
-        try topLevelFunction(f, 0, writer);
+        try function(f, 0, writer);
         i += 1;
     }
     for (m.defines) |d| {

@@ -6,7 +6,7 @@ test "tokenize comment" {
     const source =
         \\# this is a comment
         \\
-        \\start = () void {
+        \\fn start() -> void {
         \\    print("hello world") # write hello world to the stdout
         \\}
     ;
@@ -15,10 +15,11 @@ test "tokenize comment" {
     const expected =
         \\(comment # this is a comment)
         \\(new_line)
+        \\(keyword fn)
         \\(symbol start)
-        \\(operator =)
         \\(delimiter '(')
         \\(delimiter ')')
+        \\(operator ->)
         \\(symbol void)
         \\(delimiter '{')
         \\(new_line)
@@ -38,7 +39,7 @@ test "parse comment" {
     const source =
         \\# comment before a function
         \\
-        \\start = () void { # comment before function body
+        \\fn start() -> void { # comment before function body
         \\    print("hello world") # comment after expression
         \\    # comment after function body
         \\} # comment after function
@@ -48,8 +49,8 @@ test "parse comment" {
     const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def start (fn [] void
-        \\    (print "hello world")))
+        \\(fn start [] void
+        \\    (print "hello world"))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }

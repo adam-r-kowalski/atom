@@ -20,6 +20,7 @@ pub const Colon = struct { span: Span };
 pub const Plus = struct { span: Span };
 pub const PlusEqual = struct { span: Span };
 pub const Minus = struct { span: Span };
+pub const RightArrow = struct { span: Span };
 pub const Times = struct { span: Span };
 pub const TimesEqual = struct { span: Span };
 pub const Slash = struct { span: Span };
@@ -65,6 +66,7 @@ pub const Token = union(enum) {
     plus: Plus,
     plus_equal: PlusEqual,
     minus: Minus,
+    right_arrow: RightArrow,
     times: Times,
     times_equal: TimesEqual,
     slash: Slash,

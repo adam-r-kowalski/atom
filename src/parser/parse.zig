@@ -150,119 +150,15 @@ fn array(context: Context, begin: tokenizer.types.Pos) !types.Array {
     };
 }
 
-fn functionParameters(context: Context, parameters: *List(types.Parameter)) !void {
-    while (context.tokens.peek()) |t| {
-        switch (t) {
-            .new_line => context.tokens.advance(),
-            .right_paren => break,
-            .symbol => |name| {
-                context.tokens.advance();
-                _ = context.tokens.consume(.colon);
-                const type_ = try expression(withPrecedence(context, DEFINE + 1));
-                context.tokens.consumeNewLines();
-                context.tokens.maybeConsume(.comma);
-                try parameters.append(types.Parameter{
-                    .name = name,
-                    .type = type_,
-                    .mutable = false,
-                    .span = .{ .begin = name.span.begin, .end = spanOf(type_).end },
-                });
-            },
-            .mut => |mut| {
-                context.tokens.advance();
-                const name = context.tokens.consume(.symbol).symbol;
-                _ = context.tokens.consume(.colon);
-                const type_ = try expression(withPrecedence(context, DEFINE + 1));
-                context.tokens.consumeNewLines();
-                context.tokens.maybeConsume(.comma);
-                try parameters.append(types.Parameter{
-                    .name = name,
-                    .type = type_,
-                    .mutable = true,
-                    .span = .{ .begin = mut.span.begin, .end = spanOf(type_).end },
-                });
-            },
-            else => |k| std.debug.panic("\nExpected symbol or right paren, found {}", .{k}),
-        }
-    }
-    _ = context.tokens.consume(.right_paren);
-}
-
-fn function(context: Context, begin: types.Pos, parameters: *List(types.Parameter)) !types.Expression {
-    try functionParameters(context, parameters);
-    const return_type = try expressionAlloc(withPrecedence(context, DEFINE + 1));
-    if (context.tokens.peek()) |t| {
-        if (t == .left_brace) {
-            const body = try block(
-                withPrecedence(context, LOWEST),
-                tokenizer.span.token(context.tokens.consume(.left_brace)).begin,
-            );
-            const end = body.span.end;
-            return types.Expression{
-                .function = .{
-                    .parameters = try parameters.toOwnedSlice(),
-                    .return_type = return_type,
-                    .body = body,
-                    .span = types.Span{ .begin = begin, .end = end },
-                },
-            };
-        }
-    }
-    const end = spanOf(return_type.*).end;
-    return types.Expression{
-        .prototype = .{
-            .parameters = try parameters.toOwnedSlice(),
-            .return_type = return_type,
-            .span = types.Span{ .begin = begin, .end = end },
-        },
-    };
-}
-
-fn groupOrFunction(context: Context, left_paren: LeftParen) !types.Expression {
+fn group(context: Context, left_paren: LeftParen) !types.Group {
     const begin = left_paren.span.begin;
     context.tokens.consumeNewLines();
-    switch (context.tokens.peek().?) {
-        .right_paren, .mut => {
-            var parameters = List(types.Parameter).init(context.allocator);
-            return try function(context, begin, &parameters);
-        },
-        else => {
-            const expr = try expression(withPrecedence(context, DEFINE + 1));
-            switch (expr) {
-                .symbol => |name| {
-                    switch (context.tokens.peek().?) {
-                        .colon => {
-                            context.tokens.advance();
-                            var parameters = List(types.Parameter).init(context.allocator);
-                            const type_ = try expression(withPrecedence(context, DEFINE + 1));
-                            context.tokens.consumeNewLines();
-                            context.tokens.maybeConsume(.comma);
-                            try parameters.append(types.Parameter{
-                                .name = name,
-                                .type = type_,
-                                .mutable = false,
-                                .span = .{ .begin = name.span.begin, .end = spanOf(type_).end },
-                            });
-                            return try function(context, begin, &parameters);
-                        },
-                        .right_paren => {
-                            unreachable;
-                        },
-                        else => |k| std.debug.panic("\nExpected colon or right paren, found {}", .{k}),
-                    }
-                },
-                else => {
-                    const allocated = try context.allocator.create(types.Expression);
-                    allocated.* = expr;
-                    const end = tokenizer.span.token(context.tokens.consume(.right_paren)).end;
-                    return .{ .group = .{
-                        .expression = allocated,
-                        .span = .{ .begin = begin, .end = end },
-                    } };
-                },
-            }
-        },
-    }
+    const expr = try expressionAlloc(withPrecedence(context, DEFINE + 1));
+    const end = tokenizer.span.token(context.tokens.consume(.right_paren)).end;
+    return .{
+        .expression = expr,
+        .span = .{ .begin = begin, .end = end },
+    };
 }
 
 fn branch(context: Context, if_token: IfToken) !types.Branch {
@@ -310,6 +206,81 @@ fn branch(context: Context, if_token: IfToken) !types.Branch {
         }
     }
     std.debug.panic("\nExpected else token", .{});
+}
+
+fn functionParameters(context: Context) ![]types.Parameter {
+    _ = context.tokens.consume(.left_paren);
+    var parameters = List(types.Parameter).init(context.allocator);
+    while (context.tokens.peek()) |t| {
+        switch (t) {
+            .new_line => context.tokens.advance(),
+            .right_paren => break,
+            .symbol => |name| {
+                context.tokens.advance();
+                _ = context.tokens.consume(.colon);
+                const type_ = try expression(withPrecedence(context, DEFINE + 1));
+                context.tokens.consumeNewLines();
+                context.tokens.maybeConsume(.comma);
+                try parameters.append(types.Parameter{
+                    .name = name,
+                    .type = type_,
+                    .mutable = false,
+                    .span = .{ .begin = name.span.begin, .end = spanOf(type_).end },
+                });
+            },
+            .mut => |mut| {
+                context.tokens.advance();
+                const name = context.tokens.consume(.symbol).symbol;
+                _ = context.tokens.consume(.colon);
+                const type_ = try expression(withPrecedence(context, DEFINE + 1));
+                context.tokens.consumeNewLines();
+                context.tokens.maybeConsume(.comma);
+                try parameters.append(types.Parameter{
+                    .name = name,
+                    .type = type_,
+                    .mutable = true,
+                    .span = .{ .begin = mut.span.begin, .end = spanOf(type_).end },
+                });
+            },
+            else => |k| std.debug.panic("\nExpected symbol or right paren, found {}", .{k}),
+        }
+    }
+    _ = context.tokens.consume(.right_paren);
+    return try parameters.toOwnedSlice();
+}
+
+fn function(context: Context, begin: types.Pos) !types.Expression {
+    const name = context.tokens.consume(.symbol).symbol;
+    const parameters = try functionParameters(context);
+    _ = context.tokens.consume(.right_arrow);
+    const return_type = try expressionAlloc(withPrecedence(context, DEFINE + 1));
+    if (context.tokens.peek()) |t| {
+        if (t == .left_brace) {
+            const body = try block(
+                withPrecedence(context, LOWEST),
+                tokenizer.span.token(context.tokens.consume(.left_brace)).begin,
+            );
+            const end = body.span.end;
+            return types.Expression{
+                .function = .{
+                    .name = name,
+                    .parameters = parameters,
+                    .return_type = return_type,
+                    .body = body,
+                    .span = types.Span{ .begin = begin, .end = end },
+                },
+            };
+        }
+    }
+    const end = spanOf(return_type.*).end;
+    return types.Expression{
+        .prototype = .{
+            .name = name,
+            .parameters = parameters,
+            .return_type = return_type,
+            .span = types.Span{ .begin = begin, .end = end },
+        },
+    };
 }
 
 fn enumeration(context: Context, enum_: EnumToken) !types.Enumeration {
@@ -414,8 +385,9 @@ fn prefix(context: Context) !types.Expression {
         .symbol => |s| return .{ .symbol = s },
         .string => |s| return .{ .string = s },
         .bool => |b| return .{ .bool = b },
-        .left_paren => |l| return try groupOrFunction(context, l),
+        .left_paren => |l| return .{ .group = try group(context, l) },
         .if_ => |i| return .{ .branch = try branch(context, i) },
+        .fn_ => |f| return try function(context, f.span.begin),
         .enum_ => |e| return .{ .enumeration = try enumeration(context, e) },
         .struct_ => |s| return .{ .structure = try structure(context, s) },
         .block => |b| return .{ .block = try explicitBlock(context, b) },
@@ -800,7 +772,7 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
     var structures = List(types.TopLevelStructure).init(allocator);
     var enumerations = List(types.TopLevelEnumeration).init(allocator);
     var defines = List(types.Define).init(allocator);
-    var functions = List(types.TopLevelFunction).init(allocator);
+    var functions = List(types.Function).init(allocator);
     var foreign_exports = List(types.Call).init(allocator);
     var ignored = List(types.Expression).init(allocator);
     while (iterator.peek()) |t| {
@@ -824,12 +796,6 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
                                 .enumeration = en,
                                 .span = d.span,
                             }),
-                            .function => |f| try functions.append(.{
-                                .name = d.name,
-                                .type = d.type,
-                                .function = f,
-                                .span = d.span,
-                            }),
                             .call => |c| {
                                 switch (c.function.*) {
                                     .symbol => |s| {
@@ -850,6 +816,7 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
                             else => try defines.append(d),
                         }
                     },
+                    .function => |f| try functions.append(f),
                     .call => |c| {
                         switch (c.function.*) {
                             .symbol => |s| {

@@ -114,6 +114,7 @@ pub const Parameter = struct {
 };
 
 pub const Function = struct {
+    name: Symbol,
     parameters: []Parameter,
     return_type: MonoType,
     body: Block,

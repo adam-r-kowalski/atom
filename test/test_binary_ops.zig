@@ -99,49 +99,93 @@ test "parse grouped greater" {
 
 test "type infer add i32" {
     const allocator = std.testing.allocator;
-    const source = "add = (x: i32, y: i32) i32 { x + y }";
+    const source = "fn add(x: i32, y: i32) -> i32 { x + y }";
     const actual = try goat.testing.typeInfer(allocator, source, "add");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = add, type = fn(x: i32, y: i32) -> i32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            parameters =
+        \\    parameters =
+        \\        symbol{ value = x, type = i32 }
+        \\        symbol{ value = y, type = i32 }
+        \\    return_type = i32
+        \\    body =
+        \\        binary_op =
+        \\            kind = +
+        \\            left =
         \\                symbol{ value = x, type = i32 }
+        \\            right =
         \\                symbol{ value = y, type = i32 }
-        \\            return_type = i32
-        \\            body =
-        \\                binary_op =
-        \\                    kind = +
-        \\                    left =
-        \\                        symbol{ value = x, type = i32 }
-        \\                    right =
-        \\                        symbol{ value = y, type = i32 }
-        \\                    type = i32
+        \\            type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "type infer binary op multiply" {
     const allocator = std.testing.allocator;
-    const source = "multiply = (x: i32, y: i32) i32 { x * y }";
+    const source = "fn multiply(x: i32, y: i32) -> i32 { x * y }";
     const actual = try goat.testing.typeInfer(allocator, source, "multiply");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = multiply, type = fn(x: i32, y: i32) -> i32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            parameters =
+        \\    parameters =
+        \\        symbol{ value = x, type = i32 }
+        \\        symbol{ value = y, type = i32 }
+        \\    return_type = i32
+        \\    body =
+        \\        binary_op =
+        \\            kind = *
+        \\            left =
         \\                symbol{ value = x, type = i32 }
+        \\            right =
         \\                symbol{ value = y, type = i32 }
-        \\            return_type = i32
-        \\            body =
+        \\            type = i32
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer divide i32" {
+    const allocator = std.testing.allocator;
+    const source = "fn div(x: i32, y: i32) -> i32 { x / y }";
+    const actual = try goat.testing.typeInfer(allocator, source, "div");
+    defer allocator.free(actual);
+    const expected =
+        \\function =
+        \\    name = symbol{ value = div, type = fn(x: i32, y: i32) -> i32 }
+        \\    parameters =
+        \\        symbol{ value = x, type = i32 }
+        \\        symbol{ value = y, type = i32 }
+        \\    return_type = i32
+        \\    body =
+        \\        binary_op =
+        \\            kind = /
+        \\            left =
+        \\                symbol{ value = x, type = i32 }
+        \\            right =
+        \\                symbol{ value = y, type = i32 }
+        \\            type = i32
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer binary op multiply then add" {
+    const allocator = std.testing.allocator;
+    const source = "fn f(x: i32, y: i32, z: i32) -> i32 { x * y + z }";
+    const actual = try goat.testing.typeInfer(allocator, source, "f");
+    defer allocator.free(actual);
+    const expected =
+        \\function =
+        \\    name = symbol{ value = f, type = fn(x: i32, y: i32, z: i32) -> i32 }
+        \\    parameters =
+        \\        symbol{ value = x, type = i32 }
+        \\        symbol{ value = y, type = i32 }
+        \\        symbol{ value = z, type = i32 }
+        \\    return_type = i32
+        \\    body =
+        \\        binary_op =
+        \\            kind = +
+        \\            left =
         \\                binary_op =
         \\                    kind = *
         \\                    left =
@@ -149,76 +193,16 @@ test "type infer binary op multiply" {
         \\                    right =
         \\                        symbol{ value = y, type = i32 }
         \\                    type = i32
-    ;
-    try std.testing.expectEqualStrings(expected, actual);
-}
-
-test "type infer divide i32" {
-    const allocator = std.testing.allocator;
-    const source = "div = (x: i32, y: i32) i32 { x / y }";
-    const actual = try goat.testing.typeInfer(allocator, source, "div");
-    defer allocator.free(actual);
-    const expected =
-        \\define =
-        \\    name = symbol{ value = div, type = fn(x: i32, y: i32) -> i32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            parameters =
-        \\                symbol{ value = x, type = i32 }
-        \\                symbol{ value = y, type = i32 }
-        \\            return_type = i32
-        \\            body =
-        \\                binary_op =
-        \\                    kind = /
-        \\                    left =
-        \\                        symbol{ value = x, type = i32 }
-        \\                    right =
-        \\                        symbol{ value = y, type = i32 }
-        \\                    type = i32
-    ;
-    try std.testing.expectEqualStrings(expected, actual);
-}
-
-test "type infer binary op multiply then add" {
-    const allocator = std.testing.allocator;
-    const source = "f = (x: i32, y: i32, z: i32) i32 { x * y + z }";
-    const actual = try goat.testing.typeInfer(allocator, source, "f");
-    defer allocator.free(actual);
-    const expected =
-        \\define =
-        \\    name = symbol{ value = f, type = fn(x: i32, y: i32, z: i32) -> i32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            parameters =
-        \\                symbol{ value = x, type = i32 }
-        \\                symbol{ value = y, type = i32 }
+        \\            right =
         \\                symbol{ value = z, type = i32 }
-        \\            return_type = i32
-        \\            body =
-        \\                binary_op =
-        \\                    kind = +
-        \\                    left =
-        \\                        binary_op =
-        \\                            kind = *
-        \\                            left =
-        \\                                symbol{ value = x, type = i32 }
-        \\                            right =
-        \\                                symbol{ value = y, type = i32 }
-        \\                            type = i32
-        \\                    right =
-        \\                        symbol{ value = z, type = i32 }
-        \\                    type = i32
+        \\            type = i32
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
 
 test "codegen i32.add" {
     const allocator = std.testing.allocator;
-    const source = "start = () i32 { 42 + 29 }";
+    const source = "fn start() -> i32 { 42 + 29 }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -239,7 +223,7 @@ test "codegen i32.add" {
 
 test "codegen i64.add" {
     const allocator = std.testing.allocator;
-    const source = "start = () i64 { 42 + 29 }";
+    const source = "fn start() -> i64 { 42 + 29 }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -260,7 +244,7 @@ test "codegen i64.add" {
 
 test "codegen binary op i32.sub" {
     const allocator = std.testing.allocator;
-    const source = "start = () i32 { 42 - 29 }";
+    const source = "fn start() -> i32 { 42 - 29 }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -281,7 +265,7 @@ test "codegen binary op i32.sub" {
 
 test "codegen binary op f32.add" {
     const allocator = std.testing.allocator;
-    const source = "start = () f32 { 42 + 29 }";
+    const source = "fn start() -> f32 { 42 + 29 }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -302,7 +286,7 @@ test "codegen binary op f32.add" {
 
 test "codegen binary op f64.add" {
     const allocator = std.testing.allocator;
-    const source = "start = () f64 { 42 + 29 }";
+    const source = "fn start() -> f64 { 42 + 29 }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -323,7 +307,7 @@ test "codegen binary op f64.add" {
 
 test "codegen binary op f32.sub" {
     const allocator = std.testing.allocator;
-    const source = "start = () f32 { 42 - 29 }";
+    const source = "fn start() -> f32 { 42 - 29 }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -344,7 +328,7 @@ test "codegen binary op f32.sub" {
 
 test "codegen binary op i32.mul" {
     const allocator = std.testing.allocator;
-    const source = "start = () i32 { 42 * 29 }";
+    const source = "fn start() -> i32 { 42 * 29 }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -365,7 +349,7 @@ test "codegen binary op i32.mul" {
 
 test "codegen binary op f32.mul" {
     const allocator = std.testing.allocator;
-    const source = "start = () f32 { 42 * 29 }";
+    const source = "fn start() -> f32 { 42 * 29 }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -386,7 +370,7 @@ test "codegen binary op f32.mul" {
 
 test "codegen nested binary op f32.add and f32.mul" {
     const allocator = std.testing.allocator;
-    const source = "start = () f32 { 42 * 29 + 15 }";
+    const source = "fn start() -> f32 { 42 * 29 + 15 }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -409,7 +393,7 @@ test "codegen nested binary op f32.add and f32.mul" {
 
 test "codegen i32.eq" {
     const allocator = std.testing.allocator;
-    const source = "start = (x: i32, y: i32) bool { x == y }";
+    const source = "fn start(x: i32, y: i32) -> bool { x == y }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -430,7 +414,7 @@ test "codegen i32.eq" {
 
 test "codegen f32.eq" {
     const allocator = std.testing.allocator;
-    const source = "start = (x: f32, y: f32) bool { x == y }";
+    const source = "fn start(x: f32, y: f32) -> bool { x == y }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -451,7 +435,7 @@ test "codegen f32.eq" {
 
 test "codegen i32.rem_s" {
     const allocator = std.testing.allocator;
-    const source = "start = (x: i32) bool { x % 2 == 0 }";
+    const source = "fn start(x: i32) -> bool { x % 2 == 0 }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -474,7 +458,7 @@ test "codegen i32.rem_s" {
 
 test "codegen i32.or" {
     const allocator = std.testing.allocator;
-    const source = "start = (x: bool, y: bool) bool { x or y }";
+    const source = "fn start(x: bool, y: bool) -> bool { x or y }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -495,7 +479,7 @@ test "codegen i32.or" {
 
 test "codegen i32.gt_s" {
     const allocator = std.testing.allocator;
-    const source = "start = (x: i32, y: i32) bool { x > y }";
+    const source = "fn start(x: i32, y: i32) -> bool { x > y }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -516,7 +500,7 @@ test "codegen i32.gt_s" {
 
 test "codegen f32.gt" {
     const allocator = std.testing.allocator;
-    const source = "start = (x: f32, y: f32) bool { x > y }";
+    const source = "fn start(x: f32, y: f32) -> bool { x > y }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
@@ -537,7 +521,7 @@ test "codegen f32.gt" {
 
 test "codegen i32.div_s" {
     const allocator = std.testing.allocator;
-    const source = "start = (x: i32, y: i32) i32 { x / y }";
+    const source = "fn start(x: i32, y: i32) -> i32 { x / y }";
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =

@@ -4,27 +4,23 @@ const goat = @import("goat");
 test "type infer convert i32 to f32" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = (x: i32) f32 {
+        \\fn start(x: i32) -> f32 {
         \\    convert(x, f32)
         \\}
     ;
     const actual = try goat.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
-        \\define =
+        \\function =
         \\    name = symbol{ value = start, type = fn(x: i32) -> f32 }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        function =
-        \\            parameters =
+        \\    parameters =
+        \\        symbol{ value = x, type = i32 }
+        \\    return_type = f32
+        \\    body =
+        \\        convert =
+        \\            value =
         \\                symbol{ value = x, type = i32 }
-        \\            return_type = f32
-        \\            body =
-        \\                convert =
-        \\                    value =
-        \\                        symbol{ value = x, type = i32 }
-        \\                    type = f32
+        \\            type = f32
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -32,7 +28,7 @@ test "type infer convert i32 to f32" {
 test "codegen convert i32 to f32" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = (x: i32) f32 {
+        \\fn start(x: i32) -> f32 {
         \\    convert(x, f32)
         \\}
     ;
@@ -56,7 +52,7 @@ test "codegen convert i32 to f32" {
 test "codegen convert f32 to i32" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = (x: f32) i32 {
+        \\fn start(x: f32) -> i32 {
         \\    convert(x, i32)
         \\}
     ;
@@ -80,7 +76,7 @@ test "codegen convert f32 to i32" {
 test "codegen convert i64 to f64" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = (x: i64) f64 {
+        \\fn start(x: i64) -> f64 {
         \\    convert(x, f64)
         \\}
     ;
@@ -104,7 +100,7 @@ test "codegen convert i64 to f64" {
 test "codegen convert f64 to i64" {
     const allocator = std.testing.allocator;
     const source =
-        \\start = (x: f64) i64 {
+        \\fn start(x: f64) -> i64 {
         \\    convert(x, i64)
         \\}
     ;

@@ -19,6 +19,7 @@ pub fn token(t: types.Token) types.Span {
         .plus => |p| p.span,
         .plus_equal => |p| p.span,
         .minus => |m| m.span,
+        .right_arrow => |m| m.span,
         .times => |m| m.span,
         .times_equal => |e| e.span,
         .slash => |s| s.span,
