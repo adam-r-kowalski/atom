@@ -168,9 +168,9 @@ test "type infer function body" {
 test "codegen drops unused returns" {
     const allocator = std.testing.allocator;
     const source =
-        \\double = (x: i32) i32 { x * 2 }
+        \\fn double(x: i32) -> i32 { x * 2 }
         \\
-        \\start = () i32 {
+        \\fn start() -> i32 {
         \\    double(2)
         \\    double(4)
         \\}

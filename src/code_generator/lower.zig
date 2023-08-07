@@ -710,7 +710,7 @@ fn expressionAlloc(context: Context, e: type_checker.types.Expression) !*const t
     return ptr;
 }
 
-fn function(allocator: Allocator, builtins: Builtins, data_segment: *types.DataSegment, uses_memory: *bool, intrinsics: *types.Intrinsics, intern: *Intern, name: Interned, f: type_checker.types.Function) !types.Function {
+fn function(allocator: Allocator, builtins: Builtins, data_segment: *types.DataSegment, uses_memory: *bool, intrinsics: *types.Intrinsics, intern: *Intern, f: type_checker.types.Function) !types.Function {
     var locals = List(types.Local).init(allocator);
     const parameters = try allocator.alloc(types.Parameter, f.parameters.len);
     var body = List(types.Expression).init(allocator);
@@ -779,7 +779,7 @@ fn function(allocator: Allocator, builtins: Builtins, data_segment: *types.DataS
         try body.append(expr);
     }
     return types.Function{
-        .name = name,
+        .name = f.name.value,
         .parameters = parameters,
         .return_type = mapType(f.return_type),
         .locals = try locals.toOwnedSlice(),
@@ -823,10 +823,6 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                 .define => |d| {
                     const name_symbol = d.name.value;
                     switch (d.value.*) {
-                        .function => |f| {
-                            const lowered = try function(allocator, builtins, &data_segment, &uses_memory, &intrinsics, intern, name_symbol, f);
-                            try functions.append(lowered);
-                        },
                         .foreign_import => |i| {
                             const lowered = try foreignImport(allocator, name_symbol, i);
                             try imports.append(lowered);
@@ -843,13 +839,19 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                     const trimmed = try intern.store(name_string);
                     switch (e.value.*) {
                         .function => |f| {
-                            const lowered = try function(allocator, builtins, &data_segment, &uses_memory, &intrinsics, intern, trimmed, f);
+                            const lowered = try function(allocator, builtins, &data_segment, &uses_memory, &intrinsics, intern, f);
                             try functions.append(lowered);
+                            try exports.append(.{ .name = f.name.value, .alias = trimmed });
                         },
-                        .symbol => {},
+                        .symbol => {
+                            try exports.append(.{ .name = trimmed, .alias = trimmed });
+                        },
                         else => |k| std.debug.panic("\nForeign export kind {} no yet supported", .{k}),
                     }
-                    try exports.append(.{ .name = trimmed, .alias = trimmed });
+                },
+                .function => |f| {
+                    const lowered = try function(allocator, builtins, &data_segment, &uses_memory, &intrinsics, intern, f);
+                    try functions.append(lowered);
                 },
                 else => std.debug.panic("\nTop level kind {} no yet supported", .{top_level}),
             }
