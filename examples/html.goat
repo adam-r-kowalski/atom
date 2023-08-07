@@ -1,4 +1,4 @@
-start = () str {
+fn start() -> str {
     html`
         <html>
             <head>

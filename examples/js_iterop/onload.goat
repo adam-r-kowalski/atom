@@ -1,26 +1,26 @@
-element_ns = foreign_import("document", "create_element_ns", (ns: str, tag: str) i32)
-element = foreign_import("document", "create_element", (tag: str) i32)
-html = foreign_import("element", "inner_html", (el: i32, text: str) i32)
-style = foreign_import("element", "style", (el: i32, property: str, value: str) i32)
-attr = foreign_import("element", "set_attribute", (el: i32, attribute: str, value: str) i32)
-child = foreign_import("element", "append_child", (parent: i32, child: i32) i32)
-on = foreign_import("element", "add_event_listener", (el: i32, event: str, cb: str) i32)
-log = foreign_import("console", "log", (text: str) void)
+element_ns = foreign_import("document", "create_element_ns", fn element_ns(ns: str, tag: str) -> i32)
+element = foreign_import("document", "create_element", fn element(tag: str) -> i32)
+html = foreign_import("element", "inner_html", fn html(el: i32, text: str) -> i32)
+style = foreign_import("element", "style", fn style(el: i32, property: str, value: str) -> i32)
+attr = foreign_import("element", "set_attribute", fn attr(el: i32, attribute: str, value: str) -> i32)
+child = foreign_import("element", "append_child", fn child(parent: i32, child: i32) -> i32)
+on = foreign_import("element", "add_event_listener", fn on(el: i32, event: str, cb: str) -> i32)
+log = foreign_import("console", "log", fn log(text: str) -> void)
 
 
-svg = (tag: str) i32 {
+fn svg(tag: str) -> i32 {
     element_ns("http://www.w3.org/2000/svg", tag)
 }
 
-foreign_export("onmouseenter", (el: i32) i32 {
+foreign_export("onmouseenter", fn onmouseenter(el: i32) -> i32 {
     el |> attr("fill", "blue")
 })
 
-foreign_export("onmouseleave", (el: i32) i32 {
+foreign_export("onmouseleave", fn onmouseleave(el: i32) -> i32 {
     el |> attr("fill", "lightblue")
 })
 
-point = (x: str, y: str) i32 {
+fn point(x: str, y: str) -> i32 {
     svg("circle")
         |> attr("cx", x)
         |> attr("cy", y)
@@ -33,7 +33,7 @@ point = (x: str, y: str) i32 {
 }
 
 
-foreign_export("onload", () i32 {
+foreign_export("onload", fn onload() -> i32 {
     svg("svg")
         |> attr("width", "500")
         |> attr("height", "500")

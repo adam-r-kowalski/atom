@@ -1,31 +1,31 @@
 fd_read = foreign_import(
     "wasi_unstable",
     "fd_read",
-    (fd: i32, mut iovs: str, iovs_len: i32, mut nread: i32) i32
+    fn fd_read(fd: i32, mut iovs: str, iovs_len: i32, mut nread: i32) -> i32
 )
 
 fd_write = foreign_import(
     "wasi_unstable",
     "fd_write",
-    (fd: i32, iovs: str, iovs_len: i32, mut nwritten: i32) i32
+    fn fd_write(fd: i32, iovs: str, iovs_len: i32, mut nwritten: i32) -> i32
 )
 
 stdin: i32 = 0
 stdout: i32 = 1
 
-input = () str {
+fn input() -> str {
     mut text = empty(u8, 100)
     mut nread = undefined
-    stdin |> fd_read(mut text, 1, mut nread)
+    fd_read(stdin, mut text, 1, mut nread)
 	text
 }
 
-print = (text: str) void {
+fn print(text: str) -> void {
     mut nwritten = undefined
-    _ = stdout |> fd_write(text, 1, mut nwritten)
+    _ = fd_write(stdout, text, 1, mut nwritten)
 }
 
-start = () void {
+fn start() -> void {
 	text = input()
 	print(text)
 	print(text)

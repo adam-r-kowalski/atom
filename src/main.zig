@@ -123,8 +123,7 @@ const WasmModule = struct {
         if (func == null) std.debug.panic("\nError getting start!\n", .{});
         var args_val = [0]wasmer.wasm_val_t{};
         var results_val = List(wasmer.wasm_val_t).init(self.allocator);
-        const exported_define = self.ast.typed.get(name).?.define;
-        const exported_function = exported_define.value.function;
+        const exported_function = self.ast.typed.get(name).?.function;
         if (exported_function.parameters.len != 0)
             std.debug.panic("\nOnly functions with no parameters supported!\n", .{});
         const return_type = exported_function.return_type;
