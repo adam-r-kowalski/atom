@@ -215,7 +215,7 @@ such as a struct or array. It provides a convenient way to extract multiple valu
 For example, consider the `Square` struct and the implementation of `Shape` interface for it:
 
 ```goat
-Square = struct {
+struct Square {
     width: f32,
     height: f32
 }
@@ -278,13 +278,13 @@ Shadowing can be useful when you want to reuse variable names, but be careful, a
 Goat supports importing and exporting functions from the host environment.
 
 ```goat
-# Import a function from the host
-log = foreign_import("console", "log", fn log(x: str) -> void)
+@import("console", "log")
+fn log(x: str) -> void
 
-# Export a function to the host
-export("double", fn double(x: i32) -> i32 {
+@export("double")
+fn double(x: i32) -> i32 {
     x * 2
-})
+}
 
 # call the log function from Goat
 fn start() -> void {
@@ -304,11 +304,8 @@ And it has integrated capability-based security, so it extends WebAssembly's cha
 It is a first class citizen in Goat and by targeting this API you can ensure that your programs work across as many platforms as possible.
 
 ```goat
-fd_write = foreign_import(
-    "wasi_unstable",
-    "fd_write",
-    fn fd_write(fd: i32, iovs: str, iovs_len: i32, mut nwritten: i32) -> i32
-)
+@import("wasi_unstable", "fd_write")
+fn fd_write(fd: i32, iovs: str, iovs_len: i32, mut nwritten: i32) -> i32
 
 stdout: i32 = 1
 
@@ -345,7 +342,7 @@ Goat is designed with machine learning in mind. For expressions allow you to exp
 single example rather than dealing with batches. Here is a simple linear model implemented in Goat:
 
 ```goat
-Linear = struct {
+struct Linear {
     m: f64,
     b: f64
 }
@@ -391,7 +388,7 @@ Goat is built to be a citizen of the web. We want to ensure you can build servic
 on the server side or client side.
 
 ```goat
-Customer = struct {
+struct Customer {
     name: str,
     age: u8,
 }
