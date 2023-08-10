@@ -195,7 +195,8 @@ pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
 
 pub fn decorator(d: types.Decorator, indent: Indent, writer: Writer) !void {
     try writer.print("({s}", .{d.attribute.value.string()});
-    try callArguments(d.arguments, indent, writer);
+    if (d.arguments) |args|
+        try callArguments(args, indent, writer);
     try newlineAndIndent(indent + 1, writer);
     try expression(d.value.*, indent + 1, writer);
     try writer.writeAll(")");

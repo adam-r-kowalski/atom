@@ -380,14 +380,26 @@ fn mutable(context: Context, begin: tokenizer.types.Pos) !types.Define {
 
 fn decorator(context: Context, attr: tokenizer.types.Attribute) !types.Decorator {
     const begin = attr.span.begin;
-    const arguments = try callArguments(context);
+    if (context.tokens.peek()) |t| {
+        if (t == .left_paren) {
+            const arguments = try callArguments(context);
+            context.tokens.consumeNewLines();
+            const value = try expressionAlloc(withPrecedence(context, DEFINE + 1));
+            return types.Decorator{
+                .attribute = attr,
+                .arguments = arguments,
+                .value = value,
+                .span = types.Span{ .begin = begin, .end = spanOf(value.*).end },
+            };
+        }
+    }
     context.tokens.consumeNewLines();
     const value = try expressionAlloc(withPrecedence(context, DEFINE + 1));
     return types.Decorator{
         .attribute = attr,
-        .arguments = arguments,
+        .arguments = null,
         .value = value,
-        .span = types.Span{ .begin = begin, .end = arguments.span.end },
+        .span = types.Span{ .begin = begin, .end = spanOf(value.*).end },
     };
 }
 

@@ -609,13 +609,14 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
 }
 
 fn foreignImport(context: Context, d: parser.types.Decorator) !types.Expression {
-    if (d.arguments.positional.len != 2) std.debug.panic("import takes 2 arguments", .{});
+    if (d.arguments) |args|
+        if (args.positional.len != 2) std.debug.panic("import takes 2 arguments", .{});
     const value = try expression(context, d.value.*);
     const proto = value.prototype;
     return types.Expression{
         .foreign_import = .{
-            .module = d.arguments.positional[0].value.string.value,
-            .name = d.arguments.positional[1].value.string.value,
+            .module = d.arguments.?.positional[0].value.string.value,
+            .name = d.arguments.?.positional[1].value.string.value,
             .prototype = proto,
             .span = d.span,
             .type = proto.type,
@@ -624,12 +625,24 @@ fn foreignImport(context: Context, d: parser.types.Decorator) !types.Expression 
 }
 
 fn foreignExport(context: Context, d: parser.types.Decorator) !types.Expression {
-    if (d.arguments.positional.len != 1) std.debug.panic("export takes 1 argument", .{});
+    if (d.arguments) |args| {
+        if (args.positional.len != 1) std.debug.panic("export takes 1 argument", .{});
+        const value = try expression(context, d.value.*);
+        const func = value.function;
+        return types.Expression{
+            .foreign_export = .{
+                .name = args.positional[0].value.string.value,
+                .function = func,
+                .span = d.span,
+                .type = func.type,
+            },
+        };
+    }
     const value = try expression(context, d.value.*);
     const func = value.function;
     return types.Expression{
         .foreign_export = .{
-            .name = d.arguments.positional[0].value.string.value,
+            .name = func.name.value,
             .function = func,
             .span = d.span,
             .type = func.type,
@@ -1004,7 +1017,8 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
         const name = proto.name.value;
         try order.append(name);
         try untyped.putNoClobber(name, .{ .decorator = f });
-        if (f.arguments.positional.len != 2) std.debug.panic("import takes 2 arguments", .{});
+        if (f.arguments) |args|
+            if (args.positional.len != 2) std.debug.panic("import takes 2 arguments", .{});
         const len = proto.parameters.len;
         const parameters = try allocator.alloc(monotype.Parameter, len);
         for (proto.parameters, parameters) |p, *t| {
@@ -1078,7 +1092,8 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
         const name = func.name.value;
         try order.append(name);
         try untyped.putNoClobber(name, .{ .decorator = f });
-        if (f.arguments.positional.len != 1) std.debug.panic("export takes 1 argument", .{});
+        if (f.arguments) |args|
+            if (args.positional.len != 1) std.debug.panic("export takes 1 argument", .{});
         const len = func.parameters.len;
         const parameters = try allocator.alloc(monotype.Parameter, len);
         for (func.parameters, parameters) |p, *t| {

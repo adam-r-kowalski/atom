@@ -27,12 +27,12 @@ fn svg(tag: str) -> i32 {
     element_ns("http://www.w3.org/2000/svg", tag)
 }
 
-@export("onmouseenter")
+@export
 fn onmouseenter(el: i32) -> i32 {
     attr(el, "fill", "blue")
 }
 
-@export("onmouseleave")
+@export
 fn onmouseleave(el: i32) -> i32 {
     attr(el, "fill", "lightblue")
 }
@@ -50,7 +50,7 @@ fn point(x: str, y: str) -> i32 {
 }
 
 
-@export("onload")
+@export
 fn onload() -> i32 {
     svg("svg")
         |> attr("width", "500")

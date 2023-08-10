@@ -166,6 +166,24 @@ test "parse export" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
+test "parse export with no arguments" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\@export
+        \\fn double(x: i32) -> i32 {
+        \\    x * 2
+        \\}
+    ;
+    const actual = try orca.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(@export
+        \\    (fn double [(x i32)] i32
+        \\        (* x 2)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
 test "type infer export" {
     const allocator = std.testing.allocator;
     const source =
@@ -197,10 +215,67 @@ test "type infer export" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
+test "type infer export with no argument" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\@export
+        \\fn double(x: i32) -> i32 {
+        \\    x * 2
+        \\}
+    ;
+    const actual = try orca.testing.typeInfer(allocator, source, "double");
+    defer allocator.free(actual);
+    const expected =
+        \\foreign_export =
+        \\    name = "double"
+        \\    function =
+        \\        name = symbol{ value = double, type = fn(x: i32) -> i32 }
+        \\        parameters =
+        \\            symbol{ value = x, type = i32 }
+        \\        return_type = i32
+        \\        body =
+        \\            binary_op =
+        \\                kind = *
+        \\                left =
+        \\                    symbol{ value = x, type = i32 }
+        \\                right =
+        \\                    int{ value = 2, type = i32 }
+        \\                type = i32
+        \\    type = fn(x: i32) -> i32
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
 test "codegen foreign export" {
     const allocator = std.testing.allocator;
     const source =
         \\@export("double")
+        \\fn double(x: i32) -> i32 {
+        \\    x * 2
+        \\}
+    ;
+    const actual = try orca.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (func $double (param $x i32) (result i32)
+        \\        (i32.mul
+        \\            (local.get $x)
+        \\            (i32.const 2)))
+        \\
+        \\    (export "double" (func $double)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen foreign export with no arguments" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\@export
         \\fn double(x: i32) -> i32 {
         \\    x * 2
         \\}

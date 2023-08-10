@@ -165,7 +165,7 @@ pub const Call = struct {
 
 pub const Decorator = struct {
     attribute: Attribute,
-    arguments: Arguments,
+    arguments: ?Arguments,
     value: *const Expression,
     span: Span,
 };
