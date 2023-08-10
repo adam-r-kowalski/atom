@@ -1,5 +1,5 @@
 const std = @import("std");
-const goat = @import("goat");
+const orca = @import("orca");
 
 test "tokenize enum" {
     const allocator = std.testing.allocator;
@@ -16,7 +16,7 @@ test "tokenize enum" {
         \\    Grade.a
         \\}
     ;
-    const actual = try goat.testing.tokenize(allocator, source);
+    const actual = try orca.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol Grade)
@@ -73,7 +73,7 @@ test "parse enum" {
         \\    Grade.a
         \\}
     ;
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def Grade (enum
@@ -104,7 +104,7 @@ test "type infer enum" {
         \\    Grade.a
         \\}
     ;
-    const actual = try goat.testing.typeInfer(allocator, source, "start");
+    const actual = try orca.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -134,7 +134,7 @@ test "codegen enum index 0" {
         \\    Grade.a
         \\}
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -165,7 +165,7 @@ test "codegen enum index 1" {
         \\    Grade.b
         \\}
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -196,7 +196,7 @@ test "codegen enum equality" {
         \\    Grade.a == Grade.b
         \\}
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -233,7 +233,7 @@ test "codegen enum passed to function" {
         \\    got_an_a(Grade.b)
         \\}
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module

@@ -1,5 +1,5 @@
 const std = @import("std");
-const goat = @import("goat");
+const orca = @import("orca");
 
 test "tokenize import" {
     const allocator = std.testing.allocator;
@@ -7,7 +7,7 @@ test "tokenize import" {
         \\@import("console", "log")
         \\fn log(msg: str) -> void
     ;
-    const actual = try goat.testing.tokenize(allocator, source);
+    const actual = try orca.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(attribute @import)
@@ -36,7 +36,7 @@ test "parse import" {
         \\@import("console", "log")
         \\fn log(msg: str) -> void
     ;
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(@import "console" "log"
@@ -55,7 +55,7 @@ test "type infer import" {
         \\    print("hello world")
         \\}
     ;
-    const actual = try goat.testing.typeInfer(allocator, source, "start");
+    const actual = try orca.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\foreign_import =
@@ -93,7 +93,7 @@ test "codegen import" {
         \\    print(42)
         \\}
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -119,7 +119,7 @@ test "tokenize export" {
         \\    x * 2
         \\})
     ;
-    const actual = try goat.testing.tokenize(allocator, source);
+    const actual = try orca.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol foreign_export)
@@ -154,7 +154,7 @@ test "parse export" {
         \\    x * 2
         \\})
     ;
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(foreign_export "double" (fn double [(x i32)] i32
@@ -172,7 +172,7 @@ test "parse named export" {
         \\
         \\foreign_export("double", double)
     ;
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(fn double [(x i32)] i32
@@ -190,7 +190,7 @@ test "type infer export" {
         \\    x * 2
         \\})
     ;
-    const actual = try goat.testing.typeInfer(allocator, source, "\"double\"");
+    const actual = try orca.testing.typeInfer(allocator, source, "\"double\"");
     defer allocator.free(actual);
     const expected =
         \\foreign_export =
@@ -223,7 +223,7 @@ test "type infer named export" {
         \\
         \\foreign_export("double", double)
     ;
-    const actual = try goat.testing.typeInfer(allocator, source, "\"double\"");
+    const actual = try orca.testing.typeInfer(allocator, source, "\"double\"");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -256,7 +256,7 @@ test "codegen foreign export" {
         \\    x * 2
         \\})
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -283,7 +283,7 @@ test "codegen named foreign export" {
         \\
         \\foreign_export("double", double)
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -315,7 +315,7 @@ test "codegen hello world" {
         \\    fd_write(stdout, text, 1, 200)
         \\}
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -389,7 +389,7 @@ test "codegen echo" {
         \\    _ = fd_write(stdout, text, 1, mut nwritten)
         \\}
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module

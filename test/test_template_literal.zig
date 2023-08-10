@@ -1,10 +1,10 @@
 const std = @import("std");
-const goat = @import("goat");
+const orca = @import("orca");
 
 test "tokenize template literal" {
     const allocator = std.testing.allocator;
     const source = "html`<h1>Hello World!</h1>`";
-    const actual = try goat.testing.tokenize(allocator, source);
+    const actual = try orca.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol html)
@@ -16,7 +16,7 @@ test "tokenize template literal" {
 test "tokenize template literal with interpolation" {
     const allocator = std.testing.allocator;
     const source = "html`<h1>Hello ${name}!</h1>`";
-    const actual = try goat.testing.tokenize(allocator, source);
+    const actual = try orca.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol html)
@@ -30,7 +30,7 @@ test "tokenize template literal with interpolation" {
 test "tokenize template literal with two interpolations" {
     const allocator = std.testing.allocator;
     const source = "html`<h1>${x} + ${y} == ${x + y}</h1>`";
-    const actual = try goat.testing.tokenize(allocator, source);
+    const actual = try orca.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol html)
@@ -50,7 +50,7 @@ test "tokenize template literal with two interpolations" {
 test "parse template literal" {
     const allocator = std.testing.allocator;
     const source = "html`<h1>Hello World!</h1>`";
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(template_literal
@@ -66,7 +66,7 @@ test "parse template literal" {
 test "parse template literal with interpolation" {
     const allocator = std.testing.allocator;
     const source = "html`<h1>Hello ${name}!</h1>`";
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(template_literal
@@ -85,7 +85,7 @@ test "parse template literal with interpolation" {
 test "parse template literal with two interpolations" {
     const allocator = std.testing.allocator;
     const source = "html`<h1>${x} + ${y} == ${x + y}</h1>`";
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(template_literal
@@ -108,7 +108,7 @@ test "parse template literal with two interpolations" {
 test "parse template literal no tag" {
     const allocator = std.testing.allocator;
     const source = "`<h1>Hello World!</h1>`";
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(template_literal
@@ -123,7 +123,7 @@ test "parse template literal no tag" {
 test "parse template literal with interpolation and no tag" {
     const allocator = std.testing.allocator;
     const source = "`<h1>Hello ${name}!</h1>`";
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(template_literal
@@ -141,7 +141,7 @@ test "parse template literal with interpolation and no tag" {
 test "parse template literal with two interpolations and no tag" {
     const allocator = std.testing.allocator;
     const source = "`<h1>${x} + ${y} == ${x + y}</h1>`";
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(template_literal
@@ -167,7 +167,7 @@ test "tokenize template literal in function" {
         \\    html`<h1>Hello World!</h1>`
         \\}
     ;
-    const actual = try goat.testing.tokenize(allocator, source);
+    const actual = try orca.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(keyword fn)
@@ -193,7 +193,7 @@ test "parse template literal in function" {
         \\    html`<h1>Hello World!</h1>`
         \\}
     ;
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(fn start [] str
@@ -214,7 +214,7 @@ test "type infer template literal" {
         \\    html`<h1>Hello World!</h1>`
         \\}
     ;
-    const actual = try goat.testing.typeInfer(allocator, source, "start");
+    const actual = try orca.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -238,7 +238,7 @@ test "type infer template literal with interpolation" {
         \\    html`<h1>Hello ${name}!</h1>`
         \\}
     ;
-    const actual = try goat.testing.typeInfer(allocator, source, "start");
+    const actual = try orca.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -270,7 +270,7 @@ test "codegen template literal" {
         \\    html`<h1>Hello World!</h1>`
         \\}
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -325,7 +325,7 @@ test "codegen template literal with new lines" {
         \\    `
         \\}
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -374,7 +374,7 @@ test "codegen template literal with string" {
         \\    `Hi "Joe"`
         \\}
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -424,7 +424,7 @@ test "codegen template literal with interpolation" {
         \\    html`<h1>Hello ${name}</h1>`
         \\}
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -581,7 +581,7 @@ test "codegen template literal with two interpolations" {
         \\    html`<h1>Hello ${first} ${last}</h1>`
         \\}
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module

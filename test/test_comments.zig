@@ -1,5 +1,5 @@
 const std = @import("std");
-const goat = @import("goat");
+const orca = @import("orca");
 
 test "tokenize comment" {
     const allocator = std.testing.allocator;
@@ -10,7 +10,7 @@ test "tokenize comment" {
         \\    print("hello world") # write hello world to the stdout
         \\}
     ;
-    const actual = try goat.testing.tokenize(allocator, source);
+    const actual = try orca.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(comment # this is a comment)
@@ -46,7 +46,7 @@ test "parse comment" {
         \\
         \\# comment after function
     ;
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(fn start [] void

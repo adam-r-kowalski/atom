@@ -1,10 +1,10 @@
 const std = @import("std");
-const goat = @import("goat");
+const orca = @import("orca");
 
 test "tokenize call" {
     const allocator = std.testing.allocator;
     const source = "f(x, y, z)";
-    const actual = try goat.testing.tokenize(allocator, source);
+    const actual = try orca.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol f)
@@ -22,7 +22,7 @@ test "tokenize call" {
 test "parse call" {
     const allocator = std.testing.allocator;
     const source = "f(x, y, z)";
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(f x y z)";
     try std.testing.expectEqualStrings(expected, actual);
@@ -31,7 +31,7 @@ test "parse call" {
 test "parse call with expression" {
     const allocator = std.testing.allocator;
     const source = "f(x + y, z)";
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(f (+ x y) z)";
     try std.testing.expectEqualStrings(expected, actual);
@@ -40,7 +40,7 @@ test "parse call with expression" {
 test "parse pipeline call" {
     const allocator = std.testing.allocator;
     const source = "x |> f(y, z)";
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(|> x (f y z))";
     try std.testing.expectEqualStrings(expected, actual);
@@ -53,7 +53,7 @@ test "parse define then call" {
         \\
         \\fn start() -> i32 { double(2) }
     ;
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(fn double [(x i32)] i32
@@ -72,7 +72,7 @@ test "type infer define then call" {
         \\
         \\fn start() -> i32 { double(2) }
     ;
-    const actual = try goat.testing.typeInfer(allocator, source, "start");
+    const actual = try orca.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -111,7 +111,7 @@ test "codegen define then call" {
         \\
         \\fn start() -> i32 { double(2) }
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -142,7 +142,7 @@ test "codegen recursive function" {
         \\
         \\fn start() -> i32 { factorial(5) }
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -181,7 +181,7 @@ test "type infer pipeline call" {
         \\
         \\fn start() -> i32 { 2 |> double() }
     ;
-    const actual = try goat.testing.typeInfer(allocator, source, "start");
+    const actual = try orca.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -216,7 +216,7 @@ test "type infer pipeline call" {
 test "tokenize single line pipeline call" {
     const allocator = std.testing.allocator;
     const source = "x |> f(y)";
-    const actual = try goat.testing.tokenize(allocator, source);
+    const actual = try orca.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol x)
@@ -235,7 +235,7 @@ test "tokenize multi line pipeline call" {
         \\x
         \\    |> f(y)
     ;
-    const actual = try goat.testing.tokenize(allocator, source);
+    const actual = try orca.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol x)
@@ -265,7 +265,7 @@ test "parse call with multiple lines" {
         \\    )
         \\}
     ;
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(fn add [(x i32) (y i32)] i32
@@ -296,7 +296,7 @@ test "parse call with space before and after" {
         \\    )
         \\}
     ;
-    const actual = try goat.testing.parse(allocator, source);
+    const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(fn add [(x i32) (y i32)] i32

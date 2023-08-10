@@ -1,10 +1,10 @@
 const std = @import("std");
-const goat = @import("goat");
+const orca = @import("orca");
 
 test "tokenize int literal followed by dot" {
     const allocator = std.testing.allocator;
     const source = "2.";
-    const actual = try goat.testing.tokenize(allocator, source);
+    const actual = try orca.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(int 2)
@@ -16,7 +16,7 @@ test "tokenize int literal followed by dot" {
 test "type infer int literal as i32" {
     const allocator = std.testing.allocator;
     const source = "fn f() -> i32 { 42 }";
-    const actual = try goat.testing.typeInfer(allocator, source, "f");
+    const actual = try orca.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -31,7 +31,7 @@ test "type infer int literal as i32" {
 test "type infer bool literal true" {
     const allocator = std.testing.allocator;
     const source = "fn f() -> bool { true }";
-    const actual = try goat.testing.typeInfer(allocator, source, "f");
+    const actual = try orca.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -46,7 +46,7 @@ test "type infer bool literal true" {
 test "type infer bool literal false" {
     const allocator = std.testing.allocator;
     const source = "fn f() -> bool { false }";
-    const actual = try goat.testing.typeInfer(allocator, source, "f");
+    const actual = try orca.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -61,7 +61,7 @@ test "type infer bool literal false" {
 test "type infer int literal as f32" {
     const allocator = std.testing.allocator;
     const source = "fn f() -> f32 { 42 }";
-    const actual = try goat.testing.typeInfer(allocator, source, "f");
+    const actual = try orca.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -76,7 +76,7 @@ test "type infer int literal as f32" {
 test "type infer float literal as f32" {
     const allocator = std.testing.allocator;
     const source = "fn f() -> f32 { 42.3 }";
-    const actual = try goat.testing.typeInfer(allocator, source, "f");
+    const actual = try orca.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -91,7 +91,7 @@ test "type infer float literal as f32" {
 test "codegen i32 with int literal" {
     const allocator = std.testing.allocator;
     const source = "fn start() -> i32 { 42 }";
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -110,7 +110,7 @@ test "codegen i32 with int literal" {
 test "codegen f32 with int literal" {
     const allocator = std.testing.allocator;
     const source = "fn start() -> f32 { 42 }";
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -129,7 +129,7 @@ test "codegen f32 with int literal" {
 test "codegen f32 with float literal" {
     const allocator = std.testing.allocator;
     const source = "fn start() -> f32 { 42.5 }";
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -152,7 +152,7 @@ test "codegen i32 global constant" {
         \\
         \\fn start() -> i32 { i }
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -175,7 +175,7 @@ test "codegen str with string literal" {
     const source =
         \\fn start() -> str { "hi" }
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -222,7 +222,7 @@ test "codegen str with template literal" {
     const source =
         \\fn start() -> str { `hi` }
     ;
-    const actual = try goat.testing.codegen(allocator, source);
+    const actual = try orca.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
