@@ -828,17 +828,17 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                 .foreign_export => |e| {
                     const name_string = e.name.string();
                     const trimmed = try intern.store(name_string);
-                    switch (e.value.*) {
-                        .function => |f| {
-                            const lowered = try function(allocator, builtins, &data_segment, &uses_memory, &intrinsics, intern, f);
-                            try functions.append(lowered);
-                            try exports.append(.{ .name = f.name.value, .alias = trimmed });
-                        },
-                        .symbol => {
-                            try exports.append(.{ .name = trimmed, .alias = trimmed });
-                        },
-                        else => |k| std.debug.panic("\nForeign export kind {} no yet supported", .{k}),
-                    }
+                    const lowered = try function(
+                        allocator,
+                        builtins,
+                        &data_segment,
+                        &uses_memory,
+                        &intrinsics,
+                        intern,
+                        e.function,
+                    );
+                    try functions.append(lowered);
+                    try exports.append(.{ .name = e.name, .alias = trimmed });
                 },
                 .foreign_import => |f| {
                     const lowered = try foreignImport(allocator, f);

@@ -230,6 +230,6 @@ pub const Module = struct {
     enumerations: []const TopLevelEnumeration,
     functions: []const Function,
     defines: []const Define,
-    foreign_exports: []const Call,
+    foreign_exports: []const Decorator,
     ignored: []const Expression,
 };

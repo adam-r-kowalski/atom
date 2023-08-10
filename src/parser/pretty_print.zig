@@ -316,7 +316,7 @@ pub fn module(m: types.Module, writer: Writer) !void {
     }
     for (m.foreign_exports) |f| {
         if (i > 0) try writer.writeAll("\n\n");
-        try call(f, 0, writer);
+        try decorator(f, 0, writer);
         i += 1;
     }
     for (m.ignored) |ig| {

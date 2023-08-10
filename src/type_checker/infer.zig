@@ -450,18 +450,6 @@ fn timesEqual(context: Context, t: parser.types.TimesEqual) !types.TimesEqual {
     };
 }
 
-fn callForeignExport(context: Context, c: parser.types.Call) !types.Expression {
-    if (c.arguments.positional.len != 2) std.debug.panic("foreign_export takes 2 arguments", .{});
-    return types.Expression{
-        .foreign_export = .{
-            .name = c.arguments.positional[0].value.string.value,
-            .value = try expressionAlloc(context, c.arguments.positional[1].value),
-            .span = c.span,
-            .type = .{ .void = .{ .span = c.span } },
-        },
-    };
-}
-
 fn callConvert(context: Context, c: parser.types.Call) !types.Expression {
     if (c.arguments.positional.len != 2) std.debug.panic("convert takes 2 arguments", .{});
     const mono = try expressionToMonoType(context.allocator, context.scopes.base, context.builtins, c.arguments.positional[1].value);
@@ -542,7 +530,6 @@ fn callEmpty(context: Context, c: parser.types.Call) !types.Expression {
 fn call(context: Context, c: parser.types.Call) !types.Expression {
     switch (c.function.*) {
         .symbol => |s| {
-            if (s.value.eql(context.builtins.foreign_export)) return try callForeignExport(context, c);
             if (s.value.eql(context.builtins.convert)) return try callConvert(context, c);
             if (s.value.eql(context.builtins.sqrt)) return try callSqrt(context, c);
             if (s.value.eql(context.builtins.empty)) return try callEmpty(context, c);
@@ -636,10 +623,25 @@ fn foreignImport(context: Context, d: parser.types.Decorator) !types.Expression 
     };
 }
 
+fn foreignExport(context: Context, d: parser.types.Decorator) !types.Expression {
+    if (d.arguments.positional.len != 1) std.debug.panic("export takes 1 argument", .{});
+    const value = try expression(context, d.value.*);
+    const func = value.function;
+    return types.Expression{
+        .foreign_export = .{
+            .name = d.arguments.positional[0].value.string.value,
+            .function = func,
+            .span = d.span,
+            .type = func.type,
+        },
+    };
+}
+
 fn decorator(context: Context, d: parser.types.Decorator) !types.Expression {
-    if (d.attribute.value.eql(context.builtins.import)) {
+    if (d.attribute.value.eql(context.builtins.import))
         return try foreignImport(context, d);
-    }
+    if (d.attribute.value.eql(context.builtins.export_))
+        return try foreignExport(context, d);
     std.debug.panic("Invalid decorator {s}", .{d.attribute.value.string()});
 }
 
@@ -961,6 +963,7 @@ pub fn topLevel(m: *types.Module, name: Interned, errors: *Errors) !void {
 }
 
 pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, intern: *Intern, ast: parser.types.Module) !types.Module {
+    _ = intern;
     var order = List(Interned).init(allocator);
     var untyped = types.Untyped.init(allocator);
     var typed = types.Typed.init(allocator);
@@ -1070,18 +1073,36 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
             std.debug.panic("\nInvalid top level int {}", .{d});
         }
     }
-    for (ast.foreign_exports) |c| {
-        if (c.arguments.positional.len != 2) std.debug.panic("\nForeign export call expects 2 arguments received {}", .{c.arguments.positional.len});
-        switch (c.arguments.positional[0].value) {
-            .string => |str| {
-                const full_name = try std.fmt.allocPrint(allocator, "\"{s}\"", .{str.value.string()});
-                const interned = try intern.store(full_name);
-                try order.append(interned);
-                try untyped.putNoClobber(interned, .{ .call = c });
-                try foreign_exports.append(interned);
-            },
-            else => |k| std.debug.panic("\nInvalid foreign export call {}", .{k}),
+    for (ast.foreign_exports) |f| {
+        const func = f.value.function;
+        const name = func.name.value;
+        try order.append(name);
+        try untyped.putNoClobber(name, .{ .decorator = f });
+        if (f.arguments.positional.len != 1) std.debug.panic("export takes 1 argument", .{});
+        const len = func.parameters.len;
+        const parameters = try allocator.alloc(monotype.Parameter, len);
+        for (func.parameters, parameters) |p, *t| {
+            const m = try expressionToMonoType(allocator, scope, builtins, p.type);
+            t.* = .{
+                .name = p.name.value,
+                .type = monotype.withSpan(m, p.span),
+                .mutable = p.mutable,
+            };
         }
+        const return_type = try allocator.create(MonoType);
+        return_type.* = try expressionToMonoType(allocator, scope, builtins, func.return_type.*);
+        const mono = MonoType{ .function = .{
+            .parameters = parameters,
+            .return_type = return_type,
+            .span = func.span,
+        } };
+        try scope.put(name, types.Binding{
+            .type = mono,
+            .global = true,
+            .mutable = false,
+            .span = func.name.span,
+        });
+        try foreign_exports.append(name);
     }
     return types.Module{
         .allocator = allocator,

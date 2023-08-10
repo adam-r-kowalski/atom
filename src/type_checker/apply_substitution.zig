@@ -279,7 +279,7 @@ fn prototype(allocator: Allocator, sub: types.Substitution, p: types.Prototype) 
 fn foreignExport(allocator: Allocator, sub: types.Substitution, f: types.ForeignExport) !types.ForeignExport {
     return .{
         .name = f.name,
-        .value = try expressionAlloc(allocator, sub, f.value.*),
+        .function = try function(allocator, sub, f.function),
         .span = f.span,
         .type = try monotype(allocator, sub, f.type),
     };

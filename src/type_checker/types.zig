@@ -208,7 +208,7 @@ pub const ForeignImport = struct {
 
 pub const ForeignExport = struct {
     name: Interned,
-    value: *const Expression,
+    function: Function,
     span: Span,
     type: MonoType,
 };

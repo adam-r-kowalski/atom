@@ -798,7 +798,7 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
     var enumerations = List(types.TopLevelEnumeration).init(allocator);
     var defines = List(types.Define).init(allocator);
     var functions = List(types.Function).init(allocator);
-    var foreign_exports = List(types.Call).init(allocator);
+    var foreign_exports = List(types.Decorator).init(allocator);
     var ignored = List(types.Expression).init(allocator);
     while (iterator.peek()) |t| {
         switch (t) {
@@ -825,21 +825,11 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
                         }
                     },
                     .function => |f| try functions.append(f),
-                    .call => |c| {
-                        switch (c.function.*) {
-                            .symbol => |s| {
-                                if (s.value.eql(builtins.foreign_export)) {
-                                    try foreign_exports.append(c);
-                                } else {
-                                    try ignored.append(e);
-                                }
-                            },
-                            else => try ignored.append(e),
-                        }
-                    },
                     .decorator => |d| {
                         if (d.attribute.value.eql(builtins.import)) {
                             try foreign_imports.append(d);
+                        } else if (d.attribute.value.eql(builtins.export_)) {
+                            try foreign_exports.append(d);
                         } else {
                             try ignored.append(e);
                         }

@@ -398,9 +398,7 @@ pub fn foreignExport(f: types.ForeignExport, indent: Indent, writer: Writer) !vo
     try newlineAndIndent(indent + 1, writer);
     try writer.print("name = \"{s}\"", .{f.name.string()});
     try newlineAndIndent(indent + 1, writer);
-    try writer.writeAll("value =");
-    try newlineAndIndent(indent + 2, writer);
-    try expression(f.value.*, indent + 2, writer);
+    try function(f.function, indent + 1, writer);
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("type = ");
     try monotype(f.type, writer);
