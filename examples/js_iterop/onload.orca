@@ -27,13 +27,15 @@ fn svg(tag: str) -> i32 {
     element_ns("http://www.w3.org/2000/svg", tag)
 }
 
-foreign_export("onmouseenter", fn onmouseenter(el: i32) -> i32 {
-     attr(el, "fill", "blue")
-})
+@export("onmouseenter")
+fn onmouseenter(el: i32) -> i32 {
+    attr(el, "fill", "blue")
+}
 
-foreign_export("onmouseleave", fn onmouseleave(el: i32) -> i32 {
-     attr(el, "fill", "lightblue")
-})
+@export("onmouseleave")
+fn onmouseleave(el: i32) -> i32 {
+    attr(el, "fill", "lightblue")
+}
 
 fn point(x: str, y: str) -> i32 {
     svg("circle")
@@ -48,7 +50,8 @@ fn point(x: str, y: str) -> i32 {
 }
 
 
-foreign_export("onload", fn onload() -> i32 {
+@export("onload")
+fn onload() -> i32 {
     svg("svg")
         |> attr("width", "500")
         |> attr("height", "500")
@@ -65,4 +68,4 @@ foreign_export("onload", fn onload() -> i32 {
                 |> child(point("80", "64"))
                 |> child(point("90", "81"))
         )
-})
+}
