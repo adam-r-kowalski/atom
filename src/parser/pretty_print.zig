@@ -59,10 +59,12 @@ pub fn function(f: types.Function, indent: Indent, writer: Writer) !void {
 }
 
 pub fn prototype(p: types.Prototype, indent: Indent, writer: Writer) !void {
-    try writer.writeAll("(fn [");
+    try writer.print("(fn {s} [", .{p.name.value.string()});
     for (p.parameters, 0..) |param, j| {
         if (j > 0) try writer.writeAll(" ");
-        try writer.print("({} ", .{param.name.value});
+        try writer.writeAll("(");
+        if (param.mutable) try writer.writeAll("mut ");
+        try writer.print("{} ", .{param.name.value});
         try expression(param.type, indent, writer);
         try writer.writeAll(")");
     }
@@ -160,10 +162,8 @@ pub fn branch(b: types.Branch, indent: Indent, writer: Writer) !void {
     try writer.writeAll(")");
 }
 
-pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
-    try writer.writeAll("(");
-    try expression(c.function.*, indent, writer);
-    for (c.arguments) |a| {
+fn callArguments(arguments: types.Arguments, indent: Indent, writer: Writer) !void {
+    for (arguments.positional) |a| {
         try writer.writeAll(" ");
         if (a.mutable) {
             try writer.writeAll("(mut ");
@@ -173,9 +173,9 @@ pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
             try expression(a.value, indent + 1, writer);
         }
     }
-    for (c.named_arguments_order) |name| {
+    for (arguments.named_order) |name| {
         try writer.print(" :{s} ", .{name.string()});
-        const a = c.named_arguments.get(name).?;
+        const a = arguments.named.get(name).?;
         if (a.mutable) {
             try writer.writeAll("(mut ");
             try expression(a.value, indent + 1, writer);
@@ -184,6 +184,20 @@ pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
             try expression(a.value, indent + 1, writer);
         }
     }
+}
+
+pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("(");
+    try expression(c.function.*, indent, writer);
+    try callArguments(c.arguments, indent, writer);
+    try writer.writeAll(")");
+}
+
+pub fn decorator(d: types.Decorator, indent: Indent, writer: Writer) !void {
+    try writer.print("({s}", .{d.attribute.value.string()});
+    try callArguments(d.arguments, indent, writer);
+    try newlineAndIndent(indent + 1, writer);
+    try expression(d.value.*, indent + 1, writer);
     try writer.writeAll(")");
 }
 
@@ -244,21 +258,11 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .array => |a| try array(a, indent, writer),
         .branch => |b| try branch(b, indent, writer),
         .call => |c| try call(c, indent, writer),
+        .decorator => |d| try decorator(d, indent, writer),
         .index => |i| try index(i, indent, writer),
         .template_literal => |t| try templateLiteral(t, indent, writer),
         .undefined => |u| try writer.print("{}", .{u}),
     }
-}
-
-pub fn topLevelForeignImport(f: types.TopLevelForeignImport, indent: Indent, writer: Writer) !void {
-    try writer.print("(def {s}", .{f.name.value.string()});
-    if (f.type) |t| {
-        try writer.writeAll(" ");
-        try expression(t.*, indent, writer);
-    }
-    try writer.writeAll(" ");
-    try call(f.call, indent + 1, writer);
-    try writer.writeAll(")");
 }
 
 pub fn topLevelStructure(s: types.TopLevelStructure, indent: Indent, writer: Writer) !void {
@@ -287,7 +291,7 @@ pub fn module(m: types.Module, writer: Writer) !void {
     var i: usize = 0;
     for (m.foreign_imports) |f| {
         if (i > 0) try writer.writeAll("\n\n");
-        try topLevelForeignImport(f, 0, writer);
+        try decorator(f, 0, writer);
         i += 1;
     }
     for (m.structures) |s| {

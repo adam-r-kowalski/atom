@@ -11,6 +11,7 @@ pub const Span = parser.types.Span;
 const monotype = @import("monotype.zig");
 pub const TypeVar = monotype.TypeVar;
 pub const MonoType = monotype.MonoType;
+pub const Attribute = @import("../tokenizer.zig").types.Attribute;
 
 pub const Substitution = struct {
     map: Map(u64, MonoType),
@@ -103,7 +104,7 @@ pub const TimesEqual = struct {
 };
 
 pub const Block = struct {
-    expressions: []Expression,
+    expressions: []const Expression,
     span: Span,
     type: MonoType,
 };
@@ -115,9 +116,17 @@ pub const Parameter = struct {
 
 pub const Function = struct {
     name: Symbol,
-    parameters: []Parameter,
+    parameters: []const Parameter,
     return_type: MonoType,
     body: Block,
+    span: Span,
+    type: MonoType,
+};
+
+pub const Prototype = struct {
+    name: Symbol,
+    parameters: []const Parameter,
+    return_type: MonoType,
     span: Span,
     type: MonoType,
 };
@@ -136,7 +145,7 @@ pub const Arm = struct {
 };
 
 pub const Branch = struct {
-    arms: []Arm,
+    arms: []const Arm,
     else_: Block,
     span: Span,
     type: MonoType,
@@ -147,11 +156,24 @@ pub const Argument = struct {
     mutable: bool,
 };
 
+pub const Arguments = struct {
+    positional: []const Argument,
+    named: Map(Interned, Argument),
+    named_order: []const Interned,
+    span: Span,
+};
+
 pub const Call = struct {
     function: *const Expression,
-    arguments: []Argument,
-    named_arguments: Map(Interned, Argument),
-    named_arguments_order: []const Interned,
+    arguments: Arguments,
+    span: Span,
+    type: MonoType,
+};
+
+pub const Decorator = struct {
+    attribute: Attribute,
+    arguments: Arguments,
+    value: *const Expression,
     span: Span,
     type: MonoType,
 };
@@ -165,13 +187,13 @@ pub const Variant = struct {
 
 pub const Intrinsic = struct {
     function: Interned,
-    arguments: []Argument,
+    arguments: []const Argument,
     span: Span,
     type: MonoType,
 };
 
 pub const Group = struct {
-    expressions: []Expression,
+    expressions: []const Expression,
     span: Span,
     type: MonoType,
 };
@@ -179,6 +201,7 @@ pub const Group = struct {
 pub const ForeignImport = struct {
     module: Interned,
     name: Interned,
+    prototype: Prototype,
     span: Span,
     type: MonoType,
 };
@@ -248,11 +271,13 @@ pub const Expression = union(enum) {
     plus_equal: PlusEqual,
     times_equal: TimesEqual,
     function: Function,
+    prototype: Prototype,
     binary_op: BinaryOp,
     group: Group,
     block: Block,
     branch: Branch,
     call: Call,
+    decorator: Decorator,
     variant: Variant,
     intrinsic: Intrinsic,
     foreign_import: ForeignImport,

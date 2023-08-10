@@ -162,6 +162,17 @@ fn exact(cursor: *Cursor, comptime tag: Tag) types.Token {
     return @unionInit(types.Token, @tagName(tag), .{ .span = span });
 }
 
+fn attribute(intern: *Intern, cursor: *Cursor) !types.Token {
+    const begin = cursor.pos;
+    var i: u64 = 0;
+    while (i < cursor.source.len and !reserved(cursor.source[i])) : (i += 1) {}
+    const contents = advance(cursor, i);
+    const end = cursor.pos;
+    const span = types.Span{ .begin = begin, .end = end };
+    const interned = try intern.store(contents);
+    return .{ .attribute = .{ .value = interned, .span = span } };
+}
+
 fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !types.Token {
     const begin = cursor.pos;
     var i: u64 = 0;
@@ -263,6 +274,7 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?types.Token
         ',' => exact(cursor, .comma),
         '\n' => newLine(cursor),
         '#' => try comment(intern, cursor),
+        '@' => try attribute(intern, cursor),
         else => try symbol(intern, builtins, cursor),
     };
 }

@@ -11,6 +11,7 @@ pub const Symbol = tokenizer.types.Symbol;
 pub const String = tokenizer.types.String;
 pub const Bool = tokenizer.types.Bool;
 pub const Undefined = tokenizer.types.Undefined;
+pub const Attribute = tokenizer.types.Attribute;
 
 const Interned = @import("../interner.zig").Interned;
 
@@ -149,11 +150,23 @@ pub const Argument = struct {
     span: Span,
 };
 
+pub const Arguments = struct {
+    positional: []const Argument,
+    named: Map(Interned, Argument),
+    named_order: []const Interned,
+    span: Span,
+};
+
 pub const Call = struct {
     function: *const Expression,
-    arguments: []const Argument,
-    named_arguments: Map(Interned, Argument),
-    named_arguments_order: []const Interned,
+    arguments: Arguments,
+    span: Span,
+};
+
+pub const Decorator = struct {
+    attribute: Attribute,
+    arguments: Arguments,
+    value: *const Expression,
     span: Span,
 };
 
@@ -191,6 +204,7 @@ pub const Expression = union(enum) {
     array: Array,
     branch: Branch,
     call: Call,
+    decorator: Decorator,
     index: Index,
     template_literal: TemplateLiteral,
     undefined: Undefined,
@@ -210,15 +224,8 @@ pub const TopLevelEnumeration = struct {
     span: Span,
 };
 
-pub const TopLevelForeignImport = struct {
-    name: Symbol,
-    type: ?*const Expression,
-    call: Call,
-    span: Span,
-};
-
 pub const Module = struct {
-    foreign_imports: []const TopLevelForeignImport,
+    foreign_imports: []const Decorator,
     structures: []const TopLevelStructure,
     enumerations: []const TopLevelEnumeration,
     functions: []const Function,

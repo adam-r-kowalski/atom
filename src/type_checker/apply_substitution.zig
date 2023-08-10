@@ -148,29 +148,61 @@ fn timesEqual(allocator: Allocator, sub: types.Substitution, t: types.TimesEqual
 }
 
 fn call(allocator: Allocator, sub: types.Substitution, c: types.Call) !types.Call {
-    const arguments = try allocator.alloc(types.Argument, c.arguments.len);
-    for (c.arguments, arguments) |unapplied, *applied|
+    const arguments = try allocator.alloc(types.Argument, c.arguments.positional.len);
+    for (c.arguments.positional, arguments) |unapplied, *applied|
         applied.* = .{
             .value = try expression(allocator, sub, unapplied.value),
             .mutable = unapplied.mutable,
         };
     var named_arguments = Map(Interned, types.Argument).init(allocator);
-    var iterator = c.named_arguments.iterator();
-    while (iterator.next()) |entry| {
-        const unapplied = entry.value_ptr.*;
+    for (c.arguments.named_order) |name| {
+        const unapplied = c.arguments.named.get(name).?;
         const applied = .{
             .value = try expression(allocator, sub, unapplied.value),
             .mutable = unapplied.mutable,
         };
-        try named_arguments.putNoClobber(entry.key_ptr.*, applied);
+        try named_arguments.putNoClobber(name, applied);
     }
     return .{
         .function = try expressionAlloc(allocator, sub, c.function.*),
-        .arguments = arguments,
-        .named_arguments = named_arguments,
-        .named_arguments_order = c.named_arguments_order,
+        .arguments = .{
+            .positional = arguments,
+            .named = named_arguments,
+            .named_order = c.arguments.named_order,
+            .span = c.arguments.span,
+        },
         .span = c.span,
         .type = try monotype(allocator, sub, c.type),
+    };
+}
+
+fn decorator(allocator: Allocator, sub: types.Substitution, d: types.Decorator) !types.Decorator {
+    const arguments = try allocator.alloc(types.Argument, d.arguments.positional.len);
+    for (d.arguments.positional, arguments) |unapplied, *applied|
+        applied.* = .{
+            .value = try expression(allocator, sub, unapplied.value),
+            .mutable = unapplied.mutable,
+        };
+    var named_arguments = Map(Interned, types.Argument).init(allocator);
+    for (d.arguments.named_order) |name| {
+        const unapplied = d.arguments.named.get(name).?;
+        const applied = .{
+            .value = try expression(allocator, sub, unapplied.value),
+            .mutable = unapplied.mutable,
+        };
+        try named_arguments.putNoClobber(name, applied);
+    }
+    return .{
+        .attribute = d.attribute,
+        .arguments = .{
+            .positional = arguments,
+            .named = named_arguments,
+            .named_order = d.arguments.named_order,
+            .span = d.arguments.span,
+        },
+        .span = d.span,
+        .value = try expressionAlloc(allocator, sub, d.value.*),
+        .type = try monotype(allocator, sub, d.type),
     };
 }
 
@@ -225,6 +257,22 @@ fn function(allocator: Allocator, sub: types.Substitution, f: types.Function) !t
         .body = try block(allocator, sub, f.body),
         .span = f.span,
         .type = try monotype(allocator, sub, f.type),
+    };
+}
+
+fn prototype(allocator: Allocator, sub: types.Substitution, p: types.Prototype) !types.Prototype {
+    const parameters = try allocator.alloc(types.Parameter, p.parameters.len);
+    for (p.parameters, parameters) |unapplied, *applied|
+        applied.* = .{
+            .name = try symbol(allocator, sub, unapplied.name),
+            .mutable = unapplied.mutable,
+        };
+    return .{
+        .name = try symbol(allocator, sub, p.name),
+        .parameters = parameters,
+        .return_type = try monotype(allocator, sub, p.return_type),
+        .span = p.span,
+        .type = try monotype(allocator, sub, p.type),
     };
 }
 
@@ -334,8 +382,10 @@ pub fn expression(allocator: Allocator, sub: types.Substitution, e: types.Expres
         .plus_equal => |p| .{ .plus_equal = try plusEqual(allocator, sub, p) },
         .times_equal => |t| .{ .times_equal = try timesEqual(allocator, sub, t) },
         .call => |c| .{ .call = try call(allocator, sub, c) },
+        .decorator => |d| .{ .decorator = try decorator(allocator, sub, d) },
         .intrinsic => |i| .{ .intrinsic = try intrinsic(allocator, sub, i) },
         .function => |f| .{ .function = try function(allocator, sub, f) },
+        .prototype => |p| .{ .prototype = try prototype(allocator, sub, p) },
         .block => |b| .{ .block = try block(allocator, sub, b) },
         .group => |g| .{ .group = try group(allocator, sub, g) },
         .variant => |v| .{ .variant = try variant(allocator, sub, v) },

@@ -7,6 +7,7 @@ pub const Comment = struct { value: Interned, span: Span };
 pub const Symbol = struct { value: Interned, span: Span };
 pub const Int = struct { value: Interned, span: Span };
 pub const Float = struct { value: Interned, span: Span };
+pub const Attribute = struct { value: Interned, span: Span };
 pub const String = struct { value: Interned, span: Span };
 pub const TemplateLiteral = struct { value: Interned, span: Span };
 pub const TemplateLiteralBegin = struct { value: Interned, span: Span };
@@ -53,6 +54,7 @@ pub const Token = union(enum) {
     symbol: Symbol,
     int: Int,
     float: Float,
+    attribute: Attribute,
     string: String,
     template_literal: TemplateLiteral,
     template_literal_begin: TemplateLiteralBegin,

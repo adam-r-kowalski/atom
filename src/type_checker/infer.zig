@@ -291,18 +291,22 @@ fn dot(context: Context, b: parser.types.BinaryOp) !types.Expression {
 fn pipeline(context: Context, b: parser.types.BinaryOp) !types.Expression {
     switch (b.right.*) {
         .call => |c| {
-            const arguments = try context.allocator.alloc(parser.types.Argument, c.arguments.len + 1);
-            arguments[0] = .{
+            const positional = try context.allocator.alloc(parser.types.Argument, c.arguments.positional.len + 1);
+            positional[0] = .{
                 .value = b.left.*,
                 .mutable = false,
                 .span = parser.span.expression(b.left.*),
             };
-            @memcpy(arguments[1..], c.arguments);
+            @memcpy(positional[1..], c.arguments.positional);
+            const arguments = parser.types.Arguments{
+                .positional = positional,
+                .named = Map(Interned, parser.types.Argument).init(context.allocator),
+                .named_order = &.{},
+                .span = c.arguments.span,
+            };
             const new_call = parser.types.Call{
                 .function = c.function,
                 .arguments = arguments,
-                .named_arguments = c.named_arguments,
-                .named_arguments_order = c.named_arguments_order,
                 .span = b.span,
             };
             return try call(context, new_call);
@@ -446,25 +450,12 @@ fn timesEqual(context: Context, t: parser.types.TimesEqual) !types.TimesEqual {
     };
 }
 
-fn callForeignImport(context: Context, c: parser.types.Call) !types.Expression {
-    if (c.arguments.len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
-    const mono = try expressionToMonoType(context.allocator, context.scopes.base, context.builtins, c.arguments[2].value);
-    return types.Expression{
-        .foreign_import = .{
-            .module = c.arguments[0].value.string.value,
-            .name = c.arguments[1].value.string.value,
-            .span = c.span,
-            .type = mono,
-        },
-    };
-}
-
 fn callForeignExport(context: Context, c: parser.types.Call) !types.Expression {
-    if (c.arguments.len != 2) std.debug.panic("foreign_export takes 2 arguments", .{});
+    if (c.arguments.positional.len != 2) std.debug.panic("foreign_export takes 2 arguments", .{});
     return types.Expression{
         .foreign_export = .{
-            .name = c.arguments[0].value.string.value,
-            .value = try expressionAlloc(context, c.arguments[1].value),
+            .name = c.arguments.positional[0].value.string.value,
+            .value = try expressionAlloc(context, c.arguments.positional[1].value),
             .span = c.span,
             .type = .{ .void = .{ .span = c.span } },
         },
@@ -472,11 +463,11 @@ fn callForeignExport(context: Context, c: parser.types.Call) !types.Expression {
 }
 
 fn callConvert(context: Context, c: parser.types.Call) !types.Expression {
-    if (c.arguments.len != 2) std.debug.panic("convert takes 2 arguments", .{});
-    const mono = try expressionToMonoType(context.allocator, context.scopes.base, context.builtins, c.arguments[1].value);
+    if (c.arguments.positional.len != 2) std.debug.panic("convert takes 2 arguments", .{});
+    const mono = try expressionToMonoType(context.allocator, context.scopes.base, context.builtins, c.arguments.positional[1].value);
     return types.Expression{
         .convert = .{
-            .value = try expressionAlloc(context, c.arguments[0].value),
+            .value = try expressionAlloc(context, c.arguments.positional[0].value),
             .span = c.span,
             .type = mono,
         },
@@ -484,9 +475,9 @@ fn callConvert(context: Context, c: parser.types.Call) !types.Expression {
 }
 
 fn callSqrt(context: Context, c: parser.types.Call) !types.Expression {
-    if (c.arguments.len != 1) std.debug.panic("sqrt takes 1 arguments", .{});
-    const arguments = try context.allocator.alloc(types.Argument, c.arguments.len);
-    for (c.arguments, arguments) |untyped, *typed| {
+    if (c.arguments.positional.len != 1) std.debug.panic("sqrt takes 1 arguments", .{});
+    const positional = try context.allocator.alloc(types.Argument, c.arguments.positional.len);
+    for (c.arguments.positional, positional) |untyped, *typed| {
         typed.* = .{
             .value = try expression(context, untyped.value),
             .mutable = untyped.mutable,
@@ -495,9 +486,9 @@ fn callSqrt(context: Context, c: parser.types.Call) !types.Expression {
     return types.Expression{
         .intrinsic = .{
             .function = context.builtins.sqrt,
-            .arguments = arguments,
+            .arguments = positional,
             .span = c.span,
-            .type = typeOf(arguments[0].value),
+            .type = typeOf(positional[0].value),
         },
     };
 }
@@ -510,9 +501,9 @@ fn sizeOfMonoType(builtins: Builtins, m: MonoType) Interned {
 }
 
 fn callEmpty(context: Context, c: parser.types.Call) !types.Expression {
-    if (c.arguments.len != 2) std.debug.panic("empty takes 2 arguments", .{});
+    if (c.arguments.positional.len != 2) std.debug.panic("empty takes 2 arguments", .{});
     const arguments = try context.allocator.alloc(types.Argument, 2);
-    const arg0 = c.arguments[0];
+    const arg0 = c.arguments.positional[0];
     const mono = try expressionToMonoType(context.allocator, context.scopes.base, context.builtins, arg0.value);
     const arg_span = parser.span.expression(arg0.value);
     arguments[0] = .{
@@ -525,7 +516,7 @@ fn callEmpty(context: Context, c: parser.types.Call) !types.Expression {
         },
         .mutable = arg0.mutable,
     };
-    const arg1 = c.arguments[1];
+    const arg1 = c.arguments.positional[1];
     arguments[1] = .{
         .value = try expression(context, arg1.value),
         .mutable = arg1.mutable,
@@ -551,16 +542,15 @@ fn callEmpty(context: Context, c: parser.types.Call) !types.Expression {
 fn call(context: Context, c: parser.types.Call) !types.Expression {
     switch (c.function.*) {
         .symbol => |s| {
-            if (s.value.eql(context.builtins.foreign_import)) return try callForeignImport(context, c);
             if (s.value.eql(context.builtins.foreign_export)) return try callForeignExport(context, c);
             if (s.value.eql(context.builtins.convert)) return try callConvert(context, c);
             if (s.value.eql(context.builtins.sqrt)) return try callSqrt(context, c);
             if (s.value.eql(context.builtins.empty)) return try callEmpty(context, c);
             const f = try symbol(context.scopes.*, s);
-            const len = c.arguments.len;
+            const len = c.arguments.positional.len;
             const argument_types = try context.allocator.alloc(monotype.Argument, len);
             const arguments = try context.allocator.alloc(types.Argument, len);
-            for (c.arguments, arguments, argument_types) |untyped_arg, *typed_arg, *arg_type| {
+            for (c.arguments.positional, arguments, argument_types) |untyped_arg, *typed_arg, *arg_type| {
                 typed_arg.value = try expression(context, untyped_arg.value);
                 if (untyped_arg.mutable) {
                     switch (typed_arg.value) {
@@ -590,10 +580,8 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
             }
             var named_argument_types = Map(Interned, monotype.Argument).init(context.allocator);
             var named_arguments = Map(Interned, types.Argument).init(context.allocator);
-            var iterator = c.named_arguments.iterator();
-            while (iterator.next()) |entry| {
-                const name = entry.key_ptr.*;
-                const untyped_arg = entry.value_ptr.*;
+            for (c.arguments.named_order) |name| {
+                const untyped_arg = c.arguments.named.get(name).?;
                 const type_arg = try expression(context, untyped_arg.value);
                 try named_argument_types.putNoClobber(name, .{
                     .type = monotype.withSpan(typeOf(type_arg), untyped_arg.span),
@@ -618,9 +606,12 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
             return types.Expression{
                 .call = .{
                     .function = try alloc(context.allocator, .{ .symbol = f }),
-                    .arguments = arguments,
-                    .named_arguments = named_arguments,
-                    .named_arguments_order = c.named_arguments_order,
+                    .arguments = .{
+                        .positional = arguments,
+                        .named = named_arguments,
+                        .named_order = c.arguments.named_order,
+                        .span = c.arguments.span,
+                    },
                     .span = c.span,
                     .type = return_type.*,
                 },
@@ -628,6 +619,28 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
         },
         else => |k| std.debug.panic("\nInvalid call function type {}", .{k}),
     }
+}
+
+fn foreignImport(context: Context, d: parser.types.Decorator) !types.Expression {
+    if (d.arguments.positional.len != 2) std.debug.panic("import takes 2 arguments", .{});
+    const value = try expression(context, d.value.*);
+    const proto = value.prototype;
+    return types.Expression{
+        .foreign_import = .{
+            .module = d.arguments.positional[0].value.string.value,
+            .name = d.arguments.positional[1].value.string.value,
+            .prototype = proto,
+            .span = d.span,
+            .type = proto.type,
+        },
+    };
+}
+
+fn decorator(context: Context, d: parser.types.Decorator) !types.Expression {
+    if (d.attribute.value.eql(context.builtins.import)) {
+        return try foreignImport(context, d);
+    }
+    std.debug.panic("Invalid decorator {s}", .{d.attribute.value.string()});
 }
 
 fn function(context: Context, f: parser.types.Function) !types.Function {
@@ -692,6 +705,66 @@ fn function(context: Context, f: parser.types.Function) !types.Function {
         .return_type = return_type.*,
         .body = body,
         .span = f.span,
+        .type = mono,
+    };
+}
+
+fn prototype(context: Context, p: parser.types.Prototype) !types.Prototype {
+    try pushScope(context.scopes);
+    defer popScope(context.scopes);
+    const len = p.parameters.len;
+    const parameters = try context.allocator.alloc(types.Parameter, len);
+    const function_parameters = try context.allocator.alloc(monotype.Parameter, len);
+    for (p.parameters, parameters, function_parameters) |untyped_p, *typed_p, *t| {
+        const name_symbol = untyped_p.name.value;
+        const mono = try expressionToMonoType(context.allocator, context.scopes.base, context.builtins, untyped_p.type);
+        const p_type = monotype.withSpan(mono, untyped_p.span);
+        const binding = types.Binding{
+            .type = mono,
+            .global = false,
+            .mutable = untyped_p.mutable,
+            .span = untyped_p.name.span,
+        };
+        typed_p.* = types.Parameter{
+            .name = types.Symbol{
+                .value = name_symbol,
+                .span = untyped_p.name.span,
+                .type = p_type,
+                .binding = binding,
+            },
+            .mutable = binding.mutable,
+        };
+        try putInScope(context.scopes, name_symbol, binding);
+        t.* = .{
+            .name = name_symbol,
+            .type = p_type,
+            .mutable = untyped_p.mutable,
+        };
+    }
+    const return_type = try context.allocator.create(MonoType);
+    return_type.* = try expressionToMonoType(context.allocator, context.scopes.base, context.builtins, p.return_type.*);
+    const mono = .{ .function = .{
+        .parameters = function_parameters,
+        .return_type = return_type,
+        .span = p.span,
+    } };
+    const binding = types.Binding{
+        .type = mono,
+        .global = false,
+        .mutable = false,
+        .span = p.name.span,
+    };
+    const name = types.Symbol{
+        .value = p.name.value,
+        .span = p.name.span,
+        .type = monotype.withSpan(mono, p.name.span),
+        .binding = binding,
+    };
+    return types.Prototype{
+        .name = name,
+        .parameters = parameters,
+        .return_type = return_type.*,
+        .span = p.span,
         .type = mono,
     };
 }
@@ -834,10 +907,12 @@ fn expression(context: Context, e: parser.types.Expression) error{ OutOfMemory, 
         .plus_equal => |a| return .{ .plus_equal = try plusEqual(context, a) },
         .times_equal => |a| return .{ .times_equal = try timesEqual(context, a) },
         .function => |f| return .{ .function = try function(context, f) },
+        .prototype => |p| return .{ .prototype = try prototype(context, p) },
         .binary_op => |b| return try binaryOp(context, b),
         .block => |b| return .{ .block = try block(context, b) },
         .branch => |b| return .{ .branch = try branch(context, b) },
         .call => |c| return try call(context, c),
+        .decorator => |d| return try decorator(context, d),
         .undefined => |u| return .{ .undefined = untypedUndefined(context, u) },
         .struct_literal => |s| return .{ .struct_literal = try structLiteral(context, s) },
         .array => |a| return .{ .array = try array(context, a) },
@@ -922,31 +997,38 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
         });
     }
     for (ast.foreign_imports) |f| {
-        const name = f.name.value;
+        const proto = f.value.prototype;
+        const name = proto.name.value;
         try order.append(name);
-        const value = try allocator.create(parser.types.Expression);
-        value.* = .{ .call = f.call };
-        try untyped.putNoClobber(name, .{ .define = .{
-            .name = f.name,
-            .type = f.type,
-            .value = value,
-            .mutable = false,
-            .span = f.span,
-        } });
-        if (f.call.arguments.len != 3) std.debug.panic("foreign_import takes 3 arguments", .{});
-        const mono = try expressionToMonoType(allocator, scope, builtins, f.call.arguments[2].value);
+        try untyped.putNoClobber(name, .{ .decorator = f });
+        if (f.arguments.positional.len != 2) std.debug.panic("import takes 2 arguments", .{});
+        const len = proto.parameters.len;
+        const parameters = try allocator.alloc(monotype.Parameter, len);
+        for (proto.parameters, parameters) |p, *t| {
+            const m = try expressionToMonoType(allocator, scope, builtins, p.type);
+            t.* = .{
+                .name = p.name.value,
+                .type = monotype.withSpan(m, p.span),
+                .mutable = p.mutable,
+            };
+        }
+        const return_type = try allocator.create(MonoType);
+        return_type.* = try expressionToMonoType(allocator, scope, builtins, proto.return_type.*);
+        const mono = MonoType{ .function = .{
+            .parameters = parameters,
+            .return_type = return_type,
+            .span = proto.span,
+        } };
         try scope.put(name, types.Binding{
             .type = mono,
             .global = true,
             .mutable = false,
-            .span = f.name.span,
+            .span = proto.name.span,
         });
     }
     for (ast.functions) |f| {
         const name = f.name.value;
         try order.append(name);
-        const value = try allocator.create(parser.types.Expression);
-        value.* = .{ .function = f };
         try untyped.putNoClobber(name, .{ .function = f });
         const len = f.parameters.len;
         const parameters = try allocator.alloc(monotype.Parameter, len);
@@ -989,8 +1071,8 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
         }
     }
     for (ast.foreign_exports) |c| {
-        if (c.arguments.len != 2) std.debug.panic("\nForeign export call expects 2 arguments received {}", .{c.arguments.len});
-        switch (c.arguments[0].value) {
+        if (c.arguments.positional.len != 2) std.debug.panic("\nForeign export call expects 2 arguments received {}", .{c.arguments.positional.len});
+        switch (c.arguments.positional[0].value) {
             .string => |str| {
                 const full_name = try std.fmt.allocPrint(allocator, "\"{s}\"", .{str.value.string()});
                 const interned = try intern.store(full_name);

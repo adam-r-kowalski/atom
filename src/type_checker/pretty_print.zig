@@ -184,15 +184,10 @@ pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
     try monotype(b.type, writer);
 }
 
-pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
-    try writer.writeAll("call =");
-    try newlineAndIndent(indent + 1, writer);
-    try writer.writeAll("function = ");
-    try expression(c.function.*, indent + 2, writer);
-    try newlineAndIndent(indent + 1, writer);
-    if (c.arguments.len > 0) {
+fn callArguments(arguments: types.Arguments, indent: Indent, writer: Writer) !void {
+    if (arguments.positional.len > 0) {
         try writer.writeAll("arguments =");
-        for (c.arguments) |a| {
+        for (arguments.positional) |a| {
             try newlineAndIndent(indent + 2, writer);
             try writer.writeAll("argument =");
             try newlineAndIndent(indent + 3, writer);
@@ -202,10 +197,10 @@ pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
             try expression(a.value, indent + 4, writer);
         }
     }
-    if (c.named_arguments.count() > 0) {
+    if (arguments.named_order.len > 0) {
         try writer.writeAll("named_arguments =");
-        for (c.named_arguments_order) |name| {
-            const a = c.named_arguments.get(name).?;
+        for (arguments.named_order) |name| {
+            const a = arguments.named.get(name).?;
             try newlineAndIndent(indent + 2, writer);
             try writer.writeAll("argument =");
             try newlineAndIndent(indent + 3, writer);
@@ -217,9 +212,32 @@ pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
             try expression(a.value, indent + 4, writer);
         }
     }
+}
+
+pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("call =");
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("function = ");
+    try expression(c.function.*, indent + 2, writer);
+    try newlineAndIndent(indent + 1, writer);
+    try callArguments(c.arguments, indent, writer);
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("type = ");
     try monotype(c.type, writer);
+}
+
+pub fn decorator(d: types.Decorator, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("decorator =");
+    try newlineAndIndent(indent + 1, writer);
+    try writer.print("attribute = {s}", .{d.attribute.value.string()});
+    try newlineAndIndent(indent + 1, writer);
+    try callArguments(d.arguments, indent + 1, writer);
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("value = ");
+    try expression(d.value.*, indent, writer);
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("type = ");
+    try monotype(d.type, writer);
 }
 
 pub fn intrinsic(i: types.Intrinsic, indent: Indent, writer: Writer) !void {
@@ -321,6 +339,25 @@ pub fn function(f: types.Function, indent: Indent, writer: Writer) !void {
     try block(f.body, indent + 2, writer);
 }
 
+pub fn prototype(p: types.Prototype, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("prototype =");
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("name = ");
+    try symbol(p.name, writer);
+    if (p.parameters.len != 0) {
+        try newlineAndIndent(indent + 1, writer);
+        try writer.writeAll("parameters =");
+    }
+    for (p.parameters) |param| {
+        try newlineAndIndent(indent + 2, writer);
+        if (param.mutable) try writer.writeAll("mut ");
+        try symbol(param.name, writer);
+    }
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("return_type = ");
+    try monotype(p.return_type, writer);
+}
+
 pub fn block(b: types.Block, indent: Indent, writer: Writer) !void {
     for (b.expressions, 0..) |expr, i| {
         if (i != 0) try newlineAndIndent(indent, writer);
@@ -348,6 +385,8 @@ pub fn foreignImport(f: types.ForeignImport, indent: Indent, writer: Writer) !vo
     try writer.print("module = \"{s}\"", .{f.module.string()});
     try newlineAndIndent(indent + 1, writer);
     try writer.print("name = \"{s}\"", .{f.name.string()});
+    try newlineAndIndent(indent + 1, writer);
+    try prototype(f.prototype, indent + 1, writer);
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("type = ");
     try monotype(f.type, writer);
@@ -470,12 +509,14 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .branch => |b| try branch(b, indent, writer),
         .binary_op => |b| try binaryOp(b, indent, writer),
         .call => |c| try call(c, indent, writer),
+        .decorator => |d| try decorator(d, indent, writer),
         .intrinsic => |i| try intrinsic(i, indent, writer),
         .define => |d| try define(d, indent, writer),
         .drop => |d| try drop(d, indent, writer),
         .plus_equal => |p| try plusEqual(p, indent, writer),
         .times_equal => |t| try timesEqual(t, indent, writer),
         .function => |f| try function(f, indent, writer),
+        .prototype => |p| try prototype(p, indent, writer),
         .block => |b| try block(b, indent, writer),
         .group => |g| try group(g, indent, writer),
         .foreign_import => |f| try foreignImport(f, indent, writer),

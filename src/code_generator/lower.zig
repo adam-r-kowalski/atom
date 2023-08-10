@@ -244,7 +244,7 @@ fn call(context: Context, c: type_checker.types.Call) !types.Expression {
             var exprs = List(types.Expression).init(context.allocator);
             var deferred = List(types.Expression).init(context.allocator);
             var arguments = List(types.Expression).init(context.allocator);
-            for (c.arguments) |arg| {
+            for (c.arguments.positional) |arg| {
                 if (arg.mutable) {
                     switch (arg.value) {
                         .symbol => |symbol_arg| {
@@ -272,10 +272,10 @@ fn call(context: Context, c: type_checker.types.Call) !types.Expression {
                 }
             }
             const f_type = type_checker.type_of.expression(c.function.*).function;
-            for (c.named_arguments_order) |name| {
+            for (c.arguments.named_order) |name| {
                 for (f_type.parameters) |param| {
                     if (param.name.eql(name)) {
-                        const arg = c.named_arguments.get(name).?;
+                        const arg = c.arguments.named.get(name).?;
                         try arguments.append(try expression(context, arg.value));
                     }
                 }
@@ -788,22 +788,17 @@ fn function(allocator: Allocator, builtins: Builtins, data_segment: *types.DataS
     };
 }
 
-fn foreignImport(allocator: Allocator, name: Interned, i: type_checker.types.ForeignImport) !types.ForeignImport {
-    switch (i.type) {
-        .function => |f| {
-            const path = [2]Interned{ i.module, i.name };
-            const parameters = try allocator.alloc(types.Type, f.parameters.len);
-            for (f.parameters, parameters) |t, *ir_t| ir_t.* = mapType(t.type);
-            const return_type = try allocator.create(types.Type);
-            return_type.* = mapType(f.return_type.*);
-            return types.ForeignImport{
-                .name = name,
-                .path = path,
-                .type = .{ .function = .{ .parameters = parameters, .return_type = return_type } },
-            };
-        },
-        else => |k| std.debug.panic("\nForeign import type {} not yet supported", .{k}),
-    }
+fn foreignImport(allocator: Allocator, f: type_checker.types.ForeignImport) !types.ForeignImport {
+    const path = [2]Interned{ f.module, f.name };
+    const parameters = try allocator.alloc(types.Type, f.prototype.parameters.len);
+    for (f.prototype.parameters, parameters) |t, *ir_t| ir_t.* = mapType(t.name.type);
+    const return_type = try allocator.create(types.Type);
+    return_type.* = mapType(f.prototype.return_type);
+    return types.ForeignImport{
+        .name = f.prototype.name.value,
+        .path = path,
+        .type = .{ .function = .{ .parameters = parameters, .return_type = return_type } },
+    };
 }
 
 pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Module, intern: *Intern) !types.Module {
@@ -823,10 +818,6 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                 .define => |d| {
                     const name_symbol = d.name.value;
                     switch (d.value.*) {
-                        .foreign_import => |i| {
-                            const lowered = try foreignImport(allocator, name_symbol, i);
-                            try imports.append(lowered);
-                        },
                         .int => |i| {
                             const lowered = try int(i);
                             try globals.append(.{ .name = name_symbol, .type = mapType(d.name.type), .value = lowered });
@@ -848,6 +839,10 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                         },
                         else => |k| std.debug.panic("\nForeign export kind {} no yet supported", .{k}),
                     }
+                },
+                .foreign_import => |f| {
+                    const lowered = try foreignImport(allocator, f);
+                    try imports.append(lowered);
                 },
                 .function => |f| {
                     const lowered = try function(allocator, builtins, &data_segment, &uses_memory, &intrinsics, intern, f);
