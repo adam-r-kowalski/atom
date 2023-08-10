@@ -75,9 +75,9 @@ test "type infer import" {
         \\        call =
         \\            function = symbol{ value = print, type = fn(msg: str) -> void }
         \\            arguments =
-        \\                    argument =
-        \\                        mutable = false
-        \\                        value = string{ value = "hello world", type = str }
+        \\                argument =
+        \\                    mutable = false
+        \\                    value = string{ value = "hello world", type = str }
         \\            type = void
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -304,7 +304,8 @@ test "codegen named foreign export" {
 test "codegen hello world" {
     const allocator = std.testing.allocator;
     const source =
-        \\fd_write = foreign_import("wasi_unstable", "fd_write", fn fd_write(fd: i32, text: str, count: i32, out: i32) -> i32)
+        \\@import("wasi_unstable", "fd_write")
+        \\fn fd_write(fd: i32, text: str, count: i32, out: i32) -> i32
         \\
         \\stdout: i32 = 1
         \\
@@ -371,8 +372,11 @@ test "codegen hello world" {
 test "codegen echo" {
     const allocator = std.testing.allocator;
     const source =
-        \\fd_read = foreign_import("wasi_unstable", "fd_read", fn fd_read(fd: i32, mut iovs: str, iov_count: i32, mut nread: i32) -> i32)
-        \\fd_write = foreign_import("wasi_unstable", "fd_write", fn fd_write(fd: i32, iovs: str, iov_count: i32, mut nwritten: i32) -> i32)
+        \\@import("wasi_unstable", "fd_read")
+        \\fn fd_read(fd: i32, mut iovs: str, iov_count: i32, mut nread: i32) -> i32
+        \\
+        \\@import("wasi_unstable", "fd_write")
+        \\fn fd_write(fd: i32, iovs: str, iov_count: i32, mut nwritten: i32) -> i32
         \\
         \\stdin: i32 = 0
         \\stdout: i32 = 1
@@ -381,8 +385,8 @@ test "codegen echo" {
         \\    mut text = empty(u8, 100)
         \\    mut nread = undefined
         \\    mut nwritten = undefined
-        \\    stdin |> fd_read(mut text, 1, mut nread)
-        \\    _ = stdout |> fd_write(text, 1, mut nwritten)
+        \\    fd_read(stdin, mut text, 1, mut nread)
+        \\    _ = fd_write(stdout, text, 1, mut nwritten)
         \\}
     ;
     const actual = try goat.testing.codegen(allocator, source);

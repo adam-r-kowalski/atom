@@ -235,7 +235,8 @@ test "codegen if" {
 test "codegen if with void result" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("stdout", "print", fn print(x: i32) -> void)
+        \\@import("stdout", "print")
+        \\fn print(x: i32) -> void
         \\
         \\fn start() -> void {
         \\    if true { print(10) } else { print(20) }
@@ -269,7 +270,8 @@ test "codegen if with void result" {
 test "codegen if with empty else block" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("stdout", "print", fn print(x: i32) -> void)
+        \\@import("stdout", "print")
+        \\fn print(x: i32) -> void
         \\
         \\fn start() -> void {
         \\    if true { print(10) } else { }
@@ -300,7 +302,8 @@ test "codegen if with empty else block" {
 test "codegen if with no else block" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("stdout", "print", fn print(x: i32) -> void)
+        \\@import("stdout", "print")
+        \\fn print(x: i32) -> void
         \\
         \\fn start() -> void {
         \\    if true {

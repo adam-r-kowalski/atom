@@ -220,7 +220,7 @@ pub fn call(c: types.Call, indent: Indent, writer: Writer) !void {
     try writer.writeAll("function = ");
     try expression(c.function.*, indent + 2, writer);
     try newlineAndIndent(indent + 1, writer);
-    try callArguments(c.arguments, indent + 1, writer);
+    try callArguments(c.arguments, indent, writer);
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("type = ");
     try monotype(c.type, writer);

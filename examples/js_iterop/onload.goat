@@ -28,11 +28,11 @@ fn svg(tag: str) -> i32 {
 }
 
 foreign_export("onmouseenter", fn onmouseenter(el: i32) -> i32 {
-    el |> attr("fill", "blue")
+     attr(el, "fill", "blue")
 })
 
 foreign_export("onmouseleave", fn onmouseleave(el: i32) -> i32 {
-    el |> attr("fill", "lightblue")
+     attr(el, "fill", "lightblue")
 })
 
 fn point(x: str, y: str) -> i32 {
