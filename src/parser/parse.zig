@@ -378,6 +378,19 @@ fn mutable(context: Context, begin: tokenizer.types.Pos) !types.Define {
     }
 }
 
+fn decorator(context: Context, attr: tokenizer.types.Attribute) !types.Decorator {
+    const begin = attr.span.begin;
+    const arguments = try callArguments(context);
+    context.tokens.consumeNewLines();
+    const value = try expressionAlloc(withPrecedence(context, DEFINE + 1));
+    return types.Decorator{
+        .attribute = attr,
+        .arguments = arguments,
+        .value = value,
+        .span = types.Span{ .begin = begin, .end = arguments.span.end },
+    };
+}
+
 fn prefix(context: Context) !types.Expression {
     switch (context.tokens.next().?) {
         .int => |i| return .{ .int = i },
@@ -397,6 +410,7 @@ fn prefix(context: Context) !types.Expression {
         .undefined => |u| return .{ .undefined = u },
         .template_literal => |t| return .{ .template_literal = try templateLiteral(context, null, t) },
         .template_literal_begin => |t| return .{ .template_literal = try templateLiteralBegin(context, null, t) },
+        .attribute => |a| return .{ .decorator = try decorator(context, a) },
         else => |kind| std.debug.panic("\nNo prefix parser for {}\n", .{kind}),
     }
 }
@@ -483,11 +497,11 @@ fn binaryOp(context: Context, left: types.Expression, kind: types.BinaryOpKind) 
     };
 }
 
-fn call(context: Context, left: types.Expression) !types.Call {
-    context.tokens.advance();
-    var arguments = List(types.Argument).init(context.allocator);
-    var named_arguments = Map(Interned, types.Argument).init(context.allocator);
-    var named_arguments_order = List(Interned).init(context.allocator);
+fn callArguments(context: Context) !types.Arguments {
+    const left_paren = context.tokens.consume(.left_paren);
+    var positional = List(types.Argument).init(context.allocator);
+    var named = Map(Interned, types.Argument).init(context.allocator);
+    var named_order = List(Interned).init(context.allocator);
     while (context.tokens.peek()) |t| {
         switch (t) {
             .new_line => context.tokens.advance(),
@@ -495,7 +509,7 @@ fn call(context: Context, left: types.Expression) !types.Call {
             .mut => |mut| {
                 context.tokens.advance();
                 const value = try expression(withPrecedence(context, DEFINE + 1));
-                try arguments.append(.{
+                try positional.append(.{
                     .value = value,
                     .mutable = true,
                     .span = types.Span{
@@ -513,7 +527,7 @@ fn call(context: Context, left: types.Expression) !types.Call {
                         .equal => {
                             context.tokens.advance();
                             const value = try expression(withPrecedence(context, DEFINE + 1));
-                            try named_arguments.putNoClobber(name_or_value.symbol.value, .{
+                            try named.putNoClobber(name_or_value.symbol.value, .{
                                 .value = value,
                                 .mutable = false,
                                 .span = types.Span{
@@ -521,12 +535,12 @@ fn call(context: Context, left: types.Expression) !types.Call {
                                     .end = spanOf(value).end,
                                 },
                             });
-                            try named_arguments_order.append(name_or_value.symbol.value);
+                            try named_order.append(name_or_value.symbol.value);
                             context.tokens.consumeNewLines();
                             context.tokens.maybeConsume(.comma);
                         },
                         else => {
-                            try arguments.append(.{ .value = name_or_value, .mutable = false, .span = spanOf(name_or_value) });
+                            try positional.append(.{ .value = name_or_value, .mutable = false, .span = spanOf(name_or_value) });
                             context.tokens.consumeNewLines();
                             context.tokens.maybeConsume(.comma);
                         },
@@ -536,12 +550,23 @@ fn call(context: Context, left: types.Expression) !types.Call {
         }
     }
     const end = context.tokens.next().?.right_paren.span.end;
+    return types.Arguments{
+        .positional = try positional.toOwnedSlice(),
+        .named = named,
+        .named_order = try named_order.toOwnedSlice(),
+        .span = types.Span{
+            .begin = tokenizer.span.token(left_paren).begin,
+            .end = end,
+        },
+    };
+}
+
+fn call(context: Context, left: types.Expression) !types.Call {
+    const arguments = try callArguments(context);
     return types.Call{
         .function = try alloc(context, left),
-        .arguments = try arguments.toOwnedSlice(),
-        .named_arguments = named_arguments,
-        .named_arguments_order = try named_arguments_order.toOwnedSlice(),
-        .span = types.Span{ .begin = spanOf(left).begin, .end = end },
+        .arguments = arguments,
+        .span = types.Span{ .begin = spanOf(left).begin, .end = arguments.span.end },
     };
 }
 
@@ -768,7 +793,7 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
         .precedence = LOWEST,
         .builtins = builtins,
     };
-    var foreign_imports = List(types.TopLevelForeignImport).init(allocator);
+    var foreign_imports = List(types.Decorator).init(allocator);
     var structures = List(types.TopLevelStructure).init(allocator);
     var enumerations = List(types.TopLevelEnumeration).init(allocator);
     var defines = List(types.Define).init(allocator);
@@ -796,23 +821,6 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
                                 .enumeration = en,
                                 .span = d.span,
                             }),
-                            .call => |c| {
-                                switch (c.function.*) {
-                                    .symbol => |s| {
-                                        if (s.value.eql(builtins.foreign_import)) {
-                                            try foreign_imports.append(.{
-                                                .name = d.name,
-                                                .type = d.type,
-                                                .call = c,
-                                                .span = d.span,
-                                            });
-                                        } else {
-                                            try defines.append(d);
-                                        }
-                                    },
-                                    else => try defines.append(d),
-                                }
-                            },
                             else => try defines.append(d),
                         }
                     },
@@ -827,6 +835,13 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
                                 }
                             },
                             else => try ignored.append(e),
+                        }
+                    },
+                    .decorator => |d| {
+                        if (d.attribute.value.eql(builtins.import)) {
+                            try foreign_imports.append(d);
+                        } else {
+                            try ignored.append(e);
                         }
                     },
                     else => try ignored.append(e),

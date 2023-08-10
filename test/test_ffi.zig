@@ -4,17 +4,19 @@ const goat = @import("goat");
 test "tokenize import" {
     const allocator = std.testing.allocator;
     const source =
-        \\foreign_import("console", "log", fn log(msg: str) -> void)
+        \\@import("console", "log")
+        \\fn log(msg: str) -> void
     ;
     const actual = try goat.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(symbol foreign_import)
+        \\(attribute @import)
         \\(delimiter '(')
         \\(string "console")
         \\(delimiter ',')
         \\(string "log")
-        \\(delimiter ',')
+        \\(delimiter ')')
+        \\(new_line)
         \\(keyword fn)
         \\(symbol log)
         \\(delimiter '(')
@@ -24,7 +26,6 @@ test "tokenize import" {
         \\(delimiter ')')
         \\(operator ->)
         \\(symbol void)
-        \\(delimiter ')')
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -32,12 +33,14 @@ test "tokenize import" {
 test "parse import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", fn print(msg: str) -> void)
+        \\@import("console", "log")
+        \\fn log(msg: str) -> void
     ;
     const actual = try goat.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def print (foreign_import "console" "log" (fn [(msg str)] void)))
+        \\(@import "console" "log"
+        \\    (fn log [(msg str)] void))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -45,7 +48,8 @@ test "parse import" {
 test "type infer import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", fn print(msg: str) -> void)
+        \\@import("console", "log")
+        \\fn print(msg: str) -> void
         \\
         \\fn start() -> void {
         \\    print("hello world")
@@ -54,15 +58,15 @@ test "type infer import" {
     const actual = try goat.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
-        \\define =
-        \\    name = symbol{ value = print, type = fn(msg: str) -> void }
-        \\    type = void
-        \\    mutable = false
-        \\    value =
-        \\        foreign_import =
-        \\            module = "console"
-        \\            name = "log"
-        \\            type = fn(msg: str) -> void
+        \\foreign_import =
+        \\    module = "console"
+        \\    name = "log"
+        \\    prototype =
+        \\        name = symbol{ value = print, type = fn(msg: str) -> void }
+        \\        parameters =
+        \\            symbol{ value = msg, type = str }
+        \\        return_type = void
+        \\    type = fn(msg: str) -> void
         \\
         \\function =
         \\    name = symbol{ value = start, type = fn() -> void }
@@ -71,9 +75,9 @@ test "type infer import" {
         \\        call =
         \\            function = symbol{ value = print, type = fn(msg: str) -> void }
         \\            arguments =
-        \\                argument =
-        \\                    mutable = false
-        \\                    value = string{ value = "hello world", type = str }
+        \\                    argument =
+        \\                        mutable = false
+        \\                        value = string{ value = "hello world", type = str }
         \\            type = void
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -82,9 +86,12 @@ test "type infer import" {
 test "codegen import" {
     const allocator = std.testing.allocator;
     const source =
-        \\print = foreign_import("console", "log", fn print(x: i32) -> void)
+        \\@import("console", "log")
+        \\fn print(msg: i32) -> void
         \\
-        \\fn start() -> void { print(42) }
+        \\fn start() -> void {
+        \\    print(42)
+        \\}
     ;
     const actual = try goat.testing.codegen(allocator, source);
     defer allocator.free(actual);

@@ -1,11 +1,26 @@
-element_ns = foreign_import("document", "create_element_ns", fn element_ns(ns: str, tag: str) -> i32)
-element = foreign_import("document", "create_element", fn element(tag: str) -> i32)
-html = foreign_import("element", "inner_html", fn html(el: i32, text: str) -> i32)
-style = foreign_import("element", "style", fn style(el: i32, property: str, value: str) -> i32)
-attr = foreign_import("element", "set_attribute", fn attr(el: i32, attribute: str, value: str) -> i32)
-child = foreign_import("element", "append_child", fn child(parent: i32, child: i32) -> i32)
-on = foreign_import("element", "add_event_listener", fn on(el: i32, event: str, cb: str) -> i32)
-log = foreign_import("console", "log", fn log(text: str) -> void)
+@import("document", "create_element_ns")
+fn element_ns(ns: str, tag: str) -> i32
+
+@import("document", "create_element")
+fn element(tag: str) -> i32
+
+@import("element", "inner_html")
+fn html(el: i32, text: str) -> i32
+
+@import("element", "style")
+fn style(el: i32, property: str, value: str) -> i32
+
+@import("element", "set_attribute")
+fn attr(el: i32, attribute: str, value: str) -> i32
+
+@import("element", "append_child")
+fn child(parent: i32, child: i32) -> i32
+
+@import("element", "add_event_listener")
+fn on(el: i32, event: str, cb: str) -> i32
+
+@import("console", "log")
+fn log(text: str) -> void
 
 
 fn svg(tag: str) -> i32 {

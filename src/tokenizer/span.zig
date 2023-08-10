@@ -6,6 +6,7 @@ pub fn token(t: types.Token) types.Span {
         .symbol => |s| s.span,
         .int => |i| i.span,
         .float => |f| f.span,
+        .attribute => |s| s.span,
         .string => |s| s.span,
         .template_literal => |s| s.span,
         .template_literal_begin => |s| s.span,
