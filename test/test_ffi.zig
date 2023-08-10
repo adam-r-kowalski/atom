@@ -45,6 +45,21 @@ test "parse import" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
+test "parse import with no arguments" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\@import
+        \\fn log(msg: str) -> void
+    ;
+    const actual = try orca.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(@import
+        \\    (fn log [(msg str)] void))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
 test "type infer import" {
     const allocator = std.testing.allocator;
     const source =
@@ -83,6 +98,44 @@ test "type infer import" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
+test "type infer import with no arguments" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\@import
+        \\fn print(msg: str) -> void
+        \\
+        \\fn start() -> void {
+        \\    print("hello world")
+        \\}
+    ;
+    const actual = try orca.testing.typeInfer(allocator, source, "start");
+    defer allocator.free(actual);
+    const expected =
+        \\foreign_import =
+        \\    module = "host"
+        \\    name = "print"
+        \\    prototype =
+        \\        name = symbol{ value = print, type = fn(msg: str) -> void }
+        \\        parameters =
+        \\            symbol{ value = msg, type = str }
+        \\        return_type = void
+        \\    type = fn(msg: str) -> void
+        \\
+        \\function =
+        \\    name = symbol{ value = start, type = fn() -> void }
+        \\    return_type = void
+        \\    body =
+        \\        call =
+        \\            function = symbol{ value = print, type = fn(msg: str) -> void }
+        \\            arguments =
+        \\                argument =
+        \\                    mutable = false
+        \\                    value = string{ value = "hello world", type = str }
+        \\            type = void
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
 test "codegen import" {
     const allocator = std.testing.allocator;
     const source =
@@ -99,6 +152,35 @@ test "codegen import" {
         \\(module
         \\
         \\    (import "console" "log" (func $print (param i32)))
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (func $start
+        \\        (call $print
+        \\            (i32.const 42)))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen import with no arguments" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\@import
+        \\fn print(msg: i32) -> void
+        \\
+        \\fn start() -> void {
+        \\    print(42)
+        \\}
+    ;
+    const actual = try orca.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (import "host" "print" (func $print (param i32)))
         \\
         \\    (memory 1)
         \\    (export "memory" (memory 0))

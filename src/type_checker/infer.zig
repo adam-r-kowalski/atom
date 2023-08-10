@@ -609,14 +609,26 @@ fn call(context: Context, c: parser.types.Call) !types.Expression {
 }
 
 fn foreignImport(context: Context, d: parser.types.Decorator) !types.Expression {
-    if (d.arguments) |args|
+    if (d.arguments) |args| {
         if (args.positional.len != 2) std.debug.panic("import takes 2 arguments", .{});
+        const value = try expression(context, d.value.*);
+        const proto = value.prototype;
+        return types.Expression{
+            .foreign_import = .{
+                .module = d.arguments.?.positional[0].value.string.value,
+                .name = d.arguments.?.positional[1].value.string.value,
+                .prototype = proto,
+                .span = d.span,
+                .type = proto.type,
+            },
+        };
+    }
     const value = try expression(context, d.value.*);
     const proto = value.prototype;
     return types.Expression{
         .foreign_import = .{
-            .module = d.arguments.?.positional[0].value.string.value,
-            .name = d.arguments.?.positional[1].value.string.value,
+            .module = context.builtins.host,
+            .name = proto.name.value,
             .prototype = proto,
             .span = d.span,
             .type = proto.type,
@@ -975,8 +987,7 @@ pub fn topLevel(m: *types.Module, name: Interned, errors: *Errors) !void {
     }
 }
 
-pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, intern: *Intern, ast: parser.types.Module) !types.Module {
-    _ = intern;
+pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, ast: parser.types.Module) !types.Module {
     var order = List(Interned).init(allocator);
     var untyped = types.Untyped.init(allocator);
     var typed = types.Typed.init(allocator);

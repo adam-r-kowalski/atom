@@ -161,7 +161,7 @@ fn compileAndRun(allocator: Allocator, intern: *orca.interner.Intern, errors: *o
         .equal = List(orca.type_checker.types.EqualConstraint).init(allocator),
         .next_type_var = 0,
     };
-    var ast = try orca.type_checker.infer.module(allocator, &constraints, builtins, intern, untyped_ast);
+    var ast = try orca.type_checker.infer.module(allocator, &constraints, builtins, untyped_ast);
     const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
     if (export_count == 0) ast.foreign_exports = &.{start};

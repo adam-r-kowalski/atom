@@ -59,7 +59,7 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
         .equal = List(type_checker.types.EqualConstraint).init(arena.allocator()),
         .next_type_var = 0,
     };
-    var ast = try type_checker.infer.module(arena.allocator(), &constraints, builtins, &intern, untyped_ast);
+    var ast = try type_checker.infer.module(arena.allocator(), &constraints, builtins, untyped_ast);
     try type_checker.infer.topLevel(&ast, try intern.store(name), &errors);
     const substitution = try type_checker.solve_constraints.constraints(arena.allocator(), constraints, &errors);
     ast = try type_checker.apply_substitution.module(arena.allocator(), substitution, ast);
@@ -123,7 +123,7 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
         .equal = List(type_checker.types.EqualConstraint).init(arena.allocator()),
         .next_type_var = 0,
     };
-    var ast = try type_checker.infer.module(arena.allocator(), &constraints, builtins, &intern, untyped_ast);
+    var ast = try type_checker.infer.module(arena.allocator(), &constraints, builtins, untyped_ast);
     const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
     if (export_count == 0) ast.foreign_exports = &.{start};
@@ -148,7 +148,7 @@ fn endToEnd(allocator: Allocator, intern: *Intern, errors: *error_reporter.types
         .equal = List(type_checker.types.EqualConstraint).init(allocator),
         .next_type_var = 0,
     };
-    var ast = try type_checker.infer.module(allocator, &constraints, builtins, intern, untyped_ast);
+    var ast = try type_checker.infer.module(allocator, &constraints, builtins, untyped_ast);
     const export_count = ast.foreign_exports.len;
     const start = try intern.store("start");
     if (export_count == 0) ast.foreign_exports = &.{start};
