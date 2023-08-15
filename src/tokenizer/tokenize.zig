@@ -219,8 +219,13 @@ fn newLine(cursor: *Cursor) types.Token {
     return .{ .new_line = .{ .span = .{ .begin = begin, .end = cursor.pos } } };
 }
 
-fn comment(intern: *Intern, cursor: *Cursor) !types.Token {
+fn commentOrSlash(intern: *Intern, cursor: *Cursor) !types.Token {
     const begin = cursor.pos;
+    if (cursor.source.len < 2 or cursor.source[1] != '/') {
+        _ = advance(cursor, 1);
+        const span = types.Span{ .begin = begin, .end = cursor.pos };
+        return .{ .slash = .{ .span = span } };
+    }
     var i: u64 = 0;
     while (i < cursor.source.len and cursor.source[i] != '\n') : (i += 1) {}
     const contents = cursor.source[0..i];
@@ -257,7 +262,7 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?types.Token
         '+' => either(cursor, .plus, '=', .plus_equal),
         '*' => either(cursor, .times, '=', .times_equal),
         '|' => either(cursor, .bar, '>', .bar_greater),
-        '/' => exact(cursor, .slash),
+        '/' => try commentOrSlash(intern, cursor),
         '^' => exact(cursor, .caret),
         '>' => exact(cursor, .greater),
         '<' => exact(cursor, .less),
@@ -273,7 +278,6 @@ fn nextToken(cursor: *Cursor, intern: *Intern, builtins: Builtins) !?types.Token
         ']' => exact(cursor, .right_bracket),
         ',' => exact(cursor, .comma),
         '\n' => newLine(cursor),
-        '#' => try comment(intern, cursor),
         '@' => try attribute(intern, cursor),
         else => try symbol(intern, builtins, cursor),
     };
