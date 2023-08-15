@@ -312,6 +312,7 @@ fn enumeration(context: Context, enum_: EnumToken) !types.Enumeration {
 
 fn structure(context: Context, struct_: StructToken) !types.Structure {
     const begin = struct_.span.begin;
+    const struct_name = context.tokens.consume(.symbol).symbol;
     _ = context.tokens.consume(.left_brace);
     var fields = types.StructFields.init(context.allocator);
     var order = List(Interned).init(context.allocator);
@@ -319,24 +320,25 @@ fn structure(context: Context, struct_: StructToken) !types.Structure {
         switch (t) {
             .new_line => context.tokens.advance(),
             .right_brace => break,
-            .symbol => |name| {
+            .symbol => |field_name| {
                 context.tokens.advance();
                 _ = context.tokens.consume(.colon);
                 const type_ = try expression(withPrecedence(context, DEFINE + 1));
                 context.tokens.consumeNewLines();
                 context.tokens.maybeConsume(.comma);
-                try fields.putNoClobber(name.value, .{
-                    .name = name,
+                try fields.putNoClobber(field_name.value, .{
+                    .name = field_name,
                     .type = type_,
-                    .span = types.Span{ .begin = name.span.begin, .end = spanOf(type_).end },
+                    .span = types.Span{ .begin = field_name.span.begin, .end = spanOf(type_).end },
                 });
-                try order.append(name.value);
+                try order.append(field_name.value);
             },
             else => |k| std.debug.panic("\nExpected symbol or right brace, found {}", .{k}),
         }
     }
     const end = tokenizer.span.token(context.tokens.consume(.right_brace)).end;
     return types.Structure{
+        .name = struct_name,
         .fields = fields,
         .order = try order.toOwnedSlice(),
         .span = types.Span{ .begin = begin, .end = end },
@@ -825,7 +827,7 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
         .builtins = builtins,
     };
     var foreign_imports = List(types.Decorator).init(allocator);
-    var structures = List(types.TopLevelStructure).init(allocator);
+    var structures = List(types.Structure).init(allocator);
     var enumerations = List(types.TopLevelEnumeration).init(allocator);
     var defines = List(types.Define).init(allocator);
     var functions = List(types.Function).init(allocator);
@@ -840,12 +842,6 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
                     .define => |d| {
                         if (d.mutable) std.debug.panic("\nNo top level mutable definitions allowed", .{});
                         switch (d.value.*) {
-                            .structure => |s| try structures.append(.{
-                                .name = d.name,
-                                .type = d.type,
-                                .structure = s,
-                                .span = d.span,
-                            }),
                             .enumeration => |en| try enumerations.append(.{
                                 .name = d.name,
                                 .type = d.type,
@@ -856,6 +852,7 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
                         }
                     },
                     .function => |f| try functions.append(f),
+                    .structure => |s| try structures.append(s),
                     .decorator => |d| {
                         if (d.attribute.value.eql(builtins.import)) {
                             try foreign_imports.append(d);

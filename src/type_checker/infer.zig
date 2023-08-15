@@ -995,15 +995,16 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
     }
     for (ast.structures) |s| {
         var fields = Map(Interned, MonoType).init(allocator);
-        for (s.structure.order) |o| {
-            const field = s.structure.fields.get(o).?;
+        for (s.order) |o| {
+            const field = s.fields.get(o).?;
             try fields.putNoClobber(o, try expressionToMonoType(allocator, scope, builtins, field.type));
         }
         try scope.put(s.name.value, types.Binding{
             .type = .{ .structure = .{
+                .name = s.name.value,
                 .fields = fields,
-                .order = s.structure.order,
-                .span = s.structure.span,
+                .order = s.order,
+                .span = s.span,
             } },
             .global = true,
             .mutable = false,

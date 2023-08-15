@@ -83,10 +83,10 @@ pub fn enumeration(e: types.Enumeration, indent: Indent, writer: Writer) !void {
 }
 
 pub fn structure(s: types.Structure, indent: Indent, writer: Writer) !void {
-    try writer.writeAll("(struct");
+    try writer.print("(struct {s}", .{s.name.value.string()});
     for (s.order) |interned| {
         const field = s.fields.get(interned).?;
-        try newlineAndIndent(indent, writer);
+        try newlineAndIndent(indent + 1, writer);
         try writer.print("{s} ", .{field.name.value.string()});
         try expression(field.type, indent, writer);
     }
@@ -94,14 +94,15 @@ pub fn structure(s: types.Structure, indent: Indent, writer: Writer) !void {
 }
 
 pub fn structLiteral(s: types.StructLiteral, indent: Indent, writer: Writer) !void {
-    try writer.writeAll("(struct_literal");
+    try writer.writeAll("{");
     for (s.order) |interned| {
         const field = s.fields.get(interned).?;
         try newlineAndIndent(indent, writer);
         try writer.print("{s} ", .{field.name.value.string()});
         try expression(field.value, indent, writer);
     }
-    try writer.writeAll(")");
+    try newlineAndIndent(indent - 1, writer);
+    try writer.writeAll("}");
 }
 
 pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
@@ -273,17 +274,6 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
     }
 }
 
-pub fn topLevelStructure(s: types.TopLevelStructure, indent: Indent, writer: Writer) !void {
-    try writer.print("(def {s}", .{s.name.value.string()});
-    if (s.type) |t| {
-        try writer.writeAll(" ");
-        try expression(t.*, indent, writer);
-    }
-    try writer.writeAll(" ");
-    try structure(s.structure, indent + 1, writer);
-    try writer.writeAll(")");
-}
-
 pub fn topLevelEnumeration(e: types.TopLevelEnumeration, indent: Indent, writer: Writer) !void {
     try writer.print("(def {s}", .{e.name.value.string()});
     if (e.type) |t| {
@@ -304,7 +294,7 @@ pub fn module(m: types.Module, writer: Writer) !void {
     }
     for (m.structures) |s| {
         if (i > 0) try writer.writeAll("\n\n");
-        try topLevelStructure(s, 0, writer);
+        try structure(s, 0, writer);
         i += 1;
     }
     for (m.enumerations) |e| {

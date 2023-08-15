@@ -92,6 +92,7 @@ pub const StructField = struct {
 pub const StructFields = Map(Interned, StructField);
 
 pub const Structure = struct {
+    name: Symbol,
     fields: StructFields,
     order: []const Interned,
     span: Span,
@@ -216,13 +217,6 @@ pub const Expression = union(enum) {
     undefined: Undefined,
 };
 
-pub const TopLevelStructure = struct {
-    name: Symbol,
-    type: ?*const Expression,
-    structure: Structure,
-    span: Span,
-};
-
 pub const TopLevelEnumeration = struct {
     name: Symbol,
     type: ?*const Expression,
@@ -232,7 +226,7 @@ pub const TopLevelEnumeration = struct {
 
 pub const Module = struct {
     foreign_imports: []const Decorator,
-    structures: []const TopLevelStructure,
+    structures: []const Structure,
     enumerations: []const TopLevelEnumeration,
     functions: []const Function,
     defines: []const Define,

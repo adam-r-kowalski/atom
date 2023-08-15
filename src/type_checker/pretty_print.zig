@@ -64,30 +64,9 @@ pub fn monotype(m: types.MonoType, writer: Writer) !void {
             }
             try writer.writeAll(" }");
         },
-        .enumeration_instance => |e| {
-            try writer.writeAll(e.name.string());
-        },
-        .structure => |s| {
-            try writer.writeAll("struct{ ");
-            for (s.order, 0..) |o, i| {
-                const field = s.fields.get(o).?;
-                if (i > 0) try writer.writeAll(", ");
-                try writer.print("{s}: ", .{o.string()});
-                try monotype(field, writer);
-            }
-            try writer.writeAll(" }");
-        },
-        .structure_literal => |s| {
-            try writer.writeAll("struct_literal{ ");
-            for (s.order, 0..) |o, i| {
-                const field = s.fields.get(o).?;
-                if (i > 0) try writer.writeAll(", ");
-                try writer.print("{s}: ", .{o.string()});
-                try monotype(field, writer);
-            }
-            try writer.writeAll(" } as ");
-            try monotype(s.structure.*, writer);
-        },
+        .enumeration_instance => |e| try writer.writeAll(e.name.string()),
+        .structure => |s| try writer.writeAll(s.name.string()),
+        .structure_literal => |s| try monotype(s.structure.*, writer),
     }
 }
 

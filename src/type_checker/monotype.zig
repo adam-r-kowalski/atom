@@ -56,6 +56,7 @@ pub const EnumerationInstance = struct {
 pub const Fields = Map(Interned, MonoType);
 
 pub const Structure = struct {
+    name: Interned,
     fields: Fields,
     order: []const Interned,
     span: ?Span,
@@ -133,7 +134,12 @@ pub fn withSpan(monotype: MonoType, s: Span) MonoType {
         .array => |a| .{ .array = .{ .element_type = a.element_type, .span = s } },
         .enumeration => |e| .{ .enumeration = .{ .variants = e.variants, .span = s } },
         .enumeration_instance => |e| .{ .enumeration_instance = .{ .name = e.name, .span = s } },
-        .structure => |st| .{ .structure = .{ .fields = st.fields, .order = st.order, .span = s } },
+        .structure => |st| .{ .structure = .{
+            .name = st.name,
+            .fields = st.fields,
+            .order = st.order,
+            .span = s,
+        } },
         .structure_literal => |st| .{ .structure_literal = .{
             .fields = st.fields,
             .order = st.order,

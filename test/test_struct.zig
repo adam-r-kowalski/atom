@@ -4,7 +4,7 @@ const orca = @import("orca");
 test "tokenize struct" {
     const allocator = std.testing.allocator;
     const source =
-        \\Person = struct {
+        \\struct Person {
         \\    name: str,
         \\    age: u8,
         \\}
@@ -19,9 +19,8 @@ test "tokenize struct" {
     const actual = try orca.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(symbol Person)
-        \\(operator =)
         \\(keyword struct)
+        \\(symbol Person)
         \\(delimiter '{')
         \\(new_line)
         \\(symbol name)
@@ -66,7 +65,7 @@ test "tokenize struct" {
 test "parse struct" {
     const allocator = std.testing.allocator;
     const source =
-        \\Person = struct {
+        \\struct Person {
         \\    name: str,
         \\    age: u8,
         \\}
@@ -74,21 +73,22 @@ test "parse struct" {
         \\fn start() -> Person {
         \\    {
         \\        name: "Bob",
-        \\        age: 42,
+        \\        age: 42
         \\    }
         \\}
     ;
     const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def Person (struct
+        \\(struct Person
         \\    name str
-        \\    age u8))
+        \\    age u8)
         \\
         \\(fn start [] Person
-        \\    (struct_literal
+        \\    {
         \\        name "Bob"
-        \\        age 42))
+        \\        age 42
+        \\    })
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -96,7 +96,7 @@ test "parse struct" {
 test "type infer struct" {
     const allocator = std.testing.allocator;
     const source =
-        \\Person = struct {
+        \\struct Person {
         \\    name: str,
         \\    age: u8,
         \\}
@@ -112,11 +112,11 @@ test "type infer struct" {
     defer allocator.free(actual);
     const expected =
         \\function =
-        \\    name = symbol{ value = start, type = fn() -> struct{ name: str, age: u8 } }
-        \\    return_type = struct{ name: str, age: u8 }
+        \\    name = symbol{ value = start, type = fn() -> Person }
+        \\    return_type = Person
         \\    body =
         \\        struct_literal =
-        \\            type = struct_literal{ name: str, age: u8 } as struct{ name: str, age: u8 }
+        \\            type = Person
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -124,7 +124,7 @@ test "type infer struct" {
 test "codegen struct" {
     const allocator = std.testing.allocator;
     const source =
-        \\Person = struct {
+        \\struct Person {
         \\    name: str,
         \\    age: u8,
         \\}
