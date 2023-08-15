@@ -1,4 +1,4 @@
 - [x] change comments from # to //
-- [ ] migrate arrays to []f32 from vec[f32]
+- [x] migrate arrays to []f32 from vec[f32]
 - [ ] migrate structs from anonymous to named
 - [ ] migrate enums from anonymous to named
