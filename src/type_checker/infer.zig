@@ -981,12 +981,13 @@ pub fn module(allocator: Allocator, cs: *types.Constraints, builtins: Builtins, 
     var scope = types.Scope.init(allocator);
     var foreign_exports = List(Interned).init(allocator);
     for (ast.enumerations) |e| {
-        const variants = try allocator.alloc(Interned, e.enumeration.variants.len);
-        for (e.enumeration.variants, variants) |v, *i| i.* = v.value;
+        const variants = try allocator.alloc(Interned, e.variants.len);
+        for (e.variants, variants) |v, *i| i.* = v.value;
         try scope.put(e.name.value, types.Binding{
             .type = .{ .enumeration = .{
+                .name = e.name.value,
                 .variants = variants,
-                .span = e.enumeration.span,
+                .span = e.span,
             } },
             .global = true,
             .mutable = false,

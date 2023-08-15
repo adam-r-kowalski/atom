@@ -74,9 +74,9 @@ pub fn prototype(p: types.Prototype, indent: Indent, writer: Writer) !void {
 }
 
 pub fn enumeration(e: types.Enumeration, indent: Indent, writer: Writer) !void {
-    try writer.writeAll("(enum");
+    try writer.print("(enum {s}", .{e.name.value.string()});
     for (e.variants) |variant| {
-        try newlineAndIndent(indent, writer);
+        try newlineAndIndent(indent + 1, writer);
         try writer.writeAll(variant.value.string());
     }
     try writer.writeAll(")");
@@ -274,17 +274,6 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
     }
 }
 
-pub fn topLevelEnumeration(e: types.TopLevelEnumeration, indent: Indent, writer: Writer) !void {
-    try writer.print("(def {s}", .{e.name.value.string()});
-    if (e.type) |t| {
-        try writer.writeAll(" ");
-        try expression(t.*, indent, writer);
-    }
-    try writer.writeAll(" ");
-    try enumeration(e.enumeration, indent + 1, writer);
-    try writer.writeAll(")");
-}
-
 pub fn module(m: types.Module, writer: Writer) !void {
     var i: usize = 0;
     for (m.foreign_imports) |f| {
@@ -299,7 +288,7 @@ pub fn module(m: types.Module, writer: Writer) !void {
     }
     for (m.enumerations) |e| {
         if (i > 0) try writer.writeAll("\n\n");
-        try topLevelEnumeration(e, 0, writer);
+        try enumeration(e, 0, writer);
         i += 1;
     }
     for (m.functions) |f| {

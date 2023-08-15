@@ -285,19 +285,20 @@ fn function(context: Context, begin: types.Pos) !types.Expression {
 
 fn enumeration(context: Context, enum_: EnumToken) !types.Enumeration {
     const begin = enum_.span.begin;
+    const enumeration_name = context.tokens.consume(.symbol).symbol;
     _ = context.tokens.consume(.left_brace);
     var variants = List(types.Symbol).init(context.allocator);
     while (context.tokens.peek()) |t| {
         switch (t) {
             .new_line => context.tokens.advance(),
             .right_brace => break,
-            .symbol => |name| {
+            .symbol => |variant_name| {
                 context.tokens.advance();
                 context.tokens.consumeNewLines();
                 context.tokens.maybeConsume(.comma);
                 try variants.append(types.Symbol{
-                    .value = name.value,
-                    .span = name.span,
+                    .value = variant_name.value,
+                    .span = variant_name.span,
                 });
             },
             else => |k| std.debug.panic("\nExpected symbol or right brace, found {}", .{k}),
@@ -305,6 +306,7 @@ fn enumeration(context: Context, enum_: EnumToken) !types.Enumeration {
     }
     const end = tokenizer.span.token(context.tokens.consume(.right_brace)).end;
     return types.Enumeration{
+        .name = enumeration_name,
         .variants = try variants.toOwnedSlice(),
         .span = types.Span{ .begin = begin, .end = end },
     };
@@ -828,7 +830,7 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
     };
     var foreign_imports = List(types.Decorator).init(allocator);
     var structures = List(types.Structure).init(allocator);
-    var enumerations = List(types.TopLevelEnumeration).init(allocator);
+    var enumerations = List(types.Enumeration).init(allocator);
     var defines = List(types.Define).init(allocator);
     var functions = List(types.Function).init(allocator);
     var foreign_exports = List(types.Decorator).init(allocator);
@@ -841,18 +843,11 @@ pub fn parse(allocator: Allocator, builtins: Builtins, tokens: []const tokenizer
                 switch (e) {
                     .define => |d| {
                         if (d.mutable) std.debug.panic("\nNo top level mutable definitions allowed", .{});
-                        switch (d.value.*) {
-                            .enumeration => |en| try enumerations.append(.{
-                                .name = d.name,
-                                .type = d.type,
-                                .enumeration = en,
-                                .span = d.span,
-                            }),
-                            else => try defines.append(d),
-                        }
+                        try defines.append(d);
                     },
                     .function => |f| try functions.append(f),
                     .structure => |s| try structures.append(s),
+                    .enumeration => |en| try enumerations.append(en),
                     .decorator => |d| {
                         if (d.attribute.value.eql(builtins.import)) {
                             try foreign_imports.append(d);

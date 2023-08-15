@@ -44,6 +44,7 @@ pub const Array = struct {
 };
 
 pub const Enumeration = struct {
+    name: Interned,
     variants: []const Interned,
     span: ?Span,
 };
@@ -132,8 +133,15 @@ pub fn withSpan(monotype: MonoType, s: Span) MonoType {
             .span = s,
         } },
         .array => |a| .{ .array = .{ .element_type = a.element_type, .span = s } },
-        .enumeration => |e| .{ .enumeration = .{ .variants = e.variants, .span = s } },
-        .enumeration_instance => |e| .{ .enumeration_instance = .{ .name = e.name, .span = s } },
+        .enumeration => |e| .{ .enumeration = .{
+            .name = e.name,
+            .variants = e.variants,
+            .span = s,
+        } },
+        .enumeration_instance => |e| .{ .enumeration_instance = .{
+            .name = e.name,
+            .span = s,
+        } },
         .structure => |st| .{ .structure = .{
             .name = st.name,
             .fields = st.fields,

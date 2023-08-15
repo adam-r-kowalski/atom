@@ -79,6 +79,7 @@ pub const Prototype = struct {
 };
 
 pub const Enumeration = struct {
+    name: Symbol,
     variants: []const Symbol,
     span: Span,
 };
@@ -217,17 +218,10 @@ pub const Expression = union(enum) {
     undefined: Undefined,
 };
 
-pub const TopLevelEnumeration = struct {
-    name: Symbol,
-    type: ?*const Expression,
-    enumeration: Enumeration,
-    span: Span,
-};
-
 pub const Module = struct {
     foreign_imports: []const Decorator,
     structures: []const Structure,
-    enumerations: []const TopLevelEnumeration,
+    enumerations: []const Enumeration,
     functions: []const Function,
     defines: []const Define,
     foreign_exports: []const Decorator,

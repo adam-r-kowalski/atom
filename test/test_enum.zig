@@ -4,7 +4,7 @@ const orca = @import("orca");
 test "tokenize enum" {
     const allocator = std.testing.allocator;
     const source =
-        \\Grade = enum {
+        \\enum Grade {
         \\    a,
         \\    b,
         \\    c,
@@ -19,9 +19,8 @@ test "tokenize enum" {
     const actual = try orca.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(symbol Grade)
-        \\(operator =)
         \\(keyword enum)
+        \\(symbol Grade)
         \\(delimiter '{')
         \\(new_line)
         \\(symbol a)
@@ -61,7 +60,7 @@ test "tokenize enum" {
 test "parse enum" {
     const allocator = std.testing.allocator;
     const source =
-        \\Grade = enum {
+        \\enum Grade {
         \\    a,
         \\    b,
         \\    c,
@@ -76,12 +75,12 @@ test "parse enum" {
     const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(def Grade (enum
+        \\(enum Grade
         \\    a
         \\    b
         \\    c
         \\    d
-        \\    f))
+        \\    f)
         \\
         \\(fn start [] Grade
         \\    (. Grade a))
@@ -92,7 +91,7 @@ test "parse enum" {
 test "type infer enum" {
     const allocator = std.testing.allocator;
     const source =
-        \\Grade = enum {
+        \\enum Grade {
         \\    a,
         \\    b,
         \\    c,
@@ -108,13 +107,13 @@ test "type infer enum" {
     defer allocator.free(actual);
     const expected =
         \\function =
-        \\    name = symbol{ value = start, type = fn() -> enum{ a, b, c, d, f } }
-        \\    return_type = enum{ a, b, c, d, f }
+        \\    name = symbol{ value = start, type = fn() -> Grade }
+        \\    return_type = Grade
         \\    body =
         \\        variant =
         \\            value = a
         \\            index = 0
-        \\            type = enum{ a, b, c, d, f }
+        \\            type = Grade
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -122,7 +121,7 @@ test "type infer enum" {
 test "codegen enum index 0" {
     const allocator = std.testing.allocator;
     const source =
-        \\Grade = enum {
+        \\enum Grade {
         \\    a,
         \\    b,
         \\    c,
@@ -153,7 +152,7 @@ test "codegen enum index 0" {
 test "codegen enum index 1" {
     const allocator = std.testing.allocator;
     const source =
-        \\Grade = enum {
+        \\enum Grade {
         \\    a,
         \\    b,
         \\    c,
@@ -184,7 +183,7 @@ test "codegen enum index 1" {
 test "codegen enum equality" {
     const allocator = std.testing.allocator;
     const source =
-        \\Grade = enum {
+        \\enum Grade {
         \\    a,
         \\    b,
         \\    c,
@@ -217,7 +216,7 @@ test "codegen enum equality" {
 test "codegen enum passed to function" {
     const allocator = std.testing.allocator;
     const source =
-        \\Grade = enum {
+        \\enum Grade {
         \\    a,
         \\    b,
         \\    c,
