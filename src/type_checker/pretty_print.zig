@@ -48,20 +48,11 @@ pub fn monotype(m: types.MonoType, writer: Writer) !void {
             try monotype(f.return_type.*, writer);
         },
         .array => |a| {
-            switch (a.rank) {
-                1 => {
-                    switch (a.element_type.*) {
-                        .u8 => try writer.writeAll("str"),
-                        else => {
-                            try writer.writeAll("[]");
-                            try monotype(a.element_type.*, writer);
-                        },
-                    }
-                },
+            switch (a.element_type.*) {
+                .u8 => try writer.writeAll("str"),
                 else => {
-                    try writer.writeAll("arr[");
+                    try writer.writeAll("[]");
                     try monotype(a.element_type.*, writer);
-                    try writer.print(", {}]", .{a.rank});
                 },
             }
         },

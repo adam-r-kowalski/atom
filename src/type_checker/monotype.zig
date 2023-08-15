@@ -39,7 +39,6 @@ pub const Call = struct {
 };
 
 pub const Array = struct {
-    rank: u32,
     element_type: *const MonoType,
     span: ?Span,
 };
@@ -131,7 +130,7 @@ pub fn withSpan(monotype: MonoType, s: Span) MonoType {
             .return_type = c.return_type,
             .span = s,
         } },
-        .array => |a| .{ .array = .{ .rank = a.rank, .element_type = a.element_type, .span = s } },
+        .array => |a| .{ .array = .{ .element_type = a.element_type, .span = s } },
         .enumeration => |e| .{ .enumeration = .{ .variants = e.variants, .span = s } },
         .enumeration_instance => |e| .{ .enumeration_instance = .{ .name = e.name, .span = s } },
         .structure => |st| .{ .structure = .{ .fields = st.fields, .order = st.order, .span = s } },

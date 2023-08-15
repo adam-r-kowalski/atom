@@ -74,7 +74,6 @@ pub fn expressionToMonoType(allocator: Allocator, scope: types.Scope, builtins: 
                 const element_type = try allocator.create(MonoType);
                 element_type.* = .{ .u8 = .{ .span = null } };
                 return .{ .array = .{
-                    .rank = 1,
                     .element_type = element_type,
                     .span = s.span,
                 } };
@@ -107,7 +106,6 @@ pub fn expressionToMonoType(allocator: Allocator, scope: types.Scope, builtins: 
             const element_type = try allocator.create(MonoType);
             element_type.* = try expressionToMonoType(allocator, scope, builtins, a.of.*);
             return .{ .array = .{
-                .rank = 1,
                 .element_type = element_type,
                 .span = a.span,
             } };
@@ -162,7 +160,7 @@ fn string(context: Context, s: parser.types.String) !types.String {
     return types.String{
         .value = s.value,
         .span = s.span,
-        .type = .{ .array = .{ .rank = 1, .element_type = element_type, .span = s.span } },
+        .type = .{ .array = .{ .element_type = element_type, .span = s.span } },
     };
 }
 
@@ -511,7 +509,6 @@ fn callEmpty(context: Context, c: parser.types.Call) !types.Expression {
         .arguments = arguments,
         .span = c.span,
         .type = .{ .array = .{
-            .rank = 1,
             .element_type = element_type,
             .span = c.span,
         } },
@@ -825,7 +822,6 @@ fn array(context: Context, a: parser.types.Array) !types.Array {
         .expressions = expressions,
         .span = a.span,
         .type = .{ .array = .{
-            .rank = 1,
             .element_type = element_type,
             .span = a.span,
         } },
@@ -844,7 +840,7 @@ fn index(context: Context, i: parser.types.Index) !types.Index {
     try context.constraints.equal.appendSlice(&.{
         .{
             .left = typeOf(expr.*),
-            .right = .{ .array = .{ .rank = 1, .element_type = element_type, .span = null } },
+            .right = .{ .array = .{ .element_type = element_type, .span = null } },
         },
         .{
             .left = typeOf(indices[0]),
@@ -870,7 +866,7 @@ fn templateLiteral(context: Context, t: parser.types.TemplateLiteral) !types.Tem
     }
     const element_type = try context.allocator.create(MonoType);
     element_type.* = .{ .u8 = .{ .span = null } };
-    const mono = .{ .array = .{ .rank = 1, .element_type = element_type, .span = t.span } };
+    const mono = .{ .array = .{ .element_type = element_type, .span = t.span } };
     if (t.function) |f| {
         const argument_types = try context.allocator.alloc(monotype.Argument, t.arguments.len);
         for (arguments, argument_types) |a, *arg_type| {

@@ -24,7 +24,7 @@ fn exactEqual(a: types.MonoType, b: types.MonoType) bool {
             else => return false,
         },
         .array => |a1| switch (b) {
-            .array => |a2| return a1.rank == a2.rank and exactEqual(a1.element_type.*, a2.element_type.*),
+            .array => |a2| return exactEqual(a1.element_type.*, a2.element_type.*),
             else => return false,
         },
         .enumeration => |e1| switch (b) {
@@ -72,8 +72,8 @@ pub fn set(s: *types.Substitution, t: types.TypeVar, m: types.MonoType, errors: 
                 switch (result.value_ptr.*) {
                     .typevar => |t1| try set(s, t1, m, errors),
                     .array => |a2| {
-                        if (a1.rank != a2.rank) return error.CompileError;
-                        try equalConstraint(.{ .left = a1.element_type.*, .right = a2.element_type.* }, s, errors);
+                        const constraint = .{ .left = a1.element_type.*, .right = a2.element_type.* };
+                        try equalConstraint(constraint, s, errors);
                     },
                     else => return error.CompileError,
                 }
@@ -162,10 +162,6 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
         return;
     }
     if (left_tag == .array and right_tag == .array) {
-        if (equal.left.array.rank != equal.right.array.rank) {
-            try errors.type_mismatch.append(.{ .left = equal.left, .right = equal.right });
-            return error.CompileError;
-        }
         const constraint = types.EqualConstraint{
             .left = equal.left.array.element_type.*,
             .right = equal.right.array.element_type.*,

@@ -29,7 +29,6 @@ fn monotype(allocator: Allocator, sub: types.Substitution, m: MonoType) !MonoTyp
             const element_type = try allocator.create(MonoType);
             element_type.* = try monotype(allocator, sub, a.element_type.*);
             return .{ .array = .{
-                .rank = a.rank,
                 .element_type = element_type,
                 .span = a.span,
             } };
