@@ -149,6 +149,12 @@ pub fn array(a: types.Array, indent: Indent, writer: Writer) !void {
     try writer.writeAll("]");
 }
 
+pub fn arrayType(a: types.ArrayType, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("(array ");
+    try expression(a.of.*, indent, writer);
+    try writer.writeAll(")");
+}
+
 pub fn branch(b: types.Branch, indent: Indent, writer: Writer) !void {
     try writer.writeAll("(branch");
     for (b.arms) |arm| {
@@ -257,6 +263,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .group => |g| try expression(g.expression.*, indent, writer),
         .block => |b| try block(b, indent, writer),
         .array => |a| try array(a, indent, writer),
+        .array_type => |a| try arrayType(a, indent, writer),
         .branch => |b| try branch(b, indent, writer),
         .call => |c| try call(c, indent, writer),
         .decorator => |d| try decorator(d, indent, writer),

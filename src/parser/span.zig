@@ -20,6 +20,7 @@ pub fn expression(e: types.Expression) types.Span {
         .group => |g| g.span,
         .block => |b| b.span,
         .array => |a| a.span,
+        .array_type => |a| a.span,
         .branch => |b| b.span,
         .call => |c| c.span,
         .decorator => |d| d.span,

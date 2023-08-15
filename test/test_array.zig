@@ -4,7 +4,7 @@ const orca = @import("orca");
 test "tokenize array" {
     const allocator = std.testing.allocator;
     const source =
-        \\fn start() -> vec[i32] {
+        \\fn start() -> []i32 {
         \\    [1, 2, 3]
         \\}
     ;
@@ -16,10 +16,9 @@ test "tokenize array" {
         \\(delimiter '(')
         \\(delimiter ')')
         \\(operator ->)
-        \\(symbol vec)
         \\(delimiter '[')
-        \\(symbol i32)
         \\(delimiter ']')
+        \\(symbol i32)
         \\(delimiter '{')
         \\(new_line)
         \\(delimiter '[')
@@ -38,14 +37,14 @@ test "tokenize array" {
 test "parse array" {
     const allocator = std.testing.allocator;
     const source =
-        \\fn start() -> vec[i32] {
+        \\fn start() -> []i32 {
         \\    [1, 2, 3]
         \\}
     ;
     const actual = try orca.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(fn start [] (index vec i32)
+        \\(fn start [] (array i32)
         \\    [
         \\        1
         \\        2
@@ -57,7 +56,7 @@ test "parse array" {
 test "type infer array" {
     const allocator = std.testing.allocator;
     const source =
-        \\fn start() -> vec[i32] {
+        \\fn start() -> []i32 {
         \\    [1, 2, 3]
         \\}
     ;
@@ -81,7 +80,7 @@ test "type infer array" {
 test "codegen array" {
     const allocator = std.testing.allocator;
     const source =
-        \\fn start() -> vec[i32] {
+        \\fn start() -> []i32 {
         \\    [1, 2, 3]
         \\}
     ;

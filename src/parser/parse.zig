@@ -605,6 +605,17 @@ fn index(context: Context, left: types.Expression) !types.Index {
     };
 }
 
+fn arrayType(context: Context, left: types.Expression) !types.ArrayType {
+    const of = try expressionAlloc(withPrecedence(context, DEFINE + 1));
+    return types.ArrayType{
+        .of = of,
+        .span = types.Span{
+            .begin = spanOf(left).begin,
+            .end = spanOf(of.*).end,
+        },
+    };
+}
+
 fn templateLiteral(context: Context, left: ?types.Symbol, t: tokenizer.types.TemplateLiteral) !types.TemplateLiteral {
     if (left) |_| context.tokens.advance();
     const strings = try context.allocator.alloc(types.String, 1);
@@ -672,6 +683,7 @@ const Infix = union(enum) {
     annotate,
     call,
     index,
+    array_type,
     binary_op: types.BinaryOpKind,
     template_literal: tokenizer.types.TemplateLiteral,
     template_literal_begin: tokenizer.types.TemplateLiteralBegin,
@@ -685,6 +697,7 @@ fn precedence(i: Infix) Precedence {
         .annotate => DEFINE,
         .call => CALL,
         .index => CALL,
+        .array_type => CALL,
         .binary_op => |b| switch (b) {
             .add => ADD,
             .subtract => ADD,
@@ -712,6 +725,7 @@ fn associativity(i: Infix) Associativity {
         .annotate => .right,
         .call => .left,
         .index => .left,
+        .array_type => .left,
         .binary_op => |b| switch (b) {
             .add => .left,
             .subtract => .left,
@@ -763,6 +777,10 @@ fn infix(context: Context, left: types.Expression) ?Infix {
                 .symbol => .{ .template_literal_begin = l },
                 else => null,
             },
+            .symbol => switch (left) {
+                .array => .array_type,
+                else => null,
+            },
             else => null,
         };
     }
@@ -777,6 +795,7 @@ fn parseInfix(parser: Infix, context: Context, left: types.Expression) !types.Ex
         .annotate => .{ .define = try annotate(context, left.symbol) },
         .call => .{ .call = try call(context, left) },
         .index => .{ .index = try index(context, left) },
+        .array_type => .{ .array_type = try arrayType(context, left) },
         .binary_op => |kind| .{ .binary_op = try binaryOp(context, left, kind) },
         .template_literal => |t| .{ .template_literal = try templateLiteral(context, left.symbol, t) },
         .template_literal_begin => |t| .{ .template_literal = try templateLiteralBegin(context, left.symbol, t) },

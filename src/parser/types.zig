@@ -58,6 +58,11 @@ pub const Array = struct {
     span: Span,
 };
 
+pub const ArrayType = struct {
+    of: *const Expression,
+    span: Span,
+};
+
 pub const Function = struct {
     name: Symbol,
     parameters: []const Parameter,
@@ -202,6 +207,7 @@ pub const Expression = union(enum) {
     group: Group,
     block: Block,
     array: Array,
+    array_type: ArrayType,
     branch: Branch,
     call: Call,
     decorator: Decorator,

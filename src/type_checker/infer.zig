@@ -103,23 +103,14 @@ pub fn expressionToMonoType(allocator: Allocator, scope: types.Scope, builtins: 
                 .span = p.span,
             } };
         },
-        .index => |i| {
-            switch (i.expression.*) {
-                .symbol => |s| {
-                    if (s.value.eql(builtins.vec)) {
-                        std.debug.assert(i.indices.len == 1);
-                        const element_type = try allocator.create(MonoType);
-                        element_type.* = try expressionToMonoType(allocator, scope, builtins, i.indices[0]);
-                        return .{ .array = .{
-                            .rank = 1,
-                            .element_type = element_type,
-                            .span = s.span,
-                        } };
-                    }
-                    std.debug.panic("\nCannot convert index {} to mono type", .{s.value});
-                },
-                else => |k| std.debug.panic("\nCannot convert index {} to mono type", .{k}),
-            }
+        .array_type => |a| {
+            const element_type = try allocator.create(MonoType);
+            element_type.* = try expressionToMonoType(allocator, scope, builtins, a.of.*);
+            return .{ .array = .{
+                .rank = 1,
+                .element_type = element_type,
+                .span = a.span,
+            } };
         },
         else => std.debug.panic("\nCannot convert expression {} to mono type", .{e}),
     }
