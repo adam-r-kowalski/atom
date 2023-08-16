@@ -115,11 +115,11 @@ You can add a comment by starting the line with a hash (`#`).
 Here's an example:
 
 ```orca
-# This is a single line comment
+// This is a single line comment
 
-# This function calculates the square of a number
+// This function calculates the square of a number
 fn square(x: i32) -> i32 {
-    x * x # Comments can come at the end of the line
+    x * x // Comments can come at the end of the line
 }
 ```
 
@@ -189,7 +189,7 @@ Orca supports pattern matching, which is a way of checking a given sequence of t
 It's a powerful tool for working with complex data structures.
 
 ```orca
-# pattern matching is done with `match expression`
+// pattern matching is done with `match expression`
 fn sum(xs: []i32) -> i32 {
     match xs {
         [] { 0 }
@@ -235,7 +235,7 @@ it binds the variables `width` and `height` to the respective values in the pass
 Another example of destructuring can be found in array pattern matching:
 
 ```orca
-# pattern matching with destructuring
+// pattern matching with destructuring
 fn sum(xs: []i32) -> i32 {
     match xs {
         [] { 0 }
@@ -261,11 +261,11 @@ Here's an example:
 x = 5
 
 if true {
-    x = 10 # This x shadows the x declared outside the if block
-    log(x) # This will print 10
+    x = 10 // This x shadows the x declared outside the if block
+    log(x) // This will print 10
 }
 
-log(x) # This will print 5 because the shadowed x was only valid within the if block
+log(x) // This will print 5 because the shadowed x was only valid within the if block
 ```
 
 In this example, `x` is shadowed within the `if` block. The `log` function within the block prints the shadowed `x`,
@@ -286,7 +286,7 @@ fn double(x: i32) -> i32 {
     x * 2
 }
 
-# call the log function from Orca
+// call the log function from Orca
 fn start() -> void {
     log("hello world")
 }
@@ -325,12 +325,12 @@ fn start() -> void {
 Orca provides for expressions to efficiently iterate through an array and build up a new one.
 
 ```orca
-# Compute the dot product of two vectors
+// Compute the dot product of two vectors
 fn dot(a: []f32, b: []f32) -> f32 {
     sum(for i { a[i] * b[i] })
 }
 
-# Perform matrix multiplication
+// Perform matrix multiplication
 fn matmul(a: [][]f32, b: [][]f32) -> [][]f32 {
     for i, j, k { sum(a[i][k] * b[k][j]) }
 }
