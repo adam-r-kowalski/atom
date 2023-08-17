@@ -1,5 +1,5 @@
 const std = @import("std");
-const orca = @import("orca");
+const wave = @import("wave");
 
 test "tokenize struct" {
     const allocator = std.testing.allocator;
@@ -16,7 +16,7 @@ test "tokenize struct" {
         \\    }
         \\}
     ;
-    const actual = try orca.testing.tokenize(allocator, source);
+    const actual = try wave.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(keyword struct)
@@ -77,7 +77,7 @@ test "parse struct" {
         \\    }
         \\}
     ;
-    const actual = try orca.testing.parse(allocator, source);
+    const actual = try wave.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(struct Person
@@ -108,7 +108,7 @@ test "type infer struct" {
         \\    }
         \\}
     ;
-    const actual = try orca.testing.typeInfer(allocator, source, "start");
+    const actual = try wave.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -136,7 +136,7 @@ test "codegen struct" {
         \\    }
         \\}
     ;
-    const actual = try orca.testing.codegen(allocator, source);
+    const actual = try wave.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module

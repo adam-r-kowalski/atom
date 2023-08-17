@@ -1,5 +1,5 @@
 const std = @import("std");
-const orca = @import("orca");
+const wave = @import("wave");
 
 test "tokenize import" {
     const allocator = std.testing.allocator;
@@ -7,7 +7,7 @@ test "tokenize import" {
         \\@import("console", "log")
         \\fn log(msg: str) -> void
     ;
-    const actual = try orca.testing.tokenize(allocator, source);
+    const actual = try wave.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(attribute @import)
@@ -36,7 +36,7 @@ test "parse import" {
         \\@import("console", "log")
         \\fn log(msg: str) -> void
     ;
-    const actual = try orca.testing.parse(allocator, source);
+    const actual = try wave.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(@import "console" "log"
@@ -51,7 +51,7 @@ test "parse import with no arguments" {
         \\@import
         \\fn log(msg: str) -> void
     ;
-    const actual = try orca.testing.parse(allocator, source);
+    const actual = try wave.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(@import
@@ -70,7 +70,7 @@ test "type infer import" {
         \\    print("hello world")
         \\}
     ;
-    const actual = try orca.testing.typeInfer(allocator, source, "start");
+    const actual = try wave.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\foreign_import =
@@ -108,7 +108,7 @@ test "type infer import with no arguments" {
         \\    print("hello world")
         \\}
     ;
-    const actual = try orca.testing.typeInfer(allocator, source, "start");
+    const actual = try wave.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\foreign_import =
@@ -146,7 +146,7 @@ test "codegen import" {
         \\    print(42)
         \\}
     ;
-    const actual = try orca.testing.codegen(allocator, source);
+    const actual = try wave.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -175,7 +175,7 @@ test "codegen import with no arguments" {
         \\    print(42)
         \\}
     ;
-    const actual = try orca.testing.codegen(allocator, source);
+    const actual = try wave.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -202,7 +202,7 @@ test "tokenize export" {
         \\    x * 2
         \\}
     ;
-    const actual = try orca.testing.tokenize(allocator, source);
+    const actual = try wave.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(attribute @export)
@@ -238,7 +238,7 @@ test "parse export" {
         \\    x * 2
         \\}
     ;
-    const actual = try orca.testing.parse(allocator, source);
+    const actual = try wave.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(@export "double"
@@ -256,7 +256,7 @@ test "parse export with no arguments" {
         \\    x * 2
         \\}
     ;
-    const actual = try orca.testing.parse(allocator, source);
+    const actual = try wave.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(@export
@@ -274,7 +274,7 @@ test "type infer export" {
         \\    x * 2
         \\}
     ;
-    const actual = try orca.testing.typeInfer(allocator, source, "double");
+    const actual = try wave.testing.typeInfer(allocator, source, "double");
     defer allocator.free(actual);
     const expected =
         \\foreign_export =
@@ -305,7 +305,7 @@ test "type infer export with no argument" {
         \\    x * 2
         \\}
     ;
-    const actual = try orca.testing.typeInfer(allocator, source, "double");
+    const actual = try wave.testing.typeInfer(allocator, source, "double");
     defer allocator.free(actual);
     const expected =
         \\foreign_export =
@@ -336,7 +336,7 @@ test "codegen foreign export" {
         \\    x * 2
         \\}
     ;
-    const actual = try orca.testing.codegen(allocator, source);
+    const actual = try wave.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -362,7 +362,7 @@ test "codegen foreign export with no arguments" {
         \\    x * 2
         \\}
     ;
-    const actual = try orca.testing.codegen(allocator, source);
+    const actual = try wave.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -394,7 +394,7 @@ test "codegen hello world" {
         \\    fd_write(stdout, text, 1, 200)
         \\}
     ;
-    const actual = try orca.testing.codegen(allocator, source);
+    const actual = try wave.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -468,7 +468,7 @@ test "codegen echo" {
         \\    _ = fd_write(stdout, text, 1, mut nwritten)
         \\}
     ;
-    const actual = try orca.testing.codegen(allocator, source);
+    const actual = try wave.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module

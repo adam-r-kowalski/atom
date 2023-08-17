@@ -1,5 +1,5 @@
 const std = @import("std");
-const orca = @import("orca");
+const wave = @import("wave");
 
 test "type infer sqrt f32" {
     const allocator = std.testing.allocator;
@@ -8,7 +8,7 @@ test "type infer sqrt f32" {
         \\    sqrt(x)
         \\}
     ;
-    const actual = try orca.testing.typeInfer(allocator, source, "start");
+    const actual = try wave.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -35,7 +35,7 @@ test "codegen sqrt f32" {
         \\    sqrt(x)
         \\}
     ;
-    const actual = try orca.testing.codegen(allocator, source);
+    const actual = try wave.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module

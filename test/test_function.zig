@@ -1,10 +1,10 @@
 const std = @import("std");
-const orca = @import("orca");
+const wave = @import("wave");
 
 test "tokenize function definition" {
     const allocator = std.testing.allocator;
     const source = "fn double(x: i32) -> i32 { x + x }";
-    const actual = try orca.testing.tokenize(allocator, source);
+    const actual = try wave.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(keyword fn)
@@ -32,7 +32,7 @@ test "tokenize function definition with new lines and tabs" {
         \\    x + x
         \\}
     ;
-    const actual = try orca.testing.tokenize(allocator, source);
+    const actual = try wave.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(keyword fn)
@@ -58,7 +58,7 @@ test "tokenize function definition with new lines and tabs" {
 test "parse function definition" {
     const allocator = std.testing.allocator;
     const source = "fn double(x: i32) -> i32 { x + x }";
-    const actual = try orca.testing.parse(allocator, source);
+    const actual = try wave.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(fn double [(x i32)] i32
@@ -70,7 +70,7 @@ test "parse function definition" {
 test "parse multiple parameters" {
     const allocator = std.testing.allocator;
     const source = "fn add(x: i32, y: i32) -> i32 { x + y }";
-    const actual = try orca.testing.parse(allocator, source);
+    const actual = try wave.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(fn add [(x i32) (y i32)] i32
@@ -88,7 +88,7 @@ test "tokenize multi line function" {
         \\    x_squared + y_squared
         \\}
     ;
-    const actual = try orca.testing.tokenize(allocator, source);
+    const actual = try wave.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(keyword fn)
@@ -136,7 +136,7 @@ test "parse multi line function" {
         \\    x_squared + y_squared
         \\}
     ;
-    const actual = try orca.testing.parse(allocator, source);
+    const actual = try wave.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(fn sum_squares [(x i32) (y i32)] i32
@@ -151,7 +151,7 @@ test "parse multi line function" {
 test "type infer function body" {
     const allocator = std.testing.allocator;
     const source = "fn id(x: i32) -> i32 { x }";
-    const actual = try orca.testing.typeInfer(allocator, source, "id");
+    const actual = try wave.testing.typeInfer(allocator, source, "id");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -175,7 +175,7 @@ test "codegen drops unused returns" {
         \\    double(4)
         \\}
     ;
-    const actual = try orca.testing.codegen(allocator, source);
+    const actual = try wave.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
