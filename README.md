@@ -225,7 +225,7 @@ fn area({width, height}: Square) -> f32 {
 }
 
 test "area of square" {
-    assert(area({ width: 10, height: 5 }) == 50)
+    assert(area(Square(width=10, height=5)) == 50)
 }
 ```
 
@@ -359,10 +359,10 @@ fn sse(model: Linear, x: []f64, y: []f64) -> f64 {
 }
 
 fn update(model: Linear, gradient: Linear, learning_rate: f64) -> Linear {
-    {
-        m: model.m - gradient.m * learning_rate,
-        b: model.b - gradient.b * learning_rate,
-    }
+    Linear(
+        m=model.m - gradient.m * learning_rate,
+        b=model.b - gradient.b * learning_rate,
+    )
 }
 
 fn step(model: Linear, learning_rate: f64, x: []f64, y: []f64) -> Linear {
@@ -371,7 +371,7 @@ fn step(model: Linear, learning_rate: f64, x: []f64, y: []f64) -> Linear {
 }
 
 test "gradient descent" {
-    model = { m: 1.0, b: 0.0 }
+    model = Linear(m=1.0, b=0.0)
     learning_rate = 0.01
     x = [1.0, 2.0, 3.0, 4.0]
     y = [2.0, 4.0, 6.0, 8.0]
@@ -394,14 +394,8 @@ struct Customer {
 }
 
 customers: []Customer = [
-    {
-        name: "Joe",
-        age: 30
-    },
-    {
-        name: "Sally",
-        age: 27,
-    }
+    Customer(name="Joe", age=30),
+    Customer(name="Sally", age=27)
 ]
 
 fn customer_info(customer: Customer) -> str {
