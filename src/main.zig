@@ -3,6 +3,10 @@ const wasmer = @cImport(@cInclude("wasmer.h"));
 const Allocator = std.mem.Allocator;
 const wave = @import("wave");
 
+const language_name = "wave";
+const language_icon = "🌊";
+const extension_length = language_name.len + 1;
+
 const List = std.ArrayList;
 
 const Flags = struct {
@@ -16,9 +20,9 @@ const Flags = struct {
                 \\
                 \\Correct usage:
                 \\
-                \\wave <input file>.wave
-                \\this will compile and run the wave program using the wasmer runtime
-            , .{});
+                \\{s} <input file>.{s}
+                \\this will compile and run the {s} program using the wasmer runtime
+            , .{ language_name, language_name, language_name });
         }
         const file_name = std.mem.span(std.os.argv[1]);
         var map = std.StringHashMap(void).init(allocator);
@@ -30,9 +34,6 @@ const Flags = struct {
         return self.map.contains(flag);
     }
 };
-
-const language_name = "wave";
-const extension_length = language_name.len + 1;
 
 fn writeWat(allocator: Allocator, flags: Flags, wat_string: []const u8) !void {
     const file_name_no_suffix = flags.file_name[0 .. flags.file_name.len - extension_length];
@@ -196,7 +197,7 @@ fn compileAndRun(allocator: Allocator, intern: *wave.interner.Intern, errors: *w
     const writer = stdout.writer();
     switch (value) {
         .void => {},
-        else => try writer.print("🐐 {}", .{value}),
+        else => try writer.print("{s} {}", .{ language_icon, value }),
     }
 }
 

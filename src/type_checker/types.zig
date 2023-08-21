@@ -232,13 +232,6 @@ pub const Field = struct {
 
 pub const Fields = Map(Interned, Field);
 
-pub const StructLiteral = struct {
-    fields: Fields,
-    order: []const Interned,
-    type: MonoType,
-    span: Span,
-};
-
 pub const Array = struct {
     expressions: []const Expression,
     type: MonoType,
@@ -284,7 +277,6 @@ pub const Expression = union(enum) {
     foreign_export: ForeignExport,
     convert: Convert,
     undefined: Undefined,
-    struct_literal: StructLiteral,
     array: Array,
     index: Index,
     template_literal: TemplateLiteral,

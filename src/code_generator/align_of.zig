@@ -36,7 +36,6 @@ pub fn monotype(m: MonoType) u32 {
         .bool => 1,
         .enumeration => |e| enumeration(e),
         .structure => |s| structure(s),
-        .structure_literal => |s| structureLiteral(s),
         .array => 4,
         else => |k| std.debug.panic("\nSize of {} is unknown\n", .{k}),
     };

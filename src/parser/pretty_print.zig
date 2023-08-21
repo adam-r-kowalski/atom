@@ -259,7 +259,6 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .prototype => |p| try prototype(p, indent, writer),
         .enumeration => |en| try enumeration(en, indent, writer),
         .structure => |s| try structure(s, indent, writer),
-        .struct_literal => |s| try structLiteral(s, indent, writer),
         .binary_op => |b| try binaryOp(b, indent, writer),
         .group => |g| try expression(g.expression.*, indent, writer),
         .block => |b| try block(b, indent, writer),

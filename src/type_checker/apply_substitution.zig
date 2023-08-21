@@ -39,22 +39,6 @@ fn monotype(allocator: Allocator, sub: types.Substitution, m: MonoType) !MonoTyp
             }
             return m;
         },
-        .structure_literal => |s| {
-            var fields = Fields.init(allocator);
-            for (s.order) |o| {
-                const field = s.fields.get(o).?;
-                const value = try monotype(allocator, sub, field);
-                try fields.putNoClobber(o, value);
-            }
-            const structure = try allocator.create(MonoType);
-            structure.* = try monotype(allocator, sub, s.structure.*);
-            return .{ .structure_literal = .{
-                .fields = fields,
-                .order = s.order,
-                .span = s.span,
-                .structure = structure,
-            } };
-        },
         else => return m,
     }
 }
@@ -392,7 +376,6 @@ pub fn expression(allocator: Allocator, sub: types.Substitution, e: types.Expres
         .foreign_export => |f| .{ .foreign_export = try foreignExport(allocator, sub, f) },
         .convert => e,
         .undefined => |u| .{ .undefined = try undef(allocator, sub, u) },
-        .struct_literal => |s| .{ .struct_literal = try structLiteral(allocator, sub, s) },
         .array => |a| .{ .array = try array(allocator, sub, a) },
         .index => |i| .{ .index = try index(allocator, sub, i) },
         .template_literal => |t| .{ .template_literal = try templateLiteral(allocator, sub, t) },

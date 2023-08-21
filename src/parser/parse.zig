@@ -420,7 +420,6 @@ fn prefix(context: Context) !types.Expression {
         .enum_ => |e| return .{ .enumeration = try enumeration(context, e) },
         .struct_ => |s| return .{ .structure = try structure(context, s) },
         .block => |b| return .{ .block = try explicitBlock(context, b) },
-        .left_brace => |l| return .{ .struct_literal = try structLiteral(context, l.span.begin) },
         .left_bracket => |l| return .{ .array = try array(context, l.span.begin) },
         .mut => |m| return .{ .define = try mutable(context, m.span.begin) },
         .undefined => |u| return .{ .undefined = u },

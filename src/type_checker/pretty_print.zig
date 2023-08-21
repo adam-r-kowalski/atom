@@ -59,7 +59,6 @@ pub fn monotype(m: types.MonoType, writer: Writer) !void {
         .enumeration => |e| try writer.writeAll(e.name.string()),
         .enumeration_instance => |e| try writer.writeAll(e.name.string()),
         .structure => |s| try writer.writeAll(s.name.string()),
-        .structure_literal => |s| try monotype(s.structure.*, writer),
     }
 }
 
@@ -396,13 +395,6 @@ pub fn variant(v: types.Variant, indent: Indent, writer: Writer) !void {
     try monotype(v.type, writer);
 }
 
-pub fn structLiteral(s: types.StructLiteral, indent: Indent, writer: Writer) !void {
-    try writer.writeAll("struct_literal =");
-    try newlineAndIndent(indent + 1, writer);
-    try writer.writeAll("type = ");
-    try monotype(s.type, writer);
-}
-
 pub fn array(a: types.Array, indent: Indent, writer: Writer) !void {
     try writer.writeAll("array =");
     try newlineAndIndent(indent + 1, writer);
@@ -485,7 +477,6 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .convert => |c| try convert(c, indent, writer),
         .undefined => |u| try undefinedKeyword(u, indent, writer),
         .variant => |v| try variant(v, indent, writer),
-        .struct_literal => |s| try structLiteral(s, indent, writer),
         .array => |a| try array(a, indent, writer),
         .index => |i| try index(i, indent, writer),
         .template_literal => |t| try templateLiteral(t, indent, writer),

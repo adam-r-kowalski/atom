@@ -203,7 +203,6 @@ pub const Expression = union(enum) {
     function: Function,
     enumeration: Enumeration,
     structure: Structure,
-    struct_literal: StructLiteral,
     prototype: Prototype,
     binary_op: BinaryOp,
     group: Group,

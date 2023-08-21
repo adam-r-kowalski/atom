@@ -27,6 +27,10 @@ fn exactEqual(a: types.MonoType, b: types.MonoType) bool {
             .array => |a2| return exactEqual(a1.element_type.*, a2.element_type.*),
             else => return false,
         },
+        .structure => |s1| switch (b) {
+            .structure => |s2| return s1.name.eql(s2.name),
+            else => return false,
+        },
         .enumeration => |e1| switch (b) {
             .enumeration => |e2| {
                 for (e1.variants, e2.variants) |v1, v2| if (!v1.eql(v2)) return false;
@@ -38,7 +42,6 @@ fn exactEqual(a: types.MonoType, b: types.MonoType) bool {
             .enumeration_instance => |e2| return e1.name.eql(e2.name),
             else => return false,
         },
-        .structure_literal => return false,
         else => |k| std.debug.panic("Unhandled type: {}\n", .{k}),
     }
 }
@@ -49,22 +52,9 @@ pub fn set(s: *types.Substitution, t: types.TypeVar, m: types.MonoType, errors: 
         if (exactEqual(result.value_ptr.*, m)) return;
         switch (m) {
             .typevar => |t1| try set(s, t1, result.value_ptr.*, errors),
-            .structure => |s1| {
+            .structure => {
                 switch (result.value_ptr.*) {
                     .typevar => |t1| try set(s, t1, m, errors),
-                    .structure_literal => |s2| {
-                        if (s1.order.len != s2.order.len) return error.CompileError;
-                        for (s1.order) |o| {
-                            const s1_field = s1.fields.get(o).?;
-                            if (s2.fields.get(o)) |s2_field| {
-                                try equalConstraint(.{ .left = s1_field, .right = s2_field }, s, errors);
-                            } else {
-                                return error.CompileError;
-                            }
-                        }
-                        try equalConstraint(.{ .left = m, .right = s2.structure.* }, s, errors);
-                        return;
-                    },
                     else => return error.CompileError,
                 }
             },
@@ -156,6 +146,53 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
         }
         const constraint = types.EqualConstraint{
             .left = func.return_type.*,
+            .right = call.return_type.*,
+        };
+        try equalConstraint(constraint, s, errors);
+        return;
+    }
+    if (left_tag == .structure and right_tag == .call) {
+        const call = equal.right.call;
+        const total_arguments = call.arguments.len + call.named_arguments.count();
+        const structure = equal.left.structure;
+        if (structure.order.len != total_arguments)
+            std.debug.panic("\nFunction arity mismatch: {} != {}\n", .{
+                structure.order.len,
+                total_arguments,
+            });
+        for (structure.order[0..call.arguments.len], call.arguments) |name, right| {
+            const left = structure.fields.get(name).?;
+            const constraint = types.EqualConstraint{ .left = left, .right = right.type };
+            try equalConstraint(constraint, s, errors);
+            if (right.mutable) {
+                try errors.mutability_mismatch.append(.{
+                    .left = .{ .mutable = false, .span = null },
+                    .right = .{ .mutable = right.mutable, .span = monotype.span(right.type) },
+                });
+                return error.CompileError;
+            }
+        }
+        var iterator = call.named_arguments.iterator();
+        while (iterator.next()) |entry| {
+            const right_name = entry.key_ptr.*;
+            for (structure.order[call.arguments.len..]) |left_name| {
+                if (left_name.eql(right_name)) {
+                    const left = structure.fields.get(left_name).?;
+                    const right = entry.value_ptr.*;
+                    const constraint = types.EqualConstraint{ .left = left, .right = right.type };
+                    try equalConstraint(constraint, s, errors);
+                    if (right.mutable) {
+                        try errors.mutability_mismatch.append(.{
+                            .left = .{ .mutable = false, .span = null },
+                            .right = .{ .mutable = right.mutable, .span = monotype.span(right.type) },
+                        });
+                        return error.CompileError;
+                    }
+                }
+            }
+        }
+        const constraint = types.EqualConstraint{
+            .left = equal.left,
             .right = call.return_type.*,
         };
         try equalConstraint(constraint, s, errors);

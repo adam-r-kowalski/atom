@@ -10,10 +10,7 @@ test "tokenize struct" {
         \\}
         \\
         \\fn start() -> Person {
-        \\    {
-        \\        name: "Bob",
-        \\        age: 42,
-        \\    }
+        \\    Person(name="Bob", age=42)
         \\}
     ;
     const actual = try wave.testing.tokenize(allocator, source);
@@ -43,19 +40,16 @@ test "tokenize struct" {
         \\(symbol Person)
         \\(delimiter '{')
         \\(new_line)
-        \\(delimiter '{')
-        \\(new_line)
+        \\(symbol Person)
+        \\(delimiter '(')
         \\(symbol name)
-        \\(operator :)
+        \\(operator =)
         \\(string "Bob")
         \\(delimiter ',')
-        \\(new_line)
         \\(symbol age)
-        \\(operator :)
+        \\(operator =)
         \\(int 42)
-        \\(delimiter ',')
-        \\(new_line)
-        \\(delimiter '}')
+        \\(delimiter ')')
         \\(new_line)
         \\(delimiter '}')
     ;
@@ -71,10 +65,7 @@ test "parse struct" {
         \\}
         \\
         \\fn start() -> Person {
-        \\    {
-        \\        name: "Bob",
-        \\        age: 42
-        \\    }
+        \\    Person(name="Bob", age=42)
         \\}
     ;
     const actual = try wave.testing.parse(allocator, source);
@@ -85,10 +76,7 @@ test "parse struct" {
         \\    age u8)
         \\
         \\(fn start [] Person
-        \\    {
-        \\        name "Bob"
-        \\        age 42
-        \\    })
+        \\    (Person :name "Bob" :age 42))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
@@ -102,10 +90,7 @@ test "type infer struct" {
         \\}
         \\
         \\fn start() -> Person {
-        \\    {
-        \\        name: "Bob",
-        \\        age: 42,
-        \\    }
+        \\    Person(name="Bob", age=42)
         \\}
     ;
     const actual = try wave.testing.typeInfer(allocator, source, "start");
@@ -115,7 +100,17 @@ test "type infer struct" {
         \\    name = symbol{ value = start, type = fn() -> Person }
         \\    return_type = Person
         \\    body =
-        \\        struct_literal =
+        \\        call =
+        \\            function = symbol{ value = Person, type = Person }
+        \\            named_arguments =
+        \\                argument =
+        \\                    name = name
+        \\                    mutable = false
+        \\                    value = string{ value = "Bob", type = str }
+        \\                argument =
+        \\                    name = age
+        \\                    mutable = false
+        \\                    value = int{ value = 42, type = u8 }
         \\            type = Person
     ;
     try std.testing.expectEqualStrings(expected, actual);
@@ -130,10 +125,7 @@ test "codegen struct" {
         \\}
         \\
         \\fn start() -> Person {
-        \\    {
-        \\        name: "Bob",
-        \\        age: 42,
-        \\    }
+        \\    Person(name="Bob", age=42)
         \\}
     ;
     const actual = try wave.testing.codegen(allocator, source);
@@ -159,33 +151,37 @@ test "codegen struct" {
         \\
         \\    (func $start (result i32)
         \\        (local $0 i32)
-        \\        (local $1 i32)
+        \\        (local.set $0
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (call $Person
+        \\            (block (result i32)
+        \\                (i32.store
+        \\                    (local.get $0)
+        \\                    (i32.const 0))
+        \\                (i32.store
+        \\                    (i32.add
+        \\                        (local.get $0)
+        \\                        (i32.const 4))
+        \\                    (i32.const 3))
+        \\                (local.get $0))
+        \\            (i32.const 42)))
+        \\
+        \\    (func $Person (param $name i32) (param $age i32) (result i32)
+        \\        (local $0 i32)
         \\        (local.set $0
         \\            (call $core/alloc
         \\                (i32.const 12)))
-        \\        (local.set $1
-        \\            (call $core/alloc
-        \\                (i32.const 8)))
-        \\        (block (result i32)
-        \\            (memory.copy
+        \\        (memory.copy
+        \\            (local.get $0)
+        \\            (local.get $name)
+        \\            (i32.const 8))
+        \\        (i32.store8
+        \\            (i32.add
         \\                (local.get $0)
-        \\                (block (result i32)
-        \\                    (i32.store
-        \\                        (local.get $1)
-        \\                        (i32.const 0))
-        \\                    (i32.store
-        \\                        (i32.add
-        \\                            (local.get $1)
-        \\                            (i32.const 4))
-        \\                        (i32.const 3))
-        \\                    (local.get $1))
         \\                (i32.const 8))
-        \\            (i32.store8
-        \\                (i32.add
-        \\                    (local.get $0)
-        \\                    (i32.const 8))
-        \\                (i32.const 42))
-        \\            (local.get $0)))
+        \\            (local.get $age))
+        \\        (local.get $0))
         \\
         \\    (export "_start" (func $start)))
     ;
