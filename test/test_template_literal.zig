@@ -292,20 +292,20 @@ test "codegen template literal" {
         \\                (local.get $size))))
         \\
         \\    (func $start (result i32)
-        \\        (local $0 i32)
-        \\        (local.set $0
-        \\            (call $core/alloc
-        \\                (i32.const 8)))
-        \\        (block (result i32)
-        \\            (i32.store
+        \\        (call $str
+        \\            (i32.const 0)
+        \\            (i32.const 21)))
+        \\
+        \\    (func $str (param $ptr i32) (param $len i32) (result i32)
+        \\        (i32.store
+        \\            (local.get $0)
+        \\            (local.get $ptr))
+        \\        (i32.store
+        \\            (i32.add
         \\                (local.get $0)
-        \\                (i32.const 0))
-        \\            (i32.store
-        \\                (i32.add
-        \\                    (local.get $0)
-        \\                    (i32.const 4))
-        \\                (i32.const 21))
-        \\            (local.get $0)))
+        \\                (i32.const 4))
+        \\            (local.get $len))
+        \\        (local.get $0))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -347,20 +347,20 @@ test "codegen template literal with new lines" {
         \\                (local.get $size))))
         \\
         \\    (func $start (result i32)
-        \\        (local $0 i32)
-        \\        (local.set $0
-        \\            (call $core/alloc
-        \\                (i32.const 8)))
-        \\        (block (result i32)
-        \\            (i32.store
+        \\        (call $str
+        \\            (i32.const 0)
+        \\            (i32.const 114)))
+        \\
+        \\    (func $str (param $ptr i32) (param $len i32) (result i32)
+        \\        (i32.store
+        \\            (local.get $0)
+        \\            (local.get $ptr))
+        \\        (i32.store
+        \\            (i32.add
         \\                (local.get $0)
-        \\                (i32.const 0))
-        \\            (i32.store
-        \\                (i32.add
-        \\                    (local.get $0)
-        \\                    (i32.const 4))
-        \\                (i32.const 114))
-        \\            (local.get $0)))
+        \\                (i32.const 4))
+        \\            (local.get $len))
+        \\        (local.get $0))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -396,20 +396,20 @@ test "codegen template literal with string" {
         \\                (local.get $size))))
         \\
         \\    (func $start (result i32)
-        \\        (local $0 i32)
-        \\        (local.set $0
-        \\            (call $core/alloc
-        \\                (i32.const 8)))
-        \\        (block (result i32)
-        \\            (i32.store
+        \\        (call $str
+        \\            (i32.const 0)
+        \\            (i32.const 8)))
+        \\
+        \\    (func $str (param $ptr i32) (param $len i32) (result i32)
+        \\        (i32.store
+        \\            (local.get $0)
+        \\            (local.get $ptr))
+        \\        (i32.store
+        \\            (i32.add
         \\                (local.get $0)
-        \\                (i32.const 0))
-        \\            (i32.store
-        \\                (i32.add
-        \\                    (local.get $0)
-        \\                    (i32.const 4))
-        \\                (i32.const 8))
-        \\            (local.get $0)))
+        \\                (i32.const 4))
+        \\            (local.get $len))
+        \\        (local.get $0))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -449,123 +449,101 @@ test "codegen template literal with interpolation" {
         \\
         \\    (func $start (result i32)
         \\        (local $name i32)
+        \\        (local $1 i32)
         \\        (local $2 i32)
         \\        (local $3 i32)
         \\        (local $4 i32)
-        \\        (local $7 i32)
-        \\        (local $8 i32)
-        \\        (local $9 i32)
-        \\        (local $0 i32)
-        \\        (local $1 i32)
         \\        (local $5 i32)
         \\        (local $6 i32)
+        \\        (local $0 i32)
         \\        (local.set $0
         \\            (call $core/alloc
         \\                (i32.const 8)))
-        \\        (local.set $1
-        \\            (call $core/alloc
-        \\                (i32.const 8)))
-        \\        (local.set $5
-        \\            (call $core/alloc
-        \\                (i32.const 8)))
-        \\        (local.set $6
-        \\            (call $core/alloc
-        \\                (i32.const 8)))
         \\        (local.set $name
-        \\            (block (result i32)
-        \\                (i32.store
-        \\                    (local.get $0)
-        \\                    (i32.const 0))
-        \\                (i32.store
-        \\                    (i32.add
-        \\                        (local.get $0)
-        \\                        (i32.const 4))
-        \\                    (i32.const 3))
-        \\                (local.get $0)))
+        \\            (call $str
+        \\                (i32.const 0)
+        \\                (i32.const 3)))
         \\        (block (result i32)
+        \\            (local.set $1
+        \\                (call $str
+        \\                    (i32.const 3)
+        \\                    (i32.const 10)))
         \\            (local.set $2
-        \\                (block (result i32)
-        \\                    (i32.store
-        \\                        (local.get $5)
-        \\                        (i32.const 3))
-        \\                    (i32.store
-        \\                        (i32.add
-        \\                            (local.get $5)
-        \\                            (i32.const 4))
-        \\                        (i32.const 10))
-        \\                    (local.get $5)))
-        \\            (local.set $3
         \\                (local.get $name))
+        \\            (local.set $3
+        \\                (call $str
+        \\                    (i32.const 13)
+        \\                    (i32.const 5)))
         \\            (local.set $4
-        \\                (block (result i32)
-        \\                    (i32.store
-        \\                        (local.get $6)
-        \\                        (i32.const 13))
-        \\                    (i32.store
-        \\                        (i32.add
-        \\                            (local.get $6)
-        \\                            (i32.const 4))
-        \\                        (i32.const 5))
-        \\                    (local.get $6)))
-        \\            (local.set $7
         \\                (global.get $core/arena))
-        \\            (local.set $9
+        \\            (local.set $6
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $1)
+        \\                        (i32.const 4))))
+        \\            (memory.copy
+        \\                (local.get $4)
+        \\                (i32.load
+        \\                    (local.get $1))
+        \\                (local.get $6))
+        \\            (local.set $5
+        \\                (local.get $6))
+        \\            (local.set $6
         \\                (i32.load
         \\                    (i32.add
         \\                        (local.get $2)
         \\                        (i32.const 4))))
         \\            (memory.copy
-        \\                (local.get $7)
+        \\                (i32.add
+        \\                    (local.get $4)
+        \\                    (local.get $5))
         \\                (i32.load
         \\                    (local.get $2))
-        \\                (local.get $9))
-        \\            (local.set $8
-        \\                (local.get $9))
-        \\            (local.set $9
+        \\                (local.get $6))
+        \\            (local.set $5
+        \\                (i32.add
+        \\                    (local.get $5)
+        \\                    (local.get $6)))
+        \\            (local.set $6
         \\                (i32.load
         \\                    (i32.add
         \\                        (local.get $3)
         \\                        (i32.const 4))))
         \\            (memory.copy
         \\                (i32.add
-        \\                    (local.get $7)
-        \\                    (local.get $8))
+        \\                    (local.get $4)
+        \\                    (local.get $5))
         \\                (i32.load
         \\                    (local.get $3))
-        \\                (local.get $9))
-        \\            (local.set $8
+        \\                (local.get $6))
+        \\            (local.set $5
         \\                (i32.add
-        \\                    (local.get $8)
-        \\                    (local.get $9)))
-        \\            (local.set $9
-        \\                (i32.load
-        \\                    (i32.add
-        \\                        (local.get $4)
-        \\                        (i32.const 4))))
-        \\            (memory.copy
-        \\                (i32.add
-        \\                    (local.get $7)
-        \\                    (local.get $8))
-        \\                (i32.load
-        \\                    (local.get $4))
-        \\                (local.get $9))
-        \\            (local.set $8
-        \\                (i32.add
-        \\                    (local.get $8)
-        \\                    (local.get $9)))
+        \\                    (local.get $5)
+        \\                    (local.get $6)))
         \\            (i32.store
-        \\                (local.get $1)
-        \\                (local.get $7))
+        \\                (local.get $0)
+        \\                (local.get $4))
         \\            (i32.store
         \\                (i32.add
-        \\                    (local.get $1)
+        \\                    (local.get $0)
         \\                    (i32.const 4))
-        \\                (local.get $8))
+        \\                (local.get $5))
         \\            (global.set $core/arena
         \\                (i32.add
-        \\                    (local.get $7)
-        \\                    (local.get $8)))
-        \\            (local.get $1)))
+        \\                    (local.get $4)
+        \\                    (local.get $5)))
+        \\            (local.get $0)))
+        \\
+        \\    (func $str (param $ptr i32) (param $len i32) (result i32)
+        \\        (i32.store
+        \\            (local.get $0)
+        \\            (local.get $ptr))
+        \\        (i32.store
+        \\            (i32.add
+        \\                (local.get $0)
+        \\                (i32.const 4))
+        \\            (local.get $len))
+        \\        (local.get $0))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -609,189 +587,145 @@ test "codegen template literal with two interpolations" {
         \\    (func $start (result i32)
         \\        (local $first i32)
         \\        (local $last i32)
+        \\        (local $1 i32)
+        \\        (local $2 i32)
         \\        (local $3 i32)
         \\        (local $4 i32)
         \\        (local $5 i32)
         \\        (local $6 i32)
         \\        (local $7 i32)
-        \\        (local $11 i32)
-        \\        (local $12 i32)
-        \\        (local $13 i32)
-        \\        (local $0 i32)
-        \\        (local $1 i32)
-        \\        (local $2 i32)
         \\        (local $8 i32)
-        \\        (local $9 i32)
-        \\        (local $10 i32)
+        \\        (local $0 i32)
         \\        (local.set $0
         \\            (call $core/alloc
         \\                (i32.const 8)))
-        \\        (local.set $1
-        \\            (call $core/alloc
-        \\                (i32.const 8)))
-        \\        (local.set $2
-        \\            (call $core/alloc
-        \\                (i32.const 8)))
-        \\        (local.set $8
-        \\            (call $core/alloc
-        \\                (i32.const 8)))
-        \\        (local.set $9
-        \\            (call $core/alloc
-        \\                (i32.const 8)))
-        \\        (local.set $10
-        \\            (call $core/alloc
-        \\                (i32.const 8)))
         \\        (local.set $first
-        \\            (block (result i32)
-        \\                (i32.store
-        \\                    (local.get $0)
-        \\                    (i32.const 0))
-        \\                (i32.store
-        \\                    (i32.add
-        \\                        (local.get $0)
-        \\                        (i32.const 4))
-        \\                    (i32.const 3))
-        \\                (local.get $0)))
+        \\            (call $str
+        \\                (i32.const 0)
+        \\                (i32.const 3)))
         \\        (local.set $last
-        \\            (block (result i32)
-        \\                (i32.store
-        \\                    (local.get $1)
-        \\                    (i32.const 3))
-        \\                (i32.store
+        \\            (call $str
+        \\                (i32.const 3)
+        \\                (i32.const 5)))
+        \\        (block (result i32)
+        \\            (local.set $1
+        \\                (call $str
+        \\                    (i32.const 8)
+        \\                    (i32.const 10)))
+        \\            (local.set $2
+        \\                (local.get $first))
+        \\            (local.set $3
+        \\                (call $str
+        \\                    (i32.const 18)
+        \\                    (i32.const 1)))
+        \\            (local.set $4
+        \\                (local.get $last))
+        \\            (local.set $5
+        \\                (call $str
+        \\                    (i32.const 19)
+        \\                    (i32.const 5)))
+        \\            (local.set $6
+        \\                (global.get $core/arena))
+        \\            (local.set $8
+        \\                (i32.load
         \\                    (i32.add
         \\                        (local.get $1)
-        \\                        (i32.const 4))
-        \\                    (i32.const 5))
-        \\                (local.get $1)))
-        \\        (block (result i32)
-        \\            (local.set $3
-        \\                (block (result i32)
-        \\                    (i32.store
-        \\                        (local.get $8)
-        \\                        (i32.const 8))
-        \\                    (i32.store
-        \\                        (i32.add
-        \\                            (local.get $8)
-        \\                            (i32.const 4))
-        \\                        (i32.const 10))
-        \\                    (local.get $8)))
-        \\            (local.set $4
-        \\                (local.get $first))
-        \\            (local.set $5
-        \\                (block (result i32)
-        \\                    (i32.store
-        \\                        (local.get $9)
-        \\                        (i32.const 18))
-        \\                    (i32.store
-        \\                        (i32.add
-        \\                            (local.get $9)
-        \\                            (i32.const 4))
-        \\                        (i32.const 1))
-        \\                    (local.get $9)))
-        \\            (local.set $6
-        \\                (local.get $last))
+        \\                        (i32.const 4))))
+        \\            (memory.copy
+        \\                (local.get $6)
+        \\                (i32.load
+        \\                    (local.get $1))
+        \\                (local.get $8))
         \\            (local.set $7
-        \\                (block (result i32)
-        \\                    (i32.store
-        \\                        (local.get $10)
-        \\                        (i32.const 19))
-        \\                    (i32.store
-        \\                        (i32.add
-        \\                            (local.get $10)
-        \\                            (i32.const 4))
-        \\                        (i32.const 5))
-        \\                    (local.get $10)))
-        \\            (local.set $11
-        \\                (global.get $core/arena))
-        \\            (local.set $13
+        \\                (local.get $8))
+        \\            (local.set $8
+        \\                (i32.load
+        \\                    (i32.add
+        \\                        (local.get $2)
+        \\                        (i32.const 4))))
+        \\            (memory.copy
+        \\                (i32.add
+        \\                    (local.get $6)
+        \\                    (local.get $7))
+        \\                (i32.load
+        \\                    (local.get $2))
+        \\                (local.get $8))
+        \\            (local.set $7
+        \\                (i32.add
+        \\                    (local.get $7)
+        \\                    (local.get $8)))
+        \\            (local.set $8
         \\                (i32.load
         \\                    (i32.add
         \\                        (local.get $3)
         \\                        (i32.const 4))))
         \\            (memory.copy
-        \\                (local.get $11)
+        \\                (i32.add
+        \\                    (local.get $6)
+        \\                    (local.get $7))
         \\                (i32.load
         \\                    (local.get $3))
-        \\                (local.get $13))
-        \\            (local.set $12
-        \\                (local.get $13))
-        \\            (local.set $13
+        \\                (local.get $8))
+        \\            (local.set $7
+        \\                (i32.add
+        \\                    (local.get $7)
+        \\                    (local.get $8)))
+        \\            (local.set $8
         \\                (i32.load
         \\                    (i32.add
         \\                        (local.get $4)
         \\                        (i32.const 4))))
         \\            (memory.copy
         \\                (i32.add
-        \\                    (local.get $11)
-        \\                    (local.get $12))
+        \\                    (local.get $6)
+        \\                    (local.get $7))
         \\                (i32.load
         \\                    (local.get $4))
-        \\                (local.get $13))
-        \\            (local.set $12
+        \\                (local.get $8))
+        \\            (local.set $7
         \\                (i32.add
-        \\                    (local.get $12)
-        \\                    (local.get $13)))
-        \\            (local.set $13
+        \\                    (local.get $7)
+        \\                    (local.get $8)))
+        \\            (local.set $8
         \\                (i32.load
         \\                    (i32.add
         \\                        (local.get $5)
         \\                        (i32.const 4))))
         \\            (memory.copy
         \\                (i32.add
-        \\                    (local.get $11)
-        \\                    (local.get $12))
+        \\                    (local.get $6)
+        \\                    (local.get $7))
         \\                (i32.load
         \\                    (local.get $5))
-        \\                (local.get $13))
-        \\            (local.set $12
+        \\                (local.get $8))
+        \\            (local.set $7
         \\                (i32.add
-        \\                    (local.get $12)
-        \\                    (local.get $13)))
-        \\            (local.set $13
-        \\                (i32.load
-        \\                    (i32.add
-        \\                        (local.get $6)
-        \\                        (i32.const 4))))
-        \\            (memory.copy
-        \\                (i32.add
-        \\                    (local.get $11)
-        \\                    (local.get $12))
-        \\                (i32.load
-        \\                    (local.get $6))
-        \\                (local.get $13))
-        \\            (local.set $12
-        \\                (i32.add
-        \\                    (local.get $12)
-        \\                    (local.get $13)))
-        \\            (local.set $13
-        \\                (i32.load
-        \\                    (i32.add
-        \\                        (local.get $7)
-        \\                        (i32.const 4))))
-        \\            (memory.copy
-        \\                (i32.add
-        \\                    (local.get $11)
-        \\                    (local.get $12))
-        \\                (i32.load
-        \\                    (local.get $7))
-        \\                (local.get $13))
-        \\            (local.set $12
-        \\                (i32.add
-        \\                    (local.get $12)
-        \\                    (local.get $13)))
+        \\                    (local.get $7)
+        \\                    (local.get $8)))
         \\            (i32.store
-        \\                (local.get $2)
-        \\                (local.get $11))
+        \\                (local.get $0)
+        \\                (local.get $6))
         \\            (i32.store
         \\                (i32.add
-        \\                    (local.get $2)
+        \\                    (local.get $0)
         \\                    (i32.const 4))
-        \\                (local.get $12))
+        \\                (local.get $7))
         \\            (global.set $core/arena
         \\                (i32.add
-        \\                    (local.get $11)
-        \\                    (local.get $12)))
-        \\            (local.get $2)))
+        \\                    (local.get $6)
+        \\                    (local.get $7)))
+        \\            (local.get $0)))
+        \\
+        \\    (func $str (param $ptr i32) (param $len i32) (result i32)
+        \\        (i32.store
+        \\            (local.get $0)
+        \\            (local.get $ptr))
+        \\        (i32.store
+        \\            (i32.add
+        \\                (local.get $0)
+        \\                (i32.const 4))
+        \\            (local.get $len))
+        \\        (local.get $0))
         \\
         \\    (export "_start" (func $start)))
     ;

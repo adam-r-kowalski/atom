@@ -23,6 +23,7 @@ const Context = struct {
     pointer_map: *Map(LocalName, PointerName),
     next_local: *u32,
     uses_memory: *bool,
+    uses_string: *bool,
     data_segment: *types.DataSegment,
     intern: *Intern,
     intrinsics: *types.Intrinsics,
@@ -439,26 +440,17 @@ fn convert(context: Context, c: type_checker.types.Convert) !types.Expression {
 }
 
 fn string(context: Context, s: type_checker.types.String) !types.Expression {
-    const local = try freshLocalPointer(context, 8);
+    context.uses_string.* = true;
     const bytes = s.value.string();
     const offset = context.data_segment.offset;
     try context.data_segment.data.append(.{ .offset = offset, .bytes = bytes });
     context.data_segment.offset += @intCast(bytes.len);
-    const exprs = try context.allocator.alloc(types.Expression, 3);
-    const local_get = try context.allocator.create(types.Expression);
-    local_get.* = .{ .local_get = .{ .name = local } };
-    const literal_offset = try context.allocator.create(types.Expression);
-    literal_offset.* = .{ .literal = .{ .u32 = offset } };
-    exprs[0] = .{ .binary_op = .{ .kind = .i32_store, .left = local_get, .right = literal_offset } };
-    const literal_4 = try context.allocator.create(types.Expression);
-    literal_4.* = .{ .literal = .{ .u32 = 4 } };
-    const binary_add = try context.allocator.create(types.Expression);
-    binary_add.* = .{ .binary_op = .{ .kind = .i32_add, .left = local_get, .right = literal_4 } };
-    const literal_length = try context.allocator.create(types.Expression);
-    literal_length.* = .{ .literal = .{ .u32 = context.data_segment.offset - offset } };
-    exprs[1] = .{ .binary_op = .{ .kind = .i32_store, .left = binary_add, .right = literal_length } };
-    exprs[2] = .{ .local_get = .{ .name = local } };
-    return .{ .block = types.Block{ .result = .i32, .expressions = exprs } };
+    const arguments = try context.allocator.alloc(types.Expression, 2);
+    arguments[0] = .{ .literal = .{ .u32 = offset } };
+    arguments[1] = .{ .literal = .{ .u32 = context.data_segment.offset - offset } };
+    return .{
+        .call = .{ .function = context.builtins.str, .arguments = arguments },
+    };
 }
 
 fn variant(v: type_checker.types.Variant) !types.Expression {
@@ -473,46 +465,6 @@ fn variant(v: type_checker.types.Variant) !types.Expression {
         else => |k| std.debug.panic("\nVariant type {} not allowed", .{k}),
     }
 }
-
-// fn structLiteral(context: Context, s: type_checker.types.StructLiteral) !types.Expression {
-//     const size = size_of.monotype(s.type);
-//     const local = try freshLocalPointer(context, size);
-//     const exprs = try context.allocator.alloc(types.Expression, s.order.len + 1);
-//     const structure = s.type.structure_literal.structure.structure;
-//     const base = try context.allocator.create(types.Expression);
-//     base.* = .{ .local_get = .{ .name = local } };
-//     var offset: u32 = 0;
-//     for (structure.order, exprs[0..structure.order.len]) |o, *e| {
-//         const field = s.fields.get(o).?;
-//         const result = try expressionAlloc(context, field.value);
-//         const field_offset = try context.allocator.create(types.Expression);
-//         field_offset.* = .{ .literal = .{ .u32 = offset } };
-//         const field_address = blk: {
-//             if (offset > 0) {
-//                 const ptr = try context.allocator.create(types.Expression);
-//                 ptr.* = .{ .binary_op = .{ .kind = .i32_add, .left = base, .right = field_offset } };
-//                 break :blk ptr;
-//             }
-//             break :blk base;
-//         };
-//         switch (type_checker.type_of.expression(field.value)) {
-//             .u8 => e.* = .{ .binary_op = .{ .kind = .i32_store8, .left = field_address, .right = result } },
-//             .array => {
-//                 const size_expr = try context.allocator.create(types.Expression);
-//                 size_expr.* = .{ .literal = .{ .u32 = 8 } };
-//                 e.* = .{ .memory_copy = .{
-//                     .destination = field_address,
-//                     .source = result,
-//                     .size = size_expr,
-//                 } };
-//                 offset += 8;
-//             },
-//             else => |k| std.debug.panic("\nField type {} not allowed", .{k}),
-//         }
-//     }
-//     exprs[s.order.len] = base.*;
-//     return .{ .block = types.Block{ .result = .i32, .expressions = exprs } };
-// }
 
 fn array(context: Context, a: type_checker.types.Array) !types.Expression {
     const element_type = a.type.array.element_type;
@@ -725,7 +677,17 @@ fn expressionAlloc(context: Context, e: type_checker.types.Expression) !*const t
     return ptr;
 }
 
-fn function(allocator: Allocator, builtins: Builtins, data_segment: *types.DataSegment, uses_memory: *bool, intrinsics: *types.Intrinsics, intern: *Intern, constructors: *Constructors, f: type_checker.types.Function) !types.Function {
+fn function(
+    allocator: Allocator,
+    builtins: Builtins,
+    data_segment: *types.DataSegment,
+    uses_memory: *bool,
+    uses_string: *bool,
+    intrinsics: *types.Intrinsics,
+    intern: *Intern,
+    constructors: *Constructors,
+    f: type_checker.types.Function,
+) !types.Function {
     var locals = List(types.Local).init(allocator);
     const parameters = try allocator.alloc(types.Parameter, f.parameters.len);
     var body = List(types.Expression).init(allocator);
@@ -770,6 +732,7 @@ fn function(allocator: Allocator, builtins: Builtins, data_segment: *types.DataS
         .pointers = &pointers,
         .pointer_map = &pointer_map,
         .uses_memory = uses_memory,
+        .uses_string = uses_string,
         .data_segment = data_segment,
         .intern = intern,
         .intrinsics = intrinsics,
@@ -822,6 +785,7 @@ fn constructor(
     builtins: Builtins,
     data_segment: *types.DataSegment,
     uses_memory: *bool,
+    uses_string: *bool,
     intrinsics: *types.Intrinsics,
     intern: *Intern,
     name: Interned,
@@ -840,6 +804,7 @@ fn constructor(
         .pointers = &pointers,
         .pointer_map = &pointer_map,
         .uses_memory = uses_memory,
+        .uses_string = uses_string,
         .data_segment = data_segment,
         .intern = intern,
         .intrinsics = intrinsics,
@@ -896,6 +861,64 @@ fn constructor(
     };
 }
 
+fn stringConstructor(
+    allocator: Allocator,
+    builtins: Builtins,
+    data_segment: *types.DataSegment,
+    uses_memory: *bool,
+    uses_string: *bool,
+    intrinsics: *types.Intrinsics,
+    intern: *Intern,
+) !types.Function {
+    var locals = List(types.Local).init(allocator);
+    var next_local: u32 = 0;
+    var pointers = List(types.LocalPointer).init(allocator);
+    var pointer_map = Map(LocalName, PointerName).init(allocator);
+    var constructors = Constructors.init(allocator);
+    const context = Context{
+        .allocator = allocator,
+        .builtins = builtins,
+        .locals = &locals,
+        .next_local = &next_local,
+        .pointers = &pointers,
+        .pointer_map = &pointer_map,
+        .uses_memory = uses_memory,
+        .uses_string = uses_string,
+        .data_segment = data_segment,
+        .intern = intern,
+        .intrinsics = intrinsics,
+        .constructors = &constructors,
+    };
+    const local = try freshLocalPointer(context, 8);
+    const exprs = try context.allocator.alloc(types.Expression, 3);
+    const local_get = try context.allocator.create(types.Expression);
+    local_get.* = .{ .local_get = .{ .name = local } };
+    const parameters = try allocator.alloc(types.Parameter, 2);
+    const ptr = try context.intern.store("ptr");
+    parameters[0] = types.Parameter{ .name = ptr, .type = .i32 };
+    const len = try context.intern.store("len");
+    parameters[1] = types.Parameter{ .name = len, .type = .i32 };
+    const literal_offset = try context.allocator.create(types.Expression);
+    literal_offset.* = .{ .local_get = .{ .name = ptr } };
+    exprs[0] = .{ .binary_op = .{ .kind = .i32_store, .left = local_get, .right = literal_offset } };
+    const literal_4 = try context.allocator.create(types.Expression);
+    literal_4.* = .{ .literal = .{ .u32 = 4 } };
+    const binary_add = try context.allocator.create(types.Expression);
+    binary_add.* = .{ .binary_op = .{ .kind = .i32_add, .left = local_get, .right = literal_4 } };
+    const literal_length = try context.allocator.create(types.Expression);
+    literal_length.* = .{ .local_get = .{ .name = len } };
+    exprs[1] = .{ .binary_op = .{ .kind = .i32_store, .left = binary_add, .right = literal_length } };
+    exprs[2] = .{ .local_get = .{ .name = local } };
+    return types.Function{
+        .name = builtins.str,
+        .parameters = parameters,
+        .return_type = .i32,
+        .locals = &.{},
+        .pointers = &.{},
+        .body = .{ .expressions = exprs },
+    };
+}
+
 pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Module, intern: *Intern) !types.Module {
     var functions = std.ArrayList(types.Function).init(allocator);
     var imports = std.ArrayList(types.ForeignImport).init(allocator);
@@ -906,6 +929,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
     var globals = std.ArrayList(types.Global).init(allocator);
     var exports = std.ArrayList(types.ForeignExport).init(allocator);
     var uses_memory = false;
+    var uses_string = false;
     var intrinsics = types.Intrinsics.init(allocator);
     var constructors = Constructors.init(allocator);
     for (m.order) |name| {
@@ -929,6 +953,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                         builtins,
                         &data_segment,
                         &uses_memory,
+                        &uses_string,
                         &intrinsics,
                         intern,
                         &constructors,
@@ -942,7 +967,17 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                     try imports.append(lowered);
                 },
                 .function => |f| {
-                    const lowered = try function(allocator, builtins, &data_segment, &uses_memory, &intrinsics, intern, &constructors, f);
+                    const lowered = try function(
+                        allocator,
+                        builtins,
+                        &data_segment,
+                        &uses_memory,
+                        &uses_string,
+                        &intrinsics,
+                        intern,
+                        &constructors,
+                        f,
+                    );
                     try functions.append(lowered);
                 },
                 else => std.debug.panic("\nTop level kind {} no yet supported", .{top_level}),
@@ -953,7 +988,29 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
     while (iterator.next()) |entry| {
         const name = entry.key_ptr.*;
         const s = entry.value_ptr.*;
-        const lowered = try constructor(allocator, builtins, &data_segment, &uses_memory, &intrinsics, intern, name, s);
+        const lowered = try constructor(
+            allocator,
+            builtins,
+            &data_segment,
+            &uses_memory,
+            &uses_string,
+            &intrinsics,
+            intern,
+            name,
+            s,
+        );
+        try functions.append(lowered);
+    }
+    if (uses_string) {
+        const lowered = try stringConstructor(
+            allocator,
+            builtins,
+            &data_segment,
+            &uses_memory,
+            &uses_string,
+            &intrinsics,
+            intern,
+        );
         try functions.append(lowered);
     }
     return types.Module{

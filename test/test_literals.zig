@@ -197,20 +197,20 @@ test "codegen str with string literal" {
         \\                (local.get $size))))
         \\
         \\    (func $start (result i32)
-        \\        (local $0 i32)
-        \\        (local.set $0
-        \\            (call $core/alloc
-        \\                (i32.const 8)))
-        \\        (block (result i32)
-        \\            (i32.store
+        \\        (call $str
+        \\            (i32.const 0)
+        \\            (i32.const 2)))
+        \\
+        \\    (func $str (param $ptr i32) (param $len i32) (result i32)
+        \\        (i32.store
+        \\            (local.get $0)
+        \\            (local.get $ptr))
+        \\        (i32.store
+        \\            (i32.add
         \\                (local.get $0)
-        \\                (i32.const 0))
-        \\            (i32.store
-        \\                (i32.add
-        \\                    (local.get $0)
-        \\                    (i32.const 4))
-        \\                (i32.const 2))
-        \\            (local.get $0)))
+        \\                (i32.const 4))
+        \\            (local.get $len))
+        \\        (local.get $0))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -244,20 +244,20 @@ test "codegen str with template literal" {
         \\                (local.get $size))))
         \\
         \\    (func $start (result i32)
-        \\        (local $0 i32)
-        \\        (local.set $0
-        \\            (call $core/alloc
-        \\                (i32.const 8)))
-        \\        (block (result i32)
-        \\            (i32.store
+        \\        (call $str
+        \\            (i32.const 0)
+        \\            (i32.const 2)))
+        \\
+        \\    (func $str (param $ptr i32) (param $len i32) (result i32)
+        \\        (i32.store
+        \\            (local.get $0)
+        \\            (local.get $ptr))
+        \\        (i32.store
+        \\            (i32.add
         \\                (local.get $0)
-        \\                (i32.const 0))
-        \\            (i32.store
-        \\                (i32.add
-        \\                    (local.get $0)
-        \\                    (i32.const 4))
-        \\                (i32.const 2))
-        \\            (local.get $0)))
+        \\                (i32.const 4))
+        \\            (local.get $len))
+        \\        (local.get $0))
         \\
         \\    (export "_start" (func $start)))
     ;
