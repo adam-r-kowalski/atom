@@ -913,8 +913,8 @@ fn stringConstructor(
         .name = builtins.str,
         .parameters = parameters,
         .return_type = .i32,
-        .locals = &.{},
-        .pointers = &.{},
+        .locals = try locals.toOwnedSlice(),
+        .pointers = try pointers.toOwnedSlice(),
         .body = .{ .expressions = exprs },
     };
 }

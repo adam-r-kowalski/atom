@@ -433,6 +433,10 @@ test "codegen hello world" {
         \\            (i32.const 200)))
         \\
         \\    (func $str (param $ptr i32) (param $len i32) (result i32)
+        \\        (local $0 i32)
+        \\        (local.set $0
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
         \\        (i32.store
         \\            (local.get $0)
         \\            (local.get $ptr))
