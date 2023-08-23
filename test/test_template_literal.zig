@@ -533,7 +533,7 @@ test "codegen template literal with interpolation" {
         \\        (i32.load
         \\            (local.get $s)))
         \\
-        \\    (func $str/ptr (param $s i32) (result i32)
+        \\    (func $str/len (param $s i32) (result i32)
         \\        (i32.load
         \\            (i32.add
         \\                (local.get $s)
@@ -671,7 +671,7 @@ test "codegen template literal with two interpolations" {
         \\        (i32.load
         \\            (local.get $s)))
         \\
-        \\    (func $str/ptr (param $s i32) (result i32)
+        \\    (func $str/len (param $s i32) (result i32)
         \\        (i32.load
         \\            (i32.add
         \\                (local.get $s)

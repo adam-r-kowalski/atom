@@ -144,7 +144,7 @@ pub fn length(allocator: Allocator, intern: *Intern) !types.Function {
     i32_add.* = .{ .binary_op = .{ .kind = .i32_add, .left = local_get, .right = i32_const } };
     exprs[0] = .{ .unary_op = .{ .kind = .i32_load, .expression = i32_add } };
     return types.Function{
-        .name = try intern.store("str/ptr"),
+        .name = try intern.store("str/len"),
         .parameters = parameters,
         .return_type = .i32,
         .locals = &.{},
