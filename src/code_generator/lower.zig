@@ -9,8 +9,10 @@ const type_checker = @import("../type_checker.zig");
 const Builtins = @import("../builtins.zig").Builtins;
 const types = @import("types.zig");
 const size_of = @import("size_of.zig");
+const str = @import("str.zig");
 
 const Constructors = std.AutoHashMap(Interned, type_checker.monotype.Structure);
+const StrConcat = Map(usize, Interned);
 
 const LocalName = Interned;
 const PointerName = Interned;
@@ -28,6 +30,7 @@ const Context = struct {
     intern: *Intern,
     intrinsics: *types.Intrinsics,
     constructors: *Constructors,
+    str_concat: *StrConcat,
 };
 
 fn freshLocal(context: Context, t: types.Type) !Interned {
@@ -556,94 +559,38 @@ fn index(context: Context, i: type_checker.types.Index) !types.Expression {
     };
 }
 
+fn strConcatName(context: Context, count: usize) !Interned {
+    const result = try context.str_concat.getOrPut(count);
+    if (result.found_existing) return result.value_ptr.*;
+    const name = try std.fmt.allocPrint(context.allocator, "str/concat/{}", .{count});
+    const interned = try context.intern.store(name);
+    result.value_ptr.* = interned;
+    return interned;
+}
+
 fn templateLiteral(context: Context, t: type_checker.types.TemplateLiteral) !types.Expression {
     if (t.strings.len == 1) {
         return try string(context, t.strings[0]);
     }
-    const result = try freshLocalPointer(context, 8);
-    const locals = try context.allocator.alloc(Interned, t.strings.len + t.arguments.len);
-    for (locals) |*l| l.* = try freshLocal(context, .i32);
-    var exprs = List(types.Expression).init(context.allocator);
-    {
-        const value = try context.allocator.create(types.Expression);
-        value.* = try string(context, t.strings[0]);
-        try exprs.append(.{ .local_set = .{ .name = locals[0], .value = value } });
-    }
-    var local_index: u64 = 1;
+    const count = t.strings.len + t.arguments.len;
+    var arguments = try context.allocator.alloc(types.Expression, count);
+    arguments[0] = try string(context, t.strings[0]);
+    var i: usize = 1;
     for (t.strings[1..], t.arguments) |s, a| {
         switch (type_checker.type_of.expression(a)) {
             .array => |arr| {
                 switch (arr.element_type.*) {
-                    .u8 => {
-                        const value = try context.allocator.create(types.Expression);
-                        value.* = try expression(context, a);
-                        try exprs.append(.{ .local_set = .{ .name = locals[local_index], .value = value } });
-                    },
+                    .u8 => arguments[i] = try expression(context, a),
                     else => |k| std.debug.panic("\nTemplate literal array with element type {} not yet supported", .{k}),
                 }
             },
             else => |k| std.debug.panic("\nTemplate literal argument type {} not yet supported", .{k}),
         }
-        const value = try context.allocator.create(types.Expression);
-        value.* = try string(context, s);
-        try exprs.append(.{ .local_set = .{ .name = locals[local_index + 1], .value = value } });
-        local_index += 2;
+        arguments[i + 1] = try string(context, s);
+        i += 2;
     }
-    const destination = try freshLocal(context, .i32);
-    const get_arena = try context.allocator.create(types.Expression);
-    get_arena.* = .{ .global_get = .{ .name = context.builtins.core_arena } };
-    try exprs.append(.{ .local_set = .{ .name = destination, .value = get_arena } });
-    const get_destination = try context.allocator.create(types.Expression);
-    get_destination.* = .{ .local_get = .{ .name = destination } };
-    const total_length = try freshLocal(context, .i32);
-    const get_total_length = try context.allocator.create(types.Expression);
-    get_total_length.* = .{ .local_get = .{ .name = total_length } };
-    const four = try context.allocator.create(types.Expression);
-    four.* = .{ .literal = .{ .u32 = 4 } };
-    const current_length = try freshLocal(context, .i32);
-    const get_current_length = try context.allocator.create(types.Expression);
-    get_current_length.* = .{ .local_get = .{ .name = current_length } };
-    for (locals, 0..) |l, i| {
-        const base = try context.allocator.create(types.Expression);
-        base.* = .{ .local_get = .{ .name = l } };
-        const ptr = try context.allocator.create(types.Expression);
-        ptr.* = .{ .unary_op = .{ .kind = .i32_load, .expression = base } };
-        const binary_op = try context.allocator.create(types.Expression);
-        binary_op.* = .{ .binary_op = .{ .kind = .i32_add, .left = base, .right = four } };
-        const length = try context.allocator.create(types.Expression);
-        length.* = .{ .unary_op = .{ .kind = .i32_load, .expression = binary_op } };
-        try exprs.append(.{ .local_set = .{ .name = current_length, .value = length } });
-        if (i == 0) {
-            try exprs.append(.{ .memory_copy = .{
-                .destination = get_destination,
-                .source = ptr,
-                .size = get_current_length,
-            } });
-            try exprs.append(.{ .local_set = .{ .name = total_length, .value = get_current_length } });
-        } else {
-            const new_length = try context.allocator.create(types.Expression);
-            new_length.* = .{ .binary_op = .{ .kind = .i32_add, .left = get_total_length, .right = get_current_length } };
-            const new_destination = try context.allocator.create(types.Expression);
-            new_destination.* = .{ .binary_op = .{ .kind = .i32_add, .left = get_destination, .right = get_total_length } };
-            try exprs.append(.{ .memory_copy = .{
-                .destination = new_destination,
-                .source = ptr,
-                .size = get_current_length,
-            } });
-            try exprs.append(.{ .local_set = .{ .name = total_length, .value = new_length } });
-        }
-    }
-    const get_result = try context.allocator.create(types.Expression);
-    get_result.* = .{ .local_get = .{ .name = result } };
-    try exprs.append(.{ .binary_op = .{ .kind = .i32_store, .left = get_result, .right = get_destination } });
-    const length_address = try context.allocator.create(types.Expression);
-    length_address.* = .{ .binary_op = .{ .kind = .i32_add, .left = get_result, .right = four } };
-    try exprs.append(.{ .binary_op = .{ .kind = .i32_store, .left = length_address, .right = get_total_length } });
-    const new_arena = try context.allocator.create(types.Expression);
-    new_arena.* = .{ .binary_op = .{ .kind = .i32_add, .left = get_destination, .right = get_total_length } };
-    try exprs.append(.{ .global_set = .{ .name = context.builtins.core_arena, .value = new_arena } });
-    try exprs.append(.{ .local_get = .{ .name = result } });
-    return .{ .block = types.Block{ .result = .i32, .expressions = try exprs.toOwnedSlice() } };
+    const func = try strConcatName(context, count);
+    return .{ .call = .{ .function = func, .arguments = arguments } };
 }
 
 fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMemory, InvalidCharacter, Overflow }!types.Expression {
@@ -686,6 +633,7 @@ fn function(
     intrinsics: *types.Intrinsics,
     intern: *Intern,
     constructors: *Constructors,
+    str_concat: *StrConcat,
     f: type_checker.types.Function,
 ) !types.Function {
     var locals = List(types.Local).init(allocator);
@@ -737,6 +685,7 @@ fn function(
         .intern = intern,
         .intrinsics = intrinsics,
         .constructors = constructors,
+        .str_concat = str_concat,
     };
     const last = f.body.expressions.len - 1;
     for (f.body.expressions, 0..) |expr, i| {
@@ -796,6 +745,7 @@ fn constructor(
     var pointers = List(types.LocalPointer).init(allocator);
     var pointer_map = Map(LocalName, PointerName).init(allocator);
     var constructors = Constructors.init(allocator);
+    var str_concat = Map(usize, Interned).init(allocator);
     const context = Context{
         .allocator = allocator,
         .builtins = builtins,
@@ -809,6 +759,7 @@ fn constructor(
         .intern = intern,
         .intrinsics = intrinsics,
         .constructors = &constructors,
+        .str_concat = &str_concat,
     };
     const size = size_of.structure(s);
     const local = try freshLocalPointer(context, size);
@@ -875,6 +826,7 @@ fn stringConstructor(
     var pointers = List(types.LocalPointer).init(allocator);
     var pointer_map = Map(LocalName, PointerName).init(allocator);
     var constructors = Constructors.init(allocator);
+    var str_concat = Map(usize, Interned).init(allocator);
     const context = Context{
         .allocator = allocator,
         .builtins = builtins,
@@ -888,6 +840,7 @@ fn stringConstructor(
         .intern = intern,
         .intrinsics = intrinsics,
         .constructors = &constructors,
+        .str_concat = &str_concat,
     };
     const local = try freshLocalPointer(context, 8);
     const exprs = try context.allocator.alloc(types.Expression, 3);
@@ -932,6 +885,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
     var uses_string = false;
     var intrinsics = types.Intrinsics.init(allocator);
     var constructors = Constructors.init(allocator);
+    var str_concat = StrConcat.init(allocator);
     for (m.order) |name| {
         if (m.typed.get(name)) |top_level| {
             switch (top_level) {
@@ -957,6 +911,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                         &intrinsics,
                         intern,
                         &constructors,
+                        &str_concat,
                         e.function,
                     );
                     try functions.append(lowered);
@@ -976,6 +931,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                         &intrinsics,
                         intern,
                         &constructors,
+                        &str_concat,
                         f,
                     );
                     try functions.append(lowered);
@@ -984,25 +940,24 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
             }
         }
     }
-    var iterator = constructors.iterator();
-    while (iterator.next()) |entry| {
-        const name = entry.key_ptr.*;
-        const s = entry.value_ptr.*;
-        const lowered = try constructor(
-            allocator,
-            builtins,
-            &data_segment,
-            &uses_memory,
-            &uses_string,
-            &intrinsics,
-            intern,
-            name,
-            s,
-        );
-        try functions.append(lowered);
+    {
+        var iterator = constructors.iterator();
+        while (iterator.next()) |entry| {
+            try functions.append(try constructor(
+                allocator,
+                builtins,
+                &data_segment,
+                &uses_memory,
+                &uses_string,
+                &intrinsics,
+                intern,
+                entry.key_ptr.*,
+                entry.value_ptr.*,
+            ));
+        }
     }
     if (uses_string) {
-        const lowered = try stringConstructor(
+        try functions.append(try stringConstructor(
             allocator,
             builtins,
             &data_segment,
@@ -1010,8 +965,24 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
             &uses_string,
             &intrinsics,
             intern,
-        );
-        try functions.append(lowered);
+        ));
+    }
+    {
+        var iterator = str_concat.iterator();
+        while (iterator.next()) |entry| {
+            try functions.append(try str.concat(
+                allocator,
+                builtins,
+                intern,
+                entry.key_ptr.*,
+                entry.value_ptr.*,
+            ));
+        }
+    }
+    if (str_concat.count() > 0) {
+        try functions.append(try str.concatFragment(allocator, intern));
+        try functions.append(try str.pointer(allocator, intern));
+        try functions.append(try str.length(allocator, intern));
     }
     return types.Module{
         .functions = try functions.toOwnedSlice(),
