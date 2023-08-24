@@ -4,7 +4,7 @@ const Allocator = std.mem.Allocator;
 const atom = @import("atom");
 
 const language_name = "atom";
-const language_icon = "⚛️";
+const language_icon = "⚛";
 const extension_length = language_name.len + 1;
 
 const List = std.ArrayList;
