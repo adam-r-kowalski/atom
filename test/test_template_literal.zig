@@ -509,6 +509,10 @@ test "codegen template literal with interpolation" {
         \\                (local.get $ptr)
         \\                (local.get $s2)
         \\                (local.get $len)))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
+        \\                (local.get $len)))
         \\        (call $str
         \\            (local.get $ptr)
         \\            (local.get $len)))
@@ -646,6 +650,10 @@ test "codegen template literal with two interpolations" {
         \\            (call $str/concat/fragment
         \\                (local.get $ptr)
         \\                (local.get $s4)
+        \\                (local.get $len)))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
         \\                (local.get $len)))
         \\        (call $str
         \\            (local.get $ptr)

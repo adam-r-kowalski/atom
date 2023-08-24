@@ -22,7 +22,7 @@ pub fn concat(allocator: Allocator, builtins: Builtins, intern: *Intern, count: 
         .{ .name = ptr, .type = .i32 },
         .{ .name = len, .type = .i32 },
     });
-    const exprs = try allocator.alloc(types.Expression, parameters.len + 2);
+    const exprs = try allocator.alloc(types.Expression, parameters.len + 3);
     {
         const get_arena = try allocator.create(types.Expression);
         get_arena.* = .{ .global_get = .{ .name = builtins.core_arena } };
@@ -42,10 +42,17 @@ pub fn concat(allocator: Allocator, builtins: Builtins, intern: *Intern, count: 
         exprs[i + 1] = .{ .local_set = .{ .name = len, .value = call_func } };
         args[2] = if (i == 0) .{ .literal = .{ .i32 = 0 } } else get_len.*;
     }
-    const args = try allocator.alloc(types.Expression, 2);
-    args[0] = get_ptr.*;
-    args[1] = get_len.*;
-    exprs[parameters.len + 1] = .{ .call = .{ .function = builtins.str, .arguments = args } };
+    {
+        const i32_add = try allocator.create(types.Expression);
+        i32_add.* = .{ .binary_op = .{ .kind = .i32_add, .left = get_ptr, .right = get_len } };
+        exprs[parameters.len + 1] = .{ .global_set = .{ .name = builtins.core_arena, .value = i32_add } };
+    }
+    {
+        const args = try allocator.alloc(types.Expression, 2);
+        args[0] = get_ptr.*;
+        args[1] = get_len.*;
+        exprs[parameters.len + 2] = .{ .call = .{ .function = builtins.str, .arguments = args } };
+    }
     return types.Function{
         .name = name,
         .parameters = parameters,

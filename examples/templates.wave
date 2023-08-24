@@ -8,7 +8,16 @@ fn print(text: str) -> void {
     _ = fd_write(stdout, text, 1, mut nwritten)
 }
 
+fn header(first: str, last: str) -> str {
+	`Hello ${first}, ${last}!`
+}
+
+fn body() -> str {
+	"Welcome to the world of WASM!"
+}
+
 fn start() -> void {
-    name = "joe"
-	print(`Hello ${name}!\n`)
+    first = "joe"
+    last = "smith"
+	print(`${header(first, last)}\n\n${body()}\n`)
 }
