@@ -8,16 +8,14 @@ fn print(text: str) -> void {
     _ = fd_write(stdout, text, 1, mut nwritten)
 }
 
-fn header(first: str, last: str) -> str {
-	`Hello ${first}, ${last}!`
-}
-
-fn body() -> str {
-	"Welcome to the world of WASM!"
-}
 
 fn start() -> void {
     first = "joe"
     last = "smith"
-	print(`${header(first, last)}\n\n${body()}\n`)
+    message = `
+        Hello ${first}, ${last}!
+
+        Atom lets you define templates and interpolate variables
+    `
+	print(message)
 }
