@@ -1,2 +1,2 @@
-- [ ] Template literal should call a function rather than being inlined
+- [x] Template literal should call a function rather than being inlined
 - [ ] Struct field access should call a function
