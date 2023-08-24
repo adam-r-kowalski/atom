@@ -22,7 +22,7 @@ Follow the steps below to compile Wave from its source code:
 First, you'll need to clone the Wave repository from GitHub. You can do this using Git with the following command:
 
 ```bash
-git clone git@github.com:adam-r-kowalski/wave.git
+git clone git@github.com:adam-r-kowalski/atom.git
 ```
 
 This command creates a copy of the Wave repository on your local machine.
@@ -32,7 +32,7 @@ This command creates a copy of the Wave repository on your local machine.
 Use the following command to navigate into the directory of the repository you just cloned:
 
 ```bash
-cd wave
+cd atom
 ```
 
 3. Run the tests:
@@ -70,14 +70,14 @@ Now, you have Wave installed on your system, and you're ready to start coding!
 ### Running a Wave program
 
 ```bash
-wave source.wave
+atom source.atom
 ```
 
 This will compile your Wave code into web assembly and then execute it using the wasmer runtime.
 To see the generated wat code add `--wat` to the compile command.
 
 ```bash
-wave source.wave --wat
+atom source.atom --wat
 ```
 
 Look at the code in the `examples` folder for inspiration.
@@ -90,7 +90,7 @@ However, code in the examples folder should compile and run.
 Wave has a straightforward syntax that is easy to read and write.
 Here is a simple Wave program that defines a function to calculate the square of a number:
 
-```wave
+```atom
 fn square(x: i32) -> i32 {
     x * x
 }
@@ -114,7 +114,7 @@ You can add a comment by starting the line with a hash (`#`).
 
 Here's an example:
 
-```wave
+```atom
 // This is a single line comment
 
 // This function calculates the square of a number
@@ -127,7 +127,7 @@ fn square(x: i32) -> i32 {
 
 In Wave, you define a function using the `fn` keyword, followed by a list of parameters and their types, the return type, and then the function body.
 
-```wave
+```atom
 fn max(x: i32, y: i32) -> i32 {
     if x > y { x } else { y }
 }
@@ -148,7 +148,7 @@ This is a function `max` that takes two parameters, `x` and `y`, and returns the
 
 Wave supports conditional logic with `if`, `else if` and `else` expressions.
 
-```wave
+```atom
 fn clamp(value: i32, low: i32, high: i32) -> i32 {
     if value < low { low }
     else if value > high { high }
@@ -168,7 +168,7 @@ This `clamp` function ensures that a value stays within a specific range.
 
 Wave supports named arguments, which can improve the readability of your code. Here is an example of using named arguments:
 
-```wave
+```atom
 test "named arguments" {
     assert(clamp(value=1, low=3, high=5) == 3)
     assert(clamp(value=7, low=3, high=5) == 5)
@@ -188,7 +188,7 @@ This can make your code more readable by clearly associating a function with the
 Wave supports pattern matching, which is a way of checking a given sequence of tokens for the presence of the constituents of some pattern.
 It's a powerful tool for working with complex data structures.
 
-```wave
+```atom
 // pattern matching is done with `match expression`
 fn sum(xs: []i32) -> i32 {
     match xs {
@@ -214,7 +214,7 @@ such as a struct or array. It provides a convenient way to extract multiple valu
 
 For example, consider the `Square` struct and the implementation of `Shape` interface for it:
 
-```wave
+```atom
 struct Square {
     width: f32,
     height: f32
@@ -234,7 +234,7 @@ it binds the variables `width` and `height` to the respective values in the pass
 
 Another example of destructuring can be found in array pattern matching:
 
-```wave
+```atom
 // pattern matching with destructuring
 fn sum(xs: []i32) -> i32 {
     match xs {
@@ -257,7 +257,7 @@ This is not an error in Wave; it's a feature of the language.
 
 Here's an example:
 
-```wave
+```atom
 x = 5
 
 if true {
@@ -277,7 +277,7 @@ Shadowing can be useful when you want to reuse variable names, but be careful, a
 
 Wave supports importing and exporting functions from the host environment.
 
-```wave
+```atom
 @import("console", "log")
 fn log(x: str) -> void
 
@@ -303,7 +303,7 @@ And it has integrated capability-based security, so it extends WebAssembly's cha
 
 It is a first class citizen in Wave and by targeting this API you can ensure that your programs work across as many platforms as possible.
 
-```wave
+```atom
 @import("wasi_unstable", "fd_write")
 fn fd_write(fd: i32, iovs: str, iovs_len: i32, mut nwritten: i32) -> i32
 
@@ -324,7 +324,7 @@ fn start() -> void {
 
 Wave provides for expressions to efficiently iterate through an array and build up a new one.
 
-```wave
+```atom
 // Compute the dot product of two vectors
 fn dot(a: []f32, b: []f32) -> f32 {
     sum(for i { a[i] * b[i] })
@@ -341,7 +341,7 @@ fn matmul(a: [][]f32, b: [][]f32) -> [][]f32 {
 Wave is designed with machine learning in mind. For expressions allow you to express how models work across a
 single example rather than dealing with batches. Here is a simple linear model implemented in Wave:
 
-```wave
+```atom
 struct Linear {
     m: f64,
     b: f64
@@ -387,7 +387,7 @@ test "gradient descent" {
 Wave is built to be a citizen of the web. We want to ensure you can build services which can render html
 on the server side or client side.
 
-```wave
+```atom
 struct Customer {
     name: str,
     age: u8,

@@ -1,5 +1,5 @@
 const std = @import("std");
-const wave = @import("wave");
+const atom = @import("atom");
 
 test "tokenize comment" {
     const allocator = std.testing.allocator;
@@ -10,7 +10,7 @@ test "tokenize comment" {
         \\    print("hello world") // write hello world to the stdout
         \\}
     ;
-    const actual = try wave.testing.tokenize(allocator, source);
+    const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(comment // this is a comment)
@@ -46,7 +46,7 @@ test "parse comment" {
         \\
         \\// comment after function
     ;
-    const actual = try wave.testing.parse(allocator, source);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(fn start [] void

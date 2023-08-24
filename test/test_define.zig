@@ -1,10 +1,10 @@
 const std = @import("std");
-const wave = @import("wave");
+const atom = @import("atom");
 
 test "tokenize single line define" {
     const allocator = std.testing.allocator;
     const source = "x = y + z";
-    const actual = try wave.testing.tokenize(allocator, source);
+    const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol x)
@@ -19,7 +19,7 @@ test "tokenize single line define" {
 test "parse single line define" {
     const allocator = std.testing.allocator;
     const source = "x = y + z";
-    const actual = try wave.testing.parse(allocator, source);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(def x (+ y z))";
     try std.testing.expectEqualStrings(expected, actual);
@@ -28,7 +28,7 @@ test "parse single line define" {
 test "tokenize annotated single line define" {
     const allocator = std.testing.allocator;
     const source = "x: i32 = y + z";
-    const actual = try wave.testing.tokenize(allocator, source);
+    const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol x)
@@ -45,7 +45,7 @@ test "tokenize annotated single line define" {
 test "parse annotated single line define" {
     const allocator = std.testing.allocator;
     const source = "x: i32 = y + z";
-    const actual = try wave.testing.parse(allocator, source);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(def x i32 (+ y z))";
     try std.testing.expectEqualStrings(expected, actual);
@@ -59,7 +59,7 @@ test "tokenize define using block" {
         \\    a - b
         \\}
     ;
-    const actual = try wave.testing.tokenize(allocator, source);
+    const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol x)
@@ -89,7 +89,7 @@ test "parse define using block" {
         \\    a - b
         \\}
     ;
-    const actual = try wave.testing.parse(allocator, source);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def x 
@@ -108,7 +108,7 @@ test "parse multi line define with type annotation" {
         \\    a - b
         \\}
     ;
-    const actual = try wave.testing.parse(allocator, source);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(def x i32 
@@ -128,7 +128,7 @@ test "type infer define based on body" {
         \\    a + b
         \\}
     ;
-    const actual = try wave.testing.typeInfer(allocator, source, "sum_of_squares");
+    const actual = try atom.testing.typeInfer(allocator, source, "sum_of_squares");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -184,7 +184,7 @@ test "parse nested define" {
         \\    a + x
         \\}
     ;
-    const actual = try wave.testing.parse(allocator, source);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(fn f [(x i32) (y i32)] i32
@@ -209,7 +209,7 @@ test "type infer nested define" {
         \\    a + x
         \\}
     ;
-    const actual = try wave.testing.typeInfer(allocator, source, "f");
+    const actual = try atom.testing.typeInfer(allocator, source, "f");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -263,7 +263,7 @@ test "codegen define" {
         \\    a + b
         \\}
     ;
-    const actual = try wave.testing.codegen(allocator, source);
+    const actual = try atom.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -298,7 +298,7 @@ test "parse drop" {
         \\    _ = 5
         \\}
     ;
-    const actual = try wave.testing.parse(allocator, source);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(fn start [] void
@@ -315,7 +315,7 @@ test "type infer drop" {
         \\    _ = x
         \\}
     ;
-    const actual = try wave.testing.typeInfer(allocator, source, "start");
+    const actual = try atom.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -344,7 +344,7 @@ test "codegen drop" {
         \\    _ = x
         \\}
     ;
-    const actual = try wave.testing.codegen(allocator, source);
+    const actual = try atom.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
@@ -372,7 +372,7 @@ test "type infer based on return type" {
         \\    x
         \\}
     ;
-    const actual = try wave.testing.typeInfer(allocator, source, "start");
+    const actual = try atom.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\function =

@@ -1,10 +1,10 @@
 const std = @import("std");
-const wave = @import("wave");
+const atom = @import("atom");
 
 test "tokenize call with named arguments" {
     const allocator = std.testing.allocator;
     const source = "clamp(value=5, low=0, high=10)";
-    const actual = try wave.testing.tokenize(allocator, source);
+    const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(symbol clamp)
@@ -28,7 +28,7 @@ test "tokenize call with named arguments" {
 test "parse call with named arguments" {
     const allocator = std.testing.allocator;
     const source = "clamp(value=5, low=0, high=10)";
-    const actual = try wave.testing.parse(allocator, source);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected = "(clamp :value 5 :low 0 :high 10)";
     try std.testing.expectEqualStrings(expected, actual);
@@ -45,7 +45,7 @@ test "type check call with named arguments" {
         \\    clamp(value=5, low=0, high=10)
         \\}
     ;
-    const actual = try wave.testing.typeInfer(allocator, source, "start");
+    const actual = try atom.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -94,7 +94,7 @@ test "codegen call with named arguments" {
         \\    clamp(value=5, low=0, high=10)
         \\}
     ;
-    const actual = try wave.testing.codegen(allocator, source);
+    const actual = try atom.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module

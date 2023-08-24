@@ -1,7 +1,7 @@
 const std = @import("std");
-const wave = @import("wave");
-const RED = wave.error_reporter.pretty_print.RED;
-const CLEAR = wave.error_reporter.pretty_print.CLEAR;
+const atom = @import("atom");
+const RED = atom.error_reporter.pretty_print.RED;
+const CLEAR = atom.error_reporter.pretty_print.CLEAR;
 
 test "use of undefined variable" {
     const allocator = std.testing.allocator;
@@ -10,7 +10,7 @@ test "use of undefined variable" {
         \\    fib(5)
         \\}
     ;
-    const actual = try wave.testing.compileErrors(allocator, source);
+    const actual = try atom.testing.compileErrors(allocator, source);
     defer allocator.free(actual);
     const expected = try std.fmt.allocPrint(allocator,
         \\---- {s}UNDEFINED VARIABLE{s} ---------------------------------------------------
@@ -41,7 +41,7 @@ test "type error of if" {
         \\    }
         \\}
     ;
-    const actual = try wave.testing.compileErrors(allocator, source);
+    const actual = try atom.testing.compileErrors(allocator, source);
     defer allocator.free(actual);
     const expected = try std.fmt.allocPrint(allocator,
         \\---- {s}TYPE MISMATCH{s} ---------------------------------------------------
@@ -76,7 +76,7 @@ test "type error of define" {
         \\    x
         \\}
     ;
-    const actual = try wave.testing.compileErrors(allocator, source);
+    const actual = try atom.testing.compileErrors(allocator, source);
     defer allocator.free(actual);
     const expected = try std.fmt.allocPrint(allocator,
         \\---- {s}TYPE MISMATCH{s} ---------------------------------------------------
@@ -114,7 +114,7 @@ test "type type mismatch between parameter and argument" {
         \\    double(y)
         \\}
     ;
-    const actual = try wave.testing.compileErrors(allocator, source);
+    const actual = try atom.testing.compileErrors(allocator, source);
     defer allocator.free(actual);
     const expected = try std.fmt.allocPrint(allocator,
         \\---- {s}TYPE MISMATCH{s} ---------------------------------------------------
@@ -153,7 +153,7 @@ test "mutability mismatch between parameter and argument" {
         \\    x
         \\}
     ;
-    const actual = try wave.testing.compileErrors(allocator, source);
+    const actual = try atom.testing.compileErrors(allocator, source);
     defer allocator.free(actual);
     const expected = try std.fmt.allocPrint(allocator,
         \\---- {s}MUTABILITY MISMATCH{s} ---------------------------------------------------
@@ -188,7 +188,7 @@ test "mutability mismatch between binding and assignment" {
         \\    x
         \\}
     ;
-    const actual = try wave.testing.compileErrors(allocator, source);
+    const actual = try atom.testing.compileErrors(allocator, source);
     defer allocator.free(actual);
     const expected = try std.fmt.allocPrint(allocator,
         \\---- {s}REASSIGNING IMMUTABLE VALUE{s} ---------------------------------------------------
@@ -220,7 +220,7 @@ test "mutability mismatch between binding and argument" {
         \\    x
         \\}
     ;
-    const actual = try wave.testing.compileErrors(allocator, source);
+    const actual = try atom.testing.compileErrors(allocator, source);
     defer allocator.free(actual);
     const expected = try std.fmt.allocPrint(allocator,
         \\---- {s}MUTABILITY MISMATCH{s} ---------------------------------------------------
@@ -256,7 +256,7 @@ test "undefined variable sorted by edit distance" {
         \\    banna
         \\}
     ;
-    const actual = try wave.testing.compileErrors(allocator, source);
+    const actual = try atom.testing.compileErrors(allocator, source);
     defer allocator.free(actual);
     const expected = try std.fmt.allocPrint(allocator,
         \\---- {s}UNDEFINED VARIABLE{s} ---------------------------------------------------

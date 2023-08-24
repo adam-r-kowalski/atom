@@ -1,5 +1,5 @@
 const std = @import("std");
-const wave = @import("wave");
+const atom = @import("atom");
 
 test "tokenize struct" {
     const allocator = std.testing.allocator;
@@ -13,7 +13,7 @@ test "tokenize struct" {
         \\    Person(name="Bob", age=42)
         \\}
     ;
-    const actual = try wave.testing.tokenize(allocator, source);
+    const actual = try atom.testing.tokenize(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(keyword struct)
@@ -68,7 +68,7 @@ test "parse struct" {
         \\    Person(name="Bob", age=42)
         \\}
     ;
-    const actual = try wave.testing.parse(allocator, source);
+    const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(struct Person
@@ -93,7 +93,7 @@ test "type infer struct" {
         \\    Person(name="Bob", age=42)
         \\}
     ;
-    const actual = try wave.testing.typeInfer(allocator, source, "start");
+    const actual = try atom.testing.typeInfer(allocator, source, "start");
     defer allocator.free(actual);
     const expected =
         \\function =
@@ -128,7 +128,7 @@ test "codegen struct" {
         \\    Person(name="Bob", age=42)
         \\}
     ;
-    const actual = try wave.testing.codegen(allocator, source);
+    const actual = try atom.testing.codegen(allocator, source);
     defer allocator.free(actual);
     const expected =
         \\(module
