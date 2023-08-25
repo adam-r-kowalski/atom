@@ -16,6 +16,7 @@ pub fn expression(e: types.Expression) types.Span {
         .enumeration => |en| en.span,
         .structure => |s| s.span,
         .binary_op => |b| b.span,
+        .dot => |d| d.span,
         .group => |g| g.span,
         .block => |b| b.span,
         .array => |a| a.span,

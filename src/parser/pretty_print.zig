@@ -118,7 +118,6 @@ pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
         .greater => try writer.writeAll(">"),
         .less => try writer.writeAll("<"),
         .or_ => try writer.writeAll("or"),
-        .dot => try writer.writeAll("."),
         .pipeline => try writer.writeAll("|>"),
     }
     try writer.writeAll(" ");
@@ -126,6 +125,12 @@ pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
     try writer.writeAll(" ");
     try expression(b.right.*, indent, writer);
     try writer.writeAll(")");
+}
+
+pub fn dot(d: types.Dot, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("(. ");
+    try expression(d.left.*, indent, writer);
+    try writer.print(" {})", .{d.right.value});
 }
 
 pub fn block(b: types.Block, indent: Indent, writer: Writer) !void {
@@ -260,6 +265,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .enumeration => |en| try enumeration(en, indent, writer),
         .structure => |s| try structure(s, indent, writer),
         .binary_op => |b| try binaryOp(b, indent, writer),
+        .dot => |d| try dot(d, indent, writer),
         .group => |g| try expression(g.expression.*, indent, writer),
         .block => |b| try block(b, indent, writer),
         .array => |a| try array(a, indent, writer),

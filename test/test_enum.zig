@@ -110,9 +110,10 @@ test "type infer enum" {
         \\    name = symbol{ value = start, type = fn() -> Grade }
         \\    return_type = Grade
         \\    body =
-        \\        variant =
-        \\            value = a
-        \\            index = 0
+        \\        dot =
+        \\            left =
+        \\                symbol{ value = Grade, type = Grade }
+        \\            right = symbol{ value = a, type = Grade }
         \\            type = Grade
     ;
     try std.testing.expectEqualStrings(expected, actual);

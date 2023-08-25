@@ -191,3 +191,77 @@ test "codegen struct" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "parse struct field access" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\struct Person {
+        \\    name: str,
+        \\    age: u8,
+        \\}
+        \\
+        \\fn start() -> str {
+        \\    person = Person(name="Bob", age=42)
+        \\    person.name
+        \\}
+    ;
+    const actual = try atom.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(struct Person
+        \\    name str
+        \\    age u8)
+        \\
+        \\(fn start [] str
+        \\    (block
+        \\        (def person (Person :name "Bob" :age 42))
+        \\        (. person name)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "type infer struct field access" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\struct Person {
+        \\    name: str,
+        \\    age: u8,
+        \\}
+        \\
+        \\fn start() -> str {
+        \\    person = Person(name="Bob", age=42)
+        \\    person.name
+        \\}
+    ;
+    const actual = try atom.testing.typeInfer(allocator, source, "start");
+    defer allocator.free(actual);
+    const expected =
+        \\function =
+        \\    name = symbol{ value = start, type = fn() -> str }
+        \\    return_type = str
+        \\    body =
+        \\        define =
+        \\            name = symbol{ value = person, type = Person }
+        \\            type = void
+        \\            mutable = false
+        \\            value =
+        \\                call =
+        \\                    function = symbol{ value = Person, type = Person }
+        \\                    named_arguments =
+        \\                        argument =
+        \\                            name = name
+        \\                            mutable = false
+        \\                            value = string{ value = "Bob", type = str }
+        \\                        argument =
+        \\                            name = age
+        \\                            mutable = false
+        \\                            value = int{ value = 42, type = u8 }
+        \\                    type = Person
+        \\        dot =
+        \\            left =
+        \\                symbol{ value = person, type = Person }
+        \\            right = symbol{ value = name, type = str }
+        \\            type = str
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

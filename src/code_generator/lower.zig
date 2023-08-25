@@ -456,16 +456,25 @@ fn string(context: Context, s: type_checker.types.String) !types.Expression {
     };
 }
 
-fn variant(v: type_checker.types.Variant) !types.Expression {
-    switch (v.type) {
+fn enumerationIndex(comptime T: type, e: type_checker.monotype.Enumeration, name: Interned) T {
+    var i: T = 0;
+    for (e.variants) |variant| {
+        if (variant.eql(name)) return i;
+        i += 1;
+    }
+    std.debug.panic("\nEnumeration {} does not have variant {}", .{ e.name, name });
+}
+
+fn dot(d: type_checker.types.Dot) !types.Expression {
+    switch (type_checker.type_of.expression(d.left.*)) {
         .enumeration => |e| {
             switch (size_of.enumeration(e)) {
-                0...4 => return .{ .literal = .{ .u32 = @intCast(v.index) } },
-                5...8 => return .{ .literal = .{ .u64 = v.index } },
+                0...4 => return .{ .literal = .{ .u32 = enumerationIndex(u32, e, d.right.value) } },
+                5...8 => return .{ .literal = .{ .u64 = enumerationIndex(u64, e, d.right.value) } },
                 else => |k| std.debug.panic("\nVariant type {} not allowed", .{k}),
             }
         },
-        else => |k| std.debug.panic("\nVariant type {} not allowed", .{k}),
+        else => |k| std.debug.panic("\nDot type {} not allowed", .{k}),
     }
 }
 
@@ -610,7 +619,7 @@ fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMe
         .times_equal => |a| return try timesEqual(context, a),
         .convert => |c| return try convert(context, c),
         .string => |s| return try string(context, s),
-        .variant => |v| return try variant(v),
+        .dot => |d| return try dot(d),
         .array => |a| return try array(context, a),
         .index => |i| return try index(context, i),
         .template_literal => |t| return try templateLiteral(context, t),

@@ -498,6 +498,19 @@ fn annotate(context: Context, name: types.Symbol) !types.Define {
     };
 }
 
+fn dot(context: Context, left: types.Expression) !types.Dot {
+    context.tokens.advance();
+    const right = context.tokens.consume(.symbol).symbol;
+    return types.Dot{
+        .left = try alloc(context, left),
+        .right = right,
+        .span = types.Span{
+            .begin = spanOf(left).begin,
+            .end = right.span.end,
+        },
+    };
+}
+
 fn binaryOp(context: Context, left: types.Expression, kind: types.BinaryOpKind) !types.BinaryOp {
     context.tokens.advance();
     const right = try expressionAlloc(context);
@@ -687,6 +700,7 @@ const Infix = union(enum) {
     call,
     index,
     array_type,
+    dot,
     binary_op: types.BinaryOpKind,
     template_literal: tokenizer.types.TemplateLiteral,
     template_literal_begin: tokenizer.types.TemplateLiteralBegin,
@@ -712,9 +726,9 @@ fn precedence(i: Infix) Precedence {
             .greater => COMPARE,
             .less => COMPARE,
             .or_ => AND,
-            .dot => DOT,
             .pipeline => DOT,
         },
+        .dot => DOT,
         .template_literal => TEMPLATE_LITERAL,
         .template_literal_begin => TEMPLATE_LITERAL,
     };
@@ -740,9 +754,9 @@ fn associativity(i: Infix) Associativity {
             .greater => .left,
             .less => .left,
             .or_ => .left,
-            .dot => .left,
             .pipeline => .left,
         },
+        .dot => .left,
         .template_literal => .left,
         .template_literal_begin => .left,
     };
@@ -765,7 +779,7 @@ fn infix(context: Context, left: types.Expression) ?Infix {
             .greater => .{ .binary_op = .greater },
             .less => .{ .binary_op = .less },
             .or_ => .{ .binary_op = .or_ },
-            .dot => .{ .binary_op = .dot },
+            .dot => .dot,
             .bar_greater => .{ .binary_op = .pipeline },
             .left_paren => switch (left) {
                 .symbol => .call,
@@ -799,6 +813,7 @@ fn parseInfix(parser: Infix, context: Context, left: types.Expression) !types.Ex
         .call => .{ .call = try call(context, left) },
         .index => .{ .index = try index(context, left) },
         .array_type => .{ .array_type = try arrayType(context, left) },
+        .dot => .{ .dot = try dot(context, left) },
         .binary_op => |kind| .{ .binary_op = try binaryOp(context, left, kind) },
         .template_literal => |t| .{ .template_literal = try templateLiteral(context, left.symbol, t) },
         .template_literal_begin => |t| .{ .template_literal = try templateLiteralBegin(context, left.symbol, t) },

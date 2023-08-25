@@ -244,37 +244,32 @@ fn branch(context: Context, b: parser.types.Branch) !types.Branch {
     };
 }
 
-fn dot(context: Context, b: parser.types.BinaryOp) !types.Expression {
-    switch (b.right.*) {
-        .symbol => |right| {
-            switch (b.left.*) {
-                .symbol => |left| {
-                    const binding = try findInScope(context.scopes.*, left);
-                    switch (binding.type) {
-                        .enumeration => |e| {
-                            for (e.variants, 0..) |v, i| {
-                                if (v.eql(right.value)) {
-                                    return types.Expression{
-                                        .variant = .{
-                                            .value = v,
-                                            .index = i,
-                                            .span = b.span,
-                                            .type = monotype.withSpan(binding.type, b.span),
-                                        },
-                                    };
-                                }
-                            }
-                            std.debug.panic("\nvariant {s} not found in enumeration {}", .{ right.value.string(), binding.type });
-                        },
-                        else => |k| std.debug.panic("Expected enumeration, got {}", .{k}),
-                    }
-                    std.debug.panic("\nfound binding {} for symbol {s}", .{ binding, left.value.string() });
-                },
-                else => |t| std.debug.panic("Expected symbol before dot, got {}", .{t}),
-            }
-        },
-        else => |k| std.debug.panic("Expected symbol after dot, got {}", .{k}),
-    }
+fn dot(context: Context, d: parser.types.Dot) !types.Dot {
+    const left = try expressionAlloc(context, d.left.*);
+    const tvar = freshTypeVar(context.constraints, d.right.span);
+    const binding = types.Binding{
+        .type = tvar,
+        .global = false,
+        .mutable = false,
+        .span = d.right.span,
+    };
+    const right = types.Symbol{
+        .value = d.right.value,
+        .span = d.right.span,
+        .type = tvar,
+        .binding = binding,
+    };
+    try context.constraints.field_of.append(.{
+        .value = typeOf(left.*),
+        .field = tvar,
+        .name = d.right.value,
+    });
+    return types.Dot{
+        .left = left,
+        .right = right,
+        .span = d.span,
+        .type = .{ .typevar = .{ .value = tvar.typevar.value, .span = d.span } },
+    };
 }
 
 fn pipeline(context: Context, b: parser.types.BinaryOp) !types.Expression {
@@ -306,7 +301,6 @@ fn pipeline(context: Context, b: parser.types.BinaryOp) !types.Expression {
 
 fn binaryOp(context: Context, b: parser.types.BinaryOp) !types.Expression {
     switch (b.kind) {
-        .dot => return dot(context, b),
         .pipeline => return pipeline(context, b),
         .equal, .greater, .less => {
             const left = try expressionAlloc(context, b.left.*);
@@ -922,6 +916,7 @@ fn expression(context: Context, e: parser.types.Expression) error{ OutOfMemory, 
         .times_equal => |a| return .{ .times_equal = try timesEqual(context, a) },
         .function => |f| return .{ .function = try function(context, f) },
         .prototype => |p| return .{ .prototype = try prototype(context, p) },
+        .dot => |d| return .{ .dot = try dot(context, d) },
         .binary_op => |b| return try binaryOp(context, b),
         .block => |b| return .{ .block = try block(context, b) },
         .branch => |b| return .{ .branch = try branch(context, b) },

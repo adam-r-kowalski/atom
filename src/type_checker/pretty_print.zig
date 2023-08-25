@@ -130,7 +130,6 @@ pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
         .greater => try writer.writeAll(">"),
         .less => try writer.writeAll("<"),
         .or_ => try writer.writeAll("or"),
-        .dot => try writer.writeAll("."),
         .pipeline => try writer.writeAll("|>"),
     }
     try newlineAndIndent(indent + 1, writer);
@@ -144,6 +143,20 @@ pub fn binaryOp(b: types.BinaryOp, indent: Indent, writer: Writer) !void {
     try newlineAndIndent(indent + 1, writer);
     try writer.writeAll("type = ");
     try monotype(b.type, writer);
+}
+
+pub fn dot(d: types.Dot, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("dot =");
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("left =");
+    try newlineAndIndent(indent + 2, writer);
+    try expression(d.left.*, indent + 2, writer);
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("right = ");
+    try symbol(d.right, writer);
+    try newlineAndIndent(indent + 1, writer);
+    try writer.writeAll("type = ");
+    try monotype(d.type, writer);
 }
 
 fn callArguments(arguments: types.Arguments, indent: Indent, writer: Writer) !void {
@@ -384,17 +397,6 @@ pub fn undefinedKeyword(u: types.Undefined, indent: Indent, writer: Writer) !voi
     try writer.writeAll(" }");
 }
 
-pub fn variant(v: types.Variant, indent: Indent, writer: Writer) !void {
-    try writer.writeAll("variant =");
-    try newlineAndIndent(indent + 1, writer);
-    try writer.print("value = {s}", .{v.value.string()});
-    try newlineAndIndent(indent + 1, writer);
-    try writer.print("index = {}", .{v.index});
-    try newlineAndIndent(indent + 1, writer);
-    try writer.writeAll("type = ");
-    try monotype(v.type, writer);
-}
-
 pub fn array(a: types.Array, indent: Indent, writer: Writer) !void {
     try writer.writeAll("array =");
     try newlineAndIndent(indent + 1, writer);
@@ -461,6 +463,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .bool => |b| try boolean(b, writer),
         .branch => |b| try branch(b, indent, writer),
         .binary_op => |b| try binaryOp(b, indent, writer),
+        .dot => |d| try dot(d, indent, writer),
         .call => |c| try call(c, indent, writer),
         .decorator => |d| try decorator(d, indent, writer),
         .intrinsic => |i| try intrinsic(i, indent, writer),
@@ -476,7 +479,6 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .foreign_export => |f| try foreignExport(f, indent, writer),
         .convert => |c| try convert(c, indent, writer),
         .undefined => |u| try undefinedKeyword(u, indent, writer),
-        .variant => |v| try variant(v, indent, writer),
         .array => |a| try array(a, indent, writer),
         .index => |i| try index(i, indent, writer),
         .template_literal => |t| try templateLiteral(t, indent, writer),
@@ -494,13 +496,24 @@ pub fn module(m: types.Module, writer: Writer) !void {
 
 pub fn constraints(c: types.Constraints, writer: Writer) !void {
     for (c.equal.items) |e| {
-        try writer.writeAll("\nconstraint =");
+        try writer.writeAll("\nequal constraint =");
         try newlineAndIndent(1, writer);
         try writer.writeAll("left = ");
         try monotype(e.left, writer);
         try newlineAndIndent(1, writer);
         try writer.writeAll("right = ");
         try monotype(e.right, writer);
+    }
+    for (c.field_of.items) |e| {
+        try writer.writeAll("\nfield of constraint =");
+        try newlineAndIndent(1, writer);
+        try writer.writeAll("value = ");
+        try monotype(e.value, writer);
+        try newlineAndIndent(1, writer);
+        try writer.writeAll("field = ");
+        try monotype(e.field, writer);
+        try newlineAndIndent(1, writer);
+        try writer.print("name = {s}", .{e.name.string()});
     }
 }
 

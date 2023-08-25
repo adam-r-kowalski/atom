@@ -160,6 +160,7 @@ fn compileAndRun(allocator: Allocator, intern: *atom.interner.Intern, errors: *a
     const untyped_ast = try atom.parser.parse(allocator, builtins, tokens);
     var constraints = atom.type_checker.types.Constraints{
         .equal = List(atom.type_checker.types.EqualConstraint).init(allocator),
+        .field_of = List(atom.type_checker.types.FieldOfConstraint).init(allocator),
         .next_type_var = 0,
     };
     var ast = try atom.type_checker.infer.module(allocator, &constraints, builtins, untyped_ast);

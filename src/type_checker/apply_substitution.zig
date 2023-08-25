@@ -7,7 +7,7 @@ const MonoType = @import("monotype.zig").MonoType;
 const Fields = @import("monotype.zig").Fields;
 const Interned = @import("../interner.zig").Interned;
 
-fn monotype(allocator: Allocator, sub: types.Substitution, m: MonoType) !MonoType {
+pub fn monotype(allocator: Allocator, sub: types.Substitution, m: MonoType) !MonoType {
     switch (m) {
         .function => |f| {
             const parameters = try allocator.alloc(Parameter, f.parameters.len);
@@ -91,6 +91,15 @@ fn binaryOp(allocator: Allocator, sub: types.Substitution, b: types.BinaryOp) !t
         .right = try expressionAlloc(allocator, sub, b.right.*),
         .span = b.span,
         .type = try monotype(allocator, sub, b.type),
+    };
+}
+
+fn dot(allocator: Allocator, sub: types.Substitution, d: types.Dot) !types.Dot {
+    return .{
+        .left = try expressionAlloc(allocator, sub, d.left.*),
+        .right = try symbol(allocator, sub, d.right),
+        .span = d.span,
+        .type = try monotype(allocator, sub, d.type),
     };
 }
 
@@ -275,15 +284,6 @@ fn undef(allocator: Allocator, sub: types.Substitution, u: types.Undefined) !typ
     };
 }
 
-fn variant(allocator: Allocator, sub: types.Substitution, v: types.Variant) !types.Variant {
-    return .{
-        .value = v.value,
-        .index = v.index,
-        .span = v.span,
-        .type = try monotype(allocator, sub, v.type),
-    };
-}
-
 fn structLiteral(allocator: Allocator, sub: types.Substitution, s: types.StructLiteral) !types.StructLiteral {
     var fields = types.Fields.init(allocator);
     for (s.order) |o| {
@@ -360,6 +360,7 @@ pub fn expression(allocator: Allocator, sub: types.Substitution, e: types.Expres
         .string => e,
         .branch => |b| .{ .branch = try branch(allocator, sub, b) },
         .binary_op => |b| .{ .binary_op = try binaryOp(allocator, sub, b) },
+        .dot => |d| .{ .dot = try dot(allocator, sub, d) },
         .define => |d| .{ .define = try define(allocator, sub, d) },
         .drop => |d| .{ .drop = try drop(allocator, sub, d) },
         .plus_equal => |p| .{ .plus_equal = try plusEqual(allocator, sub, p) },
@@ -371,7 +372,6 @@ pub fn expression(allocator: Allocator, sub: types.Substitution, e: types.Expres
         .prototype => |p| .{ .prototype = try prototype(allocator, sub, p) },
         .block => |b| .{ .block = try block(allocator, sub, b) },
         .group => |g| .{ .group = try group(allocator, sub, g) },
-        .variant => |v| .{ .variant = try variant(allocator, sub, v) },
         .foreign_import => e,
         .foreign_export => |f| .{ .foreign_export = try foreignExport(allocator, sub, f) },
         .convert => e,

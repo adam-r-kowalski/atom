@@ -124,7 +124,6 @@ pub const BinaryOpKind = enum {
     greater,
     less,
     or_,
-    dot,
     pipeline,
 };
 
@@ -132,6 +131,12 @@ pub const BinaryOp = struct {
     kind: BinaryOpKind,
     left: *const Expression,
     right: *const Expression,
+    span: Span,
+};
+
+pub const Dot = struct {
+    left: *const Expression,
+    right: Symbol,
     span: Span,
 };
 
@@ -205,6 +210,7 @@ pub const Expression = union(enum) {
     structure: Structure,
     prototype: Prototype,
     binary_op: BinaryOp,
+    dot: Dot,
     group: Group,
     block: Block,
     array: Array,

@@ -57,6 +57,7 @@ pub fn typeInfer(allocator: Allocator, source: []const u8, name: []const u8) ![]
     const untyped_ast = try parser.parse(arena.allocator(), builtins, tokens);
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.EqualConstraint).init(arena.allocator()),
+        .field_of = List(type_checker.types.FieldOfConstraint).init(arena.allocator()),
         .next_type_var = 0,
     };
     var ast = try type_checker.infer.module(arena.allocator(), &constraints, builtins, untyped_ast);
@@ -85,6 +86,7 @@ pub fn typeInferVerbose(allocator: Allocator, source: []const u8, name: []const 
     const untyped_ast = try parser.parse(arena.allocator(), builtins, tokens);
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.EqualConstraint).init(arena.allocator()),
+        .field_of = List(type_checker.types.FieldOfConstraint).init(arena.allocator()),
         .next_type_var = 0,
     };
     var ast = try type_checker.infer.module(arena.allocator(), &constraints, builtins, untyped_ast);
@@ -121,6 +123,7 @@ pub fn codegen(allocator: Allocator, source: []const u8) ![]const u8 {
     const untyped_ast = try parser.parse(arena.allocator(), builtins, tokens);
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.EqualConstraint).init(arena.allocator()),
+        .field_of = List(type_checker.types.FieldOfConstraint).init(arena.allocator()),
         .next_type_var = 0,
     };
     var ast = try type_checker.infer.module(arena.allocator(), &constraints, builtins, untyped_ast);
@@ -146,6 +149,7 @@ fn endToEnd(allocator: Allocator, intern: *Intern, errors: *error_reporter.types
     const untyped_ast = try parser.parse(allocator, builtins, tokens);
     var constraints = type_checker.types.Constraints{
         .equal = List(type_checker.types.EqualConstraint).init(allocator),
+        .field_of = List(type_checker.types.FieldOfConstraint).init(allocator),
         .next_type_var = 0,
     };
     var ast = try type_checker.infer.module(allocator, &constraints, builtins, untyped_ast);

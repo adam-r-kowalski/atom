@@ -3,6 +3,7 @@ const Map = std.AutoHashMap;
 const types = @import("types.zig");
 const Errors = @import("../error_reporter.zig").types.Errors;
 const monotype = @import("monotype.zig");
+const apply_substitution = @import("apply_substitution.zig");
 
 fn exactEqual(a: types.MonoType, b: types.MonoType) bool {
     switch (a) {
@@ -213,6 +214,46 @@ pub fn equalConstraint(equal: types.EqualConstraint, s: *types.Substitution, err
     return error.CompileError;
 }
 
+pub fn fieldOfConstraint(allocator: std.mem.Allocator, field_of: types.FieldOfConstraint, s: *types.Substitution, errors: *Errors) error{ CompileError, OutOfMemory }!void {
+    const value_type = try apply_substitution.monotype(allocator, s.*, field_of.value);
+    const field_type = try apply_substitution.monotype(allocator, s.*, field_of.field);
+    switch (value_type) {
+        .structure => |structure| {
+            const field = structure.fields.get(field_of.name).?;
+            if (exactEqual(field, field_type)) return;
+            try errors.type_mismatch.append(.{ .left = field, .right = field_type });
+            return error.CompileError;
+        },
+        .enumeration => |e1| {
+            {
+                var contains = false;
+                for (e1.variants) |v| {
+                    if (v.eql(field_of.name)) {
+                        contains = true;
+                        break;
+                    }
+                }
+                if (!contains)
+                    std.debug.panic("enumeration {} does not contain {}", .{ e1.name, field_of.name });
+            }
+            switch (field_type) {
+                .enumeration => {
+                    if (!exactEqual(value_type, field_type)) {
+                        try errors.type_mismatch.append(.{ .left = value_type, .right = field_type });
+                        return error.CompileError;
+                    }
+                },
+                .typevar => {
+                    const constraint = .{ .left = value_type, .right = field_type };
+                    try equalConstraint(constraint, s, errors);
+                },
+                else => std.debug.panic("cannot access field {} of type {}", .{ field_of.name, field_type }),
+            }
+        },
+        else => std.debug.panic("cannot access field {} of type {}", .{ field_of.name, value_type }),
+    }
+}
+
 pub fn simplify(s: *types.Substitution) u64 {
     var count: u64 = 0;
     var iterator = s.map.iterator();
@@ -235,6 +276,7 @@ pub fn constraints(allocator: std.mem.Allocator, cs: types.Constraints, errors: 
         .map = Map(u64, types.MonoType).init(allocator),
     };
     for (cs.equal.items) |e| try equalConstraint(e, &s, errors);
+    for (cs.field_of.items) |f| try fieldOfConstraint(allocator, f, &s, errors);
     var max_attemps: u64 = 3;
     while (simplify(&s) > 0 and max_attemps != 0) : (max_attemps -= 1) {}
     return s;

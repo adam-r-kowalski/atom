@@ -30,8 +30,15 @@ pub const EqualConstraint = struct {
     right: MonoType,
 };
 
+pub const FieldOfConstraint = struct {
+    value: MonoType,
+    field: MonoType,
+    name: Interned,
+};
+
 pub const Constraints = struct {
     equal: List(EqualConstraint),
+    field_of: List(FieldOfConstraint),
     next_type_var: u64,
 };
 
@@ -131,6 +138,13 @@ pub const Prototype = struct {
     type: MonoType,
 };
 
+pub const Dot = struct {
+    left: *const Expression,
+    right: Symbol,
+    span: Span,
+    type: MonoType,
+};
+
 pub const BinaryOp = struct {
     kind: parser.types.BinaryOpKind,
     left: *const Expression,
@@ -174,13 +188,6 @@ pub const Decorator = struct {
     attribute: Attribute,
     arguments: Arguments,
     value: *const Expression,
-    span: Span,
-    type: MonoType,
-};
-
-pub const Variant = struct {
-    value: Interned,
-    index: u64,
     span: Span,
     type: MonoType,
 };
@@ -266,12 +273,12 @@ pub const Expression = union(enum) {
     function: Function,
     prototype: Prototype,
     binary_op: BinaryOp,
+    dot: Dot,
     group: Group,
     block: Block,
     branch: Branch,
     call: Call,
     decorator: Decorator,
-    variant: Variant,
     intrinsic: Intrinsic,
     foreign_import: ForeignImport,
     foreign_export: ForeignExport,
