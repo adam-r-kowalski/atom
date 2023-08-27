@@ -108,10 +108,8 @@ pub fn fieldAccess(allocator: Allocator, intern: *Intern, functions: *List(types
         param_name[0] = std.ascii.toLower(accesses.structure.name.string()[0]);
         const param = try intern.store(param_name);
         parameters[0] = types.Parameter{ .name = param, .type = struct_type };
-        const local_get = try allocator.create(types.Expression);
-        local_get.* = .{ .local_get = .{ .name = param } };
         const exprs = try allocator.alloc(types.Expression, 1);
-        exprs[0] = .{ .unary_op = .{ .kind = .i32_load, .expression = local_get } };
+        exprs[0] = .{ .local_get = .{ .name = param } };
         try functions.append(types.Function{
             .name = func,
             .parameters = parameters,

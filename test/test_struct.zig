@@ -343,8 +343,7 @@ test "codegen struct field access" {
         \\        (local.get $result))
         \\
         \\    (func $Person/name (param $p i32) (result i32)
-        \\        (i32.load
-        \\            (local.get $p)))
+        \\        (local.get $p))
         \\
         \\    (export "_start" (func $start)))
     ;
