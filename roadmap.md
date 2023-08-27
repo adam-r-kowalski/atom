@@ -1,2 +1,3 @@
 - [x] Template literal should call a function rather than being inlined
 - [x] Struct field access should call a function
+- [ ] Interop with javascript objects
