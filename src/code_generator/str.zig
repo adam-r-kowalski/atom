@@ -7,6 +7,43 @@ const Interned = interner.Interned;
 const Intern = interner.Intern;
 const types = @import("types.zig");
 const Builtins = @import("../builtins.zig").Builtins;
+const structure = @import("structure.zig");
+const FieldAccesses = structure.FieldAccesses;
+
+pub fn constructor(allocator: Allocator, builtins: Builtins, intern: *Intern, uses_memory: *bool) !types.Function {
+    uses_memory.* = true;
+    var locals = List(types.Local).init(allocator);
+    var pointers = List(types.LocalPointer).init(allocator);
+    const local = try intern.store("result");
+    try pointers.append(.{ .name = local, .size = 8 });
+    const exprs = try allocator.alloc(types.Expression, 3);
+    const local_get = try allocator.create(types.Expression);
+    local_get.* = .{ .local_get = .{ .name = local } };
+    const parameters = try allocator.alloc(types.Parameter, 2);
+    const ptr = try intern.store("ptr");
+    parameters[0] = types.Parameter{ .name = ptr, .type = .i32 };
+    const len = try intern.store("len");
+    parameters[1] = types.Parameter{ .name = len, .type = .i32 };
+    const literal_offset = try allocator.create(types.Expression);
+    literal_offset.* = .{ .local_get = .{ .name = ptr } };
+    exprs[0] = .{ .binary_op = .{ .kind = .i32_store, .left = local_get, .right = literal_offset } };
+    const literal_4 = try allocator.create(types.Expression);
+    literal_4.* = .{ .literal = .{ .u32 = 4 } };
+    const binary_add = try allocator.create(types.Expression);
+    binary_add.* = .{ .binary_op = .{ .kind = .i32_add, .left = local_get, .right = literal_4 } };
+    const literal_length = try allocator.create(types.Expression);
+    literal_length.* = .{ .local_get = .{ .name = len } };
+    exprs[1] = .{ .binary_op = .{ .kind = .i32_store, .left = binary_add, .right = literal_length } };
+    exprs[2] = .{ .local_get = .{ .name = local } };
+    return types.Function{
+        .name = builtins.str,
+        .parameters = parameters,
+        .return_type = .i32,
+        .locals = try locals.toOwnedSlice(),
+        .pointers = try pointers.toOwnedSlice(),
+        .body = .{ .expressions = exprs },
+    };
+}
 
 pub fn concat(allocator: Allocator, builtins: Builtins, intern: *Intern, count: usize, name: Interned) !types.Function {
     const parameters = try allocator.alloc(types.Parameter, count);

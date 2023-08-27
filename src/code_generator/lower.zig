@@ -10,12 +10,17 @@ const Builtins = @import("../builtins.zig").Builtins;
 const types = @import("types.zig");
 const size_of = @import("size_of.zig");
 const str = @import("str.zig");
+const mapType = @import("map_type.zig").mapType;
+const structure = @import("structure.zig");
+const LocalName = structure.LocalName;
+const PointerName = structure.PointerName;
+const FieldName = structure.FieldName;
+const Constructors = structure.Constructors;
+const FieldAccesses = structure.FieldAccesses;
+const Accesses = structure.Accesses;
+const primitive = @import("primitive.zig");
 
-const Constructors = std.AutoHashMap(Interned, type_checker.monotype.Structure);
 const StrConcat = Map(usize, Interned);
-
-const LocalName = Interned;
-const PointerName = Interned;
 
 const Context = struct {
     allocator: Allocator,
@@ -31,6 +36,7 @@ const Context = struct {
     intrinsics: *types.Intrinsics,
     constructors: *Constructors,
     str_concat: *StrConcat,
+    field_accesses: *FieldAccesses,
 };
 
 fn freshLocal(context: Context, t: types.Type) !Interned {
@@ -48,52 +54,6 @@ fn freshLocalPointer(context: Context, size: u32) !Interned {
     try context.pointers.append(.{ .name = interned, .size = size });
     context.uses_memory.* = true;
     return interned;
-}
-
-fn mapType(monotype: type_checker.types.MonoType) types.Type {
-    switch (monotype) {
-        .u8 => return .i32,
-        .i32 => return .i32,
-        .i64 => return .i64,
-        .f32 => return .f32,
-        .f64 => return .f64,
-        .bool => return .i32,
-        .void => return .void,
-        .array => return .i32,
-        .enumeration => |e| {
-            switch (size_of.enumeration(e)) {
-                0...4 => return .i32,
-                5...8 => return .i64,
-                else => std.debug.panic("\nEnumeration with {} variants not yet supported", .{e.variants.len}),
-            }
-        },
-        .structure => return .i32,
-        else => std.debug.panic("\nMonotype {} not yet supported", .{monotype}),
-    }
-}
-
-fn int(i: type_checker.types.Int) !types.Expression {
-    switch (i.type) {
-        .u8 => return .{ .literal = .{ .i32 = try std.fmt.parseInt(u8, i.value.string(), 10) } },
-        .u32 => return .{ .literal = .{ .u32 = try std.fmt.parseInt(u32, i.value.string(), 10) } },
-        .i32 => return .{ .literal = .{ .i32 = try std.fmt.parseInt(i32, i.value.string(), 10) } },
-        .i64 => return .{ .literal = .{ .i64 = try std.fmt.parseInt(i64, i.value.string(), 10) } },
-        .f32 => return .{ .literal = .{ .f32 = try std.fmt.parseFloat(f32, i.value.string()) } },
-        .f64 => return .{ .literal = .{ .f64 = try std.fmt.parseFloat(f64, i.value.string()) } },
-        else => |k| std.debug.panic("\nInt type {} not yet supported", .{k}),
-    }
-}
-
-fn float(f: type_checker.types.Float) !types.Expression {
-    switch (f.type) {
-        .f32 => return .{ .literal = .{ .f32 = try std.fmt.parseFloat(f32, f.value.string()) } },
-        .f64 => return .{ .literal = .{ .f64 = try std.fmt.parseFloat(f64, f.value.string()) } },
-        else => |k| std.debug.panic("\nFloat type {} not yet supported", .{k}),
-    }
-}
-
-fn boolean(b: type_checker.types.Bool) !types.Expression {
-    return types.Expression{ .literal = types.Literal{ .bool = b.value } };
 }
 
 fn expressions(context: Context, b: type_checker.types.Block) !types.Expressions {
@@ -227,11 +187,6 @@ fn binaryOp(context: Context, b: type_checker.types.BinaryOp) !types.Expression 
         .less => return try less(context, b),
         else => |k| std.debug.panic("\nBinary op {} not yet supported", .{k}),
     }
-}
-
-fn symbol(s: type_checker.types.Symbol) types.Expression {
-    if (s.binding.global) return types.Expression{ .global_get = .{ .name = s.value } };
-    return .{ .local_get = .{ .name = s.value } };
 }
 
 fn getOrCreatePointer(context: Context, s: type_checker.types.Symbol) !Interned {
@@ -465,7 +420,18 @@ fn enumerationIndex(comptime T: type, e: type_checker.monotype.Enumeration, name
     std.debug.panic("\nEnumeration {} does not have variant {}", .{ e.name, name });
 }
 
-fn dot(d: type_checker.types.Dot) !types.Expression {
+fn addFieldAccess(field_accesses: *FieldAccesses, s: type_checker.monotype.Structure, f: FieldName) !void {
+    const accesses = try field_accesses.getOrPut(s.name);
+    if (!accesses.found_existing) {
+        accesses.value_ptr.* = Accesses{
+            .structure = s,
+            .fields = List(FieldName).init(field_accesses.allocator),
+        };
+    }
+    try accesses.value_ptr.fields.append(f);
+}
+
+fn dot(context: Context, d: type_checker.types.Dot) !types.Expression {
     switch (type_checker.type_of.expression(d.left.*)) {
         .enumeration => |e| {
             switch (size_of.enumeration(e)) {
@@ -473,6 +439,15 @@ fn dot(d: type_checker.types.Dot) !types.Expression {
                 5...8 => return .{ .literal = .{ .u64 = enumerationIndex(u64, e, d.right.value) } },
                 else => |k| std.debug.panic("\nVariant type {} not allowed", .{k}),
             }
+        },
+        .structure => |s| {
+            const field_name = d.right.value;
+            const function_name = try std.fmt.allocPrint(context.allocator, "{}/{}", .{ s.name, field_name });
+            const func = try context.intern.store(function_name);
+            const arguments = try context.allocator.alloc(types.Expression, 1);
+            arguments[0] = try expression(context, d.left.*);
+            try addFieldAccess(context.field_accesses, s, field_name);
+            return .{ .call = .{ .function = func, .arguments = arguments } };
         },
         else => |k| std.debug.panic("\nDot type {} not allowed", .{k}),
     }
@@ -604,12 +579,12 @@ fn templateLiteral(context: Context, t: type_checker.types.TemplateLiteral) !typ
 
 fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMemory, InvalidCharacter, Overflow }!types.Expression {
     switch (e) {
-        .int => |i| return try int(i),
-        .float => |f| return try float(f),
-        .bool => |b| return try boolean(b),
+        .int => |i| return try primitive.int(i),
+        .float => |f| return try primitive.float(f),
+        .bool => |b| return try primitive.boolean(b),
         .block => |b| return .{ .expressions = try expressions(context, b) },
         .binary_op => |b| return try binaryOp(context, b),
-        .symbol => |s| return symbol(s),
+        .symbol => |s| return primitive.symbol(s),
         .call => |c| return try call(context, c),
         .intrinsic => |i| return try intrinsic(context, i),
         .branch => |b| return try branch(context, b),
@@ -619,7 +594,7 @@ fn expression(context: Context, e: type_checker.types.Expression) error{ OutOfMe
         .times_equal => |a| return try timesEqual(context, a),
         .convert => |c| return try convert(context, c),
         .string => |s| return try string(context, s),
-        .dot => |d| return try dot(d),
+        .dot => |d| return try dot(context, d),
         .array => |a| return try array(context, a),
         .index => |i| return try index(context, i),
         .template_literal => |t| return try templateLiteral(context, t),
@@ -643,6 +618,7 @@ fn function(
     intern: *Intern,
     constructors: *Constructors,
     str_concat: *StrConcat,
+    field_accesses: *FieldAccesses,
     f: type_checker.types.Function,
 ) !types.Function {
     var locals = List(types.Local).init(allocator);
@@ -695,6 +671,7 @@ fn function(
         .intrinsics = intrinsics,
         .constructors = constructors,
         .str_concat = str_concat,
+        .field_accesses = field_accesses,
     };
     const last = f.body.expressions.len - 1;
     for (f.body.expressions, 0..) |expr, i| {
@@ -738,149 +715,6 @@ fn foreignImport(allocator: Allocator, f: type_checker.types.ForeignImport) !typ
     };
 }
 
-fn constructor(
-    allocator: Allocator,
-    builtins: Builtins,
-    data_segment: *types.DataSegment,
-    uses_memory: *bool,
-    uses_string: *bool,
-    intrinsics: *types.Intrinsics,
-    intern: *Intern,
-    name: Interned,
-    s: type_checker.monotype.Structure,
-) !types.Function {
-    var locals = List(types.Local).init(allocator);
-    var next_local: u32 = 0;
-    var pointers = List(types.LocalPointer).init(allocator);
-    var pointer_map = Map(LocalName, PointerName).init(allocator);
-    var constructors = Constructors.init(allocator);
-    var str_concat = Map(usize, Interned).init(allocator);
-    const context = Context{
-        .allocator = allocator,
-        .builtins = builtins,
-        .locals = &locals,
-        .next_local = &next_local,
-        .pointers = &pointers,
-        .pointer_map = &pointer_map,
-        .uses_memory = uses_memory,
-        .uses_string = uses_string,
-        .data_segment = data_segment,
-        .intern = intern,
-        .intrinsics = intrinsics,
-        .constructors = &constructors,
-        .str_concat = &str_concat,
-    };
-    const size = size_of.structure(s);
-    const local = try freshLocalPointer(context, size);
-    const exprs = try context.allocator.alloc(types.Expression, s.order.len + 1);
-    const base = try context.allocator.create(types.Expression);
-    base.* = .{ .local_get = .{ .name = local } };
-    var offset: u32 = 0;
-    const parameters = try allocator.alloc(types.Parameter, s.order.len);
-    for (exprs[0..s.order.len], parameters, s.order) |*e, *ir_p, param_name| {
-        const typed_p = s.fields.get(param_name).?;
-        ir_p.* = types.Parameter{
-            .name = param_name,
-            .type = mapType(typed_p),
-        };
-        const field_offset = try context.allocator.create(types.Expression);
-        field_offset.* = .{ .literal = .{ .u32 = offset } };
-        const field_address = blk: {
-            if (offset > 0) {
-                const ptr = try context.allocator.create(types.Expression);
-                ptr.* = .{ .binary_op = .{ .kind = .i32_add, .left = base, .right = field_offset } };
-                break :blk ptr;
-            }
-            break :blk base;
-        };
-        const result = try context.allocator.create(types.Expression);
-        result.* = .{ .local_get = .{ .name = param_name } };
-        switch (typed_p) {
-            .u8 => e.* = .{ .binary_op = .{ .kind = .i32_store8, .left = field_address, .right = result } },
-            .array => {
-                const size_expr = try context.allocator.create(types.Expression);
-                size_expr.* = .{ .literal = .{ .u32 = 8 } };
-                e.* = .{ .memory_copy = .{
-                    .destination = field_address,
-                    .source = result,
-                    .size = size_expr,
-                } };
-                offset += 8;
-            },
-            else => |k| std.debug.panic("\nField type {} not allowed", .{k}),
-        }
-    }
-    exprs[s.order.len] = .{ .local_get = .{ .name = local } };
-    return types.Function{
-        .name = name,
-        .parameters = parameters,
-        .return_type = .i32,
-        .locals = try locals.toOwnedSlice(),
-        .pointers = try pointers.toOwnedSlice(),
-        .body = .{ .expressions = exprs },
-    };
-}
-
-fn stringConstructor(
-    allocator: Allocator,
-    builtins: Builtins,
-    data_segment: *types.DataSegment,
-    uses_memory: *bool,
-    uses_string: *bool,
-    intrinsics: *types.Intrinsics,
-    intern: *Intern,
-) !types.Function {
-    var locals = List(types.Local).init(allocator);
-    var next_local: u32 = 0;
-    var pointers = List(types.LocalPointer).init(allocator);
-    var pointer_map = Map(LocalName, PointerName).init(allocator);
-    var constructors = Constructors.init(allocator);
-    var str_concat = Map(usize, Interned).init(allocator);
-    const context = Context{
-        .allocator = allocator,
-        .builtins = builtins,
-        .locals = &locals,
-        .next_local = &next_local,
-        .pointers = &pointers,
-        .pointer_map = &pointer_map,
-        .uses_memory = uses_memory,
-        .uses_string = uses_string,
-        .data_segment = data_segment,
-        .intern = intern,
-        .intrinsics = intrinsics,
-        .constructors = &constructors,
-        .str_concat = &str_concat,
-    };
-    const local = try freshLocalPointer(context, 8);
-    const exprs = try context.allocator.alloc(types.Expression, 3);
-    const local_get = try context.allocator.create(types.Expression);
-    local_get.* = .{ .local_get = .{ .name = local } };
-    const parameters = try allocator.alloc(types.Parameter, 2);
-    const ptr = try context.intern.store("ptr");
-    parameters[0] = types.Parameter{ .name = ptr, .type = .i32 };
-    const len = try context.intern.store("len");
-    parameters[1] = types.Parameter{ .name = len, .type = .i32 };
-    const literal_offset = try context.allocator.create(types.Expression);
-    literal_offset.* = .{ .local_get = .{ .name = ptr } };
-    exprs[0] = .{ .binary_op = .{ .kind = .i32_store, .left = local_get, .right = literal_offset } };
-    const literal_4 = try context.allocator.create(types.Expression);
-    literal_4.* = .{ .literal = .{ .u32 = 4 } };
-    const binary_add = try context.allocator.create(types.Expression);
-    binary_add.* = .{ .binary_op = .{ .kind = .i32_add, .left = local_get, .right = literal_4 } };
-    const literal_length = try context.allocator.create(types.Expression);
-    literal_length.* = .{ .local_get = .{ .name = len } };
-    exprs[1] = .{ .binary_op = .{ .kind = .i32_store, .left = binary_add, .right = literal_length } };
-    exprs[2] = .{ .local_get = .{ .name = local } };
-    return types.Function{
-        .name = builtins.str,
-        .parameters = parameters,
-        .return_type = .i32,
-        .locals = try locals.toOwnedSlice(),
-        .pointers = try pointers.toOwnedSlice(),
-        .body = .{ .expressions = exprs },
-    };
-}
-
 pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Module, intern: *Intern) !types.Module {
     var functions = std.ArrayList(types.Function).init(allocator);
     var imports = std.ArrayList(types.ForeignImport).init(allocator);
@@ -895,6 +729,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
     var intrinsics = types.Intrinsics.init(allocator);
     var constructors = Constructors.init(allocator);
     var str_concat = StrConcat.init(allocator);
+    var field_accesses = FieldAccesses.init(allocator);
     for (m.order) |name| {
         if (m.typed.get(name)) |top_level| {
             switch (top_level) {
@@ -902,7 +737,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                     const name_symbol = d.name.value;
                     switch (d.value.*) {
                         .int => |i| {
-                            const lowered = try int(i);
+                            const lowered = try primitive.int(i);
                             try globals.append(.{ .name = name_symbol, .type = mapType(d.name.type), .value = lowered });
                         },
                         else => |e| std.debug.panic("\nTop level kind {} no yet supported", .{e}),
@@ -921,6 +756,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                         intern,
                         &constructors,
                         &str_concat,
+                        &field_accesses,
                         e.function,
                     );
                     try functions.append(lowered);
@@ -941,6 +777,7 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
                         intern,
                         &constructors,
                         &str_concat,
+                        &field_accesses,
                         f,
                     );
                     try functions.append(lowered);
@@ -952,29 +789,17 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
     {
         var iterator = constructors.iterator();
         while (iterator.next()) |entry| {
-            try functions.append(try constructor(
+            try functions.append(try structure.constructor(
                 allocator,
-                builtins,
-                &data_segment,
-                &uses_memory,
-                &uses_string,
-                &intrinsics,
                 intern,
+                &uses_memory,
                 entry.key_ptr.*,
                 entry.value_ptr.*,
             ));
         }
     }
     if (uses_string) {
-        try functions.append(try stringConstructor(
-            allocator,
-            builtins,
-            &data_segment,
-            &uses_memory,
-            &uses_string,
-            &intrinsics,
-            intern,
-        ));
+        try functions.append(try str.constructor(allocator, builtins, intern, &uses_memory));
     }
     {
         var iterator = str_concat.iterator();
@@ -992,6 +817,12 @@ pub fn module(allocator: Allocator, builtins: Builtins, m: type_checker.types.Mo
         try functions.append(try str.concatFragment(allocator, intern));
         try functions.append(try str.pointer(allocator, intern));
         try functions.append(try str.length(allocator, intern));
+    }
+    {
+        var iterator = field_accesses.valueIterator();
+        while (iterator.next()) |entry| {
+            try structure.fieldAccess(allocator, intern, &functions, entry.*);
+        }
     }
     return types.Module{
         .functions = try functions.toOwnedSlice(),

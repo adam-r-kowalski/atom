@@ -297,19 +297,19 @@ test "codegen template literal" {
         \\            (i32.const 21)))
         \\
         \\    (func $str (param $ptr i32) (param $len i32) (result i32)
-        \\        (local $0 i32)
-        \\        (local.set $0
+        \\        (local $result i32)
+        \\        (local.set $result
         \\            (call $core/alloc
         \\                (i32.const 8)))
         \\        (i32.store
-        \\            (local.get $0)
+        \\            (local.get $result)
         \\            (local.get $ptr))
         \\        (i32.store
         \\            (i32.add
-        \\                (local.get $0)
+        \\                (local.get $result)
         \\                (i32.const 4))
         \\            (local.get $len))
-        \\        (local.get $0))
+        \\        (local.get $result))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -356,19 +356,19 @@ test "codegen template literal with new lines" {
         \\            (i32.const 114)))
         \\
         \\    (func $str (param $ptr i32) (param $len i32) (result i32)
-        \\        (local $0 i32)
-        \\        (local.set $0
+        \\        (local $result i32)
+        \\        (local.set $result
         \\            (call $core/alloc
         \\                (i32.const 8)))
         \\        (i32.store
-        \\            (local.get $0)
+        \\            (local.get $result)
         \\            (local.get $ptr))
         \\        (i32.store
         \\            (i32.add
-        \\                (local.get $0)
+        \\                (local.get $result)
         \\                (i32.const 4))
         \\            (local.get $len))
-        \\        (local.get $0))
+        \\        (local.get $result))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -409,19 +409,19 @@ test "codegen template literal with string" {
         \\            (i32.const 8)))
         \\
         \\    (func $str (param $ptr i32) (param $len i32) (result i32)
-        \\        (local $0 i32)
-        \\        (local.set $0
+        \\        (local $result i32)
+        \\        (local.set $result
         \\            (call $core/alloc
         \\                (i32.const 8)))
         \\        (i32.store
-        \\            (local.get $0)
+        \\            (local.get $result)
         \\            (local.get $ptr))
         \\        (i32.store
         \\            (i32.add
-        \\                (local.get $0)
+        \\                (local.get $result)
         \\                (i32.const 4))
         \\            (local.get $len))
-        \\        (local.get $0))
+        \\        (local.get $result))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -475,19 +475,19 @@ test "codegen template literal with interpolation" {
         \\                (i32.const 5))))
         \\
         \\    (func $str (param $ptr i32) (param $len i32) (result i32)
-        \\        (local $0 i32)
-        \\        (local.set $0
+        \\        (local $result i32)
+        \\        (local.set $result
         \\            (call $core/alloc
         \\                (i32.const 8)))
         \\        (i32.store
-        \\            (local.get $0)
+        \\            (local.get $result)
         \\            (local.get $ptr))
         \\        (i32.store
         \\            (i32.add
-        \\                (local.get $0)
+        \\                (local.get $result)
         \\                (i32.const 4))
         \\            (local.get $len))
-        \\        (local.get $0))
+        \\        (local.get $result))
         \\
         \\    (func $str/concat/3 (param $s0 i32) (param $s1 i32) (param $s2 i32) (result i32)
         \\        (local $ptr i32)
@@ -607,19 +607,19 @@ test "codegen template literal with two interpolations" {
         \\                (i32.const 5))))
         \\
         \\    (func $str (param $ptr i32) (param $len i32) (result i32)
-        \\        (local $0 i32)
-        \\        (local.set $0
+        \\        (local $result i32)
+        \\        (local.set $result
         \\            (call $core/alloc
         \\                (i32.const 8)))
         \\        (i32.store
-        \\            (local.get $0)
+        \\            (local.get $result)
         \\            (local.get $ptr))
         \\        (i32.store
         \\            (i32.add
-        \\                (local.get $0)
+        \\                (local.get $result)
         \\                (i32.const 4))
         \\            (local.get $len))
-        \\        (local.get $0))
+        \\        (local.get $result))
         \\
         \\    (func $str/concat/5 (param $s0 i32) (param $s1 i32) (param $s2 i32) (param $s3 i32) (param $s4 i32) (result i32)
         \\        (local $ptr i32)
