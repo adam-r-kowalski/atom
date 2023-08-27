@@ -349,3 +349,90 @@ test "codegen struct field access" {
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
+
+test "codegen struct second field access" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\struct Person {
+        \\    name: str,
+        \\    age: i32,
+        \\}
+        \\
+        \\fn start() -> i32 {
+        \\    person = Person(name="Bob", age=42)
+        \\    person.age
+        \\}
+    ;
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (data (i32.const 0) "Bob")
+        \\
+        \\    (global $core/arena (mut i32) (i32.const 3))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
+        \\                (local.get $size))))
+        \\
+        \\    (func $start (result i32)
+        \\        (local $person i32)
+        \\        (local.set $person
+        \\            (call $Person
+        \\                (call $str
+        \\                    (i32.const 0)
+        \\                    (i32.const 3))
+        \\                (i32.const 42)))
+        \\        (call $Person/age
+        \\            (local.get $person)))
+        \\
+        \\    (func $Person (param $name i32) (param $age i32) (result i32)
+        \\        (local $result i32)
+        \\        (local.set $result
+        \\            (call $core/alloc
+        \\                (i32.const 12)))
+        \\        (memory.copy
+        \\            (local.get $result)
+        \\            (local.get $name)
+        \\            (i32.const 8))
+        \\        (i32.store
+        \\            (i32.add
+        \\                (local.get $result)
+        \\                (i32.const 8))
+        \\            (local.get $age))
+        \\        (local.get $result))
+        \\
+        \\    (func $str (param $ptr i32) (param $len i32) (result i32)
+        \\        (local $result i32)
+        \\        (local.set $result
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (i32.store
+        \\            (local.get $result)
+        \\            (local.get $ptr))
+        \\        (i32.store
+        \\            (i32.add
+        \\                (local.get $result)
+        \\                (i32.const 4))
+        \\            (local.get $len))
+        \\        (local.get $result))
+        \\
+        \\    (func $Person/age (param $p i32) (result i32)
+        \\        (i32.load
+        \\            (i32.add
+        \\                (local.get $p)
+        \\                (i32.const 8))))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}

@@ -61,6 +61,7 @@ pub fn constructor(
         result.* = .{ .local_get = .{ .name = param_name } };
         switch (typed_p) {
             .u8 => e.* = .{ .binary_op = .{ .kind = .i32_store8, .left = field_address, .right = result } },
+            .i32 => e.* = .{ .binary_op = .{ .kind = .i32_store, .left = field_address, .right = result } },
             .array => {
                 const size_expr = try allocator.create(types.Expression);
                 size_expr.* = .{ .literal = .{ .u32 = 8 } };
@@ -93,12 +94,14 @@ fn contains(fields: []Interned, field: Interned) bool {
 }
 
 pub fn fieldAccess(allocator: Allocator, intern: *Intern, functions: *List(types.Function), accesses: Accesses) !void {
-    var offset: usize = 0;
+    var offset: u32 = 0;
     for (accesses.structure.order) |order| {
         const field = accesses.structure.fields.get(order).?;
         const size = size_of.monotype(field);
-        offset += size;
-        if (!contains(accesses.fields.items, order)) continue;
+        if (!contains(accesses.fields.items, order)) {
+            offset += size;
+            continue;
+        }
         const function_name = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ accesses.structure.name.string(), order.string() });
         const func = try intern.store(function_name);
         const result_type = mapType(field);
@@ -108,8 +111,25 @@ pub fn fieldAccess(allocator: Allocator, intern: *Intern, functions: *List(types
         param_name[0] = std.ascii.toLower(accesses.structure.name.string()[0]);
         const param = try intern.store(param_name);
         parameters[0] = types.Parameter{ .name = param, .type = struct_type };
+        const local_get = try allocator.create(types.Expression);
+        local_get.* = .{ .local_get = .{ .name = param } };
         const exprs = try allocator.alloc(types.Expression, 1);
-        exprs[0] = .{ .local_get = .{ .name = param } };
+        if (offset == 0) {
+            exprs[0] = local_get.*;
+        } else {
+            const offset_expr = try allocator.create(types.Expression);
+            offset_expr.* = .{ .literal = .{ .u32 = offset } };
+            exprs[0] = .{ .binary_op = .{ .kind = .i32_add, .left = local_get, .right = offset_expr } };
+        }
+        switch (field) {
+            .i32 => {
+                const value = try allocator.create(types.Expression);
+                value.* = exprs[0];
+                exprs[0] = .{ .unary_op = .{ .kind = .i32_load, .expression = value } };
+            },
+            .array => {},
+            else => |k| std.debug.panic("\ninvalid field type {}\n", .{k}),
+        }
         try functions.append(types.Function{
             .name = func,
             .parameters = parameters,
@@ -118,5 +138,6 @@ pub fn fieldAccess(allocator: Allocator, intern: *Intern, functions: *List(types
             .pointers = &.{},
             .body = .{ .expressions = exprs },
         });
+        offset += size;
     }
 }
