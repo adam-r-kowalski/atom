@@ -6,6 +6,8 @@ const size_of = @import("size_of.zig");
 pub fn mapType(monotype: type_checker.types.MonoType) types.Type {
     switch (monotype) {
         .u8 => return .i32,
+        .u32 => return .i32,
+        .u64 => return .i64,
         .i32 => return .i32,
         .i64 => return .i64,
         .f32 => return .f32,

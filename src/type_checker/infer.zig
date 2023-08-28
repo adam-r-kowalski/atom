@@ -64,6 +64,8 @@ pub fn expressionToMonoType(allocator: Allocator, scope: types.Scope, builtins: 
     switch (e) {
         .symbol => |s| {
             if (s.value.eql(builtins.u8)) return .{ .u8 = .{ .span = s.span } };
+            if (s.value.eql(builtins.u32)) return .{ .u32 = .{ .span = s.span } };
+            if (s.value.eql(builtins.u64)) return .{ .u64 = .{ .span = s.span } };
             if (s.value.eql(builtins.i32)) return .{ .i32 = .{ .span = s.span } };
             if (s.value.eql(builtins.i64)) return .{ .i64 = .{ .span = s.span } };
             if (s.value.eql(builtins.f32)) return .{ .f32 = .{ .span = s.span } };

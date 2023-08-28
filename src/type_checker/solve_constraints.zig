@@ -7,7 +7,7 @@ const apply_substitution = @import("apply_substitution.zig");
 
 fn exactEqual(a: types.MonoType, b: types.MonoType) bool {
     switch (a) {
-        .void, .u8, .i32, .i64, .f32, .f64, .bool => {
+        .void, .u8, .u32, .u64, .i32, .i64, .f32, .f64, .bool => {
             return std.meta.activeTag(a) == std.meta.activeTag(b);
         },
         .typevar => {

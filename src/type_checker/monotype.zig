@@ -7,6 +7,7 @@ pub const Span = parser.types.Span;
 pub const Void = struct { span: ?Span };
 pub const U8 = struct { span: ?Span };
 pub const U32 = struct { span: ?Span };
+pub const U64 = struct { span: ?Span };
 pub const I32 = struct { span: ?Span };
 pub const I64 = struct { span: ?Span };
 pub const F32 = struct { span: ?Span };
@@ -67,6 +68,7 @@ pub const MonoType = union(enum) {
     void: Void,
     u8: U8,
     u32: U32,
+    u64: U64,
     i32: I32,
     i64: I64,
     f32: F32,
@@ -86,6 +88,7 @@ pub fn span(monotype: MonoType) ?Span {
         .void => |v| v.span,
         .u8 => |u| u.span,
         .u32 => |u| u.span,
+        .u64 => |u| u.span,
         .i32 => |i| i.span,
         .i64 => |i| i.span,
         .f32 => |f| f.span,
@@ -106,6 +109,7 @@ pub fn withSpan(monotype: MonoType, s: Span) MonoType {
         .void => .{ .void = .{ .span = s } },
         .u8 => .{ .u8 = .{ .span = s } },
         .u32 => .{ .u32 = .{ .span = s } },
+        .u64 => .{ .u64 = .{ .span = s } },
         .i32 => .{ .i32 = .{ .span = s } },
         .i64 => .{ .i64 = .{ .span = s } },
         .f32 => .{ .f32 = .{ .span = s } },

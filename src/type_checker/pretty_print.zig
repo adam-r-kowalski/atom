@@ -15,6 +15,7 @@ pub fn monotype(m: types.MonoType, writer: Writer) !void {
     switch (m) {
         .u8 => try writer.writeAll("u8"),
         .u32 => try writer.writeAll("u32"),
+        .u64 => try writer.writeAll("u64"),
         .i32 => try writer.writeAll("i32"),
         .i64 => try writer.writeAll("i64"),
         .f32 => try writer.writeAll("f32"),

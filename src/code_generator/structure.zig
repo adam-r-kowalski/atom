@@ -61,7 +61,10 @@ pub fn constructor(
         result.* = .{ .local_get = .{ .name = param_name } };
         switch (typed_p) {
             .u8 => e.* = .{ .binary_op = .{ .kind = .i32_store8, .left = field_address, .right = result } },
+            .u32 => e.* = .{ .binary_op = .{ .kind = .i32_store, .left = field_address, .right = result } },
+            .u64 => e.* = .{ .binary_op = .{ .kind = .i64_store, .left = field_address, .right = result } },
             .i32 => e.* = .{ .binary_op = .{ .kind = .i32_store, .left = field_address, .right = result } },
+            .i64 => e.* = .{ .binary_op = .{ .kind = .i64_store, .left = field_address, .right = result } },
             .array => {
                 const size_expr = try allocator.create(types.Expression);
                 size_expr.* = .{ .literal = .{ .u32 = 8 } };
@@ -122,10 +125,30 @@ pub fn fieldAccess(allocator: Allocator, intern: *Intern, functions: *List(types
             exprs[0] = .{ .binary_op = .{ .kind = .i32_add, .left = local_get, .right = offset_expr } };
         }
         switch (field) {
+            .u8 => {
+                const value = try allocator.create(types.Expression);
+                value.* = exprs[0];
+                exprs[0] = .{ .unary_op = .{ .kind = .i32_load8_u, .expression = value } };
+            },
+            .u32 => {
+                const value = try allocator.create(types.Expression);
+                value.* = exprs[0];
+                exprs[0] = .{ .unary_op = .{ .kind = .i32_load, .expression = value } };
+            },
+            .u64 => {
+                const value = try allocator.create(types.Expression);
+                value.* = exprs[0];
+                exprs[0] = .{ .unary_op = .{ .kind = .i64_load, .expression = value } };
+            },
             .i32 => {
                 const value = try allocator.create(types.Expression);
                 value.* = exprs[0];
                 exprs[0] = .{ .unary_op = .{ .kind = .i32_load, .expression = value } };
+            },
+            .i64 => {
+                const value = try allocator.create(types.Expression);
+                value.* = exprs[0];
+                exprs[0] = .{ .unary_op = .{ .kind = .i64_load, .expression = value } };
             },
             .array => {},
             else => |k| std.debug.panic("\ninvalid field type {}\n", .{k}),

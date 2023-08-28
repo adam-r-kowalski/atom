@@ -266,7 +266,7 @@ test "type infer struct field access" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "codegen struct field access" {
+test "codegen struct field access str" {
     const allocator = std.testing.allocator;
     const source =
         \\struct Person {
@@ -350,7 +350,7 @@ test "codegen struct field access" {
     try std.testing.expectEqualStrings(expected, actual);
 }
 
-test "codegen struct second field access" {
+test "codegen struct field access i32" {
     const allocator = std.testing.allocator;
     const source =
         \\struct Person {
@@ -428,6 +428,354 @@ test "codegen struct second field access" {
         \\
         \\    (func $Person/age (param $p i32) (result i32)
         \\        (i32.load
+        \\            (i32.add
+        \\                (local.get $p)
+        \\                (i32.const 8))))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen struct field access u8" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\struct Person {
+        \\    name: str,
+        \\    age: u8,
+        \\}
+        \\
+        \\fn start() -> u8 {
+        \\    person = Person(name="Bob", age=42)
+        \\    person.age
+        \\}
+    ;
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (data (i32.const 0) "Bob")
+        \\
+        \\    (global $core/arena (mut i32) (i32.const 3))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
+        \\                (local.get $size))))
+        \\
+        \\    (func $start (result i32)
+        \\        (local $person i32)
+        \\        (local.set $person
+        \\            (call $Person
+        \\                (call $str
+        \\                    (i32.const 0)
+        \\                    (i32.const 3))
+        \\                (i32.const 42)))
+        \\        (call $Person/age
+        \\            (local.get $person)))
+        \\
+        \\    (func $Person (param $name i32) (param $age i32) (result i32)
+        \\        (local $result i32)
+        \\        (local.set $result
+        \\            (call $core/alloc
+        \\                (i32.const 12)))
+        \\        (memory.copy
+        \\            (local.get $result)
+        \\            (local.get $name)
+        \\            (i32.const 8))
+        \\        (i32.store8
+        \\            (i32.add
+        \\                (local.get $result)
+        \\                (i32.const 8))
+        \\            (local.get $age))
+        \\        (local.get $result))
+        \\
+        \\    (func $str (param $ptr i32) (param $len i32) (result i32)
+        \\        (local $result i32)
+        \\        (local.set $result
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (i32.store
+        \\            (local.get $result)
+        \\            (local.get $ptr))
+        \\        (i32.store
+        \\            (i32.add
+        \\                (local.get $result)
+        \\                (i32.const 4))
+        \\            (local.get $len))
+        \\        (local.get $result))
+        \\
+        \\    (func $Person/age (param $p i32) (result i32)
+        \\        (i32.load8_u
+        \\            (i32.add
+        \\                (local.get $p)
+        \\                (i32.const 8))))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen struct field access i64" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\struct Person {
+        \\    name: str,
+        \\    age: i64,
+        \\}
+        \\
+        \\fn start() -> i64 {
+        \\    person = Person(name="Bob", age=42)
+        \\    person.age
+        \\}
+    ;
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (data (i32.const 0) "Bob")
+        \\
+        \\    (global $core/arena (mut i32) (i32.const 3))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
+        \\                (local.get $size))))
+        \\
+        \\    (func $start (result i64)
+        \\        (local $person i32)
+        \\        (local.set $person
+        \\            (call $Person
+        \\                (call $str
+        \\                    (i32.const 0)
+        \\                    (i32.const 3))
+        \\                (i64.const 42)))
+        \\        (call $Person/age
+        \\            (local.get $person)))
+        \\
+        \\    (func $Person (param $name i32) (param $age i64) (result i32)
+        \\        (local $result i32)
+        \\        (local.set $result
+        \\            (call $core/alloc
+        \\                (i32.const 16)))
+        \\        (memory.copy
+        \\            (local.get $result)
+        \\            (local.get $name)
+        \\            (i32.const 8))
+        \\        (i64.store
+        \\            (i32.add
+        \\                (local.get $result)
+        \\                (i32.const 8))
+        \\            (local.get $age))
+        \\        (local.get $result))
+        \\
+        \\    (func $str (param $ptr i32) (param $len i32) (result i32)
+        \\        (local $result i32)
+        \\        (local.set $result
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (i32.store
+        \\            (local.get $result)
+        \\            (local.get $ptr))
+        \\        (i32.store
+        \\            (i32.add
+        \\                (local.get $result)
+        \\                (i32.const 4))
+        \\            (local.get $len))
+        \\        (local.get $result))
+        \\
+        \\    (func $Person/age (param $p i32) (result i64)
+        \\        (i64.load
+        \\            (i32.add
+        \\                (local.get $p)
+        \\                (i32.const 8))))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen struct field access u32" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\struct Person {
+        \\    name: str,
+        \\    age: u32,
+        \\}
+        \\
+        \\fn start() -> u32 {
+        \\    person = Person(name="Bob", age=42)
+        \\    person.age
+        \\}
+    ;
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (data (i32.const 0) "Bob")
+        \\
+        \\    (global $core/arena (mut i32) (i32.const 3))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
+        \\                (local.get $size))))
+        \\
+        \\    (func $start (result i32)
+        \\        (local $person i32)
+        \\        (local.set $person
+        \\            (call $Person
+        \\                (call $str
+        \\                    (i32.const 0)
+        \\                    (i32.const 3))
+        \\                (i32.const 42)))
+        \\        (call $Person/age
+        \\            (local.get $person)))
+        \\
+        \\    (func $Person (param $name i32) (param $age i32) (result i32)
+        \\        (local $result i32)
+        \\        (local.set $result
+        \\            (call $core/alloc
+        \\                (i32.const 12)))
+        \\        (memory.copy
+        \\            (local.get $result)
+        \\            (local.get $name)
+        \\            (i32.const 8))
+        \\        (i32.store
+        \\            (i32.add
+        \\                (local.get $result)
+        \\                (i32.const 8))
+        \\            (local.get $age))
+        \\        (local.get $result))
+        \\
+        \\    (func $str (param $ptr i32) (param $len i32) (result i32)
+        \\        (local $result i32)
+        \\        (local.set $result
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (i32.store
+        \\            (local.get $result)
+        \\            (local.get $ptr))
+        \\        (i32.store
+        \\            (i32.add
+        \\                (local.get $result)
+        \\                (i32.const 4))
+        \\            (local.get $len))
+        \\        (local.get $result))
+        \\
+        \\    (func $Person/age (param $p i32) (result i32)
+        \\        (i32.load
+        \\            (i32.add
+        \\                (local.get $p)
+        \\                (i32.const 8))))
+        \\
+        \\    (export "_start" (func $start)))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "codegen struct field access u64" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\struct Person {
+        \\    name: str,
+        \\    age: u64,
+        \\}
+        \\
+        \\fn start() -> u64 {
+        \\    person = Person(name="Bob", age=42)
+        \\    person.age
+        \\}
+    ;
+    const actual = try atom.testing.codegen(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(module
+        \\
+        \\    (memory 1)
+        \\    (export "memory" (memory 0))
+        \\
+        \\    (data (i32.const 0) "Bob")
+        \\
+        \\    (global $core/arena (mut i32) (i32.const 3))
+        \\
+        \\    (func $core/alloc (param $size i32) (result i32)
+        \\        (local $ptr i32)
+        \\        (local.tee $ptr
+        \\            (global.get $core/arena))
+        \\        (global.set $core/arena
+        \\            (i32.add
+        \\                (local.get $ptr)
+        \\                (local.get $size))))
+        \\
+        \\    (func $start (result i64)
+        \\        (local $person i32)
+        \\        (local.set $person
+        \\            (call $Person
+        \\                (call $str
+        \\                    (i32.const 0)
+        \\                    (i32.const 3))
+        \\                (i64.const 42)))
+        \\        (call $Person/age
+        \\            (local.get $person)))
+        \\
+        \\    (func $Person (param $name i32) (param $age i64) (result i32)
+        \\        (local $result i32)
+        \\        (local.set $result
+        \\            (call $core/alloc
+        \\                (i32.const 16)))
+        \\        (memory.copy
+        \\            (local.get $result)
+        \\            (local.get $name)
+        \\            (i32.const 8))
+        \\        (i64.store
+        \\            (i32.add
+        \\                (local.get $result)
+        \\                (i32.const 8))
+        \\            (local.get $age))
+        \\        (local.get $result))
+        \\
+        \\    (func $str (param $ptr i32) (param $len i32) (result i32)
+        \\        (local $result i32)
+        \\        (local.set $result
+        \\            (call $core/alloc
+        \\                (i32.const 8)))
+        \\        (i32.store
+        \\            (local.get $result)
+        \\            (local.get $ptr))
+        \\        (i32.store
+        \\            (i32.add
+        \\                (local.get $result)
+        \\                (i32.const 4))
+        \\            (local.get $len))
+        \\        (local.get $result))
+        \\
+        \\    (func $Person/age (param $p i32) (result i64)
+        \\        (i64.load
         \\            (i32.add
         \\                (local.get $p)
         \\                (i32.const 8))))

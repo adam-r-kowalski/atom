@@ -6,6 +6,7 @@ pub fn int(i: type_checker.types.Int) !types.Expression {
     switch (i.type) {
         .u8 => return .{ .literal = .{ .i32 = try std.fmt.parseInt(u8, i.value.string(), 10) } },
         .u32 => return .{ .literal = .{ .u32 = try std.fmt.parseInt(u32, i.value.string(), 10) } },
+        .u64 => return .{ .literal = .{ .u64 = try std.fmt.parseInt(u64, i.value.string(), 10) } },
         .i32 => return .{ .literal = .{ .i32 = try std.fmt.parseInt(i32, i.value.string(), 10) } },
         .i64 => return .{ .literal = .{ .i64 = try std.fmt.parseInt(i64, i.value.string(), 10) } },
         .f32 => return .{ .literal = .{ .f32 = try std.fmt.parseFloat(f32, i.value.string()) } },
