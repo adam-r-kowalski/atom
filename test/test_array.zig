@@ -564,17 +564,17 @@ test "codegen array of f32" {
         \\            (block (result i32)
         \\                (f32.store
         \\                    (local.get $0)
-        \\                    (f32.const 3.14000010e+00))
+        \\                    (f32.const 3.14))
         \\                (f32.store
         \\                    (i32.add
         \\                        (local.get $0)
         \\                        (i32.const 4))
-        \\                    (f32.const 2.71799993e+00))
+        \\                    (f32.const 2.718))
         \\                (f32.store
         \\                    (i32.add
         \\                        (local.get $0)
         \\                        (i32.const 8))
-        \\                    (f32.const 1.61800003e+00))
+        \\                    (f32.const 1.618))
         \\                (i32.store
         \\                    (local.get $1)
         \\                    (local.get $0))
@@ -648,17 +648,17 @@ test "codegen array of f64" {
         \\            (block (result i32)
         \\                (f64.store
         \\                    (local.get $0)
-        \\                    (f64.const 3.14e+00))
+        \\                    (f64.const 3.14))
         \\                (f64.store
         \\                    (i32.add
         \\                        (local.get $0)
         \\                        (i32.const 8))
-        \\                    (f64.const 2.718e+00))
+        \\                    (f64.const 2.718))
         \\                (f64.store
         \\                    (i32.add
         \\                        (local.get $0)
         \\                        (i32.const 16))
-        \\                    (f64.const 1.618e+00))
+        \\                    (f64.const 1.618))
         \\                (i32.store
         \\                    (local.get $1)
         \\                    (local.get $0))

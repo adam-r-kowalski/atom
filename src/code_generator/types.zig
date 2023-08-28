@@ -145,8 +145,8 @@ pub const Literal = union(enum) {
     u64: u64,
     i32: i32,
     i64: i64,
-    f32: f32,
-    f64: f64,
+    f32: Interned,
+    f64: Interned,
 };
 
 pub const Drop = struct {

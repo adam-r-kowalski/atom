@@ -119,7 +119,7 @@ test "codegen f32 with int literal" {
         \\    (export "memory" (memory 0))
         \\
         \\    (func $start (result f32)
-        \\        (f32.const 4.2e+01))
+        \\        (f32.const 42))
         \\
         \\    (export "_start" (func $start)))
     ;
@@ -138,7 +138,7 @@ test "codegen f32 with float literal" {
         \\    (export "memory" (memory 0))
         \\
         \\    (func $start (result f32)
-        \\        (f32.const 4.25e+01))
+        \\        (f32.const 42.5))
         \\
         \\    (export "_start" (func $start)))
     ;
