@@ -53,6 +53,8 @@ fn writeWasm(allocator: Allocator, flags: Flags, wasm_bytes: wasmer.wasm_byte_ve
 const Value = union(enum) {
     bool: bool,
     u8: u8,
+    u32: u32,
+    u64: u64,
     i32: i32,
     i64: i64,
     f32: f32,
@@ -65,6 +67,8 @@ const Value = union(enum) {
         switch (self) {
             .bool => |b| try writer.print("{}", .{b}),
             .u8 => |i| try writer.print("'{c}'", .{i}),
+            .u32 => |i| try writer.print("{}", .{i}),
+            .u64 => |i| try writer.print("{}", .{i}),
             .i32 => |i| try writer.print("{}", .{i}),
             .i64 => |i| try writer.print("{}", .{i}),
             .f32 => |f| try writer.print("{}", .{f}),
@@ -142,6 +146,8 @@ const WasmModule = struct {
         switch (return_type) {
             .bool => return .{ .bool = results.data[0].of.i32 == 1 },
             .u8 => return .{ .u8 = @truncate(@as(u32, @intCast(results.data[0].of.i32))) },
+            .u32 => return .{ .u32 = @intCast(results.data[0].of.i32) },
+            .u64 => return .{ .u64 = @intCast(results.data[0].of.i64) },
             .i32 => return .{ .i32 = results.data[0].of.i32 },
             .i64 => return .{ .i64 = results.data[0].of.i64 },
             .f32 => return .{ .f32 = results.data[0].of.f32 },

@@ -65,6 +65,8 @@ pub fn constructor(
             .u64 => e.* = .{ .binary_op = .{ .kind = .i64_store, .left = field_address, .right = result } },
             .i32 => e.* = .{ .binary_op = .{ .kind = .i32_store, .left = field_address, .right = result } },
             .i64 => e.* = .{ .binary_op = .{ .kind = .i64_store, .left = field_address, .right = result } },
+            .f32 => e.* = .{ .binary_op = .{ .kind = .f32_store, .left = field_address, .right = result } },
+            .f64 => e.* = .{ .binary_op = .{ .kind = .f64_store, .left = field_address, .right = result } },
             .array => {
                 const size_expr = try allocator.create(types.Expression);
                 size_expr.* = .{ .literal = .{ .u32 = 8 } };
@@ -149,6 +151,16 @@ pub fn fieldAccess(allocator: Allocator, intern: *Intern, functions: *List(types
                 const value = try allocator.create(types.Expression);
                 value.* = exprs[0];
                 exprs[0] = .{ .unary_op = .{ .kind = .i64_load, .expression = value } };
+            },
+            .f32 => {
+                const value = try allocator.create(types.Expression);
+                value.* = exprs[0];
+                exprs[0] = .{ .unary_op = .{ .kind = .f32_load, .expression = value } };
+            },
+            .f64 => {
+                const value = try allocator.create(types.Expression);
+                value.* = exprs[0];
+                exprs[0] = .{ .unary_op = .{ .kind = .f64_load, .expression = value } };
             },
             .array => {},
             else => |k| std.debug.panic("\ninvalid field type {}\n", .{k}),
