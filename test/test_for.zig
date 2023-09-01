@@ -4,7 +4,7 @@ const atom = @import("atom");
 test "tokenize for loop" {
     const allocator = std.testing.allocator;
     const source =
-        \\fn double(xs: []f32) -> []f32 {
+        \\fn double(xs: vec[f32]) -> vec[f32] {
         \\    for i { 2 * xs[i] }
         \\}
     ;
@@ -16,14 +16,16 @@ test "tokenize for loop" {
         \\(delimiter '(')
         \\(symbol xs)
         \\(operator :)
+        \\(symbol vec)
         \\(delimiter '[')
-        \\(delimiter ']')
         \\(symbol f32)
+        \\(delimiter ']')
         \\(delimiter ')')
         \\(operator ->)
+        \\(symbol vec)
         \\(delimiter '[')
-        \\(delimiter ']')
         \\(symbol f32)
+        \\(delimiter ']')
         \\(delimiter '{')
         \\(new_line)
         \\(keyword for)
@@ -45,16 +47,33 @@ test "tokenize for loop" {
 test "parse for loop" {
     const allocator = std.testing.allocator;
     const source =
-        \\fn double(xs: []f32) -> []f32 {
+        \\fn double(xs: vec[f32]) -> vec[f32] {
         \\    for i { 2 * xs[i] }
         \\}
     ;
     const actual = try atom.testing.parse(allocator, source);
     defer allocator.free(actual);
     const expected =
-        \\(fn double [(xs (array f32))] (array f32)
+        \\(fn double [(xs (index vec f32))] (index vec f32)
         \\    (for [i]
         \\        (* 2 (index xs i))))
+    ;
+    try std.testing.expectEqualStrings(expected, actual);
+}
+
+test "parse multi index for loop" {
+    const allocator = std.testing.allocator;
+    const source =
+        \\fn transpose(m: mat[f32]) -> mat[f32] {
+        \\    for i, j { m[j, i] }
+        \\}
+    ;
+    const actual = try atom.testing.parse(allocator, source);
+    defer allocator.free(actual);
+    const expected =
+        \\(fn transpose [(m (index mat f32))] (index mat f32)
+        \\    (for [i j]
+        \\        (index m j i)))
     ;
     try std.testing.expectEqualStrings(expected, actual);
 }
