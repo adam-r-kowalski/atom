@@ -26,6 +26,7 @@ pub fn expression(e: types.Expression) types.Span {
         .decorator => |d| d.span,
         .index => |i| i.span,
         .template_literal => |t| t.span,
+        .for_ => |f| f.span,
         .undefined => |u| u.span,
     };
 }

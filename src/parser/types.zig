@@ -195,6 +195,12 @@ pub const TemplateLiteral = struct {
     span: Span,
 };
 
+pub const For = struct {
+    indices: []const Symbol,
+    body: Block,
+    span: Span,
+};
+
 pub const Expression = union(enum) {
     int: Int,
     float: Float,
@@ -220,6 +226,7 @@ pub const Expression = union(enum) {
     decorator: Decorator,
     index: Index,
     template_literal: TemplateLiteral,
+    for_: For,
     undefined: Undefined,
 };
 

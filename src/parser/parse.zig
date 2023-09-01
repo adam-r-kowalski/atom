@@ -283,6 +283,31 @@ fn function(context: Context, begin: types.Pos) !types.Expression {
     };
 }
 
+fn forLoop(context: Context, begin: types.Pos) !types.For {
+    var indices = List(types.Symbol).init(context.allocator);
+    while (context.tokens.peek()) |token| {
+        switch (token) {
+            .symbol => |s| {
+                context.tokens.advance();
+                try indices.append(s);
+                context.tokens.consumeNewLines();
+                context.tokens.maybeConsume(.comma);
+            },
+            .left_brace => |l| {
+                context.tokens.advance();
+                const body = try block(withPrecedence(context, LOWEST), l.span.begin);
+                return types.For{
+                    .indices = try indices.toOwnedSlice(),
+                    .body = body,
+                    .span = types.Span{ .begin = begin, .end = body.span.end },
+                };
+            },
+            else => |k| std.debug.panic("\nExpected symbol, found {}", .{k}),
+        }
+    }
+    std.debug.panic("\nExpected left brace", .{});
+}
+
 fn enumeration(context: Context, enum_: EnumToken) !types.Enumeration {
     const begin = enum_.span.begin;
     const enumeration_name = context.tokens.consume(.symbol).symbol;
@@ -417,6 +442,7 @@ fn prefix(context: Context) !types.Expression {
         .left_paren => |l| return .{ .group = try group(context, l) },
         .if_ => |i| return .{ .branch = try branch(context, i) },
         .fn_ => |f| return try function(context, f.span.begin),
+        .for_ => |f| return .{ .for_ = try forLoop(context, f.span.begin) },
         .enum_ => |e| return .{ .enumeration = try enumeration(context, e) },
         .struct_ => |s| return .{ .structure = try structure(context, s) },
         .block => |b| return .{ .block = try explicitBlock(context, b) },

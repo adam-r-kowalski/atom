@@ -192,6 +192,7 @@ fn symbol(intern: *Intern, builtins: Builtins, cursor: *Cursor) !types.Token {
     if (interned.eql(builtins.mut)) return .{ .mut = .{ .span = span } };
     if (interned.eql(builtins.undefined)) return .{ .undefined = .{ .span = span } };
     if (interned.eql(builtins.fn_)) return .{ .fn_ = .{ .span = span } };
+    if (interned.eql(builtins.for_)) return .{ .for_ = .{ .span = span } };
     return .{ .symbol = .{ .value = interned, .span = span } };
 }
 

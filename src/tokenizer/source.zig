@@ -44,6 +44,7 @@ pub fn token(t: types.Token, writer: Writer) !void {
         .or_ => try writer.writeAll("or"),
         .comma => try writer.writeAll(","),
         .fn_ => try writer.writeAll("fn"),
+        .for_ => try writer.writeAll("for"),
         .enum_ => try writer.writeAll("enum"),
         .struct_ => try writer.writeAll("struct"),
         .block => try writer.writeAll("block"),

@@ -39,6 +39,7 @@ pub fn token(t: types.Token) types.Span {
         .or_ => |o| o.span,
         .comma => |c| c.span,
         .fn_ => |f| f.span,
+        .for_ => |f| f.span,
         .enum_ => |e| e.span,
         .struct_ => |s| s.span,
         .block => |b| b.span,

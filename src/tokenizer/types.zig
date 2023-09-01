@@ -40,6 +40,7 @@ pub const Else = struct { span: Span };
 pub const Or = struct { span: Span };
 pub const Comma = struct { span: Span };
 pub const Fn = struct { span: Span };
+pub const For = struct { span: Span };
 pub const Enum = struct { span: Span };
 pub const Struct = struct { span: Span };
 pub const Block = struct { span: Span };
@@ -87,6 +88,7 @@ pub const Token = union(enum) {
     or_: Or,
     comma: Comma,
     fn_: Fn,
+    for_: For,
     enum_: Enum,
     struct_: Struct,
     block: Block,

@@ -43,6 +43,7 @@ pub fn token(t: types.Token, writer: Writer) !void {
         .else_ => try writer.writeAll("(keyword else)"),
         .or_ => try writer.writeAll("(keyword or)"),
         .fn_ => try writer.writeAll("(keyword fn)"),
+        .for_ => try writer.writeAll("(keyword for)"),
         .enum_ => try writer.writeAll("(keyword enum)"),
         .struct_ => try writer.writeAll("(keyword struct)"),
         .block => try writer.writeAll("(keyword block)"),

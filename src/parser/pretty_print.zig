@@ -249,6 +249,17 @@ pub fn templateLiteral(t: types.TemplateLiteral, indent: Indent, writer: Writer)
     try writer.writeAll(")");
 }
 
+pub fn forLoop(f: types.For, indent: Indent, writer: Writer) !void {
+    try writer.writeAll("(for [");
+    for (f.indices, 0..) |s, i| {
+        if (i > 0) try writer.writeAll(" ");
+        try writer.writeAll(s.value.string());
+    }
+    try writer.writeAll("]");
+    try block(f.body, indent, writer);
+    try writer.writeAll(")");
+}
+
 pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{OutOfMemory}!void {
     switch (e) {
         .int => |int| try writer.print("{}", .{int.value}),
@@ -275,6 +286,7 @@ pub fn expression(e: types.Expression, indent: Indent, writer: Writer) error{Out
         .decorator => |d| try decorator(d, indent, writer),
         .index => |i| try index(i, indent, writer),
         .template_literal => |t| try templateLiteral(t, indent, writer),
+        .for_ => |f| try forLoop(f, indent, writer),
         .undefined => |u| try writer.print("{}", .{u}),
     }
 }
